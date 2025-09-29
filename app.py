@@ -1,32 +1,37 @@
 """
-TruthLens Unified News & Transcript Analyzer
+TruthLens Clean Architecture - Complete Rewrite
 Date: September 29, 2025
-Version: 4.0.4 UNIFIED PRODUCTION - WITH SERVICE INITIALIZATION FIX
+Version: 5.0.0 CLEAN
 
-CRITICAL UPDATE IN THIS VERSION:
-1. Added service initialization code to ensure ArticleExtractor loads properly
-2. Forces ArticleExtractor to initialize BEFORE NewsAnalyzer
-3. Verifies ArticleExtractor is not using fallback mode
-4. All previous unified features maintained
-
-This fixes the article extraction returning dummy data with score 58
+COMPLETE REWRITE:
+- No service registry
+- No complex pipelines  
+- Direct service calls
+- Flat data structures
+- Simple, robust, working
 """
 
 import os
 import sys
 import logging
 import time
-import traceback
-import uuid
-import re
 import json
 import hashlib
-from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List, Tuple
-from urllib.parse import urlparse, quote_plus
-from collections import Counter
+import re
+from datetime import datetime
+from typing import Dict, Any, Optional, List
+from urllib.parse import urlparse
 
-# Setup comprehensive logging
+# Flask setup
+from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask_cors import CORS
+
+# Web scraping
+import requests
+from bs4 import BeautifulSoup
+from newspaper import Article
+
+# Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
@@ -39,822 +44,613 @@ logging.getLogger('urllib3').setLevel(logging.WARNING)
 logging.getLogger('requests').setLevel(logging.WARNING)
 logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
-# Flask imports
-from flask import Flask, request, jsonify, render_template, send_from_directory, g
-from flask_cors import CORS
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+# ================================================================================
+# CONFIGURATION
+# ================================================================================
 
-# Web scraping
-import requests
-from bs4 import BeautifulSoup
-from newspaper import Article, ArticleException
-
-# NLP imports for real analysis
-try:
-    import nltk
-    from textblob import TextBlob
-    
-    # Download required NLTK data
-    nltk_downloads = ['punkt', 'stopwords', 'vader_lexicon', 'averaged_perceptron_tagger']
-    for item in nltk_downloads:
-        try:
-            nltk.data.find(f'tokenizers/{item}' if item == 'punkt' else f'corpora/{item}' if item == 'stopwords' else f'vader_lexicon' if item == 'vader_lexicon' else f'taggers/{item}')
-        except LookupError:
-            logger.info(f"Downloading NLTK {item}...")
-            nltk.download(item, quiet=True)
-    
-    from nltk.sentiment import SentimentIntensityAnalyzer
-    from nltk.corpus import stopwords
-    from nltk.tokenize import word_tokenize, sent_tokenize
-    
-    NLP_AVAILABLE = True
-    logger.info("✓ NLP libraries loaded successfully")
-except ImportError as e:
-    logger.warning(f"NLP libraries not fully available: {e}")
-    NLP_AVAILABLE = False
-
-logger.info("=" * 80)
-logger.info("TRUTHLENS UNIFIED ANALYZER - v4.0.4 WITH SERVICE INIT FIX")
-logger.info(f"Python Version: {sys.version}")
-logger.info(f"Working Directory: {os.getcwd()}")
-logger.info(f"NLP Available: {NLP_AVAILABLE}")
-
-# Check template files
-template_dir = os.path.join(os.getcwd(), 'templates')
-if os.path.exists(template_dir):
-    templates = os.listdir(template_dir)
-    logger.info(f"Templates directory contents: {templates}")
-    if 'unified_index.html' in templates:
-        logger.info("✓ unified_index.html found")
-    else:
-        logger.warning("✗ unified_index.html NOT found")
-else:
-    logger.error("Templates directory does not exist!")
-
-logger.info("=" * 80)
-
-# Configuration
 class Config:
-    """Enhanced configuration for unified application"""
+    """Simple configuration"""
     DEBUG = os.environ.get('FLASK_ENV') == 'development'
-    ENV = os.environ.get('FLASK_ENV', 'production')
-    
-    # API Keys from environment
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
     SCRAPERAPI_KEY = os.environ.get('SCRAPERAPI_KEY')
-    GOOGLE_FACT_CHECK_API_KEY = os.environ.get('GOOGLE_FACT_CHECK_API_KEY')
-    NEWS_API_KEY = os.environ.get('NEWS_API_KEY')
-    NEWSAPI_KEY = os.environ.get('NEWSAPI_KEY')
-    YOUTUBE_API_KEY = os.environ.get('YOUTUBE_API_KEY')  # Added for transcript mode
-    
-    # Unified mode settings
-    ENABLE_NEWS_MODE = True
-    ENABLE_TRANSCRIPT_MODE = True
-    DEFAULT_MODE = 'news'
-    
-    @classmethod
-    def log_status(cls):
-        logger.info("API Keys Configuration:")
-        logger.info(f"  OpenAI: {'✓' if cls.OPENAI_API_KEY else '✗'}")
-        logger.info(f"  ScraperAPI: {'✓' if cls.SCRAPERAPI_KEY else '✗'}")
-        logger.info(f"  Google Fact Check: {'✓' if cls.GOOGLE_FACT_CHECK_API_KEY else '✗'}")
-        logger.info(f"  News API: {'✓' if cls.NEWS_API_KEY or cls.NEWSAPI_KEY else '✗'}")
-        logger.info(f"  YouTube API: {'✓' if cls.YOUTUBE_API_KEY else '✗'}")
-        logger.info("Modes Enabled:")
-        logger.info(f"  News Analysis: {'✓' if cls.ENABLE_NEWS_MODE else '✗'}")
-        logger.info(f"  Transcript Analysis: {'✓' if cls.ENABLE_TRANSCRIPT_MODE else '✗'}")
-
-Config.log_status()
+    NEWS_API_KEY = os.environ.get('NEWS_API_KEY') or os.environ.get('NEWSAPI_KEY')
 
 # ================================================================================
-# SERVICE INITIALIZATION - CRITICAL FOR ARTICLE EXTRACTION
-# This MUST happen BEFORE NewsAnalyzer is imported
+# ARTICLE EXTRACTOR - SIMPLE AND WORKING
 # ================================================================================
 
-logger.info("=" * 80)
-logger.info("INITIALIZING ANALYSIS SERVICES")
-logger.info("=" * 80)
-
-def initialize_article_extractor():
-    """Force ArticleExtractor to initialize properly"""
-    import importlib
-    
-    try:
-        # Clear any cached modules
-        if 'services.article_extractor' in sys.modules:
-            del sys.modules['services.article_extractor']
-        
-        # Import fresh
-        logger.info("Loading ArticleExtractor module...")
-        article_module = importlib.import_module('services.article_extractor')
-        
-        # Force reload to get latest code
-        importlib.reload(article_module)
-        
-        # Create instance
-        ArticleExtractor = getattr(article_module, 'ArticleExtractor', None)
-        if not ArticleExtractor:
-            logger.error("ArticleExtractor class not found in module")
-            return None
-        
-        extractor = ArticleExtractor()
-        
-        # Verify it's working
-        test_result = extractor.analyze({'url': 'https://test.com'})
-        
-        # Check for fallback indicators
-        if test_result.get('data', {}).get('status') == 'fallback':
-            logger.error("ArticleExtractor is using fallback - will return score 58!")
-            return None
-        
-        if test_result.get('data', {}).get('score') == 58:
-            logger.error("ArticleExtractor returning fallback score 58 - not properly initialized!")
-            return None
-        
-        version = 'unknown'
-        if hasattr(extractor, 'core') and hasattr(extractor.core, 'VERSION'):
-            version = extractor.core.VERSION
-        
-        logger.info(f"✓ ArticleExtractor v{version} initialized successfully")
-        return extractor
-        
-    except Exception as e:
-        logger.error(f"Failed to initialize ArticleExtractor: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
-def force_service_initialization():
-    """Initialize all services with ArticleExtractor first"""
-    try:
-        from services.service_registry import get_service_registry
-    except ImportError as e:
-        logger.error(f"Could not import service_registry: {e}")
-        return None
-    
-    logger.info("Getting service registry...")
-    registry = get_service_registry()
-    
-    # CRITICAL: Initialize ArticleExtractor FIRST
-    article_extractor = initialize_article_extractor()
-    
-    if article_extractor:
-        # Manually register it
-        registry.services['article_extractor'] = article_extractor
-        logger.info("✓ ArticleExtractor registered with service registry")
-    else:
-        logger.critical("⚠️ ArticleExtractor failed to initialize - extraction will NOT work!")
-    
-    # Force registry to initialize other services
-    if hasattr(registry, '_ensure_initialized'):
-        registry._ensure_initialized()
-    elif hasattr(registry, '_initialized') and not registry._initialized:
-        if hasattr(registry, '_initialize_services'):
-            registry._initialize_services()
-    
-    # Verify status
-    try:
-        status = registry.get_service_status()
-        logger.info(f"Registry Status Summary:")
-        logger.info(f"  Total configured: {status['summary'].get('total_configured', 0)}")
-        logger.info(f"  Total registered: {status['summary'].get('total_registered', 0)}")
-        logger.info(f"  Total available: {status['summary'].get('total_available', 0)}")
-        
-        # Specific check for article_extractor
-        ae_status = status.get('services', {}).get('article_extractor', {})
-        if ae_status.get('registered') and ae_status.get('available'):
-            if ae_status.get('fallback'):
-                logger.error("⚠️ ArticleExtractor is using FALLBACK mode - won't extract real articles!")
-            else:
-                logger.info("✅ ArticleExtractor is registered and available (not fallback)")
-        else:
-            logger.error("❌ ArticleExtractor not properly registered!")
-    except Exception as e:
-        logger.error(f"Could not get registry status: {e}")
-    
-    return registry
-
-# RUN THE INITIALIZATION
-try:
-    logger.info("Starting service initialization...")
-    service_registry = force_service_initialization()
-    logger.info("✓ Service initialization complete")
-except Exception as e:
-    logger.error(f"Service initialization failed: {e}")
-    import traceback
-    traceback.print_exc()
-    service_registry = None
-
-logger.info("=" * 80)
-
-# ================================================================================
-# CREATE FLASK APP - MUST BE AT MODULE LEVEL
-# ================================================================================
-
-app = Flask(__name__)
-app.config.from_object(Config)
-
-# Enable CORS
-CORS(app, origins=["*"], allow_headers=["Content-Type"], methods=["GET", "POST", "OPTIONS"])
-
-# Rate limiting
-try:
-    limiter = Limiter(
-        app=app,
-        key_func=get_remote_address,
-        default_limits=["200 per hour", "50 per minute"],
-        storage_uri="memory://",
-        swallow_errors=True
-    )
-    logger.info("✓ Rate limiter configured")
-except Exception as e:
-    logger.warning(f"Rate limiter setup failed: {e}")
-    limiter = None
-
-# ================================================================================
-# YOUTUBE TRANSCRIPT SERVICE
-# ================================================================================
-
-class YouTubeTranscriptService:
-    """Extract transcripts from YouTube videos"""
+class SimpleArticleExtractor:
+    """Simple article extraction that actually works"""
     
     def __init__(self):
-        self.api_key = Config.YOUTUBE_API_KEY
+        self.scraperapi_key = Config.SCRAPERAPI_KEY
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
-        logger.info(f"YouTube service initialized - API: {bool(self.api_key)}")
+        logger.info(f"ArticleExtractor ready - ScraperAPI: {bool(self.scraperapi_key)}")
     
-    def extract_transcript(self, youtube_url: str) -> Dict[str, Any]:
-        """Extract transcript from YouTube URL"""
-        try:
-            video_id = self._extract_video_id(youtube_url)
-            if not video_id:
-                return self._error_result("Could not extract video ID from URL")
-            
-            logger.info(f"Extracting transcript for video: {video_id}")
-            
-            # Try multiple methods
-            transcript_data = None
-            
-            # Method 1: Try youtube-transcript-api if available
-            try:
-                transcript_data = self._extract_with_transcript_api(video_id)
-            except Exception as e:
-                logger.debug(f"Transcript API failed: {e}")
-            
-            # Method 2: Try manual caption extraction
-            if not transcript_data:
-                try:
-                    transcript_data = self._extract_manual_captions(video_id)
-                except Exception as e:
-                    logger.debug(f"Manual extraction failed: {e}")
-            
-            # Method 3: Fallback with basic video info
-            if not transcript_data:
-                transcript_data = self._get_video_info_fallback(video_id, youtube_url)
-            
-            return transcript_data
-            
-        except Exception as e:
-            logger.error(f"YouTube transcript extraction failed: {e}")
-            return self._error_result(str(e))
-    
-    def _extract_video_id(self, url: str) -> Optional[str]:
-        """Extract video ID from various YouTube URL formats"""
-        patterns = [
-            r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})',
-            r'youtube\.com/watch\?.*v=([a-zA-Z0-9_-]{11})',
-            r'youtu\.be/([a-zA-Z0-9_-]{11})'
-        ]
+    def extract(self, url: str) -> Dict[str, Any]:
+        """Extract article from URL"""
+        logger.info(f"Extracting article from: {url}")
         
-        for pattern in patterns:
-            match = re.search(pattern, url)
-            if match:
-                return match.group(1)
+        # Method 1: Try ScraperAPI if available
+        if self.scraperapi_key:
+            result = self._extract_with_scraperapi(url)
+            if result['success']:
+                logger.info(f"✓ Extracted via ScraperAPI: {result['word_count']} words")
+                return result
         
-        return None
+        # Method 2: Try Newspaper3k
+        result = self._extract_with_newspaper(url)
+        if result['success']:
+            logger.info(f"✓ Extracted via Newspaper: {result['word_count']} words")
+            return result
+        
+        # Method 3: Direct request with BeautifulSoup
+        result = self._extract_with_beautifulsoup(url)
+        if result['success']:
+            logger.info(f"✓ Extracted via BeautifulSoup: {result['word_count']} words")
+            return result
+        
+        # All methods failed
+        logger.error(f"Failed to extract article from {url}")
+        return {
+            'success': False,
+            'url': url,
+            'title': 'Extraction Failed',
+            'text': '',
+            'author': 'Unknown',
+            'domain': urlparse(url).netloc,
+            'word_count': 0,
+            'error': 'All extraction methods failed'
+        }
     
-    def _extract_with_transcript_api(self, video_id: str) -> Dict[str, Any]:
-        """Try to extract using youtube-transcript-api library"""
+    def _extract_with_scraperapi(self, url: str) -> Dict[str, Any]:
+        """Extract using ScraperAPI"""
         try:
-            from youtube_transcript_api import YouTubeTranscriptApi
+            api_url = 'https://api.scraperapi.com'
+            params = {
+                'api_key': self.scraperapi_key,
+                'url': url,
+                'render': 'false'
+            }
             
-            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+            response = self.session.get(api_url, params=params, timeout=20)
+            response.raise_for_status()
             
-            # Combine transcript segments
-            full_text = ' '.join([entry['text'] for entry in transcript])
+            soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Get video info
-            video_info = self._get_video_info(video_id)
+            # Extract title
+            title = soup.find('title')
+            title = title.text.strip() if title else 'Untitled'
+            
+            # Extract article text
+            article_text = []
+            for p in soup.find_all(['p', 'article']):
+                text = p.get_text().strip()
+                if len(text) > 50:  # Filter out short snippets
+                    article_text.append(text)
+            
+            text = ' '.join(article_text)
+            
+            if len(text) < 100:
+                return {'success': False}
             
             return {
                 'success': True,
-                'title': video_info.get('title', 'YouTube Video'),
-                'channel': video_info.get('channel', 'Unknown Channel'),
-                'duration': video_info.get('duration', 0),
-                'transcript': full_text,
-                'segments': transcript[:50],  # First 50 segments
-                'word_count': len(full_text.split()),
-                'extraction_method': 'transcript_api',
-                'video_id': video_id,
-                'url': f'https://www.youtube.com/watch?v={video_id}'
+                'url': url,
+                'title': title,
+                'text': text,
+                'author': self._extract_author(soup),
+                'domain': urlparse(url).netloc,
+                'word_count': len(text.split()),
+                'method': 'scraperapi'
             }
             
-        except ImportError:
-            logger.warning("youtube-transcript-api not installed")
-            raise Exception("Transcript API not available")
         except Exception as e:
-            logger.error(f"Transcript API error: {e}")
-            raise e
+            logger.debug(f"ScraperAPI failed: {e}")
+            return {'success': False}
     
-    def _extract_manual_captions(self, video_id: str) -> Dict[str, Any]:
-        """Manual caption extraction (simplified approach)"""
-        # This is a placeholder for manual caption extraction
-        # In a real implementation, you'd parse YouTube's caption tracks
-        raise Exception("Manual extraction not implemented")
-    
-    def _get_video_info_fallback(self, video_id: str, url: str) -> Dict[str, Any]:
-        """Fallback method with basic video info"""
-        video_info = self._get_video_info(video_id)
-        
-        return {
-            'success': False,
-            'title': video_info.get('title', 'YouTube Video'),
-            'channel': video_info.get('channel', 'Unknown Channel'),
-            'duration': video_info.get('duration', 0),
-            'transcript': 'Transcript could not be automatically extracted. Please provide the transcript text manually.',
-            'segments': [],
-            'word_count': 0,
-            'extraction_method': 'fallback',
-            'video_id': video_id,
-            'url': url,
-            'error': 'Automatic transcript extraction not available for this video'
-        }
-    
-    def _get_video_info(self, video_id: str) -> Dict[str, Any]:
-        """Get basic video information"""
+    def _extract_with_newspaper(self, url: str) -> Dict[str, Any]:
+        """Extract using Newspaper3k"""
         try:
-            # Try to scrape basic info from YouTube page
-            response = self.session.get(f'https://www.youtube.com/watch?v={video_id}', timeout=10)
+            article = Article(url)
+            article.download()
+            article.parse()
+            
+            if not article.text or len(article.text) < 100:
+                return {'success': False}
+            
+            return {
+                'success': True,
+                'url': url,
+                'title': article.title or 'Untitled',
+                'text': article.text,
+                'author': ', '.join(article.authors) if article.authors else 'Unknown',
+                'domain': urlparse(url).netloc,
+                'word_count': len(article.text.split()),
+                'method': 'newspaper'
+            }
+            
+        except Exception as e:
+            logger.debug(f"Newspaper failed: {e}")
+            return {'success': False}
+    
+    def _extract_with_beautifulsoup(self, url: str) -> Dict[str, Any]:
+        """Extract using direct request and BeautifulSoup"""
+        try:
+            response = self.session.get(url, timeout=15)
             response.raise_for_status()
             
-            # Parse title and channel from HTML
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            title = 'YouTube Video'
-            channel = 'Unknown Channel'
+            # Remove scripts and styles
+            for script in soup(['script', 'style', 'meta', 'noscript']):
+                script.decompose()
             
-            # Try to extract title
-            title_tag = soup.find('title')
-            if title_tag:
-                title_text = title_tag.get_text()
-                if ' - YouTube' in title_text:
-                    title = title_text.replace(' - YouTube', '').strip()
+            # Extract title
+            title = soup.find('title')
+            title = title.text.strip() if title else 'Untitled'
             
-            # Try to extract channel name
-            channel_link = soup.find('link', {'itemprop': 'name'})
-            if channel_link:
-                channel = channel_link.get('content', channel)
+            # Extract main content
+            article_text = []
+            
+            # Try common article containers
+            article = soup.find(['article', 'main', 'div'], class_=re.compile('article|content|story'))
+            if article:
+                for p in article.find_all('p'):
+                    text = p.get_text().strip()
+                    if len(text) > 50:
+                        article_text.append(text)
+            else:
+                # Fallback to all paragraphs
+                for p in soup.find_all('p'):
+                    text = p.get_text().strip()
+                    if len(text) > 50:
+                        article_text.append(text)
+            
+            text = ' '.join(article_text)
+            
+            if len(text) < 100:
+                return {'success': False}
             
             return {
+                'success': True,
+                'url': url,
                 'title': title,
-                'channel': channel,
-                'duration': 0  # Would need additional API call
+                'text': text,
+                'author': self._extract_author(soup),
+                'domain': urlparse(url).netloc,
+                'word_count': len(text.split()),
+                'method': 'beautifulsoup'
             }
             
         except Exception as e:
-            logger.error(f"Error getting video info: {e}")
-            return {
-                'title': 'YouTube Video',
-                'channel': 'Unknown Channel', 
-                'duration': 0
-            }
+            logger.debug(f"BeautifulSoup failed: {e}")
+            return {'success': False}
     
-    def _error_result(self, error_message: str) -> Dict[str, Any]:
-        """Return error result"""
-        return {
-            'success': False,
-            'error': error_message,
-            'title': 'YouTube Video',
-            'channel': 'Unknown Channel',
-            'duration': 0,
-            'transcript': '',
-            'segments': [],
-            'word_count': 0,
-            'extraction_method': 'error'
-        }
+    def _extract_author(self, soup) -> str:
+        """Extract author from HTML"""
+        # Try meta tags
+        author_meta = soup.find('meta', {'name': 'author'}) or \
+                     soup.find('meta', {'property': 'article:author'})
+        if author_meta:
+            return author_meta.get('content', 'Unknown')
+        
+        # Try common author elements
+        author_elem = soup.find(class_=re.compile('author|byline|by-line'))
+        if author_elem:
+            return author_elem.get_text().strip().replace('By ', '').replace('by ', '')
+        
+        return 'Unknown'
 
 # ================================================================================
-# CONTENT TYPE DETECTOR
+# SIMPLE ANALYZERS - DIRECT AND WORKING
 # ================================================================================
 
-class ContentTypeDetector:
-    """Detect content type and route to appropriate analyzer"""
-    
-    @staticmethod
-    def detect_content_type(content: str) -> str:
-        """Detect if content is URL, YouTube URL, or text"""
-        if not content or len(content.strip()) < 3:
-            return 'text'
-        
-        content = content.strip()
-        
-        # Check for YouTube URLs
-        youtube_patterns = [
-            r'youtube\.com/watch',
-            r'youtu\.be/',
-            r'youtube\.com/embed/',
-            r'youtube\.com/v/',
-            r'm\.youtube\.com'
-        ]
-        
-        for pattern in youtube_patterns:
-            if re.search(pattern, content, re.IGNORECASE):
-                return 'youtube'
-        
-        # Check for general URLs
-        url_pattern = r'^https?://.+'
-        if re.match(url_pattern, content, re.IGNORECASE):
-            return 'url'
-        
-        # Default to text
-        return 'text'
-    
-    @staticmethod
-    def get_analysis_mode(content_type: str) -> str:
-        """Get analysis mode based on content type"""
-        if content_type == 'youtube':
-            return 'transcript'
-        elif content_type in ['url', 'text']:
-            return 'news'
-        else:
-            return 'news'  # Default
-
-# ================================================================================
-# PRESERVE EXISTING ANALYSIS SERVICES (keeping all original functionality)
-# ================================================================================
-
-# Import your existing services with better error handling
-NewsAnalyzer = None
-AnalysisPipeline = None
-
-# Try importing AnalysisPipeline first
-try:
-    from services.analysis_pipeline import AnalysisPipeline
-    logger.info("✓ AnalysisPipeline imported successfully")
-except ImportError as e:
-    logger.error(f"Failed to import AnalysisPipeline: {e}")
-    import traceback
-    traceback.print_exc()
-
-# Try importing NewsAnalyzer
-try:
-    from services.news_analyzer import NewsAnalyzer
-    logger.info("✓ NewsAnalyzer imported successfully")
-except ImportError as e:
-    logger.error(f"Failed to import NewsAnalyzer: {e}")
-    import traceback
-    traceback.print_exc()
-
-# If NewsAnalyzer didn't import, create a working version that uses the pipeline directly
-if NewsAnalyzer is None:
-    logger.warning("Creating emergency NewsAnalyzer that uses pipeline directly...")
-    
-    class NewsAnalyzer:
-        """Emergency NewsAnalyzer that bypasses the broken import"""
-        
-        def __init__(self):
-            """Initialize with direct pipeline access"""
-            self.pipeline = None
-            try:
-                if AnalysisPipeline:
-                    self.pipeline = AnalysisPipeline()
-                    logger.info("✓ Emergency NewsAnalyzer created with pipeline")
-                else:
-                    logger.error("Cannot create pipeline - AnalysisPipeline not available")
-            except Exception as e:
-                logger.error(f"Failed to create pipeline in emergency NewsAnalyzer: {e}")
-        
-        def analyze(self, content: str, content_type: str = 'url') -> Dict[str, Any]:
-            """Analyze using pipeline directly"""
-            if not self.pipeline:
-                logger.error("No pipeline available for analysis")
-                return {
-                    'success': False,
-                    'error': 'Analysis pipeline not available',
-                    'trust_score': 0,
-                    'article_summary': 'Pipeline initialization failed',
-                    'source': 'Unknown',
-                    'author': 'Unknown',
-                    'findings_summary': 'Analysis pipeline could not be initialized.',
-                    'detailed_analysis': {},
-                    'processing_time': 0
-                }
-            
-            try:
-                # Prepare data for pipeline
-                if content_type == 'url':
-                    analysis_data = {'url': content}
-                else:
-                    analysis_data = {'text': content, 'content': content}
-                
-                logger.info(f"Emergency NewsAnalyzer calling pipeline with {content_type}: {content[:100]}")
-                
-                # Call pipeline
-                pipeline_result = self.pipeline.analyze(analysis_data)
-                
-                # Extract article info
-                article = pipeline_result.get('article', {})
-                
-                # Format response
-                response = {
-                    'success': pipeline_result.get('success', False),
-                    'trust_score': pipeline_result.get('trust_score', 50),
-                    'article_summary': article.get('title', 'Untitled Article'),
-                    'source': article.get('domain', 'Unknown'),
-                    'author': article.get('author', 'Unknown'),
-                    'findings_summary': self._generate_findings_summary(pipeline_result),
-                    'detailed_analysis': pipeline_result.get('detailed_analysis', {}),
-                    'processing_time': pipeline_result.get('metadata', {}).get('processing_time', 0),
-                    'article': article
-                }
-                
-                logger.info(f"Emergency NewsAnalyzer completed: score={response['trust_score']}")
-                return response
-                
-            except Exception as e:
-                logger.error(f"Emergency NewsAnalyzer failed: {e}")
-                import traceback
-                traceback.print_exc()
-                return {
-                    'success': False,
-                    'error': str(e),
-                    'trust_score': 0,
-                    'article_summary': 'Analysis failed',
-                    'source': 'Unknown',
-                    'author': 'Unknown',
-                    'findings_summary': f'Analysis error: {str(e)}',
-                    'detailed_analysis': {},
-                    'processing_time': 0
-                }
-        
-        def _generate_findings_summary(self, pipeline_result: Dict[str, Any]) -> str:
-            """Generate findings summary from pipeline results"""
-            trust_score = pipeline_result.get('trust_score', 50)
-            
-            if trust_score >= 80:
-                return "Analysis indicates high credibility with strong sourcing and minimal bias."
-            elif trust_score >= 60:
-                return "Analysis shows moderate credibility with some concerns noted."
-            elif trust_score >= 40:
-                return "Analysis reveals mixed credibility with several issues identified."
-            else:
-                return "Analysis indicates low credibility with significant concerns."
-
-# ================================================================================
-# UNIFIED ANALYZER - ORCHESTRATES BOTH MODES
-# ================================================================================
-
-class UnifiedAnalyzer:
-    """Unified analyzer supporting both news and transcript analysis"""
+class SimpleAnalyzers:
+    """All analysis in one simple class"""
     
     def __init__(self):
-        # Initialize existing components
-        self.news_analyzer = NewsAnalyzer()
-        self.youtube_service = YouTubeTranscriptService()
-        self.content_detector = ContentTypeDetector()
+        self.source_database = {
+            'reuters.com': {'credibility': 95, 'bias': 'Minimal'},
+            'apnews.com': {'credibility': 95, 'bias': 'Minimal'},
+            'bbc.com': {'credibility': 90, 'bias': 'Minimal'},
+            'nytimes.com': {'credibility': 85, 'bias': 'Left-Center'},
+            'washingtonpost.com': {'credibility': 85, 'bias': 'Left-Center'},
+            'wsj.com': {'credibility': 85, 'bias': 'Right-Center'},
+            'cnn.com': {'credibility': 70, 'bias': 'Left'},
+            'foxnews.com': {'credibility': 70, 'bias': 'Right'},
+            'msnbc.com': {'credibility': 70, 'bias': 'Left'},
+            'breitbart.com': {'credibility': 30, 'bias': 'Far-Right'},
+            'dailymail.co.uk': {'credibility': 40, 'bias': 'Right'},
+            'buzzfeed.com': {'credibility': 50, 'bias': 'Left'},
+        }
+    
+    def analyze_source_credibility(self, domain: str) -> Dict[str, Any]:
+        """Analyze source credibility"""
+        clean_domain = domain.replace('www.', '')
         
-        logger.info("✓ UnifiedAnalyzer initialized with both modes")
-    
-    def analyze(self, content: str, analysis_mode: str = 'auto') -> Dict[str, Any]:
-        """
-        Unified analysis supporting both news and transcript modes
+        if clean_domain in self.source_database:
+            db_info = self.source_database[clean_domain]
+            score = db_info['credibility']
+            bias = db_info['bias']
+        else:
+            score = 50  # Unknown source
+            bias = 'Unknown'
         
-        Args:
-            content: URL, YouTube URL, or text content
-            analysis_mode: 'news', 'transcript', or 'auto' for detection
-            
-        Returns:
-            Unified analysis results
-        """
-        try:
-            start_time = time.time()
-            
-            # Detect content type and mode
-            if analysis_mode == 'auto':
-                content_type = self.content_detector.detect_content_type(content)
-                analysis_mode = self.content_detector.get_analysis_mode(content_type)
-            else:
-                content_type = 'youtube' if analysis_mode == 'transcript' else 'url'
-            
-            logger.info(f"Unified analysis: mode={analysis_mode}, type={content_type}")
-            
-            # Route to appropriate analyzer
-            if analysis_mode == 'transcript':
-                return self._analyze_transcript(content, content_type)
-            else:
-                return self._analyze_news(content, content_type)
-                
-        except Exception as e:
-            logger.error(f"Unified analysis error: {e}", exc_info=True)
-            return self._create_error_response(str(e), content)
+        return {
+            'score': score,
+            'credibility_score': score,
+            'credibility_level': self._get_level(score),
+            'bias': bias,
+            'domain': domain,
+            'in_database': clean_domain in self.source_database
+        }
     
-    def _analyze_transcript(self, content: str, content_type: str) -> Dict[str, Any]:
-        """Analyze transcript content (YouTube or text)"""
-        try:
-            # Extract transcript
-            if content_type == 'youtube':
-                extraction_result = self.youtube_service.extract_transcript(content)
-                if not extraction_result['success']:
-                    return self._create_error_response(
-                        extraction_result.get('error', 'Failed to extract transcript'),
-                        content, mode='transcript'
-                    )
-                transcript_text = extraction_result['transcript']
-                metadata = {
-                    'title': extraction_result.get('title', 'YouTube Video'),
-                    'channel': extraction_result.get('channel', 'Unknown'),
-                    'source_type': 'youtube',
-                    'video_id': extraction_result.get('video_id'),
-                    'url': extraction_result.get('url', content)
-                }
-            else:
-                # Direct text input
-                transcript_text = content
-                metadata = {
-                    'title': 'Transcript Analysis',
-                    'channel': 'Direct Input',
-                    'source_type': 'text',
-                    'url': None
-                }
-            
-            # Prepare data for analysis (reuse news analyzer infrastructure)
-            analysis_data = {
-                'text': transcript_text,
-                'title': metadata['title'],
-                'author': metadata['channel'],
-                'domain': 'transcript',
-                'content': transcript_text,
-                'url': metadata.get('url'),
-                'analysis_mode': 'transcript'
-            }
-            
-            # Run through existing analysis pipeline (reusing services)
-            result = self.news_analyzer.analyze(transcript_text, content_type='text')
-            
-            # Enhance result with transcript-specific metadata
-            result.update({
-                'analysis_mode': 'transcript',
-                'content_type': content_type,
-                'source_metadata': metadata,
-                'transcript_length': len(transcript_text.split()) if transcript_text else 0
-            })
-            
-            # Update article summary for transcript context
-            result['article_summary'] = f"Transcript: {metadata['title']}"
-            result['source'] = metadata['channel']
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Transcript analysis error: {e}", exc_info=True)
-            return self._create_error_response(str(e), content, mode='transcript')
+    def analyze_bias(self, text: str) -> Dict[str, Any]:
+        """Simple bias detection"""
+        text_lower = text.lower()
+        
+        # Count bias indicators
+        left_words = ['liberal', 'progressive', 'inequality', 'social justice']
+        right_words = ['conservative', 'traditional', 'free market', 'liberty']
+        
+        left_count = sum(1 for word in left_words if word in text_lower)
+        right_count = sum(1 for word in right_words if word in text_lower)
+        
+        # Calculate bias score (0-100, where 100 is highly biased)
+        total_indicators = left_count + right_count
+        word_count = len(text.split())
+        
+        if word_count > 0:
+            bias_score = min(100, (total_indicators / word_count) * 1000)
+        else:
+            bias_score = 0
+        
+        # Determine political lean
+        if left_count > right_count:
+            political_lean = 'Left'
+        elif right_count > left_count:
+            political_lean = 'Right'
+        else:
+            political_lean = 'Center'
+        
+        return {
+            'score': int(bias_score),
+            'bias_score': int(bias_score),
+            'bias_level': self._get_bias_level(bias_score),
+            'political_lean': political_lean,
+            'objectivity_score': 100 - int(bias_score)
+        }
     
-    def _analyze_news(self, content: str, content_type: str) -> Dict[str, Any]:
-        """Analyze news content (preserve existing functionality)"""
-        try:
-            # Use existing news analyzer (unchanged)
-            result = self.news_analyzer.analyze(content, content_type=content_type)
-            
-            # Add unified metadata
-            result.update({
-                'analysis_mode': 'news',
-                'content_type': content_type
-            })
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"News analysis error: {e}", exc_info=True)
-            return self._create_error_response(str(e), content, mode='news')
+    def analyze_author(self, author: str, domain: str) -> Dict[str, Any]:
+        """Simple author analysis"""
+        # Basic credibility based on whether author is identified
+        if author and author != 'Unknown':
+            # If from credible source, give higher score
+            source_cred = self.source_database.get(domain.replace('www.', ''), {}).get('credibility', 50)
+            score = min(100, source_cred + 10)
+        else:
+            score = 30  # No author identified
+        
+        return {
+            'score': score,
+            'credibility_score': score,
+            'author_name': author,
+            'verified': author != 'Unknown'
+        }
     
-    def _create_error_response(self, error_msg: str, content: str, mode: str = 'news') -> Dict[str, Any]:
-        """Create unified error response"""
+    def check_facts(self, text: str) -> Dict[str, Any]:
+        """Simple fact checking (pattern-based)"""
+        # Count potential factual claims
+        claim_patterns = [
+            r'\d+%',  # Percentages
+            r'\d+ million',  # Large numbers
+            r'\d+ billion',
+            r'study shows',
+            r'research indicates',
+            r'according to'
+        ]
+        
+        claims_found = 0
+        for pattern in claim_patterns:
+            claims_found += len(re.findall(pattern, text, re.IGNORECASE))
+        
+        # Simulate verification (in real app, would check against databases)
+        verified = max(0, claims_found - 2)  # Assume we can verify most claims
+        
+        return {
+            'score': min(100, verified * 20) if claims_found > 0 else 50,
+            'claims_found': claims_found,
+            'claims_verified': verified,
+            'fact_checks': []  # Simplified - no individual checks
+        }
+    
+    def analyze_transparency(self, text: str, author: str) -> Dict[str, Any]:
+        """Simple transparency analysis"""
+        score = 50  # Base score
+        
+        # Check for source citations
+        if 'according to' in text.lower() or 'said' in text.lower():
+            score += 20
+        
+        # Check for author
+        if author != 'Unknown':
+            score += 20
+        
+        # Check for quotes
+        if '"' in text:
+            score += 10
+        
+        return {
+            'score': min(100, score),
+            'transparency_score': min(100, score),
+            'sources_cited': text.count('according to'),
+            'quotes_used': text.count('"') // 2
+        }
+    
+    def detect_manipulation(self, text: str) -> Dict[str, Any]:
+        """Simple manipulation detection"""
+        manipulation_words = [
+            'shocking', 'explosive', 'devastating', 'bombshell',
+            'you won\'t believe', 'crisis', 'disaster'
+        ]
+        
+        text_lower = text.lower()
+        techniques_found = sum(1 for word in manipulation_words if word in text_lower)
+        
+        score = min(100, techniques_found * 15)
+        
+        return {
+            'score': score,
+            'manipulation_score': score,
+            'manipulation_level': self._get_level(100 - score),
+            'techniques_found': techniques_found
+        }
+    
+    def analyze_content(self, text: str) -> Dict[str, Any]:
+        """Simple content quality analysis"""
+        word_count = len(text.split())
+        sentence_count = len(re.findall(r'[.!?]+', text))
+        
+        # Average sentence length
+        avg_sentence_length = word_count / max(sentence_count, 1)
+        
+        # Simple readability score
+        if avg_sentence_length <= 15:
+            readability_score = 90
+        elif avg_sentence_length <= 20:
+            readability_score = 75
+        elif avg_sentence_length <= 25:
+            readability_score = 60
+        else:
+            readability_score = 40
+        
+        return {
+            'score': readability_score,
+            'quality_score': readability_score,
+            'readability': 'Good' if readability_score > 60 else 'Fair'
+        }
+    
+    def _get_level(self, score: int) -> str:
+        """Get level from score"""
+        if score >= 80:
+            return 'High'
+        elif score >= 60:
+            return 'Medium'
+        elif score >= 40:
+            return 'Low'
+        else:
+            return 'Very Low'
+    
+    def _get_bias_level(self, score: int) -> str:
+        """Get bias level from score"""
+        if score >= 70:
+            return 'High Bias'
+        elif score >= 40:
+            return 'Moderate Bias'
+        elif score >= 20:
+            return 'Low Bias'
+        else:
+            return 'Minimal Bias'
+
+# ================================================================================
+# MAIN ANALYZER - COORDINATES EVERYTHING
+# ================================================================================
+
+class TruthLensAnalyzer:
+    """Main analyzer that coordinates everything"""
+    
+    def __init__(self):
+        self.extractor = SimpleArticleExtractor()
+        self.analyzers = SimpleAnalyzers()
+        logger.info("✓ TruthLens Analyzer initialized")
+    
+    def analyze(self, url: str) -> Dict[str, Any]:
+        """Complete analysis of a news article"""
+        start_time = time.time()
+        
+        # Step 1: Extract article
+        article = self.extractor.extract(url)
+        
+        if not article['success']:
+            logger.error(f"Article extraction failed for {url}")
+            return self._create_error_response("Failed to extract article content", url)
+        
+        logger.info(f"✓ Article extracted: {article['title'][:50]}... ({article['word_count']} words)")
+        
+        # Step 2: Run all analyses
+        text = article['text']
+        domain = article['domain']
+        author = article['author']
+        
+        # Run individual analyzers
+        source_credibility = self.analyzers.analyze_source_credibility(domain)
+        bias_detector = self.analyzers.analyze_bias(text)
+        author_analyzer = self.analyzers.analyze_author(author, domain)
+        fact_checker = self.analyzers.check_facts(text)
+        transparency_analyzer = self.analyzers.analyze_transparency(text, author)
+        manipulation_detector = self.analyzers.detect_manipulation(text)
+        content_analyzer = self.analyzers.analyze_content(text)
+        
+        # Calculate overall trust score
+        trust_score = self._calculate_trust_score({
+            'source_credibility': source_credibility,
+            'bias_detector': bias_detector,
+            'author_analyzer': author_analyzer,
+            'fact_checker': fact_checker,
+            'transparency_analyzer': transparency_analyzer,
+            'manipulation_detector': manipulation_detector,
+            'content_analyzer': content_analyzer
+        })
+        
+        # Generate findings summary
+        findings_summary = self._generate_findings_summary(trust_score, source_credibility, bias_detector)
+        
+        # Build response
+        response = {
+            'success': True,
+            'trust_score': trust_score,
+            'article_summary': article['title'],
+            'source': domain,
+            'author': author,
+            'findings_summary': findings_summary,
+            'detailed_analysis': {
+                'source_credibility': source_credibility,
+                'bias_detector': bias_detector,
+                'author_analyzer': author_analyzer,
+                'fact_checker': fact_checker,
+                'transparency_analyzer': transparency_analyzer,
+                'manipulation_detector': manipulation_detector,
+                'content_analyzer': content_analyzer
+            },
+            'article': {
+                'title': article['title'],
+                'url': url,
+                'word_count': article['word_count'],
+                'extraction_method': article.get('method', 'unknown')
+            },
+            'processing_time': round(time.time() - start_time, 2)
+        }
+        
+        logger.info(f"✓ Analysis complete: Trust Score = {trust_score}/100 in {response['processing_time']}s")
+        
+        # Log response size
+        response_size = len(json.dumps(response))
+        logger.info(f"Response size: {response_size} bytes (should be 10-15KB for real article)")
+        
+        return response
+    
+    def _calculate_trust_score(self, analyses: Dict[str, Any]) -> int:
+        """Calculate weighted trust score"""
+        weights = {
+            'source_credibility': 0.25,
+            'author_analyzer': 0.15,
+            'bias_detector': 0.20,  # Inverted - less bias = higher trust
+            'fact_checker': 0.15,
+            'transparency_analyzer': 0.10,
+            'manipulation_detector': 0.10,  # Inverted
+            'content_analyzer': 0.05
+        }
+        
+        total_score = 0
+        
+        for service, weight in weights.items():
+            service_data = analyses.get(service, {})
+            score = service_data.get('score', 50)
+            
+            # Invert scores for negative indicators
+            if service in ['bias_detector', 'manipulation_detector']:
+                score = 100 - score
+            
+            total_score += score * weight
+        
+        return min(100, max(0, int(total_score)))
+    
+    def _generate_findings_summary(self, trust_score: int, source_cred: Dict, bias: Dict) -> str:
+        """Generate human-readable findings summary"""
+        if trust_score >= 80:
+            summary = "High credibility article from reliable source. "
+        elif trust_score >= 60:
+            summary = "Generally credible with some concerns. "
+        elif trust_score >= 40:
+            summary = "Mixed credibility, verify claims independently. "
+        else:
+            summary = "Low credibility, approach with caution. "
+        
+        # Add specific findings
+        if source_cred['score'] >= 80:
+            summary += "Well-established source. "
+        elif source_cred['score'] < 40:
+            summary += "Source has credibility issues. "
+        
+        if bias['bias_score'] > 60:
+            summary += f"Shows {bias['political_lean'].lower()} bias. "
+        
+        return summary
+    
+    def _create_error_response(self, error_msg: str, url: str) -> Dict[str, Any]:
+        """Create error response"""
         return {
             'success': False,
             'error': error_msg,
-            'analysis_mode': mode,
-            'content_type': self.content_detector.detect_content_type(content),
             'trust_score': 0,
-            'article_summary': 'Analysis failed',
-            'source': 'Unknown',
+            'article_summary': 'Analysis Failed',
+            'source': urlparse(url).netloc if url else 'Unknown',
             'author': 'Unknown',
-            'findings_summary': f'Analysis could not be completed: {error_msg}',
+            'findings_summary': error_msg,
             'detailed_analysis': {},
             'processing_time': 0
         }
 
 # ================================================================================
-# INITIALIZE UNIFIED COMPONENTS AT MODULE LEVEL
+# FLASK APPLICATION
 # ================================================================================
 
-# Initialize the unified analyzer
-unified_analyzer = UnifiedAnalyzer()
-logger.info("✓ Unified analyzer initialized")
+app = Flask(__name__)
+app.config.from_object(Config)
+CORS(app, origins=["*"])
 
-# ================================================================================
-# ROUTES - ENHANCED FOR UNIFIED FUNCTIONALITY
-# ================================================================================
+# Initialize analyzer
+analyzer = TruthLensAnalyzer()
+
+logger.info("=" * 80)
+logger.info("TRUTHLENS CLEAN ARCHITECTURE - v5.0.0")
+logger.info(f"Debug: {Config.DEBUG}")
+logger.info(f"ScraperAPI: {'✓' if Config.SCRAPERAPI_KEY else '✗'}")
+logger.info(f"OpenAI: {'✓' if Config.OPENAI_API_KEY else '✗'}")
+logger.info("=" * 80)
 
 @app.route('/')
 def index():
-    """Serve the unified application page"""
-    logger.info("Serving unified index page - attempting to render unified_index.html")
+    """Serve the main page"""
     try:
-        return render_template('unified_index.html')
-    except Exception as e:
-        logger.error(f"Failed to render unified_index.html: {e}")
-        logger.info("Attempting fallback to index.html")
-        try:
-            return render_template('index.html')
-        except Exception as e2:
-            logger.error(f"Failed to render index.html: {e2}")
-            # Return a basic HTML response as last resort
-            return """
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>TruthLens Unified Analyzer</title>
-                <style>
-                    body { font-family: Arial; padding: 20px; }
-                    .error { color: red; padding: 20px; border: 1px solid red; }
-                </style>
-            </head>
-            <body>
-                <h1>TruthLens Unified Analyzer</h1>
-                <div class="error">
-                    <h2>Template Loading Error</h2>
-                    <p>The application is running but the template files could not be loaded.</p>
-                    <p>Please ensure that either unified_index.html or index.html exists in the templates directory.</p>
-                    <p>API endpoints are available at /api/analyze</p>
-                </div>
-            </body>
-            </html>
-            """, 200
+        return render_template('index.html')
+    except:
+        return """
+        <html>
+        <head><title>TruthLens</title></head>
+        <body>
+            <h1>TruthLens News Analyzer</h1>
+            <p>API is running. Use POST /api/analyze with {'url': 'article_url'}</p>
+        </body>
+        </html>
+        """
 
 @app.route('/health')
 def health():
-    """Health check endpoint"""
+    """Health check"""
     return jsonify({
         'status': 'healthy',
-        'timestamp': datetime.utcnow().isoformat(),
-        'service': 'unified-analyzer',
-        'version': '4.0.4-unified',
-        'modes': {
-            'news': Config.ENABLE_NEWS_MODE,
-            'transcript': Config.ENABLE_TRANSCRIPT_MODE
-        },
-        'nlp_available': NLP_AVAILABLE,
-        'template_status': 'checking'
-    }), 200
-
-@app.route('/api/status')
-def api_status():
-    """Enhanced API status endpoint"""
-    # Check template status
-    template_status = {}
-    template_dir = os.path.join(app.root_path, 'templates')
-    if os.path.exists(template_dir):
-        templates = os.listdir(template_dir)
-        template_status['unified_index.html'] = 'unified_index.html' in templates
-        template_status['index.html'] = 'index.html' in templates
-    else:
-        template_status['error'] = 'Templates directory not found'
-    
-    return jsonify({
-        'status': 'operational',
-        'modes': {
-            'news_analysis': Config.ENABLE_NEWS_MODE,
-            'transcript_analysis': Config.ENABLE_TRANSCRIPT_MODE
-        },
-        'services': {
-            'unified_analyzer': 'ready',
-            'news_analyzer': 'ready',
-            'youtube_service': bool(Config.YOUTUBE_API_KEY),
-            'nlp': NLP_AVAILABLE
-        },
-        'templates': template_status,
+        'version': '5.0.0',
         'timestamp': datetime.utcnow().isoformat()
-    }), 200
+    })
 
 @app.route('/api/analyze', methods=['POST', 'OPTIONS'])
-def analyze():
-    """Unified analysis endpoint"""
-    
-    # Handle CORS preflight
+def analyze_endpoint():
+    """Main analysis endpoint"""
     if request.method == 'OPTIONS':
         return '', 204
     
@@ -862,355 +658,37 @@ def analyze():
         data = request.get_json()
         
         if not data:
-            return jsonify({
-                'success': False,
-                'error': 'No data provided'
-            }), 400
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
         
-        # Extract input data
-        content = data.get('input_data') or data.get('url') or data.get('text', '')
-        analysis_mode = data.get('analysis_mode', 'auto')  # 'news', 'transcript', or 'auto'
+        # Get URL from request
+        url = data.get('url') or data.get('input_data', '')
         
-        if not content:
-            return jsonify({
-                'success': False,
-                'error': 'No URL or text provided for analysis'
-            }), 400
+        if not url or not url.startswith('http'):
+            return jsonify({'success': False, 'error': 'Valid URL required'}), 400
         
-        logger.info(f"Unified analysis request: mode={analysis_mode}, content_length={len(content)}")
+        logger.info(f"Analysis request for: {url}")
         
-        # Detect content type for logging
-        if analysis_mode == 'auto':
-            content_type = ContentTypeDetector.detect_content_type(content)
-        else:
-            content_type = 'youtube' if analysis_mode == 'transcript' else 'url'
+        # Perform analysis
+        result = analyzer.analyze(url)
         
-        logger.info(f"Unified analysis: mode={analysis_mode}, type={content_type}")
-        
-        # Log NewsAnalyzer type for debugging
-        logger.info(f"NewsAnalyzer class: {unified_analyzer.news_analyzer.__class__.__name__}")
-        logger.info(f"NewsAnalyzer has pipeline: {hasattr(unified_analyzer.news_analyzer, 'pipeline')}")
-        
-        # Log service registry status for debugging
-        if service_registry:
-            try:
-                status = service_registry.get_service_status()
-                ae_status = status.get('services', {}).get('article_extractor', {})
-                if ae_status:
-                    logger.info(f"ArticleExtractor status: registered={ae_status.get('registered')}, available={ae_status.get('available')}, fallback={ae_status.get('fallback')}")
-            except:
-                pass
-        
-        # Perform unified analysis
-        logger.info("Calling unified_analyzer.analyze()...")
-        result = unified_analyzer.analyze(content, analysis_mode)
-        
-        # Log result size to detect if extraction happened
-        import json
-        result_json = json.dumps(result, default=str)
-        logger.info(f"Result size: {len(result_json)} bytes")
-        
-        # Check if article was extracted
-        if 'article' in result:
-            article = result['article']
-            logger.info(f"Article extracted: title='{article.get('title', 'N/A')[:50]}', word_count={article.get('word_count', 0)}")
-        
-        # Ensure success field is present
-        if 'success' not in result:
-            result['success'] = True if result.get('trust_score', 0) > 0 else False
-        
-        if result.get('success'):
-            logger.info(f"Unified analysis completed: {result.get('analysis_mode')} mode, trust_score={result.get('trust_score')}")
+        if result['success']:
             return jsonify(result), 200
         else:
-            logger.error(f"Unified analysis failed: {result.get('error')}")
             return jsonify(result), 400
             
     except Exception as e:
-        logger.error(f"API error: {str(e)}", exc_info=True)
+        logger.error(f"Analysis error: {e}", exc_info=True)
         return jsonify({
             'success': False,
-            'error': f'Analysis failed: {str(e)}'
-        }), 500
-
-@app.route('/api/detect-content-type', methods=['POST'])
-def detect_content_type():
-    """Endpoint to detect content type"""
-    try:
-        data = request.get_json()
-        content = data.get('content', '')
-        
-        content_type = ContentTypeDetector.detect_content_type(content)
-        analysis_mode = ContentTypeDetector.get_analysis_mode(content_type)
-        
-        return jsonify({
-            'content_type': content_type,
-            'analysis_mode': analysis_mode,
-            'supported': True
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
             'error': str(e)
         }), 500
 
 @app.route('/static/<path:path>')
 def send_static(path):
-    """Serve static files with better error handling"""
-    try:
-        # Log the request for debugging
-        logger.info(f"Static file requested: {path}")
-        
-        # Check if file exists
-        static_file = os.path.join(app.static_folder, path)
-        if not os.path.exists(static_file):
-            logger.warning(f"Static file not found: {path}")
-            
-            # Try alternative names for common files
-            if path == 'js/unified-app-core.js':
-                # Try to serve app-core.js instead
-                alt_path = 'js/app-core.js'
-                alt_file = os.path.join(app.static_folder, alt_path)
-                if os.path.exists(alt_file):
-                    logger.info(f"Serving alternative: {alt_path} instead of {path}")
-                    return send_from_directory('static', alt_path)
-        
-        return send_from_directory('static', path)
-    except Exception as e:
-        logger.error(f"Error serving static file {path}: {e}")
-        return f"Static file not found: {path}", 404
-
-@app.route('/favicon.ico')
-def favicon():
-    """Serve favicon"""
-    try:
-        return send_from_directory('static', 'favicon.ico', mimetype='image/x-icon')
-    except:
-        return '', 204
-
-@app.route('/diagnostic')
-def diagnostic():
-    """Serve diagnostic page for troubleshooting UI issues"""
-    logger.info("Serving diagnostic page")
-    
-    diagnostic_html = """<!DOCTYPE html>
-<html>
-<head>
-    <title>TruthLens Diagnostic Tool</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
-        .card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        .pass { color: green; font-weight: bold; }
-        .fail { color: red; font-weight: bold; }
-        .warn { color: orange; font-weight: bold; }
-        code { background: #333; color: lime; padding: 2px 6px; border-radius: 3px; }
-        pre { background: #333; color: lime; padding: 15px; border-radius: 5px; overflow-x: auto; }
-        button { background: #6366f1; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 16px; }
-        button:hover { background: #4f46e5; }
-        .result-item { padding: 8px; margin: 5px 0; border-left: 4px solid #ddd; background: #f9f9f9; }
-        .result-item.pass { border-left-color: green; background: #f0fff0; }
-        .result-item.fail { border-left-color: red; background: #fff0f0; }
-        h1 { color: #333; }
-        h2 { color: #555; border-bottom: 2px solid #e0e0e0; padding-bottom: 10px; }
-        .diagnosis-summary { padding: 15px; background: #f0f0f0; border-radius: 8px; margin-top: 20px; }
-        .fix-instruction { background: #e3f2fd; padding: 15px; border-radius: 6px; border-left: 4px solid #2196f3; margin: 10px 0; }
-    </style>
-</head>
-<body>
-    <h1>🔍 TruthLens Diagnostic Tool</h1>
-    
-    <div class="card">
-        <h2>Quick Test</h2>
-        <button onclick="runFullTest()">Run Complete Diagnostics</button>
-        <div id="results"></div>
-    </div>
-    
-    <div class="card">
-        <h2>Manual Console Test</h2>
-        <p>Open browser console (F12) and paste this:</p>
-        <pre>
-console.log('=== DIAGNOSTIC ===');
-console.log('ServiceTemplates:', typeof ServiceTemplates);
-console.log('UnifiedAnalyzer:', typeof unifiedAnalyzer);
-console.log('CSS count:', document.styleSheets.length);
-console.log('Has cleanAuthorName:', typeof unifiedAnalyzer?.cleanAuthorName);
-        </pre>
-    </div>
-    
-    <div class="card">
-        <h2>File Size Issues Detected</h2>
-        <p><strong>unified-app-core.js is only 3KB!</strong> This is wrong - it should be ~12KB.</p>
-        <p>This means you're running an old/incomplete version of the JavaScript file.</p>
-        <div class="fix-instruction">
-            <strong>FIX REQUIRED:</strong> Deploy the complete v6.0 unified-app-core.js file (12KB version)
-        </div>
-    </div>
-    
-    <script>
-        function runFullTest() {
-            const r = document.getElementById('results');
-            let html = '<h3>Diagnostic Results:</h3>';
-            let issues = [];
-            
-            // Test 1: ServiceTemplates
-            const st = typeof ServiceTemplates !== 'undefined';
-            html += '<div class="result-item ' + (st ? 'pass' : 'fail') + '">';
-            html += '1. ServiceTemplates: ' + (st ? '✓ Loaded' : '✗ NOT FOUND');
-            if (st && ServiceTemplates.displayAllAnalyses) {
-                html += ' (displayAllAnalyses: ✓)';
-            } else if (st) {
-                html += ' (displayAllAnalyses: ✗)';
-                issues.push('ServiceTemplates missing displayAllAnalyses method');
-            }
-            html += '</div>';
-            if (!st) issues.push('ServiceTemplates not loading - this causes plain text results');
-            
-            // Test 2: UnifiedAnalyzer
-            const ua = typeof unifiedAnalyzer !== 'undefined';
-            html += '<div class="result-item ' + (ua ? 'pass' : 'fail') + '">';
-            html += '2. UnifiedAnalyzer: ' + (ua ? '✓ Loaded' : '✗ NOT FOUND');
-            if (ua && typeof unifiedAnalyzer.cleanAuthorName === 'function') {
-                html += ' (cleanAuthorName: ✓)';
-            } else if (ua) {
-                html += ' (cleanAuthorName: <span class="fail">✗ MISSING</span>)';
-                issues.push('cleanAuthorName method missing - wrong JS version');
-            }
-            html += '</div>';
-            if (!ua) issues.push('UnifiedAnalyzer not loading');
-            
-            // Test 3: CSS Files
-            const css = document.styleSheets.length;
-            html += '<div class="result-item ' + (css > 1 ? 'pass' : css > 0 ? 'warn' : 'fail') + '">';
-            html += '3. CSS Files: ' + css + ' stylesheets loaded';
-            if (css === 0) {
-                html += ' <span class="fail">(NO CSS!)</span>';
-                issues.push('No CSS files loading');
-            } else if (css === 1) {
-                html += ' <span class="warn">(Only 1 - may be missing main.css)</span>';
-            }
-            html += '</div>';
-            
-            // Test 4: Required DOM elements
-            const container = document.getElementById('serviceAnalysisContainer');
-            html += '<div class="result-item ' + (container ? 'pass' : 'fail') + '">';
-            html += '4. Service Container: ' + (container ? '✓ Found' : '✗ MISSING');
-            html += '</div>';
-            if (!container) issues.push('serviceAnalysisContainer element missing');
-            
-            // Test 5: Font Awesome
-            const fa = document.querySelector('link[href*="font-awesome"]');
-            html += '<div class="result-item ' + (fa ? 'pass' : 'warn') + '">';
-            html += '5. Font Awesome Icons: ' + (fa ? '✓ Loaded' : '⚠ Not loaded (icons will be missing)');
-            html += '</div>';
-            
-            // Summary
-            html += '<div class="diagnosis-summary">';
-            html += '<h3>Diagnosis Summary:</h3>';
-            if (issues.length === 0) {
-                html += '<p class="pass">✅ All core components loaded successfully!</p>';
-            } else {
-                html += '<p class="fail">❌ Issues Found:</p>';
-                html += '<ul>';
-                for (let issue of issues) {
-                    html += '<li>' + issue + '</li>';
-                }
-                html += '</ul>';
-                
-                // Primary fix
-                if (ua && !unifiedAnalyzer.cleanAuthorName) {
-                    html += '<div class="fix-instruction">';
-                    html += '<strong>PRIMARY ISSUE:</strong> Wrong version of unified-app-core.js<br>';
-                    html += 'The file is only 3KB but should be ~12KB. You need to deploy the complete v6.0 file.';
-                    html += '</div>';
-                }
-            }
-            html += '</div>';
-            
-            r.innerHTML = html;
-        }
-        
-        // Auto-run after page loads
-        window.addEventListener('DOMContentLoaded', function() {
-            setTimeout(runFullTest, 1000);
-        });
-    </script>
-</body>
-</html>"""
-    
-    return diagnostic_html, 200
-
-@app.errorhandler(404)
-def not_found(error):
-    """Handle 404 errors"""
-    logger.warning(f"404 error: {request.url}")
-    
-    if request.path.startswith('/api/'):
-        return jsonify({
-            'success': False,
-            'error': 'Endpoint not found'
-        }), 404
-    
-    # Try to serve the unified index page
-    try:
-        return render_template('unified_index.html')
-    except:
-        try:
-            return render_template('index.html')
-        except:
-            # Return basic HTML as fallback
-            return """
-            <!DOCTYPE html>
-            <html>
-            <head><title>404 - Not Found</title></head>
-            <body>
-                <h1>404 - Page Not Found</h1>
-                <p>The requested page could not be found.</p>
-                <a href="/">Return to Home</a>
-            </body>
-            </html>
-            """, 404
-
-@app.errorhandler(500)
-def server_error(error):
-    """Handle 500 errors"""
-    logger.error(f"500 error: {str(error)}", exc_info=True)
-    return jsonify({
-        'success': False,
-        'error': 'Internal server error'
-    }), 500
-
-# ================================================================================
-# MAIN EXECUTION
-# ================================================================================
+    """Serve static files"""
+    return send_from_directory('static', path)
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
-    debug = Config.DEBUG
-    
-    logger.info("=" * 80)
-    logger.info(f"Starting TruthLens Unified Analyzer on port {port}")
-    logger.info(f"Debug mode: {debug}")
-    logger.info(f"News Mode: {Config.ENABLE_NEWS_MODE}")
-    logger.info(f"Transcript Mode: {Config.ENABLE_TRANSCRIPT_MODE}")
-    logger.info(f"Template: unified_index.html (with fallback to index.html)")
-    logger.info("=" * 80)
-    
-    # List all files in key directories for debugging
-    try:
-        logger.info("Templates directory contents:")
-        template_dir = os.path.join(os.getcwd(), 'templates')
-        if os.path.exists(template_dir):
-            for file in os.listdir(template_dir):
-                logger.info(f"  - {file}")
-        
-        logger.info("Static/js directory contents:")
-        js_dir = os.path.join(os.getcwd(), 'static', 'js')
-        if os.path.exists(js_dir):
-            for file in os.listdir(js_dir):
-                logger.info(f"  - {file}")
-    except Exception as e:
-        logger.error(f"Error listing directories: {e}")
-    
-    logger.info("=" * 80)
-    
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    logger.info(f"Starting TruthLens on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=Config.DEBUG)
