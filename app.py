@@ -1,30 +1,15 @@
 """
 TruthLens Unified News & Transcript Analyzer
-Date: September 28, 2025
-Version: 4.0.3 UNIFIED PRODUCTION - WITH DIAGNOSTIC
+Date: September 29, 2025
+Version: 4.0.4 UNIFIED PRODUCTION - WITH SERVICE INITIALIZATION FIX
 
-UPDATES IN THIS VERSION:
-1. Added /diagnostic route for troubleshooting UI issues
-2. Diagnostic checks JavaScript files, CSS, and component loading
-3. All previous unified features maintained
+CRITICAL UPDATE IN THIS VERSION:
+1. Added service initialization code to ensure ArticleExtractor loads properly
+2. Forces ArticleExtractor to initialize BEFORE NewsAnalyzer
+3. Verifies ArticleExtractor is not using fallback mode
+4. All previous unified features maintained
 
-CRITICAL FIXES IN THIS VERSION:
-1. ALL template references changed to 'unified_index.html'
-2. Fixed line 829 (main index route)
-3. Fixed line 910 (404 handler)
-4. Verified all render_template calls
-5. Added comprehensive logging for debugging
-
-UNIFIED FEATURES:
-1. News Analysis Mode - Complete TruthLens functionality
-2. Transcript Analysis Mode - YouTube + text transcript analysis  
-3. Tabbed Interface - Seamless mode switching
-4. Content Auto-Detection - URL vs YouTube vs text
-5. Cross-Mode Services - Shared analysis services
-6. Unified Scoring - Consistent trust scoring across modes
-
-This version maintains ALL existing TruthLens functionality while adding transcript analysis.
-All services are preserved and enhanced for dual-mode operation.
+This fixes the article extraction returning dummy data with score 58
 """
 
 import os
@@ -90,7 +75,7 @@ except ImportError as e:
     NLP_AVAILABLE = False
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS UNIFIED ANALYZER - v4.0.3 WITH DIAGNOSTIC")
+logger.info("TRUTHLENS UNIFIED ANALYZER - v4.0.4 WITH SERVICE INIT FIX")
 logger.info(f"Python Version: {sys.version}")
 logger.info(f"Working Directory: {os.getcwd()}")
 logger.info(f"NLP Available: {NLP_AVAILABLE}")
@@ -141,6 +126,127 @@ class Config:
         logger.info(f"  Transcript Analysis: {'✓' if cls.ENABLE_TRANSCRIPT_MODE else '✗'}")
 
 Config.log_status()
+
+# ================================================================================
+# SERVICE INITIALIZATION - CRITICAL FOR ARTICLE EXTRACTION
+# This MUST happen BEFORE NewsAnalyzer is imported
+# ================================================================================
+
+logger.info("=" * 80)
+logger.info("INITIALIZING ANALYSIS SERVICES")
+logger.info("=" * 80)
+
+def initialize_article_extractor():
+    """Force ArticleExtractor to initialize properly"""
+    import importlib
+    
+    try:
+        # Clear any cached modules
+        if 'services.article_extractor' in sys.modules:
+            del sys.modules['services.article_extractor']
+        
+        # Import fresh
+        logger.info("Loading ArticleExtractor module...")
+        article_module = importlib.import_module('services.article_extractor')
+        
+        # Force reload to get latest code
+        importlib.reload(article_module)
+        
+        # Create instance
+        ArticleExtractor = getattr(article_module, 'ArticleExtractor', None)
+        if not ArticleExtractor:
+            logger.error("ArticleExtractor class not found in module")
+            return None
+        
+        extractor = ArticleExtractor()
+        
+        # Verify it's working
+        test_result = extractor.analyze({'url': 'https://test.com'})
+        
+        # Check for fallback indicators
+        if test_result.get('data', {}).get('status') == 'fallback':
+            logger.error("ArticleExtractor is using fallback - will return score 58!")
+            return None
+        
+        if test_result.get('data', {}).get('score') == 58:
+            logger.error("ArticleExtractor returning fallback score 58 - not properly initialized!")
+            return None
+        
+        version = 'unknown'
+        if hasattr(extractor, 'core') and hasattr(extractor.core, 'VERSION'):
+            version = extractor.core.VERSION
+        
+        logger.info(f"✓ ArticleExtractor v{version} initialized successfully")
+        return extractor
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize ArticleExtractor: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+def force_service_initialization():
+    """Initialize all services with ArticleExtractor first"""
+    try:
+        from services.service_registry import get_service_registry
+    except ImportError as e:
+        logger.error(f"Could not import service_registry: {e}")
+        return None
+    
+    logger.info("Getting service registry...")
+    registry = get_service_registry()
+    
+    # CRITICAL: Initialize ArticleExtractor FIRST
+    article_extractor = initialize_article_extractor()
+    
+    if article_extractor:
+        # Manually register it
+        registry.services['article_extractor'] = article_extractor
+        logger.info("✓ ArticleExtractor registered with service registry")
+    else:
+        logger.critical("⚠️ ArticleExtractor failed to initialize - extraction will NOT work!")
+    
+    # Force registry to initialize other services
+    if hasattr(registry, '_ensure_initialized'):
+        registry._ensure_initialized()
+    elif hasattr(registry, '_initialized') and not registry._initialized:
+        if hasattr(registry, '_initialize_services'):
+            registry._initialize_services()
+    
+    # Verify status
+    try:
+        status = registry.get_service_status()
+        logger.info(f"Registry Status Summary:")
+        logger.info(f"  Total configured: {status['summary'].get('total_configured', 0)}")
+        logger.info(f"  Total registered: {status['summary'].get('total_registered', 0)}")
+        logger.info(f"  Total available: {status['summary'].get('total_available', 0)}")
+        
+        # Specific check for article_extractor
+        ae_status = status.get('services', {}).get('article_extractor', {})
+        if ae_status.get('registered') and ae_status.get('available'):
+            if ae_status.get('fallback'):
+                logger.error("⚠️ ArticleExtractor is using FALLBACK mode - won't extract real articles!")
+            else:
+                logger.info("✅ ArticleExtractor is registered and available (not fallback)")
+        else:
+            logger.error("❌ ArticleExtractor not properly registered!")
+    except Exception as e:
+        logger.error(f"Could not get registry status: {e}")
+    
+    return registry
+
+# RUN THE INITIALIZATION
+try:
+    logger.info("Starting service initialization...")
+    service_registry = force_service_initialization()
+    logger.info("✓ Service initialization complete")
+except Exception as e:
+    logger.error(f"Service initialization failed: {e}")
+    import traceback
+    traceback.print_exc()
+    service_registry = None
+
+logger.info("=" * 80)
 
 # ================================================================================
 # CREATE FLASK APP - MUST BE AT MODULE LEVEL
@@ -621,7 +727,7 @@ def health():
         'status': 'healthy',
         'timestamp': datetime.utcnow().isoformat(),
         'service': 'unified-analyzer',
-        'version': '4.0.3-unified',
+        'version': '4.0.4-unified',
         'modes': {
             'news': Config.ENABLE_NEWS_MODE,
             'transcript': Config.ENABLE_TRANSCRIPT_MODE
@@ -687,6 +793,24 @@ def analyze():
             }), 400
         
         logger.info(f"Unified analysis request: mode={analysis_mode}, content_length={len(content)}")
+        
+        # Detect content type for logging
+        if analysis_mode == 'auto':
+            content_type = ContentTypeDetector.detect_content_type(content)
+        else:
+            content_type = 'youtube' if analysis_mode == 'transcript' else 'url'
+        
+        logger.info(f"Unified analysis: mode={analysis_mode}, type={content_type}")
+        
+        # Log service registry status for debugging
+        if service_registry:
+            try:
+                status = service_registry.get_service_status()
+                ae_status = status.get('services', {}).get('article_extractor', {})
+                if ae_status:
+                    logger.info(f"ArticleExtractor status: registered={ae_status.get('registered')}, available={ae_status.get('available')}, fallback={ae_status.get('fallback')}")
+            except:
+                pass
         
         # Perform unified analysis
         result = unified_analyzer.analyze(content, analysis_mode)
