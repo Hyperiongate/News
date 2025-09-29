@@ -1,300 +1,654 @@
 """
-Article Extractor Service - CLEAN PRODUCTION VERSION
+Article Extractor Service - v5.0 PRODUCTION READY
 Date: September 29, 2025
 Last Updated: September 29, 2025
 
-COMPLETE REPLACEMENT - No duplicate code, single class definition
-This file replaces the entire article_extractor.py to ensure no old code remains
+THIS VERSION FIXES:
+1. Actually extracts content from URLs (was not working)
+2. Proper ScraperAPI integration with correct parameters
+3. Multiple fallback methods for extraction
+4. Clean author/title extraction
+5. Handles both news articles and direct text input
+6. No duplicate code or conflicting versions
+
+DEPLOYMENT NOTES:
+- Place this file in: services/article_extractor.py
+- Delete any other article_extractor.py files
+- Requires SCRAPERAPI_KEY environment variable
+- Add PYTHONDONTWRITEBYTECODE=1 to Render environment
 """
 
-# DIAGNOSTIC: Print when module loads
-print("[ARTICLE_EXTRACTOR v4.0] Clean module loaded - all old code removed")
-
 import os
+import sys
 import re
-import time
 import json
+import time
 import logging
-import requests
-from typing import Dict, Any, Optional, Union
-from urllib.parse import urlparse
+import hashlib
+from typing import Dict, Any, Optional, Tuple
+from urllib.parse import urlparse, quote_plus
+from datetime import datetime
 
+import requests
+from bs4 import BeautifulSoup
+from newspaper import Article, ArticleException
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
 logger = logging.getLogger(__name__)
 
-try:
-    from bs4 import BeautifulSoup
-    BS4_AVAILABLE = True
-except ImportError:
-    BS4_AVAILABLE = False
-    logger.error("BeautifulSoup not available!")
+# Suppress noisy loggers
+logging.getLogger('urllib3').setLevel(logging.WARNING)
+logging.getLogger('newspaper').setLevel(logging.WARNING)
 
 
 class ArticleExtractor:
-    """Single, clean article extraction service"""
+    """
+    Enhanced article extraction service with multiple fallback methods
+    """
+    
+    VERSION = "5.0"
     
     def __init__(self):
-        print("[ARTICLE_EXTRACTOR v4.0] __init__ called - clean instance created")
-        self.service_name = 'article_extractor'
-        self.available = True
-        self.is_available = True
+        """Initialize the article extractor with API keys"""
+        self.scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '')
+        self.session = requests.Session()
+        self.session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        })
         
-        # Get ScraperAPI key
-        self.scraperapi_key = os.environ.get('SCRAPERAPI_KEY', '').strip()
+        # Cache for extracted articles
+        self._cache = {}
+        self._cache_ttl = 3600  # 1 hour
         
-        if self.scraperapi_key:
-            logger.info(f"[INIT] ✓ ScraperAPI key found: {self.scraperapi_key[:10]}...")
-            print(f"[INIT] ✓ ScraperAPI key found: {self.scraperapi_key[:10]}...")
-        else:
-            logger.error("[INIT] ✗ NO SCRAPERAPI_KEY FOUND!")
-            print("[INIT] ✗ NO SCRAPERAPI_KEY FOUND!")
+        logger.info(f"ArticleExtractor v{self.VERSION} initialized")
+        logger.info(f"ScraperAPI configured: {bool(self.scraperapi_key)}")
         
-        if not BS4_AVAILABLE:
-            self.available = False
-    
-    def analyze(self, data: Union[Dict[str, Any], str]) -> Dict[str, Any]:
-        """Extract article from URL"""
-        logger.info(f"[ANALYZE v4.0] Called with type: {type(data)}")
-        print(f"[ANALYZE v4.0] Called with type: {type(data)}")
-        
-        try:
-            # Extract URL from input
-            if isinstance(data, str):
-                url = data.strip() if data.strip().startswith('http') else None
-            elif isinstance(data, dict):
-                logger.info(f"[ANALYZE v4.0] Dict keys: {list(data.keys())}")
-                print(f"[ANALYZE v4.0] Dict keys: {list(data.keys())}")
-                
-                # Try different keys
-                url = None
-                for key in ['url', 'URL', 'link', 'content', 'input']:
-                    value = data.get(key, '')
-                    if value and isinstance(value, str) and 'http' in value:
-                        if value.startswith('http'):
-                            url = value
-                            break
-                        # Extract from text
-                        match = re.search(r'(https?://[^\s]+)', value)
-                        if match:
-                            url = match.group(1)
-                            break
-            else:
-                url = None
-            
-            if not url:
-                logger.error(f"[ANALYZE v4.0] No URL found in: {data}")
-                print(f"[ANALYZE v4.0] No URL found")
-                return self._create_fallback("No URL provided")
-            
-            logger.info(f"[EXTRACT v4.0] Starting extraction for: {url}")
-            print(f"[EXTRACT v4.0] Starting extraction for: {url}")
-            
-            # Try ScraperAPI first
-            if self.scraperapi_key:
-                logger.info("[EXTRACT v4.0] Trying ScraperAPI...")
-                print("[EXTRACT v4.0] Trying ScraperAPI...")
-                
-                article_data = self._scraperapi_extract(url)
-                if article_data and article_data.get('word_count', 0) > 50:
-                    logger.info(f"[EXTRACT v4.0] ✓ ScraperAPI SUCCESS! {article_data.get('word_count')} words")
-                    print(f"[EXTRACT v4.0] ✓ ScraperAPI SUCCESS! {article_data.get('word_count')} words")
-                    return self._format_response(article_data)
-            
-            # Try direct extraction
-            logger.info("[EXTRACT v4.0] Trying direct extraction...")
-            print("[EXTRACT v4.0] Trying direct extraction...")
-            
-            article_data = self._direct_extract(url)
-            if article_data and article_data.get('word_count', 0) > 50:
-                logger.info(f"[EXTRACT v4.0] ✓ Direct SUCCESS! {article_data.get('word_count')} words")
-                print(f"[EXTRACT v4.0] ✓ Direct SUCCESS! {article_data.get('word_count')} words")
-                return self._format_response(article_data)
-            
-            # All failed
-            logger.error(f"[EXTRACT v4.0] All methods failed for {url}")
-            print(f"[EXTRACT v4.0] All methods failed")
-            return self._create_fallback(f"Could not extract from {url}", url)
-            
-        except Exception as e:
-            logger.error(f"[ANALYZE v4.0] Error: {str(e)}", exc_info=True)
-            print(f"[ANALYZE v4.0] Error: {str(e)}")
-            return self._create_fallback(str(e))
-    
-    def _scraperapi_extract(self, url: str) -> Optional[Dict[str, Any]]:
-        """Extract using ScraperAPI"""
         if not self.scraperapi_key:
-            return None
+            logger.warning("ScraperAPI key not found - extraction may be limited")
+    
+    def extract(self, url: str, use_scraperapi: bool = True) -> Dict[str, Any]:
+        """
+        Main extraction method with multiple fallback strategies
         
+        Args:
+            url: The URL to extract content from
+            use_scraperapi: Whether to use ScraperAPI for anti-bot protection
+            
+        Returns:
+            Dict containing extracted article data
+        """
+        logger.info(f"[v{self.VERSION}] Starting extraction for: {url}")
+        
+        # Check cache first
+        cache_key = self._get_cache_key(url)
+        if cache_key in self._cache:
+            cache_entry = self._cache[cache_key]
+            if time.time() - cache_entry['timestamp'] < self._cache_ttl:
+                logger.info("Returning cached article")
+                return cache_entry['data']
+        
+        # Try extraction methods in order
+        result = None
+        
+        # Method 1: ScraperAPI (most reliable for protected sites)
+        if use_scraperapi and self.scraperapi_key:
+            result = self._extract_with_scraperapi(url)
+            if result and result.get('success'):
+                logger.info("✓ Extraction successful with ScraperAPI")
+                self._cache_result(cache_key, result)
+                return result
+        
+        # Method 2: Newspaper3k with custom headers
+        result = self._extract_with_newspaper(url)
+        if result and result.get('success'):
+            logger.info("✓ Extraction successful with Newspaper3k")
+            self._cache_result(cache_key, result)
+            return result
+        
+        # Method 3: Direct requests with BeautifulSoup
+        result = self._extract_with_beautifulsoup(url)
+        if result and result.get('success'):
+            logger.info("✓ Extraction successful with BeautifulSoup")
+            self._cache_result(cache_key, result)
+            return result
+        
+        # If all methods fail, return error
+        logger.error(f"All extraction methods failed for {url}")
+        return self._create_error_response(url, "All extraction methods failed")
+    
+    def _extract_with_scraperapi(self, url: str) -> Dict[str, Any]:
+        """
+        Extract using ScraperAPI for anti-bot protection
+        """
         try:
-            api_url = "http://api.scraperapi.com"
+            logger.info("Attempting ScraperAPI extraction...")
+            
+            # ScraperAPI endpoint
+            api_url = "https://api.scraperapi.com"
+            
+            # Parameters for ScraperAPI
             params = {
                 'api_key': self.scraperapi_key,
-                'url': url
+                'url': url,
+                'render': 'true',  # Render JavaScript
+                'premium': 'true',  # Use premium proxies for better success
+                'country_code': 'us'
             }
             
-            logger.info(f"[SCRAPERAPI v4.0] Calling for: {url}")
-            print(f"[SCRAPERAPI v4.0] Calling API...")
+            # Make request to ScraperAPI
+            response = self.session.get(api_url, params=params, timeout=30)
+            response.raise_for_status()
             
-            response = requests.get(api_url, params=params, timeout=30)
+            # Parse the HTML
+            html_content = response.text
+            if not html_content or len(html_content) < 100:
+                raise ValueError("Received empty or minimal content from ScraperAPI")
             
-            logger.info(f"[SCRAPERAPI v4.0] Status: {response.status_code}")
-            print(f"[SCRAPERAPI v4.0] Status: {response.status_code}")
+            # Extract article using newspaper
+            article = Article(url)
+            article.download(input_html=html_content)
+            article.parse()
             
-            if response.status_code == 200:
-                logger.info(f"[SCRAPERAPI v4.0] Got {len(response.text)} bytes")
-                print(f"[SCRAPERAPI v4.0] Got {len(response.text)} bytes")
-                return self._parse_html(response.text, url)
-            else:
-                logger.error(f"[SCRAPERAPI v4.0] Failed: {response.status_code}")
-                print(f"[SCRAPERAPI v4.0] Failed: {response.status_code}")
-                
-        except Exception as e:
-            logger.error(f"[SCRAPERAPI v4.0] Error: {e}")
-            print(f"[SCRAPERAPI v4.0] Error: {e}")
-        
-        return None
-    
-    def _direct_extract(self, url: str) -> Optional[Dict[str, Any]]:
-        """Direct extraction"""
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
+            # Validate extraction
+            if not article.text or len(article.text) < 100:
+                # Fallback to BeautifulSoup parsing
+                return self._parse_html_content(html_content, url)
             
-            response = requests.get(url, headers=headers, timeout=15)
+            # Clean and prepare result
+            return self._prepare_article_result(
+                url=url,
+                title=article.title,
+                text=article.text,
+                authors=article.authors,
+                publish_date=article.publish_date,
+                html=html_content,
+                extraction_method='scraperapi_newspaper'
+            )
             
-            if response.status_code == 200:
-                return self._parse_html(response.text, url)
-                
-        except Exception as e:
-            logger.error(f"[DIRECT] Error: {e}")
-        
-        return None
-    
-    def _parse_html(self, html: str, url: str) -> Optional[Dict[str, Any]]:
-        """Parse HTML content"""
-        if not BS4_AVAILABLE:
+        except requests.RequestException as e:
+            logger.error(f"ScraperAPI request failed: {e}")
             return None
-        
+        except Exception as e:
+            logger.error(f"ScraperAPI extraction failed: {e}")
+            return None
+    
+    def _extract_with_newspaper(self, url: str) -> Dict[str, Any]:
+        """
+        Extract using Newspaper3k library
+        """
+        try:
+            logger.info("Attempting Newspaper3k extraction...")
+            
+            # Configure article
+            article = Article(url)
+            article.config.browser_user_agent = self.session.headers['User-Agent']
+            article.config.request_timeout = 20
+            
+            # Download and parse
+            article.download()
+            article.parse()
+            
+            # Validate content
+            if not article.text or len(article.text) < 100:
+                raise ArticleException("Article text too short or empty")
+            
+            # Perform NLP if possible
+            try:
+                article.nlp()
+            except:
+                pass  # NLP is optional
+            
+            return self._prepare_article_result(
+                url=url,
+                title=article.title,
+                text=article.text,
+                authors=article.authors,
+                publish_date=article.publish_date,
+                summary=article.summary if hasattr(article, 'summary') else None,
+                extraction_method='newspaper'
+            )
+            
+        except ArticleException as e:
+            logger.error(f"Newspaper extraction failed: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error in Newspaper extraction: {e}")
+            return None
+    
+    def _extract_with_beautifulsoup(self, url: str) -> Dict[str, Any]:
+        """
+        Direct extraction using requests and BeautifulSoup
+        """
+        try:
+            logger.info("Attempting BeautifulSoup extraction...")
+            
+            # Make direct request
+            response = self.session.get(url, timeout=20)
+            response.raise_for_status()
+            
+            # Parse HTML
+            return self._parse_html_content(response.text, url)
+            
+        except requests.RequestException as e:
+            logger.error(f"BeautifulSoup request failed: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"BeautifulSoup extraction failed: {e}")
+            return None
+    
+    def _parse_html_content(self, html: str, url: str) -> Dict[str, Any]:
+        """
+        Parse HTML content using BeautifulSoup
+        """
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
-            # Remove unwanted tags
-            for tag in soup(['script', 'style', 'nav', 'header', 'footer']):
-                tag.decompose()
+            # Remove script and style elements
+            for script in soup(["script", "style", "meta", "noscript"]):
+                script.decompose()
             
             # Extract title
-            title = ""
-            og_title = soup.find('meta', property='og:title')
-            if og_title and og_title.get('content'):
-                title = og_title['content']
-            elif soup.find('h1'):
-                title = soup.find('h1').get_text(strip=True)
-            elif soup.title:
-                title = soup.title.get_text(strip=True)
+            title = self._extract_title(soup)
             
-            # Extract content
-            content = ""
-            article = soup.find('article')
-            if article:
-                paragraphs = article.find_all('p')
-                content = ' '.join([p.get_text(strip=True) for p in paragraphs if len(p.get_text(strip=True)) > 20])
-            
-            if not content or len(content) < 200:
-                # Try all paragraphs
-                all_p = soup.find_all('p')
-                content = ' '.join([p.get_text(strip=True) for p in all_p if len(p.get_text(strip=True)) > 30])
+            # Extract main content
+            content = self._extract_main_content(soup)
             
             # Extract author
-            author = "Unknown"
-            meta_author = soup.find('meta', {'name': 'author'})
-            if meta_author and meta_author.get('content'):
-                author = meta_author['content']
+            author = self._extract_author(soup, html)
             
-            # Get domain
-            domain = urlparse(url).netloc.replace('www.', '')
+            # Extract publish date
+            publish_date = self._extract_publish_date(soup, html)
             
-            word_count = len(content.split()) if content else 0
+            # Validate content
+            if not content or len(content) < 100:
+                raise ValueError("Extracted content too short")
             
-            return {
-                'title': title or f"Article from {domain}",
-                'author': author,
-                'text': content,
-                'content': content,
-                'url': url,
-                'domain': domain,
-                'source': domain,
-                'word_count': word_count,
-                'extraction_method': 'extracted',
-                'success': True
-            }
+            return self._prepare_article_result(
+                url=url,
+                title=title,
+                text=content,
+                authors=[author] if author else [],
+                publish_date=publish_date,
+                extraction_method='beautifulsoup'
+            )
             
         except Exception as e:
-            logger.error(f"[PARSE] Error: {e}")
+            logger.error(f"HTML parsing failed: {e}")
             return None
     
-    def _format_response(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Format successful response"""
-        # Calculate score based on content quality
-        word_count = data.get('word_count', 0)
-        has_title = data.get('title') and 'Article from' not in data.get('title', '')
-        has_author = data.get('author') and data['author'] != 'Unknown'
+    def _extract_title(self, soup: BeautifulSoup) -> str:
+        """Extract article title from HTML"""
+        # Try multiple selectors
+        selectors = [
+            'h1',
+            'h1.headline',
+            'h1.title',
+            'h1.entry-title',
+            '[class*="headline"]',
+            '[class*="title"]',
+            'title',
+            'meta[property="og:title"]',
+            'meta[name="twitter:title"]'
+        ]
         
-        score = min(100, 30 + min(50, word_count // 20) + (10 if has_title else 0) + (10 if has_author else 0))
-        data['score'] = score
+        for selector in selectors:
+            element = soup.select_one(selector)
+            if element:
+                if element.name == 'meta':
+                    title = element.get('content', '')
+                else:
+                    title = element.get_text(strip=True)
+                
+                if title and len(title) > 10:
+                    return self._clean_text(title)
         
-        return {
-            'service': self.service_name,
-            'success': True,
-            'available': self.available,
-            'timestamp': time.time(),
-            'data': data
-        }
+        return "Unknown Title"
     
-    def _create_fallback(self, message: str, url: str = None) -> Dict[str, Any]:
-        """Create fallback response"""
-        domain = 'unknown'
-        if url:
+    def _extract_main_content(self, soup: BeautifulSoup) -> str:
+        """Extract main article content"""
+        # Common content selectors
+        selectors = [
+            'article',
+            '[role="main"]',
+            '[class*="content-body"]',
+            '[class*="article-body"]',
+            '[class*="entry-content"]',
+            '[class*="post-content"]',
+            'div.content',
+            'div.story-body',
+            'main'
+        ]
+        
+        # Try each selector
+        for selector in selectors:
+            elements = soup.select(selector)
+            if elements:
+                # Get all paragraphs from the first matching element
+                content_elem = elements[0]
+                paragraphs = content_elem.find_all(['p', 'h2', 'h3', 'h4'])
+                
+                text_parts = []
+                for p in paragraphs:
+                    text = p.get_text(strip=True)
+                    if text and len(text) > 20:  # Filter out short snippets
+                        text_parts.append(text)
+                
+                if text_parts:
+                    content = '\n\n'.join(text_parts)
+                    if len(content) > 200:  # Minimum content length
+                        return content
+        
+        # Fallback: get all paragraphs
+        all_paragraphs = soup.find_all('p')
+        text_parts = []
+        
+        for p in all_paragraphs:
+            text = p.get_text(strip=True)
+            if text and len(text) > 30:  # Filter short snippets
+                text_parts.append(text)
+        
+        if text_parts:
+            # Take the longest contiguous block of paragraphs
+            return '\n\n'.join(text_parts[:50])  # Limit to 50 paragraphs
+        
+        # Last resort: get all text
+        return soup.get_text(separator='\n', strip=True)
+    
+    def _extract_author(self, soup: BeautifulSoup, html: str) -> str:
+        """Extract author from HTML"""
+        # Try meta tags first
+        meta_selectors = [
+            'meta[name="author"]',
+            'meta[property="article:author"]',
+            'meta[name="byl"]',
+            'meta[name="parsely-author"]'
+        ]
+        
+        for selector in meta_selectors:
+            element = soup.select_one(selector)
+            if element:
+                author = element.get('content', '')
+                if author:
+                    return self._clean_author_name(author)
+        
+        # Try common author selectors
+        selectors = [
+            '[class*="author-name"]',
+            '[class*="by-author"]',
+            '[class*="byline"]',
+            '[rel="author"]',
+            '.author',
+            '.writer',
+            'span.by'
+        ]
+        
+        for selector in selectors:
+            element = soup.select_one(selector)
+            if element:
+                author = element.get_text(strip=True)
+                if author and len(author) > 2:
+                    return self._clean_author_name(author)
+        
+        # Try to find author in JSON-LD
+        json_lds = soup.find_all('script', type='application/ld+json')
+        for json_ld in json_lds:
             try:
-                domain = urlparse(url).netloc.replace('www.', '')
+                data = json.loads(json_ld.string)
+                if isinstance(data, dict):
+                    if 'author' in data:
+                        author_data = data['author']
+                        if isinstance(author_data, dict):
+                            author = author_data.get('name', '')
+                        else:
+                            author = str(author_data)
+                        if author:
+                            return self._clean_author_name(author)
+            except:
+                continue
+        
+        return "Unknown Author"
+    
+    def _extract_publish_date(self, soup: BeautifulSoup, html: str) -> Optional[datetime]:
+        """Extract publish date from HTML"""
+        # Try meta tags
+        meta_selectors = [
+            'meta[property="article:published_time"]',
+            'meta[name="publish_date"]',
+            'meta[name="parsely-pub-date"]',
+            'meta[name="date"]'
+        ]
+        
+        for selector in meta_selectors:
+            element = soup.select_one(selector)
+            if element:
+                date_str = element.get('content', '')
+                if date_str:
+                    try:
+                        return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+                    except:
+                        continue
+        
+        # Try time elements
+        time_element = soup.select_one('time[datetime]')
+        if time_element:
+            try:
+                return datetime.fromisoformat(time_element['datetime'].replace('Z', '+00:00'))
             except:
                 pass
         
+        return None
+    
+    def _clean_text(self, text: str) -> str:
+        """Clean extracted text"""
+        if not text:
+            return ""
+        
+        # Remove extra whitespace
+        text = re.sub(r'\s+', ' ', text)
+        
+        # Remove special characters
+        text = re.sub(r'[\r\n\t]', ' ', text)
+        
+        # Trim
+        return text.strip()
+    
+    def _clean_author_name(self, author: str) -> str:
+        """Clean author name"""
+        if not author:
+            return "Unknown Author"
+        
+        # Remove common prefixes
+        author = re.sub(r'^(by|By|BY)\s+', '', author)
+        author = re.sub(r'^(written by|Written by)\s+', '', author, re.IGNORECASE)
+        
+        # Remove extra whitespace
+        author = re.sub(r'\s+', ' ', author)
+        
+        # Remove special characters
+        author = re.sub(r'[<>"]', '', author)
+        
+        # Trim
+        author = author.strip()
+        
+        # Validate
+        if not author or len(author) < 2 or len(author) > 100:
+            return "Unknown Author"
+        
+        return author
+    
+    def _prepare_article_result(
+        self,
+        url: str,
+        title: str,
+        text: str,
+        authors: list = None,
+        publish_date: datetime = None,
+        summary: str = None,
+        html: str = None,
+        extraction_method: str = 'unknown'
+    ) -> Dict[str, Any]:
+        """Prepare the final article result"""
+        
+        # Clean text
+        title = self._clean_text(title) if title else "Unknown Title"
+        text = self._clean_text(text) if text else ""
+        
+        # Process authors
+        if authors:
+            authors = [self._clean_author_name(a) for a in authors if a]
+            authors = [a for a in authors if a != "Unknown Author"]
+        
+        author = authors[0] if authors else "Unknown Author"
+        
+        # Extract domain
+        domain = urlparse(url).netloc.replace('www.', '')
+        
+        # Calculate metrics
+        word_count = len(text.split()) if text else 0
+        
+        # Build result
+        result = {
+            'success': True,
+            'url': url,
+            'title': title,
+            'text': text,
+            'author': author,
+            'authors': authors or [author],
+            'publish_date': publish_date.isoformat() if publish_date else None,
+            'domain': domain,
+            'word_count': word_count,
+            'extraction_method': extraction_method,
+            'extracted_at': datetime.now().isoformat(),
+            'version': self.VERSION
+        }
+        
+        # Add summary if available
+        if summary:
+            result['summary'] = self._clean_text(summary)
+        
+        # Log success
+        logger.info(f"✓ Extracted: {title[:50]}... ({word_count} words) by {author}")
+        
+        return result
+    
+    def _create_error_response(self, url: str, error_message: str) -> Dict[str, Any]:
+        """Create error response"""
         return {
-            'service': self.service_name,
-            'success': True,  # Keep true so pipeline continues
-            'available': self.available,
-            'timestamp': time.time(),
-            'data': {
-                'title': f'Article from {domain}' if domain != 'unknown' else 'Untitled',
-                'author': 'Unknown',
-                'text': f'Content could not be extracted. {message}',
-                'content': f'Content could not be extracted. {message}',
-                'url': url or '',
-                'domain': domain,
-                'source': domain,
-                'word_count': 10,
-                'extraction_method': 'fallback',
-                'score': 30,
-                'status': 'fallback'
-            },
-            'fallback': True,
-            'error': message
+            'success': False,
+            'url': url,
+            'title': 'Unknown',
+            'text': '',
+            'author': 'Unknown',
+            'authors': [],
+            'error': error_message,
+            'extraction_method': 'none',
+            'version': self.VERSION,
+            'extracted_at': datetime.now().isoformat()
         }
     
-    # Compatibility methods
-    def check_availability(self) -> bool:
-        return self.available
+    def _get_cache_key(self, url: str) -> str:
+        """Generate cache key for URL"""
+        return hashlib.md5(url.encode()).hexdigest()
     
-    def _check_availability(self) -> bool:
-        return self.available
+    def _cache_result(self, key: str, result: Dict[str, Any]) -> None:
+        """Cache extraction result"""
+        self._cache[key] = {
+            'data': result,
+            'timestamp': time.time()
+        }
+        
+        # Clean old cache entries
+        if len(self._cache) > 100:
+            # Remove oldest entries
+            sorted_items = sorted(
+                self._cache.items(),
+                key=lambda x: x[1]['timestamp']
+            )
+            self._cache = dict(sorted_items[-50:])
     
-    def get_service_info(self) -> Dict[str, Any]:
+    def process_text_input(self, text: str, source: str = "direct_input") -> Dict[str, Any]:
+        """
+        Process direct text input (not from URL)
+        
+        Args:
+            text: The text content to analyze
+            source: Source identifier
+            
+        Returns:
+            Dict containing processed text data
+        """
+        logger.info(f"Processing direct text input ({len(text)} chars)")
+        
+        # Extract title from first line or generate one
+        lines = text.strip().split('\n')
+        title = lines[0][:100] if lines else "Direct Text Input"
+        
+        # Clean the text
+        cleaned_text = self._clean_text(text)
+        
         return {
-            'name': self.service_name,
-            'available': self.available,
-            'enabled': True,
-            'has_api_key': bool(self.scraperapi_key)
+            'success': True,
+            'url': source,
+            'title': title,
+            'text': cleaned_text,
+            'author': 'Unknown Author',
+            'authors': ['Unknown Author'],
+            'publish_date': datetime.now().isoformat(),
+            'domain': 'text_input',
+            'word_count': len(cleaned_text.split()),
+            'extraction_method': 'text_input',
+            'extracted_at': datetime.now().isoformat(),
+            'version': self.VERSION
         }
 
 
-# END OF FILE - No additional code below this line
+# Create singleton instance
+_instance = None
+
+def get_extractor() -> ArticleExtractor:
+    """Get or create the article extractor instance"""
+    global _instance
+    if _instance is None:
+        _instance = ArticleExtractor()
+    return _instance
+
+
+# For backwards compatibility
+def extract_article(url: str) -> Dict[str, Any]:
+    """
+    Legacy function for compatibility
+    
+    Args:
+        url: URL to extract
+        
+    Returns:
+        Extracted article data
+    """
+    extractor = get_extractor()
+    return extractor.extract(url)
+
+
+if __name__ == "__main__":
+    # Test extraction
+    test_url = "https://www.reuters.com/"
+    
+    print(f"Testing ArticleExtractor v{ArticleExtractor.VERSION}")
+    print(f"Test URL: {test_url}")
+    print("-" * 50)
+    
+    extractor = ArticleExtractor()
+    result = extractor.extract(test_url)
+    
+    if result['success']:
+        print(f"✓ Title: {result['title'][:60]}...")
+        print(f"✓ Author: {result['author']}")
+        print(f"✓ Word Count: {result['word_count']}")
+        print(f"✓ Method: {result['extraction_method']}")
+        print(f"✓ Content: {result['text'][:200]}...")
+    else:
+        print(f"✗ Extraction failed: {result.get('error', 'Unknown error')}")
+        
