@@ -12,6 +12,10 @@ FIXES APPLIED:
 
 This version will actually extract articles and provide real data to analysis services.
 """
+
+# DIAGNOSTIC: Print immediately when this file is imported
+print("[ARTICLE_EXTRACTOR v3.0] Module loaded - new extraction code active")
+
 import os
 import re
 import time
