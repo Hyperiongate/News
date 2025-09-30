@@ -1468,3 +1468,106 @@ body {
     animation: barGrow 1s ease-out;
 }
 
+/* Claims List Enhanced Styles */
+.claims-list {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.claims-list h4 {
+    color: #1f2937;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+.claim-item {
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 6px;
+    border-left: 3px solid;
+    background: #fafafa;
+}
+
+.claim-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.claim-type {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.claim-verdict {
+    margin-left: auto;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+}
+
+.claim-text {
+    font-size: 0.85rem;
+    color: #374151;
+    line-height: 1.5;
+}
+
+.claim-item.verified {
+    background: rgba(16, 185, 129, 0.05);
+    border-color: #10b981;
+}
+
+.claim-item.verified .claim-header i {
+    color: #059669;
+}
+
+.claim-item.verified .claim-verdict {
+    background: rgba(16, 185, 129, 0.15);
+    color: #059669;
+}
+
+.claim-item.unverified {
+    background: rgba(251, 191, 36, 0.05);
+    border-color: #fbbf24;
+}
+
+.claim-item.unverified .claim-header i {
+    color: #d97706;
+}
+
+.claim-item.unverified .claim-verdict {
+    background: rgba(251, 191, 36, 0.15);
+    color: #d97706;
+}
+
+.claim-item.prediction {
+    background: rgba(147, 51, 234, 0.05);
+    border-color: #9333ea;
+}
+
+.claim-item.prediction .claim-header i {
+    color: #7c3aed;
+}
+
+.claim-item.prediction .claim-verdict {
+    background: rgba(147, 51, 234, 0.15);
+    color: #7c3aed;
+}
+
+.more-claims {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px dashed #e5e7eb;
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-style: italic;
+}
