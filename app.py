@@ -273,36 +273,62 @@ class SimpleArticleExtractor:
             return {'success': False, 'error': str(e)}
     
     def _extract_author(self, soup):
-        """Enhanced author extraction"""
+        """Enhanced author extraction - Fixed for Politico"""
         author = 'Unknown'
         
-        # Check meta tags first
+        # First check the raw HTML for "By AUTHOR NAME" pattern
+        # This catches Politico's format
+        html_str = str(soup)
+        
+        # Look for multiple patterns
+        patterns = [
+            r'By\s+([A-Z][A-Z]+\s+[A-Z][A-Z]+)',  # BY DASHA BURNS (all caps)
+            r'By\s+([A-Z][a-z]+\s+[A-Z][a-z]+)',  # By Dasha Burns (title case)
+            r'>By\s+([^<]+)<',  # By followed by name before tag close
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, html_str)
+            if match:
+                potential_author = match.group(1).strip()
+                # Validate it looks like a name
+                if potential_author and len(potential_author) < 50 and ' ' in potential_author:
+                    # Convert to proper case if all caps
+                    if potential_author.isupper():
+                        potential_author = potential_author.title()
+                    logger.info(f"Found author via pattern: {potential_author}")
+                    return potential_author
+        
+        # Check meta tags
         meta_tags = [
             soup.find('meta', {'name': 'author'}),
             soup.find('meta', {'property': 'article:author'}),
             soup.find('meta', {'name': 'byl'}),
-            soup.find('meta', {'property': 'author'})
+            soup.find('meta', {'property': 'author'}),
+            soup.find('meta', {'name': 'sailthru.author'})
         ]
         
         for meta in meta_tags:
             if meta and meta.get('content'):
                 author = meta['content'].strip()
-                if author and author != 'Unknown':
+                if author and author not in ['Unknown', 'Staff']:
                     return author
         
-        # Check for byline with "By" pattern
-        by_pattern = soup.find(text=re.compile(r'^By\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+', re.MULTILINE))
-        if by_pattern:
-            author = re.sub(r'^By\s+', '', by_pattern.strip())
-            if author:
-                return author
+        # Check for byline text nodes
+        by_patterns = soup.find_all(text=re.compile(r'By\s+[A-Z]'))
+        for text in by_patterns:
+            if text and len(text.strip()) < 50:
+                cleaned = re.sub(r'^By\s+', '', text.strip())
+                if cleaned and ' ' in cleaned:
+                    return cleaned
         
-        # Check common byline classes
+        # Check common byline selectors
         byline_selectors = [
             '.byline', '.author', '.by-author', '.article-author',
             '[class*="byline"]', '[class*="author"]', 
             'span.byline', 'div.author', 'p.author',
-            '.author-name', '.writer', '.journalist'
+            '.author-name', '.writer', '.journalist',
+            '.story-meta__authors'  # Politico specific
         ]
         
         for selector in byline_selectors:
