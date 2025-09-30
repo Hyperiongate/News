@@ -571,17 +571,17 @@ window.ServiceTemplates = {
         const claims = data.claims || [];
         const totalClaims = data.total_claims || claims.length;
         const verifiedCount = claims.filter(function(c) { 
-            return c.verdict === 'True' || c.verdict === 'Attributed'; 
+            return c.verdict === 'True' || c.verdict === 'Attributed' || c.verdict === 'Verifiable'; 
         }).length;
         const needsVerification = claims.filter(function(c) {
-            return c.verdict === 'Needs verification' || c.verdict === 'Policy claim';
+            return c.verdict === 'Needs verification' || c.verdict === 'Context needed';
         }).length;
         
         this.updateElement('fact-score', score + '%');
         this.updateElement('claims-checked', totalClaims);
         this.updateElement('claims-verified', verifiedCount);
         
-        // Display enhanced claims list
+        // Display enhanced claims list with individual verdicts
         const claimsList = document.getElementById('claims-list');
         if (claimsList && claims.length > 0) {
             let claimsHTML = '<h4>Key Claims Analyzed:</h4>';
@@ -589,28 +589,61 @@ window.ServiceTemplates = {
             claims.forEach(function(claim) {
                 let verdictClass = 'neutral';
                 let icon = 'info-circle';
+                let verdictColor = '#6b7280';
                 
-                if (claim.verdict === 'True' || claim.verdict === 'Attributed') {
+                // Determine styling based on verdict
+                if (claim.verdict === 'True' || claim.verdict === 'Verifiable') {
                     verdictClass = 'verified';
                     icon = 'check-circle';
+                    verdictColor = '#059669';
+                } else if (claim.verdict === 'Attributed') {
+                    verdictClass = 'attributed';
+                    icon = 'quote-left';
+                    verdictColor = '#0891b2';
                 } else if (claim.verdict === 'Needs verification') {
                     verdictClass = 'unverified';
                     icon = 'question-circle';
+                    verdictColor = '#d97706';
                 } else if (claim.verdict === 'False') {
                     verdictClass = 'false';
                     icon = 'times-circle';
-                } else if (claim.verdict === 'Prediction') {
+                    verdictColor = '#dc2626';
+                } else if (claim.verdict === 'Prediction' || claim.verdict === 'Unverifiable') {
                     verdictClass = 'prediction';
                     icon = 'clock';
+                    verdictColor = '#7c3aed';
+                } else if (claim.verdict === 'Opinion') {
+                    verdictClass = 'opinion';
+                    icon = 'comment';
+                    verdictColor = '#6b7280';
+                } else if (claim.verdict === 'Context needed') {
+                    verdictClass = 'context';
+                    icon = 'exclamation-triangle';
+                    verdictColor = '#ea580c';
                 }
                 
                 claimsHTML += '<div class="claim-item ' + verdictClass + '">' +
-                    '<div class="claim-header">' +
-                    '<i class="fas fa-' + icon + '"></i>' +
-                    '<span class="claim-type">' + (claim.type || 'Claim') + '</span>' +
-                    '<span class="claim-verdict">' + claim.verdict + '</span>' +
+                    '<div class="claim-content">' +
+                    '<div class="claim-text">' +
+                    '<i class="fas fa-' + icon + '" style="color: ' + verdictColor + '; margin-right: 8px;"></i>' +
+                    claim.claim + 
                     '</div>' +
-                    '<div class="claim-text">' + claim.claim + '</div>' +
+                    '<div class="claim-verdict-row">' +
+                    '<span class="claim-type">' + (claim.type || 'Claim') + '</span>' +
+                    '<span class="claim-verdict" style="background: rgba(' + 
+                    (verdictClass === 'verified' ? '16, 185, 129' : 
+                     verdictClass === 'false' ? '239, 68, 68' :
+                     verdictClass === 'opinion' ? '107, 114, 128' :
+                     verdictClass === 'attributed' ? '8, 145, 178' :
+                     verdictClass === 'context' ? '234, 88, 12' :
+                     verdictClass === 'prediction' ? '147, 51, 234' :
+                     '251, 191, 36') + 
+                    ', 0.15); color: ' + verdictColor + '">' + 
+                    '<strong>' + claim.verdict + '</strong>' +
+                    (claim.verdict_detail ? ': ' + claim.verdict_detail : '') +
+                    '</span>' +
+                    '</div>' +
+                    '</div>' +
                     '</div>';
             });
             
@@ -621,25 +654,13 @@ window.ServiceTemplates = {
             claimsList.innerHTML = claimsHTML;
         }
         
-        // Analysis blocks with enhanced rationale
+        // Analysis blocks with specific, detailed information
         const analysis = data.analysis || {};
-        let whatWeFound = analysis.what_we_found || 
-            'Checked ' + totalClaims + ' claims, ' + verifiedCount + ' verified or attributed.';
-        
-        // Add specific rationale for the score
-        if (score === 100) {
-            whatWeFound += ' All identifiable claims are properly sourced and verifiable.';
-        } else if (score >= 75) {
-            whatWeFound += ' Most claims are well-supported, but ' + needsVerification + ' claims require additional verification from primary sources.';
-        } else if (score >= 50) {
-            whatWeFound += ' Mixed factual accuracy. Several claims could not be immediately verified and should be cross-checked with authoritative sources.';
-        } else {
-            whatWeFound += ' Significant verification needed. Many claims lack supporting evidence or attribution. Reader should seek additional sources.';
-        }
         
         this.updateElement('fact-analyzed', analysis.what_we_looked || 
             'We identified and examined specific factual claims including statistics, dates, quotes, and policy statements.');
-        this.updateElement('fact-found', whatWeFound);
+        this.updateElement('fact-found', analysis.what_we_found || 
+            'Analyzed ' + totalClaims + ' claims with individual verification.');
         this.updateElement('fact-means', analysis.what_it_means || 
             this.getFactCheckMeaning(score));
     },
