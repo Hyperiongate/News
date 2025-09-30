@@ -1914,3 +1914,238 @@ body {
 .contribution-bar {
     animation: barGrow 1s ease-out;
 }
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enhanced Styles Update</title>
+    <style>
+        /* ===== CRITICAL FIX: Trust Score Circle Text ===== */
+        .trust-label-badge {
+            margin-top: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+            /* Fix for text overflow */
+            max-width: 140px;
+            text-align: center;
+        }
+
+        /* Adjusted labels for better fit */
+        .trust-label-badge.high {
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+        }
+
+        .trust-label-badge.medium {
+            background: rgba(59, 130, 246, 0.1);
+            color: #2563eb;
+        }
+
+        .trust-label-badge.low {
+            background: rgba(239, 68, 68, 0.1);
+            color: #dc2626;
+        }
+
+        /* Make inner circle slightly larger to accommodate text */
+        .score-circle-inner {
+            width: 164px;
+            height: 164px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            animation: scoreReveal 0.5s ease-out;
+            text-align: center;
+            padding: 10px;
+        }
+
+        .trust-score-big {
+            font-size: 2.75rem;
+            font-weight: 800;
+            line-height: 1;
+            margin: 0;
+            display: block;
+        }
+
+        .trust-score-max {
+            font-size: 1.125rem;
+            color: #6b7280;
+            font-weight: 600;
+            margin: 0.125rem 0 0.5rem 0;
+            display: block;
+        }
+
+        /* ===== ENHANCED BIAS DETECTOR STYLES ===== */
+        .bias-explanation-panel {
+            background: linear-gradient(135deg, #fef3c7 0%, #fef9e7 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-top: 1rem;
+            position: relative;
+        }
+
+        .bias-explanation-panel::before {
+            content: '💡';
+            position: absolute;
+            top: -12px;
+            left: 20px;
+            background: white;
+            padding: 0 8px;
+            font-size: 1.2rem;
+        }
+
+        .bias-explanation-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+        }
+
+        .bias-explanation-text {
+            color: #78350f;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        .bias-indicators-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .bias-indicator-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 3px solid #f59e0b;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .bias-indicator-label {
+            font-size: 0.75rem;
+            color: #92400e;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .bias-indicator-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #451a03;
+        }
+
+        /* Enhanced bias meter with better labels */
+        .bias-scale {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            position: relative;
+        }
+
+        .scale-label {
+            font-size: 0.7rem;
+            color: #6b7280;
+            font-weight: 500;
+            text-align: center;
+            flex: 1;
+        }
+
+        .scale-label.active {
+            color: #f59e0b;
+            font-weight: 700;
+            transform: scale(1.1);
+        }
+
+        /* Better bias track visualization */
+        .bias-track {
+            height: 8px;
+            background: linear-gradient(to right, 
+                #3b82f6 0%, 
+                #06b6d4 25%, 
+                #10b981 50%, 
+                #f59e0b 75%, 
+                #ef4444 100%);
+            border-radius: 4px;
+            position: relative;
+            margin-top: 0.5rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .bias-indicator {
+            position: absolute;
+            top: -6px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 3px solid #1f2937;
+            border-radius: 50%;
+            transform: translateX(-50%);
+            transition: left 0.5s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Bias finding cards */
+        .bias-findings-list {
+            margin-top: 1rem;
+        }
+
+        .bias-finding-item {
+            background: rgba(245, 158, 11, 0.05);
+            border-left: 3px solid #f59e0b;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border-radius: 4px;
+        }
+
+        .bias-finding-item strong {
+            color: #92400e;
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .bias-finding-item span {
+            color: #78350f;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+    <div style="padding: 2rem; font-family: Inter, sans-serif;">
+        <h2>CSS Updates to Add to main.css</h2>
+        
+        <h3>1. Trust Score Circle Fix</h3>
+        <p>The trust label has been adjusted to fit properly within the circle by:</p>
+        <ul>
+            <li>Setting max-width: 140px on the badge</li>
+            <li>Reducing font size slightly to 0.65rem</li>
+            <li>Adding padding to the inner circle</li>
+            <li>Ensuring text-align: center</li>
+        </ul>
+
+        <h3>2. Enhanced Bias Detection Display</h3>
+        <p>New components for better bias explanation:</p>
+        <ul>
+            <li>Bias explanation panel with gradient background</li>
+            <li>Bias indicators grid for detailed metrics</li>
+            <li>Enhanced bias meter with clearer labeling</li>
+            <li>Bias findings list for specific examples</li>
+        </ul>
+
+        <div style="background: #f0f9ff; border: 2px solid #0284c7; padding: 1rem; border-radius: 8px; margin-top: 2rem;">
+            <h4>📋 Copy these styles to your main.css file</h4>
+            <p>Add the CSS from this artifact to your static/css/main.css file to fix the trust circle text overflow and enhance bias detection display.</p>
+        </div>
+    </div>
+</body>
+</html>
