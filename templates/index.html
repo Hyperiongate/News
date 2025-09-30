@@ -3,9 +3,9 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 3.0.0
+    Version: 3.1.0
     Date: September 30, 2025
-    Changes: Enhanced UI with rich visual cards for all services
+    Complete file with fixed trust score display and enhanced styles
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -56,11 +56,14 @@
             border-radius: 50%;
             padding: 8px;
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .score-circle-inner {
-            width: 100%;
-            height: 100%;
+            width: 164px;
+            height: 164px;
             background: white;
             border-radius: 50%;
             display: flex;
@@ -68,14 +71,15 @@
             align-items: center;
             justify-content: center;
             animation: scoreReveal 0.5s ease-out;
-            position: relative;
+            text-align: center;
         }
 
         .trust-score-big {
-            font-size: 3rem;
+            font-size: 2.75rem;
             font-weight: 800;
             line-height: 1;
             margin: 0;
+            display: block;
         }
 
         .trust-score-big.high {
@@ -91,19 +95,21 @@
         }
 
         .trust-score-max {
-            font-size: 1.25rem;
+            font-size: 1.125rem;
             color: #6b7280;
             font-weight: 600;
+            margin: 0.125rem 0 0.5rem 0;
+            display: block;
         }
 
         .trust-label-badge {
-            margin-top: 0.5rem;
-            padding: 0.25rem 1rem;
+            padding: 0.25rem 0.75rem;
             border-radius: 20px;
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            white-space: nowrap;
         }
 
         .trust-label-badge.high {
@@ -1030,10 +1036,7 @@ You can paste:
                         </div>
                         <div class="info-item">
                             <span class="info-label">Source</span>
-                            <span class="info-value" id="articleSource">
-                                ${data.source || 'Loading...'}
-                                ${data.content_type ? `<span class="source-type-badge ${data.content_type}">${data.content_type.toUpperCase()}</span>` : ''}
-                            </span>
+                            <span class="info-value" id="articleSource">${data.source || 'Loading...'}</span>
                         </div>
                         <div class="info-item">
                             <span class="info-label">${analysisMode === 'news' ? 'Author' : 'Creator'}</span>
