@@ -1571,3 +1571,346 @@ body {
     color: #6b7280;
     font-style: italic;
 }
+/**
+ * Enhanced Trust Score Display Styles
+ * Add these styles to your existing main.css file
+ * Date: September 30, 2025
+ * 
+ * These styles create the rich visual trust score display
+ */
+
+/* ===== ENHANCED TRUST SCORE DISPLAY ===== */
+.trust-score-visual {
+    display: flex;
+    gap: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Score Circle Section */
+.score-circle-container {
+    flex-shrink: 0;
+    position: relative;
+}
+
+.score-circle-bg {
+    width: 180px;
+    height: 180px;
+    background: conic-gradient(
+        from 0deg,
+        #10b981 0deg 72deg,
+        #3b82f6 72deg 144deg,
+        #f59e0b 144deg 216deg,
+        #ef4444 216deg 288deg,
+        #6b7280 288deg 360deg
+    );
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.score-circle-inner {
+    width: 100%;
+    height: 100%;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.trust-score-big {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.trust-score-big.high {
+    color: #10b981;
+}
+
+.trust-score-big.medium {
+    color: #3b82f6;
+}
+
+.trust-score-big.low {
+    color: #ef4444;
+}
+
+.trust-score-max {
+    font-size: 1.25rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.trust-label-badge {
+    margin-top: 0.5rem;
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.trust-label-badge.high {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.trust-label-badge.medium {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+.trust-label-badge.low {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+/* Score Details Section */
+.score-details-section {
+    flex: 1;
+}
+
+.score-breakdown-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.score-breakdown-title i {
+    color: #6366f1;
+}
+
+.calculation-method {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.calculation-method-title {
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.calculation-method-text {
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+/* Service Contributions */
+.service-contributions {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.contributions-title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.contribution-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.contribution-label {
+    flex: 0 0 140px;
+    font-size: 0.85rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.contribution-bar-container {
+    flex: 1;
+    height: 24px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.contribution-bar {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.6s ease;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+}
+
+.contribution-score {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+}
+
+.contribution-weight {
+    flex: 0 0 40px;
+    text-align: right;
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+/* Service-specific colors */
+.contribution-source {
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.contribution-bias {
+    background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%);
+}
+
+.contribution-author {
+    background: linear-gradient(90deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.contribution-facts {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.contribution-transparency {
+    background: linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%);
+}
+
+.contribution-manipulation {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+.contribution-content {
+    background: linear-gradient(90deg, #ec4899 0%, #db2777 100%);
+}
+
+/* Article Info Section */
+.article-info-section {
+    margin-top: 2rem;
+    padding: 2rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.info-value {
+    font-size: 1rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.findings-summary {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.02) 100%);
+    border-left: 4px solid #6366f1;
+    border-radius: 8px;
+}
+
+.findings-title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.findings-text {
+    color: #475569;
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .trust-score-visual {
+        flex-direction: column;
+        gap: 2rem;
+    }
+    
+    .score-circle-container {
+        margin: 0 auto;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .contribution-item {
+        flex-wrap: wrap;
+    }
+    
+    .contribution-label {
+        flex: 0 0 100%;
+        margin-bottom: 0.25rem;
+    }
+    
+    .contribution-bar-container {
+        flex: 1 1 auto;
+    }
+}
+
+/* Animations */
+@keyframes scoreReveal {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.score-circle-inner {
+    animation: scoreReveal 0.5s ease-out;
+}
+
+@keyframes barGrow {
+    from {
+        width: 0;
+    }
+}
+
+.contribution-bar {
+    animation: barGrow 1s ease-out;
+}
