@@ -3,9 +3,10 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 3.1.0
+    Version: 3.2.0
     Date: September 30, 2025
     Complete file with fixed trust score display and enhanced styles
+    FIXES: Trust circle text now fits properly with shorter labels
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -72,6 +73,7 @@
             justify-content: center;
             animation: scoreReveal 0.5s ease-out;
             text-align: center;
+            padding: 10px;
         }
 
         .trust-score-big {
@@ -110,6 +112,8 @@
             text-transform: uppercase;
             letter-spacing: 0.03em;
             white-space: nowrap;
+            max-width: 140px;  /* Added to prevent overflow */
+            text-align: center;  /* Added for centering */
         }
 
         .trust-label-badge.high {
@@ -913,15 +917,15 @@ You can paste:
             const analysisMode = data.analysis_mode || 'news';
             
             let scoreClass = 'medium';
-            let label = 'Moderate Trust';
+            let label = 'MODERATE';  // SHORTENED from "Moderate Trust"
             if (trustScore >= 80) {
                 scoreClass = 'high';
-                label = 'Highly Trustworthy';
+                label = 'TRUSTWORTHY';  // SHORTENED from "Highly Trustworthy"
             } else if (trustScore >= 60) {
-                label = 'Generally Trustworthy';
+                label = 'RELIABLE';  // SHORTENED from "Generally Trustworthy"
             } else if (trustScore < 40) {
                 scoreClass = 'low';
-                label = 'Low Trustworthiness';
+                label = 'UNRELIABLE';  // SHORTENED from "Low Trustworthiness"
             }
 
             return `
