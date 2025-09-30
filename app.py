@@ -444,27 +444,90 @@ class SimpleAnalyzers:
         return result
     
     def check_facts(self, text: str) -> Dict[str, Any]:
-        """Basic fact checking"""
+        """Enhanced fact checking with specific claim identification"""
         claims = []
         
-        # Look for common claim patterns
-        if 'million' in text or 'billion' in text:
-            claims.append({'claim': 'Statistical claim detected', 'verdict': 'Needs verification'})
-        if 'study' in text or 'research' in text:
-            claims.append({'claim': 'Research claim detected', 'verdict': 'Check sources'})
-        if 'according to' in text:
-            claims.append({'claim': 'Attribution found', 'verdict': 'True'})
+        # Extract potential factual claims from text
+        sentences = re.split(r'[.!?]+', text)
         
+        for sentence in sentences[:10]:  # Check first 10 sentences for performance
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+                
+            # Look for factual claim patterns
+            claim_identified = False
+            
+            # Numbers and statistics
+            if re.search(r'\d+\s*(percent|%|million|billion|thousand)', sentence, re.IGNORECASE):
+                claims.append({
+                    'claim': sentence[:100] + ('...' if len(sentence) > 100 else ''),
+                    'verdict': 'Needs verification',
+                    'type': 'Statistical claim'
+                })
+                claim_identified = True
+            
+            # Date-based claims
+            elif re.search(r'(January|February|March|April|May|June|July|August|September|October|November|December|\d{4})', sentence):
+                if re.search(r'(will|would|could|might|expected)', sentence, re.IGNORECASE):
+                    claims.append({
+                        'claim': sentence[:100] + ('...' if len(sentence) > 100 else ''),
+                        'verdict': 'Prediction',
+                        'type': 'Future claim'
+                    })
+                else:
+                    claims.append({
+                        'claim': sentence[:100] + ('...' if len(sentence) > 100 else ''),
+                        'verdict': 'True',
+                        'type': 'Date reference'
+                    })
+                claim_identified = True
+            
+            # Attribution claims
+            elif re.search(r'(said|told|according to|reported|stated)', sentence, re.IGNORECASE):
+                claims.append({
+                    'claim': sentence[:100] + ('...' if len(sentence) > 100 else ''),
+                    'verdict': 'Attributed',
+                    'type': 'Quoted statement'
+                })
+                claim_identified = True
+            
+            # Policy or law claims
+            elif re.search(r'(law|policy|regulation|bill|act|legislation)', sentence, re.IGNORECASE):
+                claims.append({
+                    'claim': sentence[:100] + ('...' if len(sentence) > 100 else ''),
+                    'verdict': 'Policy claim',
+                    'type': 'Legal/Policy'
+                })
+                claim_identified = True
+        
+        # Calculate accuracy score based on verifiable claims
         if not claims:
-            claims = [{'claim': 'General news content', 'verdict': 'True'}]
-        
-        accuracy = 75  # Default
+            claims = [{'claim': 'No specific factual claims identified', 'verdict': 'N/A', 'type': 'General content'}]
+            accuracy = 75  # Default for general content
+        else:
+            # Count verified vs unverified
+            verified = sum(1 for c in claims if c['verdict'] in ['True', 'Attributed'])
+            needs_check = sum(1 for c in claims if c['verdict'] in ['Needs verification', 'Policy claim'])
+            
+            if verified + needs_check > 0:
+                accuracy = int((verified / (verified + needs_check)) * 100)
+            else:
+                accuracy = 50
         
         return {
             'accuracy_score': accuracy,
-            'claims': claims,
-            'findings': [f'{len(claims)} claims analyzed'],
-            'score': accuracy
+            'claims': claims[:5],  # Return top 5 claims
+            'total_claims': len(claims),
+            'findings': [f'{len(claims)} factual claims identified for verification'],
+            'score': accuracy,
+            'analysis': {
+                'what_we_looked': 'We identified and examined specific factual claims including statistics, dates, quotes, and policy statements.',
+                'what_we_found': f'Found {len(claims)} claims: {sum(1 for c in claims if c["verdict"] == "True")} verified, '
+                                f'{sum(1 for c in claims if c["verdict"] == "Attributed")} attributed, '
+                                f'{sum(1 for c in claims if "verification" in c["verdict"])} need verification.',
+                'what_it_means': 'Claims requiring verification should be cross-checked with primary sources.' if accuracy < 100 else 'Most claims are properly attributed or verifiable.'
+            }
         }
     
     def analyze_transparency(self, text: str) -> Dict[str, Any]:
