@@ -1,7 +1,7 @@
 """
 TruthLens Clean Architecture - Complete Rewrite
 Date: September 29, 2025
-Version: 5.0.0 CLEAN
+Version: 5.0.1 FIXED
 
 COMPLETE REWRITE:
 - No service registry
@@ -9,6 +9,7 @@ COMPLETE REWRITE:
 - Direct service calls
 - Flat data structures
 - Simple, robust, working
+- FIXED: Full response data included
 """
 
 import os
@@ -457,19 +458,19 @@ class SimpleAnalyzers:
             return 'Minimal Bias'
 
 # ================================================================================
-# MAIN ANALYZER - COORDINATES EVERYTHING
+# MAIN ANALYZER - COORDINATES EVERYTHING - FIXED VERSION
 # ================================================================================
 
 class TruthLensAnalyzer:
-    """Main analyzer that coordinates everything"""
+    """Main analyzer that coordinates everything - FIXED to include all data"""
     
     def __init__(self):
         self.extractor = SimpleArticleExtractor()
         self.analyzers = SimpleAnalyzers()
-        logger.info("✓ TruthLens Analyzer initialized")
+        logger.info("✓ TruthLens Analyzer initialized (v5.0.1)")
     
     def analyze(self, url: str) -> Dict[str, Any]:
-        """Complete analysis of a news article"""
+        """Complete analysis of a news article with FULL data response"""
         start_time = time.time()
         
         # Step 1: Extract article
@@ -486,17 +487,44 @@ class TruthLensAnalyzer:
         domain = article['domain']
         author = article['author']
         
-        # Run individual analyzers
-        source_credibility = self.analyzers.analyze_source_credibility(domain)
-        bias_detector = self.analyzers.analyze_bias(text)
-        author_analyzer = self.analyzers.analyze_author(author, domain)
-        fact_checker = self.analyzers.check_facts(text)
-        transparency_analyzer = self.analyzers.analyze_transparency(text, author)
-        manipulation_detector = self.analyzers.detect_manipulation(text)
-        content_analyzer = self.analyzers.analyze_content(text)
+        # Run individual analyzers and ensure complete data
+        source_credibility = self._ensure_complete_data(
+            'source_credibility',
+            self.analyzers.analyze_source_credibility(domain)
+        )
+        
+        bias_detector = self._ensure_complete_data(
+            'bias_detector',
+            self.analyzers.analyze_bias(text)
+        )
+        
+        author_analyzer = self._ensure_complete_data(
+            'author_analyzer',
+            self.analyzers.analyze_author(author, domain)
+        )
+        
+        fact_checker = self._ensure_complete_data(
+            'fact_checker',
+            self.analyzers.check_facts(text)
+        )
+        
+        transparency_analyzer = self._ensure_complete_data(
+            'transparency_analyzer',
+            self.analyzers.analyze_transparency(text, author)
+        )
+        
+        manipulation_detector = self._ensure_complete_data(
+            'manipulation_detector',
+            self.analyzers.detect_manipulation(text)
+        )
+        
+        content_analyzer = self._ensure_complete_data(
+            'content_analyzer',
+            self.analyzers.analyze_content(text)
+        )
         
         # Calculate overall trust score
-        trust_score = self._calculate_trust_score({
+        all_analyses = {
             'source_credibility': source_credibility,
             'bias_detector': bias_detector,
             'author_analyzer': author_analyzer,
@@ -504,12 +532,14 @@ class TruthLensAnalyzer:
             'transparency_analyzer': transparency_analyzer,
             'manipulation_detector': manipulation_detector,
             'content_analyzer': content_analyzer
-        })
+        }
         
-        # Generate findings summary
+        trust_score = self._calculate_trust_score(all_analyses)
+        
+        # Generate comprehensive findings
         findings_summary = self._generate_findings_summary(trust_score, source_credibility, bias_detector)
         
-        # Build response
+        # Build COMPLETE response with ALL data
         response = {
             'success': True,
             'trust_score': trust_score,
@@ -517,34 +547,217 @@ class TruthLensAnalyzer:
             'source': domain,
             'author': author,
             'findings_summary': findings_summary,
+            
+            # Include FULL detailed analysis with findings
             'detailed_analysis': {
-                'source_credibility': source_credibility,
-                'bias_detector': bias_detector,
-                'author_analyzer': author_analyzer,
-                'fact_checker': fact_checker,
-                'transparency_analyzer': transparency_analyzer,
-                'manipulation_detector': manipulation_detector,
-                'content_analyzer': content_analyzer
+                'source_credibility': self._add_findings(source_credibility, 'source_credibility'),
+                'bias_detector': self._add_findings(bias_detector, 'bias_detector'),
+                'author_analyzer': self._add_findings(author_analyzer, 'author_analyzer'),
+                'fact_checker': self._add_findings(fact_checker, 'fact_checker'),
+                'transparency_analyzer': self._add_findings(transparency_analyzer, 'transparency_analyzer'),
+                'manipulation_detector': self._add_findings(manipulation_detector, 'manipulation_detector'),
+                'content_analyzer': self._add_findings(content_analyzer, 'content_analyzer')
             },
+            
+            # Include complete article metadata
             'article': {
                 'title': article['title'],
                 'url': url,
                 'word_count': article['word_count'],
+                'extraction_method': article.get('method', 'unknown'),
+                'domain': domain,
+                'author': author,
+                'text_preview': text[:500] + '...' if len(text) > 500 else text
+            },
+            
+            # Include analysis metadata
+            'metadata': {
+                'processing_time': round(time.time() - start_time, 2),
+                'timestamp': datetime.now().isoformat(),
+                'version': '5.0.1',
                 'extraction_method': article.get('method', 'unknown')
             },
+            
             'processing_time': round(time.time() - start_time, 2)
         }
         
-        logger.info(f"✓ Analysis complete: Trust Score = {trust_score}/100 in {response['processing_time']}s")
-        
-        # Log response size
-        response_size = len(json.dumps(response))
-        logger.info(f"Response size: {response_size} bytes (should be 10-15KB for real article)")
+        # Log complete response info
+        try:
+            response_json = json.dumps(response)
+            response_size = len(response_json.encode('utf-8'))
+            logger.info(f"✓ Analysis complete: Trust Score = {trust_score}/100 in {response['processing_time']}s")
+            logger.info(f"✓ Full response size: {response_size} bytes (expected 10-15KB)")
+            logger.info(f"✓ Services included: {', '.join(response['detailed_analysis'].keys())}")
+        except Exception as e:
+            logger.error(f"Error serializing response: {e}")
         
         return response
     
+    def _ensure_complete_data(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Ensure service data has all required fields"""
+        # Add service identifier
+        data['service'] = service_name
+        
+        # Ensure core fields exist
+        if 'score' not in data:
+            data['score'] = 50
+        
+        # Add timestamp
+        data['analyzed_at'] = datetime.now().isoformat()
+        
+        return data
+    
+    def _add_findings(self, service_data: Dict[str, Any], service_name: str) -> Dict[str, Any]:
+        """Add detailed findings to service data"""
+        # Copy original data
+        enhanced = service_data.copy()
+        
+        # Generate specific findings based on service
+        findings = []
+        score = enhanced.get('score', 50)
+        
+        if service_name == 'source_credibility':
+            level = enhanced.get('credibility_level', 'Unknown')
+            bias = enhanced.get('bias', 'Unknown')
+            domain = enhanced.get('domain', '')
+            
+            findings.append({
+                'type': 'info',
+                'severity': 'medium' if score >= 60 else 'high',
+                'text': f"Source credibility: {level}",
+                'detail': f"{domain} has a credibility score of {score}/100"
+            })
+            
+            if bias != 'Unknown':
+                findings.append({
+                    'type': 'info',
+                    'severity': 'low',
+                    'text': f"Known political bias: {bias}",
+                    'detail': "Based on historical media analysis"
+                })
+        
+        elif service_name == 'bias_detector':
+            bias_level = enhanced.get('bias_level', 'Unknown')
+            political_lean = enhanced.get('political_lean', 'Unknown')
+            objectivity = enhanced.get('objectivity_score', 50)
+            
+            findings.append({
+                'type': 'warning' if score > 60 else 'info',
+                'severity': 'high' if score > 70 else 'medium',
+                'text': f"Bias level: {bias_level}",
+                'detail': f"Political lean detected: {political_lean}"
+            })
+            
+            findings.append({
+                'type': 'info',
+                'severity': 'low',
+                'text': f"Objectivity score: {objectivity}/100",
+                'detail': "Higher scores indicate more objective reporting"
+            })
+        
+        elif service_name == 'author_analyzer':
+            author_name = enhanced.get('author_name', 'Unknown')
+            verified = enhanced.get('verified', False)
+            
+            findings.append({
+                'type': 'info' if verified else 'warning',
+                'severity': 'low' if verified else 'medium',
+                'text': f"Author: {author_name}",
+                'detail': 'Verified author with publication history' if verified else 'Author not verified'
+            })
+            
+            findings.append({
+                'type': 'info',
+                'severity': 'low',
+                'text': f"Author credibility: {score}/100",
+                'detail': "Based on source reputation and author verification"
+            })
+        
+        elif service_name == 'fact_checker':
+            claims_found = enhanced.get('claims_found', 0)
+            claims_verified = enhanced.get('claims_verified', 0)
+            
+            findings.append({
+                'type': 'info',
+                'severity': 'low',
+                'text': f"Found {claims_found} factual claims",
+                'detail': f"Successfully verified {claims_verified} claims"
+            })
+            
+            if claims_found > 0:
+                verification_rate = (claims_verified / claims_found) * 100
+                findings.append({
+                    'type': 'success' if verification_rate > 60 else 'warning',
+                    'severity': 'low' if verification_rate > 60 else 'medium',
+                    'text': f"Verification rate: {verification_rate:.0f}%",
+                    'detail': "Percentage of claims that could be verified"
+                })
+        
+        elif service_name == 'transparency_analyzer':
+            sources = enhanced.get('sources_cited', 0)
+            quotes = enhanced.get('quotes_used', 0)
+            
+            findings.append({
+                'type': 'info',
+                'severity': 'low',
+                'text': f"Transparency score: {score}/100",
+                'detail': f"Article cites {sources} sources and includes {quotes} quotes"
+            })
+            
+            if sources < 2:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'medium',
+                    'text': "Limited source attribution",
+                    'detail': "Article relies on few external sources"
+                })
+        
+        elif service_name == 'manipulation_detector':
+            techniques = enhanced.get('techniques_found', 0)
+            level = enhanced.get('manipulation_level', 'Low')
+            
+            if techniques > 0:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'high' if techniques > 3 else 'medium',
+                    'text': f"Found {techniques} manipulation techniques",
+                    'detail': f"Manipulation level assessed as: {level}"
+                })
+            else:
+                findings.append({
+                    'type': 'success',
+                    'severity': 'low',
+                    'text': "No manipulation techniques detected",
+                    'detail': "Content appears to be genuine and straightforward"
+                })
+        
+        elif service_name == 'content_analyzer':
+            readability = enhanced.get('readability', 'Unknown')
+            quality_score = enhanced.get('quality_score', 50)
+            
+            findings.append({
+                'type': 'info',
+                'severity': 'low',
+                'text': f"Content readability: {readability}",
+                'detail': f"Quality score: {quality_score}/100"
+            })
+            
+            if quality_score < 50:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'low',
+                    'text': "Complex writing style",
+                    'detail': "Article may be difficult for general audience"
+                })
+        
+        # Add findings to enhanced data
+        enhanced['findings'] = findings
+        enhanced['findings_count'] = len(findings)
+        
+        return enhanced
+    
     def _calculate_trust_score(self, analyses: Dict[str, Any]) -> int:
-        """Calculate weighted trust score"""
+        """Calculate weighted trust score with detailed logging"""
         weights = {
             'source_credibility': 0.25,
             'author_analyzer': 0.15,
@@ -556,6 +769,7 @@ class TruthLensAnalyzer:
         }
         
         total_score = 0
+        contributions = {}
         
         for service, weight in weights.items():
             service_data = analyses.get(service, {})
@@ -565,34 +779,54 @@ class TruthLensAnalyzer:
             if service in ['bias_detector', 'manipulation_detector']:
                 score = 100 - score
             
-            total_score += score * weight
+            contribution = score * weight
+            total_score += contribution
+            contributions[service] = contribution
+            
+            logger.debug(f"Trust Score - {service}: {score} * {weight} = {contribution:.1f}")
         
-        return min(100, max(0, int(total_score)))
+        final_score = min(100, max(0, int(total_score)))
+        logger.info(f"Trust Score Calculation: {final_score}/100")
+        
+        return final_score
     
     def _generate_findings_summary(self, trust_score: int, source_cred: Dict, bias: Dict) -> str:
-        """Generate human-readable findings summary"""
+        """Generate comprehensive human-readable findings summary"""
+        parts = []
+        
+        # Overall assessment
         if trust_score >= 80:
-            summary = "High credibility article from reliable source. "
+            parts.append("High credibility article from reliable source.")
         elif trust_score >= 60:
-            summary = "Generally credible with some concerns. "
+            parts.append("Generally credible with some concerns.")
         elif trust_score >= 40:
-            summary = "Mixed credibility, verify claims independently. "
+            parts.append("Mixed credibility, verify claims independently.")
         else:
-            summary = "Low credibility, approach with caution. "
+            parts.append("Low credibility, approach with caution.")
         
-        # Add specific findings
-        if source_cred['score'] >= 80:
-            summary += "Well-established source. "
-        elif source_cred['score'] < 40:
-            summary += "Source has credibility issues. "
+        # Source assessment
+        source_score = source_cred.get('score', 50)
+        if source_score >= 80:
+            parts.append("Well-established, reputable news source.")
+        elif source_score >= 60:
+            parts.append("Generally reliable source.")
+        elif source_score < 40:
+            parts.append("Source has known credibility issues.")
         
-        if bias['bias_score'] > 60:
-            summary += f"Shows {bias['political_lean'].lower()} bias. "
+        # Bias assessment
+        bias_score = bias.get('bias_score', 0)
+        political_lean = bias.get('political_lean', 'Unknown')
+        if bias_score > 60:
+            parts.append(f"Shows significant {political_lean.lower()} political bias.")
+        elif bias_score > 30:
+            parts.append(f"Some {political_lean.lower()} lean detected.")
+        else:
+            parts.append("Relatively balanced reporting.")
         
-        return summary
+        return " ".join(parts)
     
     def _create_error_response(self, error_msg: str, url: str) -> Dict[str, Any]:
-        """Create error response"""
+        """Create complete error response with proper structure"""
         return {
             'success': False,
             'error': error_msg,
@@ -601,8 +835,27 @@ class TruthLensAnalyzer:
             'source': urlparse(url).netloc if url else 'Unknown',
             'author': 'Unknown',
             'findings_summary': error_msg,
-            'detailed_analysis': {},
-            'processing_time': 0
+            'detailed_analysis': {
+                'source_credibility': {'score': 0, 'error': error_msg, 'findings': []},
+                'bias_detector': {'score': 0, 'error': error_msg, 'findings': []},
+                'author_analyzer': {'score': 0, 'error': error_msg, 'findings': []},
+                'fact_checker': {'score': 0, 'error': error_msg, 'findings': []},
+                'transparency_analyzer': {'score': 0, 'error': error_msg, 'findings': []},
+                'manipulation_detector': {'score': 0, 'error': error_msg, 'findings': []},
+                'content_analyzer': {'score': 0, 'error': error_msg, 'findings': []}
+            },
+            'article': {
+                'title': 'Error',
+                'url': url,
+                'word_count': 0,
+                'error': error_msg
+            },
+            'processing_time': 0,
+            'metadata': {
+                'timestamp': datetime.now().isoformat(),
+                'version': '5.0.1',
+                'error': True
+            }
         }
 
 # ================================================================================
@@ -617,7 +870,7 @@ CORS(app, origins=["*"])
 analyzer = TruthLensAnalyzer()
 
 logger.info("=" * 80)
-logger.info("TRUTHLENS CLEAN ARCHITECTURE - v5.0.0")
+logger.info("TRUTHLENS CLEAN ARCHITECTURE - v5.0.1 FIXED")
 logger.info(f"Debug: {Config.DEBUG}")
 logger.info(f"ScraperAPI: {'✓' if Config.SCRAPERAPI_KEY else '✗'}")
 logger.info(f"OpenAI: {'✓' if Config.OPENAI_API_KEY else '✗'}")
@@ -644,7 +897,7 @@ def health():
     """Health check"""
     return jsonify({
         'status': 'healthy',
-        'version': '5.0.0',
+        'version': '5.0.1',
         'timestamp': datetime.utcnow().isoformat()
     })
 
