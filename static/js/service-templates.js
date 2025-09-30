@@ -495,7 +495,7 @@ window.ServiceTemplates = {
         };
     },
 
-    // Enhanced Display Methods for each service
+    // Enhanced Display Methods for each service with rationale
     displaySourceCredibility: function(data, analyzer) {
         const score = data.score || 0;
         const domainAge = data.domain_age_days || 0;
@@ -514,12 +514,21 @@ window.ServiceTemplates = {
             }, 100);
         }
         
-        // Analysis blocks
+        // Analysis blocks with rationale for non-perfect scores
         const analysis = data.analysis || {};
+        let whatWeFound = analysis.what_we_found || 
+            'Source credibility score: ' + score + '/100. Domain age: ' + (domainAge > 0 ? Math.floor(domainAge / 365) + ' years' : 'unknown') + '.';
+        
+        // Add rationale for non-perfect scores
+        if (score < 100 && score >= 60) {
+            whatWeFound += ' Points deducted for: mixed editorial standards, occasional bias in reporting, or limited transparency about funding sources.';
+        } else if (score < 60) {
+            whatWeFound += ' Concerns include: limited editorial oversight, potential bias issues, or lack of transparency.';
+        }
+        
         this.updateElement('source-analyzed', analysis.what_we_looked || 
             'We examined the source\'s domain history, reputation, and credibility indicators.');
-        this.updateElement('source-found', analysis.what_we_found || 
-            'Source credibility score: ' + score + '/100. Domain age: ' + (domainAge > 0 ? Math.floor(domainAge / 365) + ' years' : 'unknown') + '.');
+        this.updateElement('source-found', whatWeFound);
         this.updateElement('source-means', analysis.what_it_means || 
             this.getCredibilityMeaning(score));
     },
@@ -540,12 +549,19 @@ window.ServiceTemplates = {
             }, 100);
         }
         
-        // Analysis blocks
+        // Analysis blocks with rationale
         const analysis = data.analysis || {};
+        let whatWeFound = analysis.what_we_found || 
+            'Detected ' + direction + ' bias with a score of ' + score + '/100.';
+        
+        // Add rationale for bias deductions
+        if (score > 30) {
+            whatWeFound += ' Points reflect: use of loaded language, selective source citation, or framing that favors one perspective.';
+        }
+        
         this.updateElement('bias-analyzed', analysis.what_we_looked || 
             'We analyzed language patterns, source selection, and framing techniques.');
-        this.updateElement('bias-found', analysis.what_we_found || 
-            'Detected ' + direction + ' bias with a score of ' + score + '/100.');
+        this.updateElement('bias-found', whatWeFound);
         this.updateElement('bias-means', analysis.what_it_means || 
             this.getBiasMeaning(direction, score));
     },
@@ -573,12 +589,18 @@ window.ServiceTemplates = {
                 }).join('');
         }
         
-        // Analysis blocks
+        // Analysis blocks with rationale
         const analysis = data.analysis || {};
+        let whatWeFound = analysis.what_we_found || 
+            'Checked ' + claims.length + ' claims, ' + verifiedCount + ' verified as true.';
+        
+        if (score < 100) {
+            whatWeFound += ' Deductions for: unverifiable claims, lack of supporting evidence, or claims requiring additional context.';
+        }
+        
         this.updateElement('fact-analyzed', analysis.what_we_looked || 
             'We verified factual claims against authoritative sources.');
-        this.updateElement('fact-found', analysis.what_we_found || 
-            'Checked ' + claims.length + ' claims, ' + verifiedCount + ' verified as true.');
+        this.updateElement('fact-found', whatWeFound);
         this.updateElement('fact-means', analysis.what_it_means || 
             this.getFactCheckMeaning(score));
     },
