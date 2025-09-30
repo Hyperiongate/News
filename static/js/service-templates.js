@@ -1,523 +1,500 @@
 /**
- * TruthLens Service Templates
- * Date: September 14, 2025
- * Version: 2.0.0 - CLEAN CONSOLIDATED VERSION
+ * Enhanced Author Display for ServiceTemplates
+ * Date: September 30, 2025
+ * Version: 3.0 - RICH AUTHOR VISUALIZATION
  * 
- * Purpose: Template generation and data display logic for all analysis services
- * Dependencies: Must be loaded before app-core.js
- * 
- * FIXES IN THIS VERSION:
- * - Proper data extraction from backend response
- * - No more demo/fallback data
- * - Clean template structure
- * - Consistent data handling
+ * Replace the existing author template and displayAuthor function
+ * in your service-templates.js file with this enhanced version
  */
 
-window.ServiceTemplates = {
-    // Get template HTML for a service
-    getTemplate(serviceId) {
-        const templates = {
-            sourceCredibility: `
-                <div class="service-analysis-section">
-                    <div class="analysis-metrics">
-                        <div class="metric-card">
-                            <span class="metric-label">Credibility Score</span>
-                            <span class="metric-value" id="source-score">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Domain Age</span>
-                            <span class="metric-value" id="domain-age">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Reputation</span>
-                            <span class="metric-value" id="source-reputation">--</span>
-                        </div>
-                    </div>
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4>What We Analyzed</h4>
-                            <p id="source-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What We Found</h4>
-                            <p id="source-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What This Means</h4>
-                            <p id="source-means">Loading...</p>
-                        </div>
+// Add this enhanced author template to your templates object
+const authorTemplate = `
+    <div class="service-analysis-section author-enhanced">
+        <!-- Author Header with Avatar and Social Links -->
+        <div class="author-profile-header">
+            <div class="author-avatar-section">
+                <div class="author-avatar-circle">
+                    <i class="fas fa-user-circle" id="author-avatar-icon"></i>
+                    <div class="credibility-badge" id="author-credibility-badge">
+                        <span id="author-badge-score">--</span>
                     </div>
                 </div>
-            `,
+                <div class="verification-badge" id="author-verification">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Verified</span>
+                </div>
+            </div>
             
-            biasDetector: `
-                <div class="service-analysis-section">
-                    <div class="bias-meter-container">
-                        <div class="bias-meter">
-                            <div class="bias-spectrum">
-                                <span class="bias-label">Far Left</span>
-                                <span class="bias-label">Left</span>
-                                <span class="bias-label">Center</span>
-                                <span class="bias-label">Right</span>
-                                <span class="bias-label">Far Right</span>
-                            </div>
-                            <div class="bias-indicator-track">
-                                <div class="bias-indicator" id="bias-indicator"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4>What We Analyzed</h4>
-                            <p id="bias-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What We Found</h4>
-                            <p id="bias-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What This Means</h4>
-                            <p id="bias-means">Loading...</p>
-                        </div>
-                    </div>
+            <div class="author-main-info">
+                <h2 class="author-name" id="author-name">Loading...</h2>
+                <div class="author-title" id="author-position">Position Loading...</div>
+                <div class="author-org" id="author-organization">Organization Loading...</div>
+                
+                <!-- Social Media Links -->
+                <div class="author-social-links" id="author-social-links">
+                    <!-- Populated dynamically -->
                 </div>
-            `,
+            </div>
             
-            factChecker: `
-                <div class="service-analysis-section">
-                    <div class="fact-check-summary">
-                        <div class="metric-card">
-                            <span class="metric-label">Accuracy Score</span>
-                            <span class="metric-value" id="fact-score">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Claims Checked</span>
-                            <span class="metric-value" id="claims-checked">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Verified</span>
-                            <span class="metric-value" id="claims-verified">--</span>
-                        </div>
+            <!-- Trust Indicator -->
+            <div class="author-trust-indicator">
+                <div class="trust-meter" id="author-trust-meter">
+                    <div class="trust-level" id="trust-level-indicator">
+                        <span class="trust-label">Can Trust?</span>
+                        <span class="trust-value" id="trust-value">--</span>
                     </div>
-                    <div class="claims-list" id="claims-list"></div>
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4>What We Analyzed</h4>
-                            <p id="fact-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What We Found</h4>
-                            <p id="fact-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What This Means</h4>
-                            <p id="fact-means">Loading...</p>
-                        </div>
+                    <div class="trust-explanation" id="trust-explanation">
+                        Loading assessment...
                     </div>
                 </div>
-            `,
-            
-            transparencyAnalyzer: `
-                <div class="service-analysis-section">
-                    <div class="transparency-metrics">
-                        <div class="metric-card">
-                            <span class="metric-label">Transparency Score</span>
-                            <span class="metric-value" id="transparency-score">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Sources Cited</span>
-                            <span class="metric-value" id="sources-count">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Direct Quotes</span>
-                            <span class="metric-value" id="quotes-count">--</span>
-                        </div>
-                    </div>
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4>What We Analyzed</h4>
-                            <p id="transparency-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What We Found</h4>
-                            <p id="transparency-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What This Means</h4>
-                            <p id="transparency-means">Loading...</p>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            manipulationDetector: `
-                <div class="service-analysis-section">
-                    <div class="manipulation-metrics">
-                        <div class="metric-card">
-                            <span class="metric-label">Integrity Score</span>
-                            <span class="metric-value" id="integrity-score">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Techniques Found</span>
-                            <span class="metric-value" id="techniques-count">--</span>
-                        </div>
-                    </div>
-                    <div class="techniques-list" id="techniques-list"></div>
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4>What We Analyzed</h4>
-                            <p id="manipulation-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What We Found</h4>
-                            <p id="manipulation-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What This Means</h4>
-                            <p id="manipulation-means">Loading...</p>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            contentAnalyzer: `
-                <div class="service-analysis-section">
-                    <div class="content-metrics">
-                        <div class="metric-card">
-                            <span class="metric-label">Quality Score</span>
-                            <span class="metric-value" id="quality-score">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Readability</span>
-                            <span class="metric-value" id="readability-level">--</span>
-                        </div>
-                        <div class="metric-card">
-                            <span class="metric-label">Word Count</span>
-                            <span class="metric-value" id="word-count">--</span>
-                        </div>
-                    </div>
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4>What We Analyzed</h4>
-                            <p id="content-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What We Found</h4>
-                            <p id="content-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What This Means</h4>
-                            <p id="content-means">Loading...</p>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            author: `
-                <div class="service-analysis-section">
-                    <div class="author-profile">
-                        <div class="author-header">
-                            <h3 id="author-name">Loading...</h3>
-                            <div class="author-links" id="author-links"></div>
-                        </div>
-                        <div class="author-metrics">
-                            <div class="metric-card">
-                                <span class="metric-label">Credibility</span>
-                                <span class="metric-value" id="author-credibility">--</span>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-label">Expertise</span>
-                                <span class="metric-value" id="author-expertise">--</span>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-label">Track Record</span>
-                                <span class="metric-value" id="author-track-record">--</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4>What We Analyzed</h4>
-                            <p id="author-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What We Found</h4>
-                            <p id="author-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4>What This Means</h4>
-                            <p id="author-means">Loading...</p>
-                        </div>
-                    </div>
-                </div>
-            `
-        };
+            </div>
+        </div>
         
-        return templates[serviceId] || '<div class="error">Template not found</div>';
-    },
+        <!-- Credibility Metrics -->
+        <div class="author-metrics-grid">
+            <div class="metric-card credibility-card">
+                <div class="metric-icon">
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="author-credibility">--</div>
+                    <div class="metric-label">Credibility Score</div>
+                </div>
+                <div class="metric-chart">
+                    <div class="mini-bar-chart">
+                        <div class="bar-fill" id="credibility-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="metric-card reputation-card">
+                <div class="metric-icon">
+                    <i class="fas fa-star"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="author-reputation">--</div>
+                    <div class="metric-label">Reputation</div>
+                </div>
+                <div class="metric-chart">
+                    <div class="mini-bar-chart">
+                        <div class="bar-fill" id="reputation-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="metric-card experience-card">
+                <div class="metric-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="author-experience">--</div>
+                    <div class="metric-label">Years Experience</div>
+                </div>
+            </div>
+            
+            <div class="metric-card articles-card">
+                <div class="metric-icon">
+                    <i class="fas fa-newspaper"></i>
+                </div>
+                <div class="metric-content">
+                    <div class="metric-value" id="author-articles">--</div>
+                    <div class="metric-label">Recent Articles</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Awards Section -->
+        <div class="author-awards-section" id="awards-section" style="display: none;">
+            <h3 class="section-title">
+                <i class="fas fa-trophy"></i>
+                Awards & Recognition
+            </h3>
+            <div class="awards-container" id="awards-container">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Expertise Areas -->
+        <div class="author-expertise-section" id="expertise-section" style="display: none;">
+            <h3 class="section-title">
+                <i class="fas fa-graduation-cap"></i>
+                Areas of Expertise
+            </h3>
+            <div class="expertise-tags" id="expertise-tags">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Professional Bio -->
+        <div class="author-bio-section">
+            <h3 class="section-title">
+                <i class="fas fa-user"></i>
+                Professional Biography
+            </h3>
+            <p class="author-bio" id="author-bio">Loading biography...</p>
+            <div class="author-education" id="author-education" style="display: none;">
+                <i class="fas fa-university"></i>
+                <span id="education-text"></span>
+            </div>
+        </div>
+        
+        <!-- Trust Indicators and Red Flags -->
+        <div class="trust-assessment-grid">
+            <div class="trust-indicators-section" id="trust-indicators-section">
+                <h3 class="section-title">
+                    <i class="fas fa-check-circle"></i>
+                    Trust Indicators
+                </h3>
+                <ul class="indicators-list" id="trust-indicators">
+                    <!-- Populated dynamically -->
+                </ul>
+            </div>
+            
+            <div class="red-flags-section" id="red-flags-section">
+                <h3 class="section-title">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Caution Flags
+                </h3>
+                <ul class="flags-list" id="red-flags">
+                    <!-- Populated dynamically -->
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Recent Articles -->
+        <div class="recent-articles-section" id="recent-articles-section" style="display: none;">
+            <h3 class="section-title">
+                <i class="fas fa-file-alt"></i>
+                Recent Articles by Author
+            </h3>
+            <div class="articles-list" id="recent-articles-list">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Professional Links -->
+        <div class="professional-links-section">
+            <h3 class="section-title">
+                <i class="fas fa-link"></i>
+                Research Links
+            </h3>
+            <div class="professional-links" id="professional-links">
+                <!-- Populated dynamically -->
+            </div>
+        </div>
+        
+        <!-- Analysis Details -->
+        <div class="analysis-details">
+            <div class="analysis-block">
+                <h4><i class="fas fa-search"></i> What We Analyzed</h4>
+                <p id="author-analyzed">We examined the author's credentials, publication history, social presence, and professional reputation.</p>
+            </div>
+            <div class="analysis-block">
+                <h4><i class="fas fa-chart-line"></i> What We Found</h4>
+                <p id="author-found">Loading findings...</p>
+            </div>
+            <div class="analysis-block">
+                <h4><i class="fas fa-info-circle"></i> What This Means</h4>
+                <p id="author-means">Loading assessment...</p>
+            </div>
+        </div>
+    </div>
+`;
 
-    // Display all analyses
-    displayAllAnalyses(data, analyzer) {
-        console.log('Displaying all analyses with data:', data);
-        
-        const detailed = data.detailed_analysis || {};
-        
-        // Display each service
-        this.displaySourceCredibility(detailed.source_credibility || {}, analyzer);
-        this.displayBiasDetector(detailed.bias_detector || {}, analyzer);
-        this.displayFactChecker(detailed.fact_checker || {}, analyzer);
-        this.displayTransparencyAnalyzer(detailed.transparency_analyzer || {}, analyzer);
-        this.displayManipulationDetector(detailed.manipulation_detector || {}, analyzer);
-        this.displayContentAnalyzer(detailed.content_analyzer || {}, analyzer);
-        this.displayAuthor(detailed.author_analyzer || {}, analyzer);
-    },
-
-    // Display Source Credibility
-    displaySourceCredibility(data, analyzer) {
-        const score = data.score || 0;
-        const domainAge = data.domain_age_days || 0;
-        const reputation = data.credibility || 'Unknown';
-        
-        this.updateElement('source-score', `${score}/100`);
-        this.updateElement('domain-age', domainAge > 0 ? `${Math.floor(domainAge / 365)} years` : 'Unknown');
-        this.updateElement('source-reputation', reputation);
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('source-analyzed', analysis.what_we_looked || 
-            'We examined the source\'s domain history, reputation, and credibility indicators.');
-        this.updateElement('source-found', analysis.what_we_found || 
-            `Source credibility score: ${score}/100. Domain age: ${domainAge > 0 ? Math.floor(domainAge / 365) + ' years' : 'unknown'}.`);
-        this.updateElement('source-means', analysis.what_it_means || 
-            this.getCredibilityMeaning(score));
-    },
-
-    // Display Bias Detection
-    displayBiasDetector(data, analyzer) {
-        const score = data.bias_score || 50;
-        const direction = data.political_bias || 'center';
-        
-        // Position bias indicator
-        const indicator = document.getElementById('bias-indicator');
-        if (indicator) {
-            const position = this.getBiasPosition(direction, score);
-            indicator.style.left = `${position}%`;
+// Enhanced displayAuthor function
+function displayAuthorEnhanced(data, analyzer) {
+    console.log('Enhanced Author Data:', data);
+    
+    // Basic Information
+    const authorName = data.author_name || data.name || 'Unknown Author';
+    const credibility = data.credibility_score || data.score || 0;
+    const reputation = data.reputation_score || credibility;
+    const experience = data.years_experience || 0;
+    const articlesCount = data.articles_found || 0;
+    const position = data.position || 'Journalist';
+    const organization = data.organization || 'Unknown';
+    const verified = data.verified || false;
+    
+    // Update header information
+    updateElement('author-name', authorName);
+    updateElement('author-position', position);
+    updateElement('author-organization', organization);
+    
+    // Update avatar and verification
+    const avatarIcon = document.getElementById('author-avatar-icon');
+    if (avatarIcon) {
+        if (verified) {
+            avatarIcon.className = 'fas fa-user-check';
+            avatarIcon.style.color = '#10b981';
+        } else {
+            avatarIcon.className = 'fas fa-user-circle';
+            avatarIcon.style.color = '#6b7280';
         }
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('bias-analyzed', analysis.what_we_looked || 
-            'We analyzed language patterns, source selection, and framing techniques.');
-        this.updateElement('bias-found', analysis.what_we_found || 
-            `Detected ${direction} bias with a score of ${score}/100.`);
-        this.updateElement('bias-means', analysis.what_it_means || 
-            this.getBiasMeaning(direction, score));
-    },
-
-    // Display Fact Checking
-    displayFactChecker(data, analyzer) {
-        const score = data.accuracy_score || 0;
-        const claims = data.claims || [];
-        const verifiedCount = claims.filter(c => c.verdict === 'True').length;
-        
-        this.updateElement('fact-score', `${score}%`);
-        this.updateElement('claims-checked', claims.length);
-        this.updateElement('claims-verified', verifiedCount);
-        
-        // Display claims list
-        const claimsList = document.getElementById('claims-list');
-        if (claimsList && claims.length > 0) {
-            claimsList.innerHTML = '<h4>Claims Analyzed:</h4>' + 
-                claims.map(claim => `
-                    <div class="claim-item">
-                        <span class="claim-text">${claim.claim || 'Claim'}</span>
-                        <span class="claim-verdict ${claim.verdict?.toLowerCase()}">${claim.verdict || 'Unverified'}</span>
-                    </div>
-                `).join('');
-        }
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('fact-analyzed', analysis.what_we_looked || 
-            'We verified factual claims against authoritative sources.');
-        this.updateElement('fact-found', analysis.what_we_found || 
-            `Checked ${claims.length} claims, ${verifiedCount} verified as true.`);
-        this.updateElement('fact-means', analysis.what_it_means || 
-            this.getFactCheckMeaning(score));
-    },
-
-    // Display Transparency Analysis
-    displayTransparencyAnalyzer(data, analyzer) {
-        const score = data.transparency_score || 0;
-        const sources = data.source_count || 0;
-        const quotes = data.quote_count || 0;
-        
-        this.updateElement('transparency-score', `${score}/100`);
-        this.updateElement('sources-count', sources);
-        this.updateElement('quotes-count', quotes);
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('transparency-analyzed', analysis.what_we_looked || 
-            'We examined source attribution, citations, and transparency of information.');
-        this.updateElement('transparency-found', analysis.what_we_found || 
-            `Found ${sources} sources cited and ${quotes} direct quotes.`);
-        this.updateElement('transparency-means', analysis.what_it_means || 
-            this.getTransparencyMeaning(score, sources));
-    },
-
-    // Display Manipulation Detection
-    displayManipulationDetector(data, analyzer) {
-        const score = data.integrity_score || 100;
-        const techniques = data.techniques || [];
-        
-        this.updateElement('integrity-score', `${score}/100`);
-        this.updateElement('techniques-count', techniques.length);
-        
-        // Display techniques list
-        const techniquesList = document.getElementById('techniques-list');
-        if (techniquesList && techniques.length > 0) {
-            techniquesList.innerHTML = '<h4>Techniques Detected:</h4>' + 
-                techniques.map(tech => `
-                    <div class="technique-item">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <span>${tech}</span>
-                    </div>
-                `).join('');
-        }
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('manipulation-analyzed', analysis.what_we_looked || 
-            'We checked for emotional manipulation, misleading headlines, and deceptive techniques.');
-        this.updateElement('manipulation-found', analysis.what_we_found || 
-            `Integrity score: ${score}/100. ${techniques.length} potential issues found.`);
-        this.updateElement('manipulation-means', analysis.what_it_means || 
-            this.getManipulationMeaning(score, techniques.length));
-    },
-
-    // Display Content Analysis
-    displayContentAnalyzer(data, analyzer) {
-        const score = data.quality_score || 0;
-        const readability = data.readability_level || 'Unknown';
-        const wordCount = data.word_count || 0;
-        
-        this.updateElement('quality-score', `${score}/100`);
-        this.updateElement('readability-level', readability);
-        this.updateElement('word-count', wordCount);
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('content-analyzed', analysis.what_we_looked || 
-            'We evaluated readability, structure, and overall content quality.');
-        this.updateElement('content-found', analysis.what_we_found || 
-            `Quality score: ${score}/100. Readability: ${readability}. Length: ${wordCount} words.`);
-        this.updateElement('content-means', analysis.what_it_means || 
-            this.getContentMeaning(score, readability));
-    },
-
-    // Display Author Analysis
-    displayAuthor(data, analyzer) {
-        const authorName = analyzer?.cleanAuthorName(data.name) || 'Unknown Author';
-        const credibility = data.credibility_score || 0;
-        const expertise = data.expertise || 'General';
-        const trackRecord = data.track_record || 'Unknown';
-        
-        this.updateElement('author-name', authorName);
-        this.updateElement('author-credibility', `${credibility}/100`);
-        this.updateElement('author-expertise', expertise);
-        this.updateElement('author-track-record', trackRecord);
-        
-        // Add author links if available
-        const linksContainer = document.getElementById('author-links');
-        if (linksContainer && data.social_media) {
-            const links = [];
-            if (data.social_media.twitter) {
-                links.push(`<a href="${data.social_media.twitter}" target="_blank"><i class="fab fa-twitter"></i></a>`);
-            }
-            if (data.social_media.linkedin) {
-                links.push(`<a href="${data.social_media.linkedin}" target="_blank"><i class="fab fa-linkedin"></i></a>`);
-            }
-            linksContainer.innerHTML = links.join('');
-        }
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('author-analyzed', analysis.what_we_looked || 
-            'We examined the author\'s credentials, expertise, and publishing history.');
-        this.updateElement('author-found', analysis.what_we_found || 
-            `Author: ${authorName}. Credibility: ${credibility}/100.`);
-        this.updateElement('author-means', analysis.what_it_means || 
-            this.getAuthorMeaning(credibility));
-    },
-
-    // Helper Functions
-    updateElement(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
-        }
-    },
-
-    getBiasPosition(direction, score) {
-        const positions = {
-            'far-left': 10,
-            'left': 30,
-            'center-left': 40,
-            'center': 50,
-            'center-right': 60,
-            'right': 70,
-            'far-right': 90
-        };
-        return positions[direction.toLowerCase()] || 50;
-    },
-
-    // Meaning generators
-    getCredibilityMeaning(score) {
-        if (score >= 80) return 'This source has excellent credibility and is highly trustworthy.';
-        if (score >= 60) return 'This source has good credibility with minor concerns.';
-        if (score >= 40) return 'This source has moderate credibility. Verify important claims.';
-        return 'This source has low credibility. Seek additional sources.';
-    },
-
-    getBiasMeaning(direction, score) {
-        if (direction === 'center') return 'The article appears balanced with minimal bias.';
-        const strength = score > 70 ? 'Strong' : score > 40 ? 'Moderate' : 'Slight';
-        return `${strength} ${direction} bias detected. Consider seeking alternative perspectives.`;
-    },
-
-    getFactCheckMeaning(score) {
-        if (score >= 90) return 'Excellent factual accuracy. Claims are well-supported.';
-        if (score >= 70) return 'Good factual accuracy with minor issues.';
-        if (score >= 50) return 'Mixed factual accuracy. Some claims need verification.';
-        return 'Significant factual concerns. Many claims could not be verified.';
-    },
-
-    getTransparencyMeaning(score, sources) {
-        if (score >= 80) return 'Excellent transparency with clear source attribution.';
-        if (score >= 60) return 'Good transparency with adequate sourcing.';
-        if (sources === 0) return 'No sources cited. Unable to verify information.';
-        return 'Limited transparency. Additional sources needed.';
-    },
-
-    getManipulationMeaning(score, techniques) {
-        if (techniques === 0) return 'No manipulation detected. Content appears fair.';
-        if (techniques <= 2) return 'Minor persuasive techniques used within acceptable bounds.';
-        return 'Multiple manipulation techniques detected. Read critically.';
-    },
-
-    getContentMeaning(score, readability) {
-        if (score >= 80) return `Excellent content quality with ${readability} readability.`;
-        if (score >= 60) return `Good content quality. ${readability} to read.`;
-        return 'Content quality concerns identified. May lack depth or clarity.';
-    },
-
-    getAuthorMeaning(credibility) {
-        if (credibility >= 80) return 'Highly credible author with strong expertise.';
-        if (credibility >= 60) return 'Credible author with relevant experience.';
-        if (credibility >= 40) return 'Author credibility could not be fully verified.';
-        return 'Limited information about author credibility.';
     }
-};
+    
+    // Update credibility badge
+    const credBadge = document.getElementById('author-credibility-badge');
+    const badgeScore = document.getElementById('author-badge-score');
+    if (credBadge && badgeScore) {
+        badgeScore.textContent = credibility;
+        if (credibility >= 80) {
+            credBadge.className = 'credibility-badge high';
+        } else if (credibility >= 60) {
+            credBadge.className = 'credibility-badge medium';
+        } else {
+            credBadge.className = 'credibility-badge low';
+        }
+    }
+    
+    // Show/hide verification badge
+    const verificationBadge = document.getElementById('author-verification');
+    if (verificationBadge) {
+        verificationBadge.style.display = verified ? 'flex' : 'none';
+    }
+    
+    // Update trust indicator
+    const trustValue = document.getElementById('trust-value');
+    const trustExplanation = document.getElementById('trust-explanation');
+    const trustMeter = document.getElementById('author-trust-meter');
+    
+    if (trustValue && data.can_trust) {
+        trustValue.textContent = data.can_trust;
+        trustValue.className = 'trust-value';
+        
+        if (data.can_trust === 'YES') {
+            trustValue.style.color = '#10b981';
+            if (trustMeter) trustMeter.className = 'trust-meter trust-yes';
+        } else if (data.can_trust === 'MAYBE') {
+            trustValue.style.color = '#f59e0b';
+            if (trustMeter) trustMeter.className = 'trust-meter trust-maybe';
+        } else {
+            trustValue.style.color = '#ef4444';
+            if (trustMeter) trustMeter.className = 'trust-meter trust-no';
+        }
+    }
+    
+    if (trustExplanation && data.trust_explanation) {
+        trustExplanation.textContent = data.trust_explanation;
+    }
+    
+    // Update metrics
+    updateElement('author-credibility', credibility + '/100');
+    updateElement('author-reputation', reputation + '/100');
+    updateElement('author-experience', experience > 0 ? experience + ' years' : 'New');
+    updateElement('author-articles', articlesCount);
+    
+    // Update progress bars
+    const credBar = document.getElementById('credibility-bar');
+    if (credBar) {
+        credBar.style.width = credibility + '%';
+        credBar.style.backgroundColor = getScoreColor(credibility);
+    }
+    
+    const repBar = document.getElementById('reputation-bar');
+    if (repBar) {
+        repBar.style.width = reputation + '%';
+        repBar.style.backgroundColor = getScoreColor(reputation);
+    }
+    
+    // Display social media links
+    const socialContainer = document.getElementById('author-social-links');
+    if (socialContainer && data.social_profiles && data.social_profiles.length > 0) {
+        socialContainer.innerHTML = data.social_profiles.map(profile => `
+            <a href="${profile.url}" target="_blank" class="social-link" 
+               style="color: ${profile.color};" title="${profile.platform}">
+                <i class="${profile.icon}"></i>
+            </a>
+        `).join('');
+    }
+    
+    // Display awards
+    const awardsSection = document.getElementById('awards-section');
+    const awardsContainer = document.getElementById('awards-container');
+    if (data.awards && data.awards.length > 0) {
+        awardsSection.style.display = 'block';
+        awardsContainer.innerHTML = data.awards.map(award => `
+            <div class="award-badge">
+                <i class="fas fa-medal"></i>
+                <span>${award}</span>
+            </div>
+        `).join('');
+    } else {
+        awardsSection.style.display = 'none';
+    }
+    
+    // Display expertise areas
+    const expertiseSection = document.getElementById('expertise-section');
+    const expertiseTags = document.getElementById('expertise-tags');
+    if (data.expertise_areas && data.expertise_areas.length > 0) {
+        expertiseSection.style.display = 'block';
+        expertiseTags.innerHTML = data.expertise_areas.map(area => `
+            <span class="expertise-tag">${area}</span>
+        `).join('');
+    } else {
+        expertiseSection.style.display = 'none';
+    }
+    
+    // Display biography
+    updateElement('author-bio', data.biography || data.bio || 'Biography not available.');
+    
+    // Display education if available
+    const educationSection = document.getElementById('author-education');
+    const educationText = document.getElementById('education-text');
+    if (data.education && educationSection && educationText) {
+        educationSection.style.display = 'block';
+        educationText.textContent = data.education;
+    }
+    
+    // Display trust indicators
+    const trustIndicators = document.getElementById('trust-indicators');
+    if (trustIndicators && data.trust_indicators && data.trust_indicators.length > 0) {
+        trustIndicators.innerHTML = data.trust_indicators.map(indicator => `
+            <li class="indicator-item">
+                <i class="fas fa-check"></i>
+                <span>${indicator}</span>
+            </li>
+        `).join('');
+    }
+    
+    // Display red flags
+    const redFlags = document.getElementById('red-flags');
+    if (redFlags && data.red_flags && data.red_flags.length > 0) {
+        redFlags.innerHTML = data.red_flags.map(flag => `
+            <li class="flag-item">
+                <i class="fas fa-times"></i>
+                <span>${flag}</span>
+            </li>
+        `).join('');
+    }
+    
+    // Display recent articles
+    const articlesSection = document.getElementById('recent-articles-section');
+    const articlesList = document.getElementById('recent-articles-list');
+    if (data.recent_articles && data.recent_articles.length > 0) {
+        articlesSection.style.display = 'block';
+        articlesList.innerHTML = data.recent_articles.map(article => `
+            <div class="article-item">
+                <a href="${article.url}" target="_blank" class="article-title">
+                    ${article.title}
+                </a>
+                <div class="article-meta">
+                    <span class="article-date">${formatDate(article.date)}</span>
+                </div>
+                <p class="article-description">${article.description || ''}</p>
+            </div>
+        `).join('');
+    } else {
+        articlesSection.style.display = 'none';
+    }
+    
+    // Display professional links
+    const professionalLinks = document.getElementById('professional-links');
+    if (professionalLinks && data.professional_links && data.professional_links.length > 0) {
+        professionalLinks.innerHTML = data.professional_links.map(link => `
+            <a href="${link.url}" target="_blank" class="professional-link">
+                <i class="fas fa-external-link-alt"></i>
+                <span>${link.label}</span>
+            </a>
+        `).join('');
+    }
+    
+    // Update analysis blocks with dynamic content
+    const analyzed = 'We examined ' + authorName + "'s credentials, " +
+                    (data.articles_found > 0 ? data.articles_found + ' recent articles, ' : '') +
+                    (data.social_count > 0 ? 'social media presence, ' : '') +
+                    'and professional reputation across ' + (data.data_sources ? data.data_sources.length : '1') + ' data sources.';
+    updateElement('author-analyzed', analyzed);
+    
+    const findings = generateAuthorFindings(data);
+    updateElement('author-found', findings);
+    
+    const meaning = generateAuthorMeaning(data);
+    updateElement('author-means', meaning);
+}
 
-console.log('ServiceTemplates loaded successfully - v2.0.0');
+// Helper functions
+function getScoreColor(score) {
+    if (score >= 80) return '#10b981';
+    if (score >= 60) return '#3b82f6';
+    if (score >= 40) return '#f59e0b';
+    return '#ef4444';
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function generateAuthorFindings(data) {
+    const parts = [];
+    
+    if (data.verified) {
+        parts.push('Verified journalist');
+    }
+    
+    if (data.credibility_score >= 70) {
+        parts.push('high credibility score (' + data.credibility_score + '/100)');
+    } else if (data.credibility_score >= 50) {
+        parts.push('moderate credibility (' + data.credibility_score + '/100)');
+    } else {
+        parts.push('limited credibility information (' + data.credibility_score + '/100)');
+    }
+    
+    if (data.awards && data.awards.length > 0) {
+        parts.push(data.awards.length + ' journalism awards');
+    }
+    
+    if (data.years_experience > 5) {
+        parts.push(data.years_experience + ' years of experience');
+    }
+    
+    if (data.social_count > 0) {
+        parts.push('active professional social media presence');
+    }
+    
+    const org = data.organization || 'unknown outlet';
+    parts.push('publishing at ' + org);
+    
+    return 'Found ' + parts.join(', ') + '.';
+}
+
+function generateAuthorMeaning(data) {
+    const credibility = data.credibility_score || 0;
+    const canTrust = data.can_trust;
+    
+    let meaning = '';
+    
+    if (canTrust === 'YES') {
+        meaning = 'This author has strong credibility indicators. ';
+        if (data.awards && data.awards.length > 0) {
+            meaning += 'Award-winning journalist with proven track record. ';
+        }
+        if (data.verified) {
+            meaning += 'Identity and credentials verified. ';
+        }
+        meaning += 'You can generally trust content from this author, though always verify important claims.';
+    } else if (canTrust === 'MAYBE') {
+        meaning = 'This author has some credibility indicators but limited verification available. ';
+        meaning += 'The publication outlet is ' + (data.outlet_score >= 70 ? 'reputable' : 'moderately established') + '. ';
+        meaning += 'Recommend cross-referencing important claims with other sources.';
+    } else {
+        meaning = 'Limited information available to verify this author\'s credibility. ';
+        if (!data.verified) {
+            meaning += 'Unable to verify author identity or credentials. ';
+        }
+        meaning += 'Exercise caution and seek additional sources for verification of claims.';
+    }
+    
+    return meaning;
+}
+
+function updateElement(id, value) {
+    const element = document.getElementById(id);
+    if (element) {
+        element.textContent = value;
+    }
+}
+
+// Update the main displayAuthor function to use the enhanced version
+window.ServiceTemplates.displayAuthor = displayAuthorEnhanced;
