@@ -1,10 +1,12 @@
 /**
- * TruthLens Service Templates - Enhanced Transparency Version
+ * TruthLens Service Templates - Enhanced Version
  * Date: October 1, 2025
- * Version: 4.1.0 - ENHANCED TRANSPARENCY ANALYSIS
+ * Version: 4.2.0 - ENHANCED MANIPULATION DISPLAY
  * 
- * CHANGES: Completely redesigned Transparency Analyzer with clear explanations
- * Replace your existing static/js/service-templates.js with this file
+ * CHANGES: 
+ * - Added detailed manipulation technique examples with descriptions
+ * - Enhanced visual hierarchy for manipulation detection
+ * - All other functionality preserved
  */
 
 // Create global ServiceTemplates object
@@ -901,27 +903,72 @@ window.ServiceTemplates = {
             this.getTransparencyMeaning(score, sources));
     },
 
+    // ENHANCED Display Manipulation Detector with DETAILED EXAMPLES
     displayManipulationDetector: function(data, analyzer) {
         const score = data.integrity_score || 100;
         const techniques = data.techniques || [];
+        const tactics_found = data.tactics_found || [];
         
         this.updateElement('integrity-score', score + '/100');
         this.updateElement('techniques-count', techniques.length);
         
         const techniquesList = document.getElementById('techniques-list');
-        if (techniquesList && techniques.length > 0) {
-            techniquesList.innerHTML = '<h4>Techniques Detected:</h4>' + 
-                techniques.map(function(tech) {
-                    return '<div class="technique-item">' +
-                        '<i class="fas fa-exclamation-triangle"></i>' +
-                        '<span>' + tech + '</span>' +
-                    '</div>';
-                }).join('');
+        if (techniquesList) {
+            if (techniques.length > 0 || tactics_found.length > 0) {
+                let html = '<h4 style="margin-bottom: 1rem; color: #1e293b; font-size: 1.1rem; font-weight: 600;">Techniques Detected:</h4>';
+                html += '<div class="techniques-detailed">';
+                
+                // Use tactics_found if available (has detailed info), otherwise use techniques
+                if (tactics_found && tactics_found.length > 0) {
+                    tactics_found.slice(0, 10).forEach(function(tactic) {
+                        const severityColor = tactic.severity === 'high' ? '#ef4444' : 
+                                            tactic.severity === 'medium' ? '#f59e0b' : '#10b981';
+                        const severityIcon = tactic.severity === 'high' ? 'exclamation-triangle' : 
+                                           tactic.severity === 'medium' ? 'exclamation-circle' : 'info-circle';
+                        const severityLabel = tactic.severity === 'high' ? 'HIGH' : 
+                                            tactic.severity === 'medium' ? 'MEDIUM' : 'LOW';
+                        
+                        html += '<div class="technique-item-detailed" style="margin-bottom: 1.25rem; padding: 1.25rem; background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%); border-left: 4px solid ' + severityColor + '; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">';
+                        html += '  <div style="display: flex; align-items: start; gap: 1rem;">';
+                        html += '    <i class="fas fa-' + severityIcon + '" style="color: ' + severityColor + '; margin-top: 4px; font-size: 1.3rem; min-width: 24px;"></i>';
+                        html += '    <div style="flex: 1;">';
+                        html += '      <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">';
+                        html += '        <div style="font-weight: 700; color: #0f172a; font-size: 1.05rem;">' + tactic.name + '</div>';
+                        html += '        <span style="background: ' + severityColor + '; color: white; padding: 0.15rem 0.5rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.5px;">' + severityLabel + '</span>';
+                        html += '      </div>';
+                        html += '      <div style="color: #475569; font-size: 0.95rem; line-height: 1.6; margin-bottom: 0.5rem;">' + tactic.description + '</div>';
+                        if (tactic.instances && tactic.instances > 1) {
+                            html += '      <div style="margin-top: 0.75rem; padding: 0.5rem 0.75rem; background: rgba(59, 130, 246, 0.08); border-radius: 6px; color: #3b82f6; font-size: 0.875rem; display: inline-flex; align-items: center; gap: 0.5rem;">';
+                            html += '        <i class="fas fa-sync-alt" style="font-size: 0.8rem;"></i>';
+                            html += '        <span><strong>Found ' + tactic.instances + ' instances</strong> throughout the article</span>';
+                            html += '      </div>';
+                        }
+                        html += '    </div>';
+                        html += '  </div>';
+                        html += '</div>';
+                    });
+                } else {
+                    // Fallback to simple technique list with enhanced styling
+                    techniques.slice(0, 10).forEach(function(tech) {
+                        html += '<div class="technique-item" style="margin-bottom: 1rem; padding: 1rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 4px solid #ef4444; border-radius: 8px; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.15);">';
+                        html += '  <div style="display: flex; align-items: center; gap: 0.75rem;">';
+                        html += '    <i class="fas fa-exclamation-triangle" style="color: #ef4444; font-size: 1.1rem;"></i>';
+                        html += '    <span style="color: #1e293b; font-weight: 600; font-size: 0.95rem;">' + tech + '</span>';
+                        html += '  </div>';
+                        html += '</div>';
+                    });
+                }
+                
+                html += '</div>';
+                techniquesList.innerHTML = html;
+            } else {
+                techniquesList.innerHTML = '<div style="padding: 1.75rem; text-align: center; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b981; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);"><i class="fas fa-check-circle" style="margin-right: 0.75rem; font-size: 1.5rem; color: #059669;"></i><strong style="color: #166534; font-size: 1.05rem;">No manipulation techniques detected</strong><p style="color: #16a34a; margin-top: 0.5rem; margin-bottom: 0;">This article appears to present information fairly and objectively.</p></div>';
+            }
         }
         
         const analysis = data.analysis || {};
-        this.updateElement('manipulation-analyzed', analysis.what_we_looked || 'We checked for manipulation.');
-        this.updateElement('manipulation-found', analysis.what_we_found || 'Integrity score: ' + score + '/100.');
+        this.updateElement('manipulation-analyzed', analysis.what_we_looked || 'We checked for emotional manipulation, propaganda techniques, logical fallacies, selective quoting, and deceptive framing.');
+        this.updateElement('manipulation-found', analysis.what_we_found || 'Integrity score: ' + score + '/100. Detected ' + techniques.length + ' manipulation technique' + (techniques.length !== 1 ? 's' : '') + '.');
         this.updateElement('manipulation-means', analysis.what_it_means || this.getManipulationMeaning(score, techniques.length));
     },
 
@@ -1021,10 +1068,18 @@ window.ServiceTemplates = {
         return 'Poor transparency. Minimal sourcing makes it difficult to verify information independently.';
     },
 
-    getManipulationMeaning: function(score, techniques) {
-        if (techniques === 0) return 'No manipulation detected.';
-        if (techniques <= 2) return 'Minor techniques within normal bounds.';
-        return 'Multiple manipulation techniques detected.';
+    getManipulationMeaning: function(score, techniqueCount) {
+        if (score >= 80) {
+            return 'No significant manipulation detected. The article appears to present information fairly and objectively.';
+        } else if (score >= 60) {
+            return 'Minor persuasive techniques detected (' + techniqueCount + ' technique' + (techniqueCount !== 1 ? 's' : '') + '). These could be stylistic choices rather than deliberate manipulation.';
+        } else if (score >= 40) {
+            return 'Some manipulative elements present (' + techniqueCount + ' techniques detected). The article uses psychological tactics to influence reader opinion. Read critically and verify claims.';
+        } else if (score >= 20) {
+            return 'Significant manipulation detected (' + techniqueCount + ' techniques). This article heavily employs psychological techniques to sway readers. Be very skeptical of its conclusions.';
+        } else {
+            return 'Extensive manipulation detected (' + techniqueCount + ' techniques). This content appears designed to manipulate rather than inform. Treat with extreme skepticism.';
+        }
     },
 
     getContentMeaning: function(score, readability) {
@@ -1041,4 +1096,4 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.1.0 ENHANCED TRANSPARENCY');
+console.log('ServiceTemplates loaded successfully - v4.2.0 ENHANCED MANIPULATION DISPLAY');
