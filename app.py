@@ -45,6 +45,14 @@ try:
 except ImportError:
     MANIPULATION_DETECTOR_AVAILABLE = False
 
+# Import author analyzer service
+try:
+    from services.author_analyzer import AuthorAnalyzer
+    AUTHOR_ANALYZER_AVAILABLE = True
+except ImportError:
+    AUTHOR_ANALYZER_AVAILABLE = False
+    logger.warning("Author analyzer service not available")
+
 # ================================================================================
 # CONFIGURATION
 # ================================================================================
@@ -81,6 +89,15 @@ if MANIPULATION_DETECTOR_AVAILABLE:
         logger.info("✓ Manipulation detector service initialized")
     except Exception as e:
         logger.error(f"Failed to initialize manipulation detector: {e}")
+
+# Initialize author analyzer
+author_analyzer = None
+if AUTHOR_ANALYZER_AVAILABLE:
+    try:
+        author_analyzer = AuthorAnalyzer()
+        logger.info("✓ Author analyzer service initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize author analyzer: {e}")
 
 # ================================================================================
 # ARTICLE EXTRACTOR - ENHANCED AUTHOR DETECTION
@@ -478,6 +495,23 @@ Provide a detailed JSON analysis with this EXACT structure:
                 except Exception as e:
                     logger.error(f"Manipulation detector service failed: {e}")
             
+            # FIXED: Call author analyzer service if available
+            if author_analyzer:
+                try:
+                    logger.info("Running enhanced author analysis service...")
+                    author_result = author_analyzer.analyze({
+                        'author': author,
+                        'domain': urlparse(url).netloc.replace('www.', ''),
+                        'text': text,
+                        'title': title
+                    })
+                    
+                    if author_result.get('success') and 'data' in author_result:
+                        analysis['author_service'] = author_result['data']
+                        logger.info(f"✓ Author analyzer service completed - Score: {author_result['data'].get('credibility_score', 0)}")
+                except Exception as e:
+                    logger.error(f"Author analyzer service failed: {e}")
+            
             return analysis
             
         except json.JSONDecodeError as e:
@@ -528,6 +562,78 @@ Provide a detailed JSON analysis with this EXACT structure:
 
 class ResponseFormatter:
     """Format AI results for frontend"""
+    
+    @staticmethod
+    def _format_author_analyzer(author_data: Dict, author_name: str, cred: Dict) -> Dict:
+        """
+        Format author analyzer data - ENHANCED VERSION
+        Uses service data if available, falls back to AI data
+        """
+        if author_data:
+            # We have rich service data
+            logger.info("Using author analyzer service data")
+            return {
+                'name': author_data.get('author_name', author_name),
+                'credibility_score': author_data.get('credibility_score', 50),
+                'score': author_data.get('score', 50),
+                'expertise': author_data.get('position', 'Journalist'),
+                'track_record': author_data.get('credibility_level', 'Unknown'),
+                'findings': [f"Credibility: {author_data.get('credibility_score', 50)}/100"] + author_data.get('trust_indicators', [])[:3],
+                'analysis': {
+                    'what_we_looked': 'Comprehensive author credentials, publication history, awards, and professional standing.',
+                    'what_we_found': author_data.get('trust_reasoning', f"Author credibility score: {author_data.get('credibility_score', 50)}/100"),
+                    'what_it_means': author_data.get('trust_explanation', 'Author assessment based on multiple factors.')
+                },
+                # Enhanced fields from service
+                'bio': author_data.get('bio', ''),
+                'organization': author_data.get('organization', ''),
+                'position': author_data.get('position', ''),
+                'years_experience': author_data.get('years_experience', 0),
+                'expertise_areas': author_data.get('expertise_areas', []),
+                'awards': author_data.get('awards', []),
+                'awards_count': author_data.get('awards_count', 0),
+                'social_profiles': author_data.get('social_profiles', []),
+                'professional_links': author_data.get('professional_links', []),
+                'verified': author_data.get('verified', False),
+                'reputation_score': author_data.get('reputation_score', 50),
+                'trust_indicators': author_data.get('trust_indicators', []),
+                'red_flags': author_data.get('red_flags', []),
+                'recent_articles': author_data.get('recent_articles', []),
+                'education': author_data.get('education', ''),
+                'verification_status': author_data.get('verification_status', 'Unverified')
+            }
+        else:
+            # Fallback to basic AI data
+            logger.info("Using OpenAI author data (service not available)")
+            return {
+                'name': author_name,
+                'credibility_score': cred.get('author_score', 50),
+                'score': cred.get('author_score', 50),
+                'expertise': 'Journalist',
+                'track_record': 'Established' if cred.get('author_score', 50) >= 60 else 'Unknown',
+                'findings': [f"Author credibility: {cred.get('author_score', 50)}/100"],
+                'analysis': {
+                    'what_we_looked': 'AI assessed author credentials and expertise.',
+                    'what_we_found': f"Author credibility score: {cred.get('author_score', 50)}/100",
+                    'what_it_means': 'Author assessment based on publication and article quality.'
+                },
+                'bio': '',
+                'organization': '',
+                'position': 'Journalist',
+                'years_experience': 0,
+                'expertise_areas': [],
+                'awards': [],
+                'awards_count': 0,
+                'social_profiles': [],
+                'professional_links': [],
+                'verified': False,
+                'reputation_score': cred.get('author_score', 50),
+                'trust_indicators': [],
+                'red_flags': [],
+                'recent_articles': [],
+                'education': '',
+                'verification_status': 'Unverified'
+            }
     
     @staticmethod
     def format_complete_response(article: Dict, ai_analysis: Dict) -> Dict:
@@ -586,19 +692,7 @@ class ResponseFormatter:
                 
                 'fact_checker': ResponseFormatter._format_fact_checking(facts),
                 
-                'author_analyzer': {
-                    'name': article.get('author', 'Unknown'),
-                    'credibility_score': cred.get('author_score', 50),
-                    'expertise': 'Journalist',
-                    'track_record': 'Established' if cred.get('author_score', 50) >= 60 else 'Unknown',
-                    'score': cred.get('author_score', 50),
-                    'findings': [f"Author credibility: {cred.get('author_score', 50)}/100"],
-                    'analysis': {
-                        'what_we_looked': 'AI assessed author credentials and expertise.',
-                        'what_we_found': f"Author credibility score: {cred.get('author_score', 50)}/100",
-                        'what_it_means': 'Author assessment based on publication and article quality.'
-                    }
-                },
+                'author_analyzer': ResponseFormatter._format_author_analyzer(ai_analysis.get('author_service'), article.get('author', 'Unknown'), cred),
                 
                 'transparency_analyzer': {
                     'transparency_score': cred.get('transparency_score', 50),
@@ -886,8 +980,10 @@ analyzer = TruthLensAnalyzer()
 
 # Startup message
 logger.info("=" * 80)
-logger.info("TRUTHLENS v7.2.0 - ENHANCED AUTHOR EXTRACTION")
+logger.info("TRUTHLENS v7.2.0 - ENHANCED AUTHOR EXTRACTION + AUTHOR ANALYZER SERVICE")
 logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
+logger.info(f"Author Analyzer: {'✓ ENHANCED SERVICE LOADED' if author_analyzer else '✗ Using basic analysis'}")
+logger.info(f"Manipulation Detector: {'✓ LOADED' if manipulation_detector else '✗ Using basic detection'}")
 logger.info("=" * 80)
 
 @app.route('/')
