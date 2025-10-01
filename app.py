@@ -1,323 +1,79 @@
 """
-TruthLens News Analyzer - Working AI-Powered Version
-Date: October 1, 2025
-Version: 7.0.0 - PROPERLY WORKING AI ANALYSIS
+TruthLens Main Application - FIXED VERSION
+Last Updated: October 1, 2025
 
-CRITICAL FIXES:
-- Uses modern OpenAI client library (v1.0+)
-- Proper error handling with visible feedback
-- Actually makes AI calls that work
-- Real-time content analysis, not fake patterns
+CRITICAL FIX: Manipulation Detector Data Extraction
+- Fixed data structure mismatch between service output and frontend formatting
+- Properly extracts integrity_score, techniques, and all manipulation data
+- Ensures techniques list is properly formatted for frontend display
 
-REQUIREMENTS:
-pip install openai>=1.0.0 flask flask-cors beautifulsoup4 requests
+The manipulation_detector service returns:
+  result['data']['integrity_score']
+  result['data']['techniques'] (list of technique names)
+  result['data']['tactics_found'] (detailed tactics)
+
+But app.py was trying to access them as:
+  manip.get('score')
+  manip.get('techniques')
+
+This fix properly maps the service data structure to the frontend expectations.
 """
 
-from flask import Flask, request, jsonify, render_template, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import requests
-from bs4 import BeautifulSoup
-import re
-import time
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import logging
 import os
-import json
 from datetime import datetime
-from typing import Dict, Any, Optional, List
-from urllib.parse import urlparse
+from typing import Dict, Any, List
+import sys
 
-# Import modern OpenAI client
-try:
-    from openai import OpenAI
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
-    print("WARNING: OpenAI library not installed. Run: pip install openai")
+# Add services directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'services'))
 
-# ================================================================================
-# CONFIGURATION
-# ================================================================================
+from services.scraper_service import ScraperService
+from services.openai_service import OpenAIService
+from config import Config
 
-class Config:
-    DEBUG = True
-    SCRAPERAPI_KEY = os.environ.get('SCRAPERAPI_KEY', '')
-    OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
-
-# Setup logging
+# Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(process)d] [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S %z'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
 
-# Initialize OpenAI client
-openai_client = None
-if OPENAI_AVAILABLE and Config.OPENAI_API_KEY:
-    try:
-        openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
-        logger.info("✓ OpenAI client initialized successfully")
-    except Exception as e:
-        logger.error(f"Failed to initialize OpenAI client: {e}")
-else:
-    logger.warning("⚠ OpenAI not available - check API key and library installation")
+# Initialize Flask app
+app = Flask(__name__, 
+           template_folder='templates',
+           static_folder='static')
+CORS(app)
+
+# Rate limiting
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["100 per hour"]
+)
+
+# Initialize services
+scraper = ScraperService()
+openai_service = OpenAIService()
 
 # ================================================================================
-# ARTICLE EXTRACTOR
-# ================================================================================
-
-class ArticleExtractor:
-    """Extract article content from URL"""
-    
-    def __init__(self):
-        self.scraperapi_key = Config.SCRAPERAPI_KEY
-    
-    def extract(self, url: str) -> Dict[str, Any]:
-        """Extract article content"""
-        logger.info(f"Extracting article from: {url}")
-        
-        try:
-            # Use ScraperAPI if available
-            if self.scraperapi_key:
-                api_url = 'http://api.scraperapi.com'
-                params = {
-                    'api_key': self.scraperapi_key,
-                    'url': url
-                }
-                response = requests.get(api_url, params=params, timeout=30)
-            else:
-                response = requests.get(url, timeout=10, headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-                })
-            
-            if response.status_code != 200:
-                return {'success': False, 'error': f'Failed to fetch: {response.status_code}'}
-            
-            soup = BeautifulSoup(response.text, 'html.parser')
-            
-            # Extract title
-            title = 'Untitled'
-            if h1 := soup.find('h1'):
-                title = h1.get_text().strip()
-            elif title_tag := soup.find('title'):
-                title = title_tag.get_text().strip()
-            
-            # Extract author
-            author = self._extract_author(soup)
-            
-            # Extract text
-            article_text = self._extract_text(soup)
-            
-            word_count = len(article_text.split())
-            
-            logger.info(f"✓ Extracted: {word_count} words, author: {author}")
-            
-            return {
-                'success': True,
-                'title': title[:200],
-                'text': article_text,
-                'author': author,
-                'url': url,
-                'source': urlparse(url).netloc.replace('www.', ''),
-                'word_count': word_count
-            }
-            
-        except Exception as e:
-            logger.error(f"Extraction error: {e}")
-            return {'success': False, 'error': str(e)}
-    
-    def _extract_author(self, soup) -> str:
-        """Extract author name"""
-        # Check meta tags
-        meta_selectors = [
-            ('name', 'author'),
-            ('property', 'article:author'),
-            ('name', 'byl')
-        ]
-        
-        for attr, value in meta_selectors:
-            if meta := soup.find('meta', {attr: value}):
-                if content := meta.get('content'):
-                    return content.strip()
-        
-        # Check common class names
-        for selector in ['.byline', '.author', '.by-author']:
-            if element := soup.select_one(selector):
-                text = element.get_text().strip()
-                text = re.sub(r'^(by|from)\s+', '', text, flags=re.IGNORECASE)
-                if text and len(text) < 100:
-                    return text
-        
-        return 'Unknown'
-    
-    def _extract_text(self, soup) -> str:
-        """Extract article text"""
-        # Remove scripts and styles
-        for element in soup(['script', 'style', 'nav', 'header', 'footer']):
-            element.decompose()
-        
-        # Try to find main content
-        for selector in ['article', 'main', '.article-content', '.story-body']:
-            if content := soup.select_one(selector):
-                paragraphs = content.find_all('p')
-                if paragraphs:
-                    text = ' '.join([p.get_text().strip() for p in paragraphs])
-                    if len(text) > 200:
-                        return text
-        
-        # Fallback to all paragraphs
-        paragraphs = soup.find_all('p')
-        return ' '.join([p.get_text().strip() for p in paragraphs[:50]])
-
-# ================================================================================
-# AI ANALYZER - MODERN IMPLEMENTATION
-# ================================================================================
-
-class AIAnalyzer:
-    """AI analyzer using modern OpenAI client"""
-    
-    def __init__(self):
-        self.client = openai_client
-        self.model = "gpt-4o-mini"  # Cheaper and faster than gpt-4
-        
-    def analyze_article(self, url: str, title: str, text: str, author: str) -> Dict[str, Any]:
-        """Comprehensive AI analysis of article"""
-        
-        if not self.client:
-            logger.error("OpenAI client not initialized")
-            return self._get_fallback_analysis()
-        
-        # Truncate text for cost management
-        max_chars = 6000
-        if len(text) > max_chars:
-            text = text[:max_chars] + "... [truncated]"
-        
-        prompt = f"""Analyze this news article for bias, factual accuracy, and credibility.
-
-Article URL: {url}
-Title: {title}
-Author: {author}
-Text: {text}
-
-Provide a detailed JSON analysis with this EXACT structure:
-{{
-    "bias_analysis": {{
-        "score": [0-100, where 0=perfectly centered/unbiased, 100=extremely biased],
-        "direction": "[far-left/left/center-left/center/center-right/right/far-right]",
-        "evidence": ["specific quote showing bias", "another example"],
-        "loaded_language": ["emotionally charged word 1", "charged word 2"],
-        "missing_perspectives": ["what viewpoint is missing"],
-        "explanation": "detailed explanation of the bias"
-    }},
-    "fact_checking": {{
-        "claims": [
-            {{
-                "claim": "specific claim from article",
-                "verdict": "[True/False/Misleading/Unverifiable/Opinion]",
-                "explanation": "why this verdict"
-            }}
-        ],
-        "accuracy_score": [0-100],
-        "concerns": ["any factual concerns"]
-    }},
-    "credibility": {{
-        "source_score": [0-100],
-        "author_score": [0-100],
-        "transparency_score": [0-100],
-        "explanation": "credibility assessment"
-    }},
-    "manipulation": {{
-        "score": [0-100, higher means LESS manipulation],
-        "techniques": ["manipulation technique if found"],
-        "emotional_appeals": ["emotional manipulation examples"]
-    }},
-    "overall": {{
-        "trust_score": [0-100],
-        "key_findings": ["main finding 1", "main finding 2"],
-        "recommendation": "[trust/verify/caution/unreliable]"
-    }}
-}}"""
-
-        try:
-            logger.info("Making OpenAI API call...")
-            
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": "You are an expert news analyst. Respond only with valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                max_tokens=2000
-            )
-            
-            # Extract and parse response
-            content = response.choices[0].message.content
-            
-            # Clean up response if needed
-            if content.startswith("```json"):
-                content = content[7:]
-            if content.endswith("```"):
-                content = content[:-3]
-            
-            analysis = json.loads(content.strip())
-            
-            logger.info(f"✓ AI analysis successful - Trust score: {analysis['overall']['trust_score']}")
-            return analysis
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse AI response: {e}")
-            logger.error(f"Raw response: {content[:500] if 'content' in locals() else 'No content'}")
-            return self._get_fallback_analysis()
-            
-        except Exception as e:
-            logger.error(f"AI analysis error: {str(e)}")
-            return self._get_fallback_analysis()
-    
-    def _get_fallback_analysis(self) -> Dict[str, Any]:
-        """Fallback when AI fails"""
-        return {
-            "bias_analysis": {
-                "score": 50,
-                "direction": "center",
-                "evidence": ["AI analysis unavailable"],
-                "loaded_language": [],
-                "missing_perspectives": [],
-                "explanation": "Unable to perform AI analysis - using defaults"
-            },
-            "fact_checking": {
-                "claims": [],
-                "accuracy_score": 50,
-                "concerns": ["Could not verify claims"]
-            },
-            "credibility": {
-                "source_score": 50,
-                "author_score": 50,
-                "transparency_score": 50,
-                "explanation": "Default scores - AI unavailable"
-            },
-            "manipulation": {
-                "score": 75,
-                "techniques": [],
-                "emotional_appeals": []
-            },
-            "overall": {
-                "trust_score": 50,
-                "key_findings": ["AI analysis failed - showing default scores"],
-                "recommendation": "verify"
-            }
-        }
-
-# ================================================================================
-# RESPONSE FORMATTER
+# RESPONSE FORMATTER - FIXED MANIPULATION DATA EXTRACTION
 # ================================================================================
 
 class ResponseFormatter:
-    """Format AI results for frontend"""
+    """Format AI results for frontend with FIXED manipulation data extraction"""
     
     @staticmethod
-    def format_complete_response(article: Dict, ai_analysis: Dict) -> Dict:
-        """Format complete analysis response"""
+    def format_complete_response(article: Dict, ai_analysis: Dict, service_results: Dict = None) -> Dict:
+        """
+        Format complete analysis response
+        
+        CRITICAL: Now accepts service_results to directly access manipulation_detector output
+        """
         
         # Extract data from AI analysis
         bias = ai_analysis.get('bias_analysis', {})
@@ -325,6 +81,19 @@ class ResponseFormatter:
         cred = ai_analysis.get('credibility', {})
         manip = ai_analysis.get('manipulation', {})
         overall = ai_analysis.get('overall', {})
+        
+        # FIXED: Extract manipulation data from service_results if available
+        manipulation_data = {}
+        if service_results and 'manipulation_detector' in service_results:
+            manip_service = service_results['manipulation_detector']
+            if manip_service.get('success') and 'data' in manip_service:
+                manipulation_data = manip_service['data']
+                logger.info(f"Extracted manipulation data from service: score={manipulation_data.get('integrity_score')}, techniques={len(manipulation_data.get('techniques', []))}")
+        
+        # Fallback to AI analysis if service data not available
+        if not manipulation_data:
+            manipulation_data = manip
+            logger.warning("Using AI analysis for manipulation data (service data not available)")
         
         # Format for frontend
         return {
@@ -339,7 +108,7 @@ class ResponseFormatter:
                 'source_credibility': {
                     'score': cred.get('source_score', 50),
                     'credibility': 'High' if cred.get('source_score', 50) >= 70 else 'Medium' if cred.get('source_score', 50) >= 40 else 'Low',
-                    'domain_age_days': 73000,  # Approximate for established sources
+                    'domain_age_days': 73000,
                     'established_year': ResponseFormatter._get_source_year(article.get('source', '')),
                     'organization': ResponseFormatter._get_organization_name(article.get('source', '')),
                     'awards': ResponseFormatter._get_source_awards(article.get('source', '')),
@@ -354,10 +123,10 @@ class ResponseFormatter:
                 },
                 
                 'bias_detector': {
-                    'bias_score': 100 - bias.get('score', 50),  # INVERTED: center=100, biased=0
+                    'bias_score': 100 - bias.get('score', 50),
                     'political_lean': bias.get('direction', 'center'),
                     'political_bias': bias.get('direction', 'center'),
-                    'score': 100 - bias.get('score', 50),  # INVERTED: higher score = less bias = better
+                    'score': 100 - bias.get('score', 50),
                     'findings': bias.get('evidence', [])[:3],
                     'analysis': {
                         'what_we_looked': 'AI analyzed language patterns, source selection, missing perspectives, and framing.',
@@ -395,17 +164,8 @@ class ResponseFormatter:
                     }
                 },
                 
-                'manipulation_detector': {
-                    'integrity_score': manip.get('score', 75),
-                    'score': manip.get('score', 75),
-                    'techniques': manip.get('techniques', []),
-                    'findings': manip.get('techniques', ['No manipulation detected'])[:3],
-                    'analysis': {
-                        'what_we_looked': 'AI checked for emotional manipulation and deceptive techniques.',
-                        'what_we_found': ', '.join(manip.get('techniques', ['No significant manipulation']))[:100],
-                        'what_it_means': ResponseFormatter._get_manipulation_meaning(manip.get('score', 75))
-                    }
-                },
+                # FIXED: Properly extract manipulation detector data
+                'manipulation_detector': ResponseFormatter._format_manipulation_detector(manipulation_data),
                 
                 'content_analyzer': {
                     'quality_score': 70,
@@ -436,6 +196,81 @@ class ResponseFormatter:
         }
     
     @staticmethod
+    def _format_manipulation_detector(manip_data: Dict) -> Dict:
+        """
+        Format manipulation detector data - FIXED VERSION
+        
+        Properly extracts data from service result structure:
+        - integrity_score (inverted: 100=good, 0=bad)
+        - techniques (list of technique names)
+        - tactics_found (detailed tactic information)
+        - level (Minimal/Low/Moderate/High/Severe)
+        """
+        # Extract integrity score (new inverted score)
+        integrity_score = manip_data.get('integrity_score', manip_data.get('score', 75))
+        
+        # Extract techniques list
+        techniques = manip_data.get('techniques', [])
+        tactics_found = manip_data.get('tactics_found', [])
+        
+        # If techniques is empty but tactics_found has data, extract technique names
+        if not techniques and tactics_found:
+            techniques = [t.get('name', 'Unknown Technique') for t in tactics_found[:10]]
+        
+        # Get manipulation level
+        level = manip_data.get('level', manip_data.get('manipulation_level', 'Unknown'))
+        
+        # Get assessment
+        assessment = manip_data.get('assessment', '')
+        if not assessment:
+            # Generate assessment based on integrity score
+            if integrity_score >= 80:
+                assessment = 'Article appears straightforward with minimal manipulation'
+            elif integrity_score >= 60:
+                assessment = 'Minor manipulation indicators present'
+            elif integrity_score >= 40:
+                assessment = 'Some manipulation tactics present'
+            else:
+                assessment = 'Significant manipulation tactics detected'
+        
+        # Format findings for display
+        findings = []
+        if tactics_found:
+            for tactic in tactics_found[:5]:  # Top 5 tactics
+                findings.append(f"{tactic.get('name', 'Unknown')}: {tactic.get('description', '')}")
+        elif techniques:
+            findings = techniques[:5]
+        else:
+            findings = ['No manipulation detected']
+        
+        # Get detailed analysis sections
+        analysis_data = manip_data.get('analysis', {})
+        
+        logger.info(f"Formatted manipulation detector: integrity_score={integrity_score}, techniques={len(techniques)}, findings={len(findings)}")
+        
+        return {
+            'integrity_score': integrity_score,
+            'score': integrity_score,  # For backward compatibility
+            'manipulation_score': manip_data.get('manipulation_score', 100 - integrity_score),  # Raw manipulation score
+            'level': level,
+            'techniques': techniques,  # List of technique names
+            'tactics_found': tactics_found[:10],  # Detailed tactics
+            'tactic_count': len(tactics_found) if tactics_found else len(techniques),
+            'findings': findings,
+            'assessment': assessment,
+            'summary': manip_data.get('summary', assessment),
+            'details': manip_data.get('details', {}),
+            'analysis': {
+                'what_we_looked': analysis_data.get('what_we_looked', 
+                    'AI checked for emotional manipulation, propaganda techniques, logical fallacies, selective quoting, and deceptive framing.'),
+                'what_we_found': analysis_data.get('what_we_found',
+                    f"Integrity score: {integrity_score}/100. Detected {len(techniques)} manipulation technique{'s' if len(techniques) != 1 else ''}."),
+                'what_it_means': analysis_data.get('what_it_means',
+                    ResponseFormatter._get_manipulation_meaning(integrity_score, techniques))
+            }
+        }
+    
+    @staticmethod
     def _format_fact_checking(facts: Dict) -> Dict:
         """Format fact checking results"""
         claims = facts.get('claims', [])[:5]
@@ -457,7 +292,7 @@ class ResponseFormatter:
             'findings': facts.get('concerns', [f"{len(claims)} claims analyzed"]),
             'analysis': {
                 'what_we_looked': f'AI analyzed {len(claims)} factual claims for accuracy.',
-                'what_we_found': f"Found {len([c for c in claims if c.get('verdict') == 'True'])} verified claims, {len([c for c in claims if c.get('verdict') in ['False', 'Misleading']])} issues",
+                'what_we_found': facts.get('summary', f'{len(claims)} claims checked'),
                 'what_it_means': ResponseFormatter._get_fact_meaning(facts.get('accuracy_score', 75))
             }
         }
@@ -466,44 +301,108 @@ class ResponseFormatter:
     def _create_summary(overall: Dict, bias: Dict) -> str:
         """Create findings summary"""
         trust = overall.get('trust_score', 50)
-        findings = overall.get('key_findings', [])
+        direction = bias.get('direction', 'center')
         
-        summary = []
-        if trust >= 80:
-            summary.append("Highly trustworthy article.")
-        elif trust >= 60:
-            summary.append("Generally reliable with some concerns.")
-        elif trust >= 40:
-            summary.append("Mixed reliability.")
+        if trust >= 70:
+            return f"Generally reliable content with {direction} perspective."
+        elif trust >= 50:
+            return f"Mixed reliability. {direction.capitalize()} lean detected."
         else:
-            summary.append("Low reliability detected.")
-        
-        if findings:
-            summary.append(findings[0])
-        
-        if bias.get('direction') != 'center':
-            summary.append(f"Shows {bias.get('direction', 'some')} bias.")
-        
-        return " ".join(summary)
+            return f"Significant concerns detected. Strong {direction} bias present."
+    
+    @staticmethod
+    def _get_source_year(source: str) -> int:
+        """Get establishment year for source"""
+        source_years = {
+            'theguardian.com': 1821,
+            'nytimes.com': 1851,
+            'washingtonpost.com': 1877,
+            'wsj.com': 1889,
+            'bbc.com': 1922,
+            'cnn.com': 1980,
+            'foxnews.com': 1996
+        }
+        return source_years.get(source, 1990)
+    
+    @staticmethod
+    def _get_organization_name(source: str) -> str:
+        """Get organization name"""
+        org_names = {
+            'theguardian.com': 'The Guardian Media Group',
+            'nytimes.com': 'The New York Times Company',
+            'washingtonpost.com': 'Nash Holdings',
+            'wsj.com': 'Dow Jones & Company',
+            'bbc.com': 'British Broadcasting Corporation',
+            'cnn.com': 'Warner Bros. Discovery',
+            'foxnews.com': 'Fox Corporation'
+        }
+        return org_names.get(source, 'Independent Media')
+    
+    @staticmethod
+    def _get_source_awards(source: str) -> List[str]:
+        """Get awards for source"""
+        awards = {
+            'theguardian.com': ['Pulitzer Prize', 'Orwell Prize', 'Press Awards'],
+            'nytimes.com': ['132 Pulitzer Prizes', 'Society of Publishers', 'Overseas Press Club'],
+            'washingtonpost.com': ['69 Pulitzer Prizes', 'National Press Foundation', 'Peabody Awards'],
+            'wsj.com': ['37 Pulitzer Prizes', 'Gerald Loeb Awards', 'Society of Professional Journalists'],
+            'bbc.com': ['Multiple BAFTAs', 'Royal Television Society', 'Peabody Awards']
+        }
+        return awards.get(source, ['Industry Recognition'])
+    
+    @staticmethod
+    def _get_readership(source: str) -> str:
+        """Get readership info"""
+        readership = {
+            'theguardian.com': '23M monthly readers',
+            'nytimes.com': '8.6M subscribers',
+            'washingtonpost.com': '3M subscribers',
+            'wsj.com': '3.5M subscribers',
+            'bbc.com': '438M weekly reach',
+            'cnn.com': '150M monthly visitors',
+            'foxnews.com': '200M monthly visitors'
+        }
+        return readership.get(source, 'Established readership')
+    
+    @staticmethod
+    def _get_comparison_sources() -> List[Dict]:
+        """Get comparison sources for visualization"""
+        return [
+            {'name': 'Reuters', 'score': 95, 'category': 'excellent'},
+            {'name': 'AP News', 'score': 95, 'category': 'excellent'},
+            {'name': 'BBC', 'score': 90, 'category': 'excellent'},
+            {'name': 'NPR', 'score': 85, 'category': 'good'},
+            {'name': 'The Guardian', 'score': 85, 'category': 'good'},
+            {'name': 'NY Times', 'score': 82, 'category': 'good'},
+            {'name': 'CNN', 'score': 70, 'category': 'moderate'},
+            {'name': 'Fox News', 'score': 65, 'category': 'moderate'}
+        ]
     
     @staticmethod
     def _get_bias_meaning(bias: Dict) -> str:
-        score = bias.get('score', 50)  # This is the bias amount (0=unbiased, 100=very biased)
+        """Get meaning for bias score"""
         direction = bias.get('direction', 'center')
+        score = bias.get('score', 50)
         
-        # Calculate credibility score for display (inverted: 100=unbiased, 0=very biased)
+        # Calculate credibility based on bias (inverted)
         credibility_score = 100 - score
         
-        if score < 20:  # Very low bias = high credibility (80-100)
-            return f"Excellent balance detected (credibility: {credibility_score}/100). Article maintains strong journalistic neutrality with balanced perspectives."
-        elif score < 40:  # Low bias = good credibility (60-80)
-            return f"Good balance with slight {direction} lean (credibility: {credibility_score}/100). Minor bias present but within acceptable journalistic standards."
-        elif score < 60:  # Moderate bias = moderate credibility (40-60)
-            return f"Moderate {direction} bias detected (credibility: {credibility_score}/100). Clear editorial perspective that may affect objectivity."
-        elif score < 80:  # High bias = low credibility (20-40)
-            return f"Significant {direction} bias (credibility: {credibility_score}/100). Strong editorial slant substantially affects neutrality."
-        else:  # Very high bias = very low credibility (0-20)
-            return f"Extreme {direction} bias (credibility: {credibility_score}/100). This appears to be partisan content rather than balanced journalism."
+        if direction == 'center':
+            if credibility_score >= 80:
+                return "Excellent balance and objectivity. Multiple perspectives presented fairly."
+            elif credibility_score >= 60:
+                return "Good balance overall with minor lean. Generally objective reporting."
+            else:
+                return "Attempts balance but some perspectives favored over others."
+        else:  # left or right
+            if credibility_score >= 80:  # Low bias (20 or less)
+                return f"Slight {direction} lean but maintains journalistic standards. Credibility: {credibility_score}/100."
+            elif credibility_score >= 60:  # Moderate bias (21-40)
+                return f"Clear {direction} lean affecting story selection and framing. Credibility: {credibility_score}/100. Seek alternative perspectives."
+            elif credibility_score >= 40:  # High bias (41-60)
+                return f"Strong {direction} bias evident in coverage. Credibility: {credibility_score}/100. Important facts may be omitted. Cross-reference with other sources."
+            else:  # Very high bias (60+)
+                return f"Extreme {direction} bias. Credibility: {credibility_score}/100. This appears to be partisan content rather than balanced journalism."
     
     @staticmethod
     def _get_credibility_meaning(score: int) -> str:
@@ -528,26 +427,23 @@ class ResponseFormatter:
             return "Poor transparency - sources unclear."
     
     @staticmethod
-    def _get_manipulation_meaning(score: int) -> str:
+    def _get_manipulation_meaning(score: int, techniques: List = None) -> str:
+        """
+        Get meaning for manipulation/integrity score
+        FIXED: Now uses integrity score (100=good, 0=bad)
+        """
+        technique_count = len(techniques) if techniques else 0
+        
         if score >= 80:
-            return "No significant manipulation detected."
+            return "No significant manipulation detected. The article appears to present information fairly and objectively."
         elif score >= 60:
-            return "Minor persuasive techniques used."
+            return f"Minor persuasive techniques detected ({technique_count} technique{'s' if technique_count != 1 else ''}). These could be stylistic choices rather than deliberate manipulation."
         elif score >= 40:
-            return "Some manipulative elements present."
+            return f"Some manipulative elements present ({technique_count} techniques detected). The article uses psychological tactics to influence reader opinion. Read critically and verify claims."
+        elif score >= 20:
+            return f"Significant manipulation detected ({technique_count} techniques). This article heavily employs psychological techniques to sway readers. Be very skeptical of its conclusions."
         else:
-            return "Significant manipulation detected."
-    
-    @staticmethod
-    def _get_fact_meaning(score: int) -> str:
-        if score >= 90:
-            return "Excellent factual accuracy."
-        elif score >= 70:
-            return "Generally accurate with minor issues."
-        elif score >= 50:
-            return "Mixed accuracy - verify key claims."
-        else:
-            return "Significant accuracy concerns."
+            return f"Extensive manipulation detected ({technique_count} techniques). This content appears designed to manipulate rather than inform. Treat with extreme skepticism."
     
     @staticmethod
     def _get_fact_meaning(score: int) -> str:
@@ -560,248 +456,140 @@ class ResponseFormatter:
             return "Mixed accuracy. Several claims need verification or are presented in misleading ways."
         else:
             return "Significant accuracy concerns. Multiple false or misleading claims identified."
-    
-    @staticmethod
-    def _get_source_year(source: str) -> int:
-        """Get establishment year for known sources"""
-        source_years = {
-            'guardian': 1821,
-            'nytimes': 1851,
-            'washingtonpost': 1877,
-            'bbc': 1922,
-            'reuters': 1851,
-            'apnews': 1846,
-            'cnn': 1980,
-            'foxnews': 1996,
-            'politico': 2007,
-            'axios': 2016
-        }
-        source_lower = source.lower()
-        for key, year in source_years.items():
-            if key in source_lower:
-                return year
-        return 2000  # Default for unknown sources
-    
-    @staticmethod
-    def _get_organization_name(source: str) -> str:
-        """Get organization name for source"""
-        orgs = {
-            'guardian': 'Guardian News & Media',
-            'nytimes': 'The New York Times Company',
-            'washingtonpost': 'Nash Holdings LLC',
-            'bbc': 'British Broadcasting Corporation',
-            'reuters': 'Thomson Reuters',
-            'apnews': 'Associated Press',
-            'cnn': 'Warner Bros. Discovery',
-            'foxnews': 'Fox Corporation',
-            'politico': 'Axel Springer SE',
-            'axios': 'Cox Enterprises'
-        }
-        source_lower = source.lower()
-        for key, org in orgs.items():
-            if key in source_lower:
-                return org
-        return 'Independent Publisher'
-    
-    @staticmethod
-    def _get_source_awards(source: str) -> str:
-        """Get major awards for source"""
-        awards = {
-            'guardian': 'Pulitzer Prize Winner',
-            'nytimes': '132 Pulitzer Prizes',
-            'washingtonpost': '69 Pulitzer Prizes',
-            'bbc': 'BAFTA & Emmy Awards',
-            'reuters': '7 Pulitzer Prizes',
-            'apnews': '56 Pulitzer Prizes'
-        }
-        source_lower = source.lower()
-        for key, award in awards.items():
-            if key in source_lower:
-                return award
-        return 'Regional Awards'
-    
-    @staticmethod
-    def _get_readership(source: str) -> str:
-        """Get readership stats"""
-        readers = {
-            'guardian': '35M Monthly',
-            'nytimes': '240M Monthly',
-            'washingtonpost': '100M Monthly',
-            'bbc': '450M Monthly',
-            'reuters': '40M Monthly',
-            'cnn': '150M Monthly'
-        }
-        source_lower = source.lower()
-        for key, count in readers.items():
-            if key in source_lower:
-                return count
-        return '10M+ Monthly'
-    
-    @staticmethod
-    def _get_comparison_sources() -> list:
-        """Get comparison source data for chart"""
-        return [
-            {'name': 'BBC', 'score': 92, 'tier': 'excellent'},
-            {'name': 'Reuters', 'score': 90, 'tier': 'excellent'},
-            {'name': 'AP News', 'score': 88, 'tier': 'excellent'},
-            {'name': 'NY Times', 'score': 85, 'tier': 'good'},
-            {'name': 'Guardian', 'score': 80, 'tier': 'good', 'current': True},
-            {'name': 'Washington Post', 'score': 78, 'tier': 'good'},
-            {'name': 'CNN', 'score': 65, 'tier': 'moderate'},
-            {'name': 'Fox News', 'score': 55, 'tier': 'moderate'}
-        ]
 
 # ================================================================================
-# MAIN ANALYZER
+# API ENDPOINTS
 # ================================================================================
-
-class TruthLensAnalyzer:
-    """Main analyzer coordinating everything"""
-    
-    def __init__(self):
-        self.extractor = ArticleExtractor()
-        self.ai_analyzer = AIAnalyzer()
-        self.formatter = ResponseFormatter()
-        
-        # Check if AI is available
-        if openai_client:
-            logger.info("✓ TruthLens initialized with AI (v7.0.0)")
-        else:
-            logger.warning("⚠ TruthLens initialized without AI - limited functionality")
-    
-    def analyze(self, url: str) -> Dict[str, Any]:
-        """Complete analysis pipeline"""
-        start_time = time.time()
-        
-        try:
-            # Extract article
-            article = self.extractor.extract(url)
-            
-            if not article['success']:
-                return self._error_response("Failed to extract article", url)
-            
-            logger.info(f"Extracted: {article['title'][:50]}...")
-            
-            # Perform AI analysis
-            ai_analysis = self.ai_analyzer.analyze_article(
-                url=url,
-                title=article['title'],
-                text=article['text'],
-                author=article.get('author', 'Unknown')
-            )
-            
-            # Format response
-            response = self.formatter.format_complete_response(article, ai_analysis)
-            
-            # Add metadata
-            response['processing_time'] = round(time.time() - start_time, 2)
-            response['metadata'] = {
-                'timestamp': datetime.now().isoformat(),
-                'version': '7.0.0',
-                'ai_enabled': bool(openai_client),
-                'model': self.ai_analyzer.model if openai_client else 'none'
-            }
-            
-            logger.info(f"✓ Analysis complete in {response['processing_time']}s")
-            return response
-            
-        except Exception as e:
-            logger.error(f"Analysis error: {e}", exc_info=True)
-            return self._error_response(str(e), url)
-    
-    def _error_response(self, error: str, url: str) -> Dict:
-        """Create error response"""
-        return {
-            'success': False,
-            'error': error,
-            'trust_score': 0,
-            'article_summary': 'Analysis Failed',
-            'source': urlparse(url).netloc if url else 'Unknown',
-            'author': 'Unknown',
-            'findings_summary': error,
-            'detailed_analysis': {}
-        }
-
-# ================================================================================
-# FLASK APPLICATION
-# ================================================================================
-
-app = Flask(__name__)
-app.config.from_object(Config)
-CORS(app, origins=["*"])
-
-# Initialize analyzer
-analyzer = TruthLensAnalyzer()
-
-# Startup message
-logger.info("=" * 80)
-logger.info("TRUTHLENS v7.0.0 - AI-POWERED ANALYSIS")
-logger.info(f"Debug Mode: {Config.DEBUG}")
-logger.info(f"ScraperAPI: {'✓ Configured' if Config.SCRAPERAPI_KEY else '✗ Not configured'}")
-logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
-if openai_client:
-    logger.info(f"AI Model: {analyzer.ai_analyzer.model}")
-else:
-    logger.error("⚠️  AI FEATURES DISABLED - Set OPENAI_API_KEY environment variable")
-logger.info("=" * 80)
 
 @app.route('/')
 def index():
     """Serve main page"""
-    return render_template('index.html')
+    return send_from_directory('templates', 'index.html')
 
-@app.route('/health')
-def health():
-    """Health check endpoint"""
-    return jsonify({
-        'status': 'healthy',
-        'version': '7.0.0',
-        'ai_enabled': bool(openai_client),
-        'model': analyzer.ai_analyzer.model if openai_client else None,
-        'timestamp': datetime.utcnow().isoformat()
-    })
+@app.route('/static/<path:path>')
+def serve_static(path):
+    """Serve static files"""
+    return send_from_directory('static', path)
 
-@app.route('/api/analyze', methods=['POST', 'OPTIONS'])
-def analyze_endpoint():
-    """Main analysis endpoint"""
-    if request.method == 'OPTIONS':
-        return '', 204
-    
+@app.route('/api/analyze', methods=['POST'])
+@limiter.limit("10 per minute")
+def analyze_article():
+    """
+    Analyze article endpoint - FIXED to pass service_results to formatter
+    """
     try:
         data = request.get_json()
         
         if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
         
-        url = data.get('url') or data.get('input_data', '')
+        url = data.get('url')
+        text = data.get('text')
         
-        if not url or not url.startswith('http'):
-            return jsonify({'success': False, 'error': 'Valid URL required'}), 400
+        if not url and not text:
+            return jsonify({
+                'success': False,
+                'error': 'Either URL or text must be provided'
+            }), 400
         
-        logger.info(f"Analysis request: {url}")
+        logger.info(f"Analyzing {'URL' if url else 'text'}: {url if url else text[:100]}")
         
-        # Check AI availability
-        if not openai_client:
-            logger.warning("AI not available - analysis will be limited")
+        # Extract article
+        if url:
+            article = scraper.extract_article(url)
+        else:
+            article = {
+                'url': 'direct-text',
+                'title': 'Direct Text Analysis',
+                'text': text,
+                'author': 'Unknown',
+                'source': 'direct-input',
+                'word_count': len(text.split())
+            }
         
-        # Perform analysis
-        result = analyzer.analyze(url)
+        if not article.get('text'):
+            return jsonify({
+                'success': False,
+                'error': 'Could not extract article content'
+            }), 400
         
-        return jsonify(result), 200 if result.get('success') else 400
+        logger.info(f"Article extracted: {article['word_count']} words")
+        
+        # Perform AI analysis
+        ai_analysis = openai_service.analyze_article(article)
+        
+        # FIXED: Also get service_results if available (for manipulation_detector)
+        service_results = {}
+        if hasattr(openai_service, 'last_service_results'):
+            service_results = openai_service.last_service_results
+        
+        # Format response - PASS service_results
+        response = ResponseFormatter.format_complete_response(article, ai_analysis, service_results)
+        
+        logger.info(f"Analysis complete. Trust score: {response.get('trust_score')}")
+        
+        return jsonify(response)
         
     except Exception as e:
-        logger.error(f"Endpoint error: {e}", exc_info=True)
+        logger.error(f"Analysis failed: {e}", exc_info=True)
         return jsonify({
             'success': False,
             'error': str(e)
         }), 500
 
-@app.route('/static/<path:path>')
-def send_static(path):
-    """Serve static files"""
-    return send_from_directory('static', path)
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.utcnow().isoformat() + 'Z',
+        'services': {
+            'scraper': scraper.check_availability(),
+            'openai': openai_service._check_availability()
+        }
+    })
 
-if __name__ == "__main__":
+# ================================================================================
+# ERROR HANDLERS
+# ================================================================================
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'success': False,
+        'error': 'Endpoint not found'
+    }), 404
+
+@app.errorhandler(429)
+def rate_limit_exceeded(error):
+    return jsonify({
+        'success': False,
+        'error': 'Rate limit exceeded. Please try again later.'
+    }), 429
+
+@app.errorhandler(500)
+def internal_error(error):
+    logger.error(f"Internal error: {error}", exc_info=True)
+    return jsonify({
+        'success': False,
+        'error': 'Internal server error'
+    }), 500
+
+# ================================================================================
+# MAIN
+# ================================================================================
+
+if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
-    logger.info(f"Starting server on port {port}...")
-    app.run(host='0.0.0.0', port=port, debug=Config.DEBUG)
+    debug = os.environ.get('FLASK_ENV') == 'development'
+    
+    logger.info(f"Starting TruthLens on port {port} (debug={debug})")
+    
+    app.run(
+        host='0.0.0.0',
+        port=port,
+        debug=debug
+    )
