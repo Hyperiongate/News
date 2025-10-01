@@ -6,6 +6,7 @@
  * FIXES: Source Credibility CSS rendering issue
  * INCLUDES: All enhanced visual styles for all services
  * ADDS: Enhanced Transparency Analysis styles
+ * NEW: Enhanced colorful progress bar overlay (Oct 1, 2025)
  */
 
 /* ===== BASE RESET ===== */
@@ -258,100 +259,283 @@ body {
     background: #e2e8f0;
 }
 
-/* ===== PROGRESS CONTAINER ===== */
+/* ===== ENHANCED COLORFUL PROGRESS BAR STYLES (NEW - OCT 1, 2025) ===== */
+
+/* Progress Container - Now Full Screen Overlay */
 .progress-container {
     display: none;
-    margin-top: 2rem;
-    padding: 2rem;
-    background: #f8fafc;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.95) 0%, rgba(139, 92, 246, 0.95) 50%, rgba(236, 72, 153, 0.95) 100%);
+    backdrop-filter: blur(10px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
 }
 
-.progress-container.active {
-    display: block;
+.progress-container.show {
+    display: flex !important;
 }
 
-.progress-header {
+/* Progress Card */
+.progress-card {
+    background: white;
+    padding: 3rem;
+    border-radius: 24px;
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.3);
+    min-width: 600px;
+    max-width: 700px;
     text-align: center;
-    margin-bottom: 1.5rem;
+    animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Progress Header */
+.progress-header {
+    margin-bottom: 2rem;
 }
 
 .progress-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 0.25rem;
+    font-size: 1.75rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 0.5rem;
+    animation: shimmer 3s infinite;
+    background-size: 200% auto;
+}
+
+@keyframes shimmer {
+    0%, 100% { background-position: 0% center; }
+    50% { background-position: 100% center; }
 }
 
 .progress-subtitle {
     color: #64748b;
-    font-size: 0.9rem;
+    font-size: 1rem;
+    font-weight: 500;
 }
 
+/* Percentage Display - Large and Colorful */
 .progress-percentage {
-    text-align: center;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #6366f1;
-    margin-bottom: 1rem;
+    font-size: 4rem;
+    font-weight: 900;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 1.5rem 0;
+    animation: pulse 2s infinite;
 }
 
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* Progress Bar - Rainbow Animated */
 .progress-bar-container {
-    background: #e2e8f0;
-    height: 8px;
-    border-radius: 4px;
+    background: linear-gradient(90deg, 
+        rgba(239, 68, 68, 0.1),
+        rgba(249, 115, 22, 0.1),
+        rgba(234, 179, 8, 0.1),
+        rgba(34, 197, 94, 0.1),
+        rgba(59, 130, 246, 0.1),
+        rgba(139, 92, 246, 0.1)
+    );
+    height: 16px;
+    border-radius: 20px;
     overflow: hidden;
-    margin-bottom: 2rem;
+    margin: 2rem 0;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
-    transition: width 0.3s ease;
-    border-radius: 4px;
+    background: linear-gradient(90deg, 
+        #ef4444 0%,
+        #f97316 16.67%,
+        #eab308 33.33%,
+        #22c55e 50%,
+        #3b82f6 66.67%,
+        #8b5cf6 83.33%,
+        #ec4899 100%
+    );
+    background-size: 200% 100%;
+    animation: rainbowFlow 3s linear infinite, glow 2s ease-in-out infinite;
+    border-radius: 20px;
+    width: 0%;
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
 }
 
+@keyframes rainbowFlow {
+    0% { background-position: 0% center; }
+    100% { background-position: 200% center; }
+}
+
+@keyframes glow {
+    0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.5); }
+    50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.8), 0 0 60px rgba(236, 72, 153, 0.6); }
+}
+
+/* Progress Steps - Colorful Icons */
 .progress-steps {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+    margin-top: 2.5rem;
 }
 
 .progress-step {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
+    opacity: 0.4;
+    transition: all 0.5s ease;
+}
+
+.progress-step.active {
+    opacity: 1;
+    transform: scale(1.1);
 }
 
 .step-icon {
-    width: 40px;
-    height: 40px;
-    background: #e2e8f0;
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #e5e7eb, #f3f4f6);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: 600;
-    color: #64748b;
-    transition: all 0.2s;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #9ca3af;
+    transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.progress-step.active .step-icon {
-    background: #6366f1;
+/* Individual step colors */
+.progress-step:nth-child(1).active .step-icon {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
     color: white;
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+    animation: bounce 0.6s ease;
 }
 
-.progress-step.completed .step-icon {
-    background: #10b981;
+.progress-step:nth-child(2).active .step-icon {
+    background: linear-gradient(135deg, #f97316, #ea580c);
     color: white;
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.4);
+    animation: bounce 0.6s ease;
+}
+
+.progress-step:nth-child(3).active .step-icon {
+    background: linear-gradient(135deg, #eab308, #ca8a04);
+    color: white;
+    box-shadow: 0 8px 24px rgba(234, 179, 8, 0.4);
+    animation: bounce 0.6s ease;
+}
+
+.progress-step:nth-child(4).active .step-icon {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    box-shadow: 0 8px 24px rgba(34, 197, 94, 0.4);
+    animation: bounce 0.6s ease;
+}
+
+.progress-step:nth-child(5).active .step-icon {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+    animation: bounce 0.6s ease;
+}
+
+.progress-step:nth-child(6).active .step-icon {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    color: white;
+    box-shadow: 0 8px 24px rgba(139, 92, 246, 0.4);
+    animation: bounce 0.6s ease;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.2); }
 }
 
 .step-text {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 600;
     color: #64748b;
-    font-weight: 500;
+    transition: all 0.3s ease;
 }
+
+.progress-step.active .step-text {
+    color: #1e293b;
+    font-weight: 700;
+}
+
+/* Completed step checkmark */
+.progress-step.completed .step-icon {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    color: white;
+}
+
+.progress-step.completed .step-icon::after {
+    content: '✓';
+    position: absolute;
+    font-size: 1.5rem;
+}
+
+/* Sparkle effect on progress card */
+.progress-card::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, 
+        #ef4444, #f97316, #eab308, #22c55e, 
+        #3b82f6, #8b5cf6, #ec4899, #ef4444
+    );
+    background-size: 400% 400%;
+    border-radius: 24px;
+    opacity: 0.5;
+    z-index: -1;
+    animation: borderGlow 3s ease infinite;
+    filter: blur(8px);
+}
+
+@keyframes borderGlow {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ===== END ENHANCED PROGRESS BAR STYLES ===== */
 
 /* ===== RESULTS SECTION ===== */
 .results-section {
@@ -1757,5 +1941,21 @@ body {
     
     .impact-grid {
         grid-template-columns: 1fr;
+    }
+    
+    /* Progress Bar Responsive */
+    .progress-card {
+        min-width: auto;
+        width: 90%;
+        padding: 2rem 1.5rem;
+    }
+
+    .progress-steps {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+
+    .progress-percentage {
+        font-size: 3rem;
     }
 }
