@@ -1,9 +1,9 @@
 /**
- * TruthLens Service Templates - Complete Enhanced Version
+ * TruthLens Service Templates - Enhanced Transparency Version
  * Date: October 1, 2025
- * Version: 4.0.0 - ENHANCED SOURCE CREDIBILITY & ALL SERVICES
+ * Version: 4.1.0 - ENHANCED TRANSPARENCY ANALYSIS
  * 
- * Complete file with enhanced Source Credibility visuals
+ * CHANGES: Completely redesigned Transparency Analyzer with clear explanations
  * Replace your existing static/js/service-templates.js with this file
  */
 
@@ -226,42 +226,147 @@ window.ServiceTemplates = {
             
             transparencyAnalyzer: `
                 <div class="service-analysis-section">
-                    <div class="service-card-enhanced">
-                        <div class="card-header-gradient transparency-header">
-                            <i class="fas fa-eye"></i>
-                            <h3>Transparency Analysis</h3>
+                    <div class="transparency-enhanced">
+                        <!-- What is Transparency Explanation -->
+                        <div class="transparency-explainer">
+                            <div class="explainer-header">
+                                <i class="fas fa-lightbulb"></i>
+                                <h4>What is Transparency?</h4>
+                            </div>
+                            <p class="explainer-text">
+                                Transparency measures how well journalists back up their claims with evidence. 
+                                Good journalism cites sources, includes expert quotes, and provides links so you 
+                                can verify information yourself. Without transparency, you're just trusting someone's word.
+                            </p>
                         </div>
-                        <div class="transparency-metrics">
-                            <div class="metric-card primary">
-                                <div class="metric-icon"><i class="fas fa-star-half-alt"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="transparency-score">--</span>
-                                    <span class="metric-label">Transparency Score</span>
+
+                        <!-- Score Overview with Visual Circle -->
+                        <div class="transparency-score-overview">
+                            <div class="score-circle-display">
+                                <svg viewBox="0 0 120 120" class="score-circle-svg">
+                                    <circle cx="60" cy="60" r="50" class="score-circle-bg"></circle>
+                                    <circle cx="60" cy="60" r="50" class="score-circle-progress" id="transparency-circle"></circle>
+                                </svg>
+                                <div class="score-circle-text">
+                                    <div class="score-big" id="transparency-score-display">--</div>
+                                    <div class="score-label-small">Transparency</div>
                                 </div>
                             </div>
-                            <div class="metric-card info">
-                                <div class="metric-icon"><i class="fas fa-link"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="sources-count">--</span>
-                                    <span class="metric-label">Sources Cited</span>
-                                </div>
-                            </div>
-                            <div class="metric-card secondary">
-                                <div class="metric-icon"><i class="fas fa-quote-right"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="quotes-count">--</span>
-                                    <span class="metric-label">Direct Quotes</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="transparency-visual">
-                            <div class="transparency-gauge">
-                                <div class="gauge-meter">
-                                    <div class="gauge-fill" id="transparency-gauge" style="height: 0%"></div>
-                                </div>
-                                <div class="gauge-label">Transparency Level</div>
+                            
+                            <div class="score-interpretation" id="transparency-interpretation">
+                                <h4 id="transparency-rating-title">Calculating...</h4>
+                                <p id="transparency-rating-text">Analyzing article transparency...</p>
                             </div>
                         </div>
+
+                        <!-- Transparency Breakdown -->
+                        <div class="transparency-breakdown">
+                            <h4 class="breakdown-title">
+                                <i class="fas fa-calculator"></i>
+                                How We Calculated This Score
+                            </h4>
+                            
+                            <div class="breakdown-grid">
+                                <div class="breakdown-item">
+                                    <div class="breakdown-icon sources">
+                                        <i class="fas fa-link"></i>
+                                    </div>
+                                    <div class="breakdown-content">
+                                        <div class="breakdown-label">Sources Cited</div>
+                                        <div class="breakdown-value" id="trans-sources-value">--</div>
+                                        <div class="breakdown-desc" id="trans-sources-desc">External references and citations</div>
+                                    </div>
+                                    <div class="breakdown-score" id="trans-sources-score">--</div>
+                                </div>
+
+                                <div class="breakdown-item">
+                                    <div class="breakdown-icon quotes">
+                                        <i class="fas fa-quote-right"></i>
+                                    </div>
+                                    <div class="breakdown-content">
+                                        <div class="breakdown-label">Direct Quotes</div>
+                                        <div class="breakdown-value" id="trans-quotes-value">--</div>
+                                        <div class="breakdown-desc" id="trans-quotes-desc">Attributed statements from experts</div>
+                                    </div>
+                                    <div class="breakdown-score" id="trans-quotes-score">--</div>
+                                </div>
+
+                                <div class="breakdown-item">
+                                    <div class="breakdown-icon attribution">
+                                        <i class="fas fa-fingerprint"></i>
+                                    </div>
+                                    <div class="breakdown-content">
+                                        <div class="breakdown-label">Attribution Quality</div>
+                                        <div class="breakdown-value" id="trans-attribution-value">--</div>
+                                        <div class="breakdown-desc" id="trans-attribution-desc">How well sources are identified</div>
+                                    </div>
+                                    <div class="breakdown-score" id="trans-attribution-score">--</div>
+                                </div>
+
+                                <div class="breakdown-item">
+                                    <div class="breakdown-icon verifiable">
+                                        <i class="fas fa-check-double"></i>
+                                    </div>
+                                    <div class="breakdown-content">
+                                        <div class="breakdown-label">Verifiable Claims</div>
+                                        <div class="breakdown-value" id="trans-verifiable-value">--</div>
+                                        <div class="breakdown-desc" id="trans-verifiable-desc">Claims backed by evidence</div>
+                                    </div>
+                                    <div class="breakdown-score" id="trans-verifiable-score">--</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Transparency Checklist -->
+                        <div class="transparency-checklist">
+                            <h4 class="checklist-title">
+                                <i class="fas fa-tasks"></i>
+                                Transparency Checklist
+                            </h4>
+                            <div class="checklist-items" id="transparency-checklist-items">
+                                <!-- Will be populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Why This Matters -->
+                        <div class="transparency-impact">
+                            <div class="impact-header">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <h4>Why Transparency Matters</h4>
+                            </div>
+                            <div class="impact-grid">
+                                <div class="impact-item">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <div class="impact-content">
+                                        <strong>Builds Trust</strong>
+                                        <p>Shows the journalist did their homework and has nothing to hide</p>
+                                    </div>
+                                </div>
+                                <div class="impact-item">
+                                    <i class="fas fa-search"></i>
+                                    <div class="impact-content">
+                                        <strong>Enables Verification</strong>
+                                        <p>You can check sources yourself instead of blindly trusting</p>
+                                    </div>
+                                </div>
+                                <div class="impact-item">
+                                    <i class="fas fa-balance-scale"></i>
+                                    <div class="impact-content">
+                                        <strong>Shows Accountability</strong>
+                                        <p>Clear sources mean journalists can be held accountable for errors</p>
+                                    </div>
+                                </div>
+                                <div class="impact-item">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <div class="impact-content">
+                                        <strong>Educational Value</strong>
+                                        <p>Good sourcing helps readers learn more about the topic</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Traditional Analysis Sections -->
                         <div class="analysis-details">
                             <div class="analysis-block">
                                 <h4><i class="fas fa-search-plus"></i> What We Analyzed</h4>
@@ -691,29 +796,109 @@ window.ServiceTemplates = {
             this.getFactCheckMeaning(score));
     },
 
-    // Display other services...
+    // ENHANCED Display Transparency Analyzer
     displayTransparencyAnalyzer: function(data, analyzer) {
         const score = data.transparency_score || 0;
         const sources = data.source_count || 0;
         const quotes = data.quote_count || 0;
         
-        this.updateElement('transparency-score', score + '/100');
-        this.updateElement('sources-count', sources);
-        this.updateElement('quotes-count', quotes);
+        // Update main score display
+        this.updateElement('transparency-score-display', score);
         
-        // Update gauge
-        const gauge = document.getElementById('transparency-gauge');
-        if (gauge) {
+        // Update SVG circle
+        const circle = document.getElementById('transparency-circle');
+        if (circle) {
+            const circumference = 2 * Math.PI * 50;
+            const offset = circumference - (score / 100) * circumference;
             setTimeout(function() {
-                gauge.style.height = score + '%';
-                gauge.style.background = score >= 70 ? '#10b981' : score >= 40 ? '#3b82f6' : '#f59e0b';
+                circle.style.strokeDashoffset = offset;
             }, 100);
         }
         
+        // Update interpretation based on score
+        const ratingTitle = document.getElementById('transparency-rating-title');
+        const ratingText = document.getElementById('transparency-rating-text');
+        
+        if (score >= 80) {
+            this.updateElement('transparency-rating-title', '✨ Excellent Transparency');
+            this.updateElement('transparency-rating-text', 'This article provides clear sourcing and attribution, making it easy to verify claims.');
+        } else if (score >= 60) {
+            this.updateElement('transparency-rating-title', '👍 Good Transparency');
+            this.updateElement('transparency-rating-text', 'The article includes decent sourcing, though some claims could use more backing.');
+        } else if (score >= 40) {
+            this.updateElement('transparency-rating-title', '⚠️ Fair Transparency');
+            this.updateElement('transparency-rating-text', 'Limited sourcing detected. Be cautious and look for additional verification.');
+        } else {
+            this.updateElement('transparency-rating-title', '❌ Poor Transparency');
+            this.updateElement('transparency-rating-text', 'Very few sources cited. Claims are difficult to verify independently.');
+        }
+        
+        // Breakdown scores (simulated calculation breakdown)
+        const sourcesScore = Math.min(30, sources * 5); // Max 30 points
+        const quotesScore = Math.min(25, quotes * 8); // Max 25 points
+        const attributionScore = Math.floor(score * 0.25); // 25% of total
+        const verifiableScore = Math.floor(score * 0.20); // 20% of total
+        
+        // Update breakdown items
+        this.updateElement('trans-sources-value', sources + ' found');
+        this.updateElement('trans-sources-desc', sources > 5 ? 'Well-sourced article' : sources > 2 ? 'Moderate sourcing' : 'Limited sources');
+        this.updateElement('trans-sources-score', '+' + sourcesScore);
+        
+        this.updateElement('trans-quotes-value', quotes + ' found');
+        this.updateElement('trans-quotes-desc', quotes > 3 ? 'Good expert input' : quotes > 1 ? 'Some quotes included' : 'Few direct quotes');
+        this.updateElement('trans-quotes-score', '+' + quotesScore);
+        
+        this.updateElement('trans-attribution-value', score >= 70 ? 'Clear' : score >= 50 ? 'Moderate' : 'Vague');
+        this.updateElement('trans-attribution-desc', score >= 70 ? 'Sources clearly identified' : 'Attribution could be clearer');
+        this.updateElement('trans-attribution-score', '+' + attributionScore);
+        
+        this.updateElement('trans-verifiable-value', score >= 60 ? 'High' : score >= 40 ? 'Medium' : 'Low');
+        this.updateElement('trans-verifiable-desc', score >= 60 ? 'Claims can be verified' : 'Verification challenging');
+        this.updateElement('trans-verifiable-score', '+' + verifiableScore);
+        
+        // Create transparency checklist
+        const checklist = document.getElementById('transparency-checklist-items');
+        if (checklist) {
+            const checklistItems = [
+                { label: 'Sources Cited', present: sources > 0, icon: 'link' },
+                { label: 'Expert Quotes', present: quotes > 0, icon: 'quote-right' },
+                { label: 'Attributed Statements', present: score >= 50, icon: 'user-check' },
+                { label: 'Verifiable Claims', present: score >= 60, icon: 'check-circle' },
+                { label: 'External Links', present: sources > 2, icon: 'external-link-alt' },
+                { label: 'Clear Context', present: score >= 70, icon: 'info-circle' }
+            ];
+            
+            let checklistHTML = '';
+            checklistItems.forEach(function(item) {
+                const statusClass = item.present ? 'present' : 'missing';
+                const statusIcon = item.present ? 'check' : 'times';
+                const statusText = item.present ? 'Yes' : 'No';
+                
+                checklistHTML += `
+                    <div class="checklist-item ${statusClass}">
+                        <div class="checklist-icon">
+                            <i class="fas fa-${item.icon}"></i>
+                        </div>
+                        <div class="checklist-label">${item.label}</div>
+                        <div class="checklist-status">
+                            <i class="fas fa-${statusIcon}"></i>
+                            <span>${statusText}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            checklist.innerHTML = checklistHTML;
+        }
+        
+        // Traditional analysis blocks
         const analysis = data.analysis || {};
-        this.updateElement('transparency-analyzed', analysis.what_we_looked || 'We examined source attribution.');
-        this.updateElement('transparency-found', analysis.what_we_found || 'Found ' + sources + ' sources.');
-        this.updateElement('transparency-means', analysis.what_it_means || this.getTransparencyMeaning(score, sources));
+        this.updateElement('transparency-analyzed', analysis.what_we_looked || 
+            'We examined how well the article backs up its claims with sources, quotes, and verifiable information.');
+        this.updateElement('transparency-found', analysis.what_we_found || 
+            'Found ' + sources + ' sources cited and ' + quotes + ' direct quotes. Transparency score: ' + score + '/100.');
+        this.updateElement('transparency-means', analysis.what_it_means || 
+            this.getTransparencyMeaning(score, sources));
     },
 
     displayManipulationDetector: function(data, analyzer) {
@@ -829,10 +1014,11 @@ window.ServiceTemplates = {
     },
 
     getTransparencyMeaning: function(score, sources) {
-        if (score >= 80) return 'Excellent transparency with clear sourcing.';
-        if (score >= 60) return 'Good transparency.';
-        if (sources === 0) return 'No sources cited - credibility concern.';
-        return 'Limited transparency.';
+        if (score >= 80) return 'Excellent transparency with clear sourcing. Readers can easily verify claims and understand where information comes from.';
+        if (score >= 60) return 'Good transparency. Most claims are backed up, though some could use stronger sourcing.';
+        if (sources === 0) return 'No sources cited - major credibility concern. Claims cannot be independently verified.';
+        if (score >= 40) return 'Limited transparency. Some sourcing present but many claims lack backing.';
+        return 'Poor transparency. Minimal sourcing makes it difficult to verify information independently.';
     },
 
     getManipulationMeaning: function(score, techniques) {
@@ -855,4 +1041,4 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.0.0 COMPLETE');
+console.log('ServiceTemplates loaded successfully - v4.1.0 ENHANCED TRANSPARENCY');
