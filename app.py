@@ -202,7 +202,7 @@ Text: {text}
 Provide a detailed JSON analysis with this EXACT structure:
 {{
     "bias_analysis": {{
-        "score": [0-100, higher means more biased],
+        "score": [0-100, where 0=perfectly centered/unbiased, 100=extremely biased],
         "direction": "[far-left/left/center-left/center/center-right/right/far-right]",
         "evidence": ["specific quote showing bias", "another example"],
         "loaded_language": ["emotionally charged word 1", "charged word 2"],
@@ -348,10 +348,10 @@ class ResponseFormatter:
                 },
                 
                 'bias_detector': {
-                    'bias_score': bias.get('score', 50),
+                    'bias_score': 100 - bias.get('score', 50),  # INVERTED: center=100, biased=0
                     'political_lean': bias.get('direction', 'center'),
                     'political_bias': bias.get('direction', 'center'),
-                    'score': 100 - bias.get('score', 50),
+                    'score': 100 - bias.get('score', 50),  # INVERTED: higher score = less bias = better
                     'findings': bias.get('evidence', [])[:3],
                     'analysis': {
                         'what_we_looked': 'AI analyzed language patterns, source selection, missing perspectives, and framing.',
@@ -482,17 +482,22 @@ class ResponseFormatter:
     
     @staticmethod
     def _get_bias_meaning(bias: Dict) -> str:
-        score = bias.get('score', 50)
+        score = bias.get('score', 50)  # This is the bias amount (0=unbiased, 100=very biased)
         direction = bias.get('direction', 'center')
         
-        if score < 30:
-            return "Minimal bias. Article maintains journalistic balance."
-        elif score < 50:
-            return f"Moderate {direction} bias detected. Some perspectives may be emphasized over others."
-        elif score < 70:
-            return f"Significant {direction} bias. Article shows clear editorial slant."
-        else:
-            return f"Strong {direction} bias. This is advocacy rather than neutral reporting."
+        # Calculate credibility score for display (inverted: 100=unbiased, 0=very biased)
+        credibility_score = 100 - score
+        
+        if score < 20:  # Very low bias = high credibility (80-100)
+            return f"Excellent balance detected (credibility: {credibility_score}/100). Article maintains strong journalistic neutrality with balanced perspectives."
+        elif score < 40:  # Low bias = good credibility (60-80)
+            return f"Good balance with slight {direction} lean (credibility: {credibility_score}/100). Minor bias present but within acceptable journalistic standards."
+        elif score < 60:  # Moderate bias = moderate credibility (40-60)
+            return f"Moderate {direction} bias detected (credibility: {credibility_score}/100). Clear editorial perspective that may affect objectivity."
+        elif score < 80:  # High bias = low credibility (20-40)
+            return f"Significant {direction} bias (credibility: {credibility_score}/100). Strong editorial slant substantially affects neutrality."
+        else:  # Very high bias = very low credibility (0-20)
+            return f"Extreme {direction} bias (credibility: {credibility_score}/100). This appears to be partisan content rather than balanced journalism."
     
     @staticmethod
     def _get_credibility_meaning(score: int) -> str:
