@@ -1,13 +1,13 @@
 """
-TruthLens News Analyzer - Working AI-Powered Version
-Date: September 30, 2025
-Version: 7.0.0 - PROPERLY WORKING AI ANALYSIS
+TruthLens News Analyzer - FIXED VERSION with Manipulation Detector Integration
+Date: October 1, 2025
+Version: 7.1.0 - FIXED MANIPULATION DETECTION
 
 CRITICAL FIXES:
-- Uses modern OpenAI client library (v1.0+)
-- Proper error handling with visible feedback
-- Actually makes AI calls that work
-- Real-time content analysis, not fake patterns
+- Now calls the actual manipulation_detector service
+- Merges service results with OpenAI analysis
+- Properly formats manipulation data for frontend
+- Uses enhanced pattern detection from manipulation_detector.py
 
 REQUIREMENTS:
 pip install openai>=1.0.0 flask flask-cors beautifulsoup4 requests
@@ -22,9 +22,13 @@ import time
 import logging
 import os
 import json
+import sys
 from datetime import datetime
 from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
+
+# Add services directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'services'))
 
 # Import modern OpenAI client
 try:
@@ -33,6 +37,14 @@ try:
 except ImportError:
     OPENAI_AVAILABLE = False
     print("WARNING: OpenAI library not installed. Run: pip install openai")
+
+# FIXED: Import manipulation detector service
+try:
+    from services.manipulation_detector import ManipulationDetector
+    MANIPULATION_DETECTOR_AVAILABLE = True
+except ImportError:
+    MANIPULATION_DETECTOR_AVAILABLE = False
+    logger.warning("Manipulation detector service not available")
 
 # ================================================================================
 # CONFIGURATION
@@ -61,6 +73,15 @@ if OPENAI_AVAILABLE and Config.OPENAI_API_KEY:
         logger.error(f"Failed to initialize OpenAI client: {e}")
 else:
     logger.warning("⚠ OpenAI not available - check API key and library installation")
+
+# FIXED: Initialize manipulation detector
+manipulation_detector = None
+if MANIPULATION_DETECTOR_AVAILABLE:
+    try:
+        manipulation_detector = ManipulationDetector()
+        logger.info("✓ Manipulation detector service initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize manipulation detector: {e}")
 
 # ================================================================================
 # ARTICLE EXTRACTOR
@@ -170,7 +191,7 @@ class ArticleExtractor:
         return ' '.join([p.get_text().strip() for p in paragraphs[:50]])
 
 # ================================================================================
-# AI ANALYZER - MODERN IMPLEMENTATION
+# AI ANALYZER - MODERN IMPLEMENTATION WITH SERVICE INTEGRATION
 # ================================================================================
 
 class AIAnalyzer:
@@ -178,10 +199,13 @@ class AIAnalyzer:
     
     def __init__(self):
         self.client = openai_client
-        self.model = "gpt-4o-mini"  # Cheaper and faster than gpt-4
+        self.model = "gpt-4o-mini"
         
     def analyze_article(self, url: str, title: str, text: str, author: str) -> Dict[str, Any]:
-        """Comprehensive AI analysis of article"""
+        """
+        Comprehensive AI analysis of article
+        FIXED: Now also calls manipulation_detector service
+        """
         
         if not self.client:
             logger.error("OpenAI client not initialized")
@@ -263,6 +287,25 @@ Provide a detailed JSON analysis with this EXACT structure:
             analysis = json.loads(content.strip())
             
             logger.info(f"✓ AI analysis successful - Trust score: {analysis['overall']['trust_score']}")
+            
+            # FIXED: Call manipulation detector service if available
+            if manipulation_detector:
+                try:
+                    logger.info("Running enhanced manipulation detection service...")
+                    manip_result = manipulation_detector.analyze({
+                        'text': text,
+                        'title': title,
+                        'url': url,
+                        'author': author
+                    })
+                    
+                    if manip_result.get('success') and 'data' in manip_result:
+                        # Store service result for ResponseFormatter
+                        analysis['manipulation_service'] = manip_result['data']
+                        logger.info(f"✓ Manipulation detector service: integrity_score={manip_result['data'].get('integrity_score')}, techniques={len(manip_result['data'].get('techniques', []))}")
+                except Exception as e:
+                    logger.error(f"Manipulation detector service failed: {e}")
+            
             return analysis
             
         except json.JSONDecodeError as e:
@@ -309,15 +352,18 @@ Provide a detailed JSON analysis with this EXACT structure:
         }
 
 # ================================================================================
-# RESPONSE FORMATTER
+# RESPONSE FORMATTER - FIXED TO USE SERVICE DATA
 # ================================================================================
 
 class ResponseFormatter:
-    """Format AI results for frontend"""
+    """Format AI results for frontend with FIXED manipulation data extraction"""
     
     @staticmethod
     def format_complete_response(article: Dict, ai_analysis: Dict) -> Dict:
-        """Format complete analysis response"""
+        """
+        Format complete analysis response
+        FIXED: Now properly extracts manipulation detector service data
+        """
         
         # Extract data from AI analysis
         bias = ai_analysis.get('bias_analysis', {})
@@ -325,6 +371,14 @@ class ResponseFormatter:
         cred = ai_analysis.get('credibility', {})
         manip = ai_analysis.get('manipulation', {})
         overall = ai_analysis.get('overall', {})
+        
+        # FIXED: Check if we have service data from manipulation_detector
+        manipulation_data = ai_analysis.get('manipulation_service')
+        if manipulation_data:
+            logger.info("Using manipulation detector service data")
+        else:
+            logger.info("Using OpenAI manipulation data (service not available)")
+            manipulation_data = manip
         
         # Format for frontend
         return {
@@ -389,17 +443,8 @@ class ResponseFormatter:
                     }
                 },
                 
-                'manipulation_detector': {
-                    'integrity_score': manip.get('score', 75),
-                    'score': manip.get('score', 75),
-                    'techniques': manip.get('techniques', []),
-                    'findings': manip.get('techniques', ['No manipulation detected'])[:3],
-                    'analysis': {
-                        'what_we_looked': 'AI checked for emotional manipulation and deceptive techniques.',
-                        'what_we_found': ', '.join(manip.get('techniques', ['No significant manipulation']))[:100],
-                        'what_it_means': ResponseFormatter._get_manipulation_meaning(manip.get('score', 75))
-                    }
-                },
+                # FIXED: Use service data or OpenAI data
+                'manipulation_detector': ResponseFormatter._format_manipulation_detector(manipulation_data),
                 
                 'content_analyzer': {
                     'quality_score': 70,
@@ -428,6 +473,87 @@ class ResponseFormatter:
                 'text': article['text'][:500]
             }
         }
+    
+    @staticmethod
+    def _format_manipulation_detector(manip_data: Dict) -> Dict:
+        """
+        Format manipulation detector data - FIXED VERSION
+        Handles both service data and OpenAI data
+        """
+        # Check if this is service data (has integrity_score) or OpenAI data (has score)
+        if 'integrity_score' in manip_data:
+            # This is from the manipulation_detector service
+            integrity_score = manip_data.get('integrity_score', 75)
+            techniques = manip_data.get('techniques', [])
+            tactics_found = manip_data.get('tactics_found', [])
+            level = manip_data.get('level', 'Unknown')
+            
+            # If techniques is empty but tactics_found has data, extract names
+            if not techniques and tactics_found:
+                techniques = [t.get('name', 'Unknown') for t in tactics_found[:10]]
+            
+            # Get assessment
+            assessment = manip_data.get('assessment', '')
+            if not assessment:
+                if integrity_score >= 80:
+                    assessment = 'Article appears straightforward with minimal manipulation'
+                elif integrity_score >= 60:
+                    assessment = 'Minor manipulation indicators present'
+                elif integrity_score >= 40:
+                    assessment = 'Some manipulation tactics present'
+                else:
+                    assessment = 'Significant manipulation tactics detected'
+            
+            # Format findings
+            findings = []
+            if tactics_found:
+                for tactic in tactics_found[:5]:
+                    findings.append(f"{tactic.get('name', 'Unknown')}: {tactic.get('description', '')}")
+            elif techniques:
+                findings = techniques[:5]
+            else:
+                findings = ['No manipulation detected']
+            
+            # Get analysis sections
+            analysis_data = manip_data.get('analysis', {})
+            
+            return {
+                'integrity_score': integrity_score,
+                'score': integrity_score,
+                'manipulation_score': manip_data.get('manipulation_score', 100 - integrity_score),
+                'level': level,
+                'techniques': techniques,
+                'tactics_found': tactics_found[:10],
+                'tactic_count': len(tactics_found) if tactics_found else len(techniques),
+                'findings': findings,
+                'assessment': assessment,
+                'summary': manip_data.get('summary', assessment),
+                'details': manip_data.get('details', {}),
+                'analysis': {
+                    'what_we_looked': analysis_data.get('what_we_looked', 
+                        'AI checked for emotional manipulation, propaganda techniques, logical fallacies, selective quoting, and deceptive framing.'),
+                    'what_we_found': analysis_data.get('what_we_found',
+                        f"Integrity score: {integrity_score}/100. Detected {len(techniques)} manipulation technique{'s' if len(techniques) != 1 else ''}."),
+                    'what_it_means': analysis_data.get('what_it_means',
+                        ResponseFormatter._get_manipulation_meaning(integrity_score, techniques))
+                }
+            }
+        else:
+            # This is from OpenAI - use as-is with minimal formatting
+            score = manip_data.get('score', 75)
+            techniques = manip_data.get('techniques', [])
+            
+            return {
+                'integrity_score': score,
+                'score': score,
+                'techniques': techniques,
+                'findings': techniques[:3] if techniques else ['No manipulation detected'],
+                'analysis': {
+                    'what_we_looked': 'AI checked for emotional manipulation and deceptive techniques.',
+                    'what_we_found': ', '.join(techniques[:3]) if techniques else 'No significant manipulation',
+                    'what_it_means': ResponseFormatter._get_manipulation_meaning(score, techniques)
+                }
+            }
     
     @staticmethod
     def _format_fact_checking(facts: Dict) -> Dict:
@@ -517,15 +643,20 @@ class ResponseFormatter:
             return "Poor transparency - sources unclear."
     
     @staticmethod
-    def _get_manipulation_meaning(score: int) -> str:
+    def _get_manipulation_meaning(score: int, techniques: List = None) -> str:
+        """Get meaning for manipulation/integrity score"""
+        technique_count = len(techniques) if techniques else 0
+        
         if score >= 80:
-            return "No significant manipulation detected."
+            return "No significant manipulation detected. The article appears to present information fairly and objectively."
         elif score >= 60:
-            return "Minor persuasive techniques used."
+            return f"Minor persuasive techniques detected ({technique_count} technique{'s' if technique_count != 1 else ''}). These could be stylistic choices rather than deliberate manipulation."
         elif score >= 40:
-            return "Some manipulative elements present."
+            return f"Some manipulative elements present ({technique_count} techniques detected). The article uses psychological tactics to influence reader opinion. Read critically and verify claims."
+        elif score >= 20:
+            return f"Significant manipulation detected ({technique_count} techniques). This article heavily employs psychological techniques to sway readers. Be very skeptical of its conclusions."
         else:
-            return "Significant manipulation detected."
+            return f"Extensive manipulation detected ({technique_count} techniques). This content appears designed to manipulate rather than inform. Treat with extreme skepticism."
     
     @staticmethod
     def _get_fact_meaning(score: int) -> str:
@@ -550,11 +681,16 @@ class TruthLensAnalyzer:
         self.ai_analyzer = AIAnalyzer()
         self.formatter = ResponseFormatter()
         
-        # Check if AI is available
+        # Check services
         if openai_client:
-            logger.info("✓ TruthLens initialized with AI (v7.0.0)")
+            logger.info("✓ TruthLens initialized with AI (v7.1.0)")
         else:
-            logger.warning("⚠ TruthLens initialized without AI - limited functionality")
+            logger.warning("⚠ TruthLens initialized without AI")
+            
+        if manipulation_detector:
+            logger.info("✓ Enhanced manipulation detection available")
+        else:
+            logger.warning("⚠ Using basic manipulation detection (service not available)")
     
     def analyze(self, url: str) -> Dict[str, Any]:
         """Complete analysis pipeline"""
@@ -569,7 +705,7 @@ class TruthLensAnalyzer:
             
             logger.info(f"Extracted: {article['title'][:50]}...")
             
-            # Perform AI analysis
+            # Perform AI analysis (which now includes manipulation detector)
             ai_analysis = self.ai_analyzer.analyze_article(
                 url=url,
                 title=article['title'],
@@ -584,8 +720,9 @@ class TruthLensAnalyzer:
             response['processing_time'] = round(time.time() - start_time, 2)
             response['metadata'] = {
                 'timestamp': datetime.now().isoformat(),
-                'version': '7.0.0',
+                'version': '7.1.0',
                 'ai_enabled': bool(openai_client),
+                'manipulation_service_enabled': bool(manipulation_detector),
                 'model': self.ai_analyzer.model if openai_client else 'none'
             }
             
@@ -622,10 +759,11 @@ analyzer = TruthLensAnalyzer()
 
 # Startup message
 logger.info("=" * 80)
-logger.info("TRUTHLENS v7.0.0 - AI-POWERED ANALYSIS")
+logger.info("TRUTHLENS v7.1.0 - FIXED MANIPULATION DETECTION")
 logger.info(f"Debug Mode: {Config.DEBUG}")
 logger.info(f"ScraperAPI: {'✓ Configured' if Config.SCRAPERAPI_KEY else '✗ Not configured'}")
 logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
+logger.info(f"Manipulation Detector: {'✓ ENHANCED SERVICE LOADED' if manipulation_detector else '✗ Using basic detection'}")
 if openai_client:
     logger.info(f"AI Model: {analyzer.ai_analyzer.model}")
 else:
@@ -642,8 +780,9 @@ def health():
     """Health check endpoint"""
     return jsonify({
         'status': 'healthy',
-        'version': '7.0.0',
+        'version': '7.1.0',
         'ai_enabled': bool(openai_client),
+        'manipulation_service_enabled': bool(manipulation_detector),
         'model': analyzer.ai_analyzer.model if openai_client else None,
         'timestamp': datetime.utcnow().isoformat()
     })
