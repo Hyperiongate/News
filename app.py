@@ -539,6 +539,29 @@ class ResponseFormatter:
             return "Significant manipulation detected."
     
     @staticmethod
+    def _get_fact_meaning(score: int) -> str:
+        if score >= 90:
+            return "Excellent factual accuracy."
+        elif score >= 70:
+            return "Generally accurate with minor issues."
+        elif score >= 50:
+            return "Mixed accuracy - verify key claims."
+        else:
+            return "Significant accuracy concerns."
+    
+    @staticmethod
+    def _get_fact_meaning(score: int) -> str:
+        """Get meaning for fact check score"""
+        if score >= 90:
+            return "Excellent factual accuracy. Claims are well-supported and properly contextualized."
+        elif score >= 70:
+            return "Generally accurate with minor issues. Most claims check out but some lack full context."
+        elif score >= 50:
+            return "Mixed accuracy. Several claims need verification or are presented in misleading ways."
+        else:
+            return "Significant accuracy concerns. Multiple false or misleading claims identified."
+    
+    @staticmethod
     def _get_source_year(source: str) -> int:
         """Get establishment year for known sources"""
         source_years = {
