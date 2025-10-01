@@ -2149,3 +2149,78 @@ body {
     </div>
 </body>
 </html>
+/* Source Comparison Chart - Add these to main.css */
+.source-bar {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.source-name {
+    flex: 0 0 120px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4a5568;
+    text-align: right;
+    padding-right: 1rem;
+}
+
+.source-bar-track {
+    flex: 1;
+    height: 32px;
+    background: #f1f5f9;
+    border-radius: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.source-bar-fill {
+    height: 100%;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.75rem;
+    transition: width 0.6s ease;
+    position: relative;
+}
+
+/* Color classes for different tiers */
+.source-bar-fill.excellent {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.source-bar-fill.good {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.source-bar-fill.moderate {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.source-bar-fill.low {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* Current source highlighting */
+.source-bar.current {
+    transform: scale(1.05);
+    margin: 1rem 0;
+}
+
+.source-bar.current .source-name {
+    color: #6366f1;
+    font-weight: 700;
+}
+
+.source-bar.current .source-bar-track {
+    border: 2px solid #6366f1;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.score-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: white;
+}
