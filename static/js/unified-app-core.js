@@ -1,18 +1,17 @@
 /**
- * TruthLens Unified App Core - Enhanced Progress Version
- * Version: 6.1.0
- * Date: October 1, 2025
+ * TruthLens Unified App Core
+ * Version: 6.2.0
+ * Date: October 2, 2025
  * 
- * ENHANCEMENTS:
- * - Colorful, prominent progress bar display
- * - Full-screen progress overlay
- * - Rainbow animated progress bar
- * - Enhanced step animations
+ * CRITICAL FIX: Simple inline progress bar (not full-screen overlay)
+ * - Progress bar shows inline between form and results
+ * - No overwhelming animations
+ * - Professional and subtle
  * - All existing functionality preserved
  */
 
 function UnifiedTruthLensAnalyzer() {
-    console.log('[UnifiedTruthLens] Initializing v6.1.0 with enhanced progress...');
+    console.log('[UnifiedTruthLens] Initializing v6.2.0 with simple progress...');
     
     // Core properties
     this.currentMode = 'news';
@@ -45,7 +44,7 @@ UnifiedTruthLensAnalyzer.prototype.initialize = function() {
     this.setupTabs();
     this.setupResetButtons();
     
-    console.log('[UnifiedTruthLens] Ready with enhanced progress display');
+    console.log('[UnifiedTruthLens] Ready with simple inline progress');
 };
 
 UnifiedTruthLensAnalyzer.prototype.setupTabs = function() {
@@ -207,21 +206,20 @@ UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input) {
 };
 
 UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
-    console.log('[UnifiedTruthLens] Showing enhanced progress display');
+    console.log('[UnifiedTruthLens] Showing simple inline progress');
     
     var loadingOverlay = document.getElementById('loadingOverlay');
     var progressContainer = document.getElementById('progressContainer');
     var resultsSection = document.getElementById('resultsSection');
     
-    // Hide old loading overlay
+    // Hide old loading overlay if it exists
     if (loadingOverlay) {
         loadingOverlay.style.display = 'none';
     }
     
-    // Show new colorful progress container
+    // Show simple inline progress container
     if (progressContainer) {
         progressContainer.classList.add('show');
-        progressContainer.style.display = 'flex';
         this.animateProgress();
     }
     
@@ -241,7 +239,7 @@ UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
 };
 
 UnifiedTruthLensAnalyzer.prototype.animateProgress = function() {
-    console.log('[UnifiedTruthLens] Starting enhanced progress animation');
+    console.log('[UnifiedTruthLens] Starting simple progress animation');
     
     var progressBar = document.getElementById('progressBar');
     var progressPercentage = document.getElementById('progressPercentage');
@@ -292,7 +290,7 @@ UnifiedTruthLensAnalyzer.prototype.animateProgress = function() {
 };
 
 UnifiedTruthLensAnalyzer.prototype.hideLoadingState = function() {
-    console.log('[UnifiedTruthLens] Hiding progress display');
+    console.log('[UnifiedTruthLens] Hiding progress');
     
     var self = this;
     var loadingOverlay = document.getElementById('loadingOverlay');
@@ -323,7 +321,6 @@ UnifiedTruthLensAnalyzer.prototype.hideLoadingState = function() {
         
         if (progressContainer) {
             progressContainer.classList.remove('show');
-            progressContainer.style.display = 'none';
             
             // Reset for next use
             if (progressBar) {
@@ -434,7 +431,7 @@ UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
 };
 
 // Initialize application
-console.log('[UnifiedTruthLens] Loading enhanced application...');
+console.log('[UnifiedTruthLens] Loading simple progress version...');
 var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 // Export for compatibility
