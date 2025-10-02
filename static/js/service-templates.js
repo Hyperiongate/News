@@ -1,11 +1,12 @@
 /**
  * TruthLens Service Templates - Enhanced Version
  * Date: October 2, 2025
- * Version: 4.3.0 - TOP 10 SOURCES COMPARISON ADDED
+ * Version: 4.4.0 - ADDED SCORE DIFFERENCE EXPLANATION
  * 
- * CHANGES: 
- * - Modified displaySourceCredibility to add top 10 news sources comparison chart
- * - Dynamic positioning of current source with star if not in top 10
+ * CHANGES FROM 4.3.0: 
+ * - Added explanation text for why article scores differ from outlet averages
+ * - Improved chart heading and labeling
+ * - Added "This Article" vs "Outlet Average" clarification
  * - ALL EXISTING FUNCTIONALITY PRESERVED EXACTLY
  */
 
@@ -22,7 +23,7 @@ window.ServiceTemplates = {
                             <div class="source-metric-card primary">
                                 <i class="fas fa-star metric-icon-large"></i>
                                 <div class="metric-value-large" id="source-score">--</div>
-                                <div class="metric-label">Credibility Score</div>
+                                <div class="metric-label">This Article's Score</div>
                             </div>
                             
                             <div class="source-metric-card success">
@@ -42,8 +43,20 @@ window.ServiceTemplates = {
                         <div class="source-comparison-section">
                             <h4 class="comparison-title">
                                 <i class="fas fa-chart-bar"></i>
-                                How This Source Compares
+                                Outlet Credibility Comparison
                             </h4>
+                            
+                            <!-- Explanation of score differences -->
+                            <div class="score-explanation" style="background: #f0f9ff; border-left: 3px solid #3b82f6; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 6px;">
+                                <p style="margin: 0; font-size: 0.875rem; color: #1e40af; line-height: 1.5;">
+                                    <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
+                                    <strong>Note:</strong> The bars below show each outlet's <em>typical</em> credibility score. 
+                                    Individual articles may score higher or lower based on their specific quality, sourcing, and accuracy. 
+                                    This article scored <span id="article-score-inline" style="font-weight: 700;">--</span>, 
+                                    while <span id="outlet-name-inline" style="font-weight: 700;">this outlet</span> typically scores 
+                                    <span id="outlet-average-inline" style="font-weight: 700;">--</span>.
+                                </p>
+                            </div>
                             
                             <div class="source-ranking-chart" id="source-ranking-chart">
                                 <!-- Chart will be populated dynamically -->
@@ -651,7 +664,7 @@ window.ServiceTemplates = {
         };
     },
 
-    // MODIFIED Display Method for Source Credibility with Top 10 Sources
+    // MODIFIED Display Method for Source Credibility with Top 10 Sources and EXPLANATION
     displaySourceCredibility: function(data, analyzer) {
         const score = data.score || 0;
         const year = data.established_year || new Date().getFullYear();
@@ -659,7 +672,7 @@ window.ServiceTemplates = {
         const reputation = data.credibility || 'Unknown';
         const currentSource = data.source || data.organization || 'This Source';
         
-        // Update metrics
+        // Update metrics - Note the label change for clarity
         this.updateElement('source-score', score + '/100');
         this.updateElement('source-age', yearsOld > 0 ? yearsOld + ' Years' : 'New');
         this.updateElement('source-reputation', reputation);
@@ -679,7 +692,7 @@ window.ServiceTemplates = {
         this.updateElement('source-awards', data.awards || 'N/A');
         this.updateElement('source-readership', data.readership || 'N/A');
         
-        // TOP 10 NEWS SOURCES COMPARISON - NEW FEATURE
+        // TOP 10 NEWS SOURCES COMPARISON
         const topSources = [
             { name: 'Reuters', score: 95, tier: 'excellent' },
             { name: 'Associated Press', score: 94, tier: 'excellent' },
@@ -692,6 +705,23 @@ window.ServiceTemplates = {
             { name: 'NBC News', score: 82, tier: 'good' },
             { name: 'CBS News', score: 81, tier: 'good' }
         ];
+        
+        // Find matching outlet for average score
+        let outletAverageScore = null;
+        const matchingOutlet = topSources.find(s => 
+            s.name.toLowerCase() === currentSource.toLowerCase() ||
+            currentSource.toLowerCase().includes(s.name.toLowerCase()) ||
+            s.name.toLowerCase().includes(currentSource.toLowerCase())
+        );
+        
+        if (matchingOutlet) {
+            outletAverageScore = matchingOutlet.score;
+        }
+        
+        // Update the inline explanation with actual values
+        this.updateElement('article-score-inline', score + '/100');
+        this.updateElement('outlet-name-inline', currentSource);
+        this.updateElement('outlet-average-inline', outletAverageScore ? outletAverageScore + '/100' : 'varies');
         
         // Determine tier based on score
         let tierClass = 'moderate';
@@ -731,12 +761,13 @@ window.ServiceTemplates = {
                 });
             }
         } else if (isInTop10) {
-            // Mark the matching source as current
+            // Mark the matching source as current BUT DON'T CHANGE ITS SCORE
+            // This preserves the outlet average in the chart
             sourcesToDisplay = sourcesToDisplay.map(s => {
                 if (s.name.toLowerCase() === currentSource.toLowerCase() ||
                     currentSource.toLowerCase().includes(s.name.toLowerCase()) ||
                     s.name.toLowerCase().includes(currentSource.toLowerCase())) {
-                    return { ...s, current: true };
+                    return { ...s, current: true }; // Keep original score, just mark as current
                 }
                 return s;
             });
@@ -1161,4 +1192,4 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.3.0 TOP 10 SOURCES ADDED');
+console.log('ServiceTemplates loaded successfully - v4.4.0 SCORE EXPLANATION ADDED');
