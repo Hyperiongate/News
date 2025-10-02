@@ -1,17 +1,18 @@
 /**
- * TruthLens Unified App Core
- * Version: 6.2.0
+ * TruthLens Unified App Core - COMPLETE FIXED VERSION
+ * Version: 6.3.0
  * Date: October 2, 2025
  * 
- * CRITICAL FIX: Simple inline progress bar (not full-screen overlay)
- * - Progress bar shows inline between form and results
- * - No overwhelming animations
- * - Professional and subtle
+ * FIXES:
+ * - Corrected API request structure (sends 'url' field, not 'input_data')
+ * - Properly detects URL vs text input
+ * - Simple inline progress bar (not full-screen overlay)
+ * - Professional and subtle animations
  * - All existing functionality preserved
  */
 
 function UnifiedTruthLensAnalyzer() {
-    console.log('[UnifiedTruthLens] Initializing v6.2.0 with simple progress...');
+    console.log('[UnifiedTruthLens] Initializing v6.3.0 with API fix...');
     
     // Core properties
     this.currentMode = 'news';
@@ -44,7 +45,7 @@ UnifiedTruthLensAnalyzer.prototype.initialize = function() {
     this.setupTabs();
     this.setupResetButtons();
     
-    console.log('[UnifiedTruthLens] Ready with simple inline progress');
+    console.log('[UnifiedTruthLens] Ready with API fix');
 };
 
 UnifiedTruthLensAnalyzer.prototype.setupTabs = function() {
@@ -93,12 +94,18 @@ UnifiedTruthLensAnalyzer.prototype.setupFormHandlers = function() {
             var urlInput = document.getElementById('newsUrlInput');
             var textInput = document.getElementById('newsTextInput');
             var input = '';
+            var isUrl = false;
             
+            // Check URL first
             if (urlInput && urlInput.value) {
                 input = urlInput.value.trim();
+                // Check if it looks like a URL
+                isUrl = input.startsWith('http://') || input.startsWith('https://') || input.includes('.');
             }
+            // If no URL, check text
             if (!input && textInput && textInput.value) {
                 input = textInput.value.trim();
+                isUrl = false;
             }
             
             if (!input) {
@@ -107,7 +114,7 @@ UnifiedTruthLensAnalyzer.prototype.setupFormHandlers = function() {
             }
             
             self.currentMode = 'news';
-            self.analyzeContent(input);
+            self.analyzeContent(input, isUrl);
         });
     }
     
@@ -120,12 +127,19 @@ UnifiedTruthLensAnalyzer.prototype.setupFormHandlers = function() {
             var urlInput = document.getElementById('youtubeUrlInput');
             var textInput = document.getElementById('transcriptTextInput');
             var input = '';
+            var isUrl = false;
             
+            // Check YouTube URL first
             if (urlInput && urlInput.value) {
                 input = urlInput.value.trim();
+                // Check if it looks like a URL
+                isUrl = input.startsWith('http://') || input.startsWith('https://') || 
+                        input.includes('youtube.com') || input.includes('youtu.be');
             }
+            // If no URL, check text
             if (!input && textInput && textInput.value) {
                 input = textInput.value.trim();
+                isUrl = false;
             }
             
             if (!input) {
@@ -134,7 +148,7 @@ UnifiedTruthLensAnalyzer.prototype.setupFormHandlers = function() {
             }
             
             self.currentMode = 'transcript';
-            self.analyzeContent(input);
+            self.analyzeContent(input, isUrl);
         });
     }
 };
@@ -151,8 +165,11 @@ UnifiedTruthLensAnalyzer.prototype.setupResetButtons = function() {
     };
 };
 
-UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input) {
+UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input, isUrl) {
     console.log('[UnifiedTruthLens] Starting analysis...');
+    console.log('[UnifiedTruthLens] Input type:', isUrl ? 'URL' : 'Text');
+    console.log('[UnifiedTruthLens] Mode:', this.currentMode);
+    console.log('[UnifiedTruthLens] Input length:', input.length);
     
     if (this.isAnalyzing) return;
     
@@ -162,6 +179,24 @@ UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input) {
     
     var self = this;
     var startTime = Date.now();
+    
+    // Build request body based on what app.py expects
+    var requestBody = {};
+    
+    if (isUrl) {
+        // For URLs, send as 'url' field (this is what app.py expects)
+        requestBody.url = input;
+        console.log('[UnifiedTruthLens] Sending URL:', input);
+    } else {
+        // For text, send as 'text' field
+        requestBody.text = input;
+        console.log('[UnifiedTruthLens] Sending text (length):', input.length);
+    }
+    
+    // Add analysis mode (optional, app.py doesn't require it)
+    requestBody.analysis_mode = this.currentMode;
+    
+    console.log('[UnifiedTruthLens] Request body:', requestBody);
     
     // Create request
     var xhr = new XMLHttpRequest();
@@ -174,19 +209,37 @@ UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input) {
         
         // Ensure minimum loading time
         setTimeout(function() {
+            console.log('[UnifiedTruthLens] Response status:', xhr.status);
+            
             if (xhr.status === 200) {
                 try {
                     var data = JSON.parse(xhr.responseText);
-                    if (data.error) {
+                    console.log('[UnifiedTruthLens] Response received:', data);
+                    
+                    if (!data.success) {
+                        self.showError(data.error || 'Analysis failed');
+                    } else if (data.error) {
                         self.showError(data.error);
                     } else {
                         self.displayResults(data);
                     }
                 } catch (e) {
-                    self.showError('Failed to parse response');
+                    console.error('[UnifiedTruthLens] Parse error:', e);
+                    self.showError('Failed to parse response: ' + e.message);
                 }
+            } else if (xhr.status === 400) {
+                // Bad request - parse error message
+                var errorMsg = 'Invalid request';
+                try {
+                    var errorData = JSON.parse(xhr.responseText);
+                    errorMsg = errorData.error || 'Please provide a valid URL or text';
+                    console.error('[UnifiedTruthLens] 400 Error:', errorData);
+                } catch (e) {
+                    errorMsg = 'Invalid request - please provide a URL or text';
+                }
+                self.showError(errorMsg);
             } else {
-                self.showError('Analysis failed: ' + xhr.statusText);
+                self.showError('Analysis failed: ' + xhr.statusText + ' (Status: ' + xhr.status + ')');
             }
             self.hideLoadingState();
             self.isAnalyzing = false;
@@ -194,15 +247,14 @@ UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input) {
     };
     
     xhr.onerror = function() {
-        self.showError('Network error occurred');
+        console.error('[UnifiedTruthLens] Network error');
+        self.showError('Network error occurred - please check your connection');
         self.hideLoadingState();
         self.isAnalyzing = false;
     };
     
-    xhr.send(JSON.stringify({
-        input_data: input,
-        analysis_mode: this.currentMode
-    }));
+    // Send the request with correct structure
+    xhr.send(JSON.stringify(requestBody));
 };
 
 UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
@@ -363,9 +415,15 @@ UnifiedTruthLensAnalyzer.prototype.hideLoadingState = function() {
 
 UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
     console.log('[UnifiedTruthLens] Displaying results...');
+    console.log('[UnifiedTruthLens] Trust Score:', data.trust_score);
+    console.log('[UnifiedTruthLens] Source:', data.source);
+    console.log('[UnifiedTruthLens] Author:', data.author);
     
     var resultsSection = document.getElementById('resultsSection');
-    if (!resultsSection) return;
+    if (!resultsSection) {
+        console.error('[UnifiedTruthLens] Results section not found');
+        return;
+    }
     
     resultsSection.style.display = 'block';
     
@@ -378,6 +436,8 @@ UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
     // Update trust display
     if (typeof updateEnhancedTrustDisplay === 'function') {
         updateEnhancedTrustDisplay(data);
+    } else {
+        console.warn('[UnifiedTruthLens] updateEnhancedTrustDisplay function not found');
     }
     
     // Display service analyses
@@ -385,6 +445,8 @@ UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
     if (container && typeof ServiceTemplates !== 'undefined') {
         container.innerHTML = '';
         ServiceTemplates.displayAllAnalyses(data, this);
+    } else {
+        console.error('[UnifiedTruthLens] Service analysis container or ServiceTemplates not found');
     }
     
     // Scroll to results
@@ -404,7 +466,7 @@ UnifiedTruthLensAnalyzer.prototype.clearResults = function() {
 };
 
 UnifiedTruthLensAnalyzer.prototype.showError = function(message) {
-    console.error('[UnifiedTruthLens] ' + message);
+    console.error('[UnifiedTruthLens] Error:', message);
     
     this.hideLoadingState();
     
@@ -416,9 +478,16 @@ UnifiedTruthLensAnalyzer.prototype.showError = function(message) {
         errorMessage.style.display = 'block';
         errorMessage.classList.add('active');
         
+        // Auto-hide after 5 seconds
         setTimeout(function() {
             errorMessage.classList.remove('active');
+            setTimeout(function() {
+                errorMessage.style.display = 'none';
+            }, 300);
         }, 5000);
+    } else {
+        // Fallback to alert if error elements not found
+        alert('Error: ' + message);
     }
 };
 
@@ -431,7 +500,7 @@ UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
 };
 
 // Initialize application
-console.log('[UnifiedTruthLens] Loading simple progress version...');
+console.log('[UnifiedTruthLens] Loading v6.3.0 with API fix...');
 var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 // Export for compatibility
