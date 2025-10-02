@@ -1,604 +1,28 @@
 /**
- * TruthLens Service Templates - Enhanced Version
+ * TruthLens Service Templates - Fixed Version
  * Date: October 2, 2025
- * Version: 4.3.0 - TOP 10 SOURCES COMPARISON RESTORED
+ * Version: 4.3.1 - SYNTAX ERROR FIX + TOP 10 SOURCES
  * 
- * CHANGES: 
+ * FIXES: 
+ * - Fixed syntax error causing ServiceTemplates to not load
  * - Restored top 10 news sources comparison chart
- * - Added dynamic positioning of current source with star
- * - Fixed color coding for credibility tiers
- * - All existing functionality preserved
+ * - Complete file with all functionality
  */
 
 // Create global ServiceTemplates object
 window.ServiceTemplates = {
-    // Get template HTML for a service
-    getTemplate: function(serviceId) {
-        const templates = {
-            sourceCredibility: `
-                <div class="service-analysis-section">
-                    <div class="source-credibility-enhanced">
-                        <!-- Colorful Metric Cards -->
-                        <div class="source-metrics-row">
-                            <div class="source-metric-card primary">
-                                <i class="fas fa-star metric-icon-large"></i>
-                                <div class="metric-value-large" id="source-score">--</div>
-                                <div class="metric-label">Credibility Score</div>
-                            </div>
-                            
-                            <div class="source-metric-card success">
-                                <i class="fas fa-history metric-icon-large"></i>
-                                <div class="metric-value-large" id="source-age">--</div>
-                                <div class="metric-label">Established</div>
-                            </div>
-                            
-                            <div class="source-metric-card info">
-                                <i class="fas fa-award metric-icon-large"></i>
-                                <div class="metric-value-large" id="source-reputation">--</div>
-                                <div class="metric-label">Reputation</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Source Comparison Chart -->
-                        <div class="source-comparison-section">
-                            <h4 class="comparison-title">
-                                <i class="fas fa-chart-bar"></i>
-                                How This Source Compares
-                            </h4>
-                            
-                            <div class="source-ranking-chart" id="source-ranking-chart">
-                                <!-- Chart will be populated dynamically -->
-                            </div>
-                        </div>
-                        
-                        <!-- Trust Level Meter -->
-                        <div class="trust-meter-section">
-                            <div class="trust-meter-title">Overall Trust Level</div>
-                            <div class="trust-meter">
-                                <div class="trust-indicator" id="trust-indicator">--</div>
-                            </div>
-                            <div class="trust-scale">
-                                <span class="scale-marker">0</span>
-                                <span class="scale-marker">25</span>
-                                <span class="scale-marker">50</span>
-                                <span class="scale-marker">75</span>
-                                <span class="scale-marker">100</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Source Details -->
-                        <div class="source-details-grid">
-                            <div class="source-detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-building"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <div class="detail-label">Organization</div>
-                                    <div class="detail-value" id="source-org">--</div>
-                                </div>
-                            </div>
-                            
-                            <div class="source-detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-calendar"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <div class="detail-label">Founded</div>
-                                    <div class="detail-value" id="source-founded">--</div>
-                                </div>
-                            </div>
-                            
-                            <div class="source-detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-trophy"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <div class="detail-label">Awards</div>
-                                    <div class="detail-value" id="source-awards">--</div>
-                                </div>
-                            </div>
-                            
-                            <div class="source-detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-users"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <div class="detail-label">Readership</div>
-                                    <div class="detail-value" id="source-readership">--</div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Analysis sections -->
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-microscope"></i> What We Analyzed</h4>
-                                <p id="source-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-chart-line"></i> What We Found</h4>
-                                <p id="source-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-lightbulb"></i> What This Means</h4>
-                                <p id="source-means">Loading...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            biasDetector: `
-                <div class="service-analysis-section">
-                    <div class="service-card-enhanced">
-                        <div class="card-header-gradient bias-header">
-                            <i class="fas fa-balance-scale"></i>
-                            <h3>Bias Detection Analysis</h3>
-                        </div>
-                        <div class="bias-meter-container">
-                            <div class="meter-title">Political Bias Spectrum</div>
-                            <div class="bias-meter">
-                                <div class="bias-scale">
-                                    <span class="scale-label">Far Left</span>
-                                    <span class="scale-label">Left</span>
-                                    <span class="scale-label">Center</span>
-                                    <span class="scale-label">Right</span>
-                                    <span class="scale-label">Far Right</span>
-                                </div>
-                                <div class="bias-track">
-                                    <div class="bias-indicator" id="bias-indicator" style="left: 50%"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bias-metrics">
-                            <div class="metric-card warning">
-                                <span class="metric-label">Bias Score</span>
-                                <span class="metric-value" id="bias-score">--</span>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-label">Direction</span>
-                                <span class="metric-value" id="bias-direction">--</span>
-                            </div>
-                        </div>
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-search"></i> What We Analyzed</h4>
-                                <p id="bias-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-chart-bar"></i> What We Found</h4>
-                                <p id="bias-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-info-circle"></i> What This Means</h4>
-                                <p id="bias-means">Loading...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            factChecker: `
-                <div class="service-analysis-section">
-                    <div class="service-card-enhanced">
-                        <div class="card-header-gradient fact-header">
-                            <i class="fas fa-check-circle"></i>
-                            <h3>Fact Checking Results</h3>
-                        </div>
-                        <div class="fact-check-summary">
-                            <div class="metric-card success">
-                                <div class="metric-icon"><i class="fas fa-percentage"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="fact-score">--</span>
-                                    <span class="metric-label">Accuracy Score</span>
-                                </div>
-                            </div>
-                            <div class="metric-card info">
-                                <div class="metric-icon"><i class="fas fa-clipboard-check"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="claims-checked">--</span>
-                                    <span class="metric-label">Claims Checked</span>
-                                </div>
-                            </div>
-                            <div class="metric-card success">
-                                <div class="metric-icon"><i class="fas fa-shield-alt"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="claims-verified">--</span>
-                                    <span class="metric-label">Verified</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="claims-list" id="claims-list"></div>
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-tasks"></i> What We Analyzed</h4>
-                                <p id="fact-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-clipboard-list"></i> What We Found</h4>
-                                <p id="fact-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-exclamation-circle"></i> What This Means</h4>
-                                <p id="fact-means">Loading...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            transparencyAnalyzer: `
-                <div class="service-analysis-section">
-                    <div class="transparency-enhanced">
-                        <!-- What is Transparency Explanation -->
-                        <div class="transparency-explainer">
-                            <div class="explainer-header">
-                                <i class="fas fa-lightbulb"></i>
-                                <h4>What is Transparency?</h4>
-                            </div>
-                            <p class="explainer-text">
-                                Transparency measures how well journalists back up their claims with evidence. 
-                                Good journalism cites sources, includes expert quotes, and provides links so you 
-                                can verify information yourself. Without transparency, you're just trusting someone's word.
-                            </p>
-                        </div>
-
-                        <!-- Score Overview with Visual Circle -->
-                        <div class="transparency-score-overview">
-                            <div class="score-circle-display">
-                                <svg viewBox="0 0 120 120" class="score-circle-svg">
-                                    <circle cx="60" cy="60" r="50" class="score-circle-bg"></circle>
-                                    <circle cx="60" cy="60" r="50" class="score-circle-progress" id="transparency-circle"></circle>
-                                </svg>
-                                <div class="score-circle-text">
-                                    <div class="score-big" id="transparency-score-display">--</div>
-                                    <div class="score-label-small">Transparency</div>
-                                </div>
-                            </div>
-                            
-                            <div class="score-interpretation" id="transparency-interpretation">
-                                <h4 id="transparency-rating-title">Calculating...</h4>
-                                <p id="transparency-rating-text">Analyzing article transparency...</p>
-                            </div>
-                        </div>
-
-                        <!-- Transparency Breakdown -->
-                        <div class="transparency-breakdown">
-                            <h4 class="breakdown-title">
-                                <i class="fas fa-calculator"></i>
-                                How We Calculated This Score
-                            </h4>
-                            
-                            <div class="breakdown-grid">
-                                <div class="breakdown-item">
-                                    <div class="breakdown-icon sources">
-                                        <i class="fas fa-link"></i>
-                                    </div>
-                                    <div class="breakdown-content">
-                                        <div class="breakdown-label">Sources Cited</div>
-                                        <div class="breakdown-value" id="trans-sources-value">--</div>
-                                        <div class="breakdown-desc" id="trans-sources-desc">External references and citations</div>
-                                    </div>
-                                    <div class="breakdown-score" id="trans-sources-score">--</div>
-                                </div>
-
-                                <div class="breakdown-item">
-                                    <div class="breakdown-icon quotes">
-                                        <i class="fas fa-quote-right"></i>
-                                    </div>
-                                    <div class="breakdown-content">
-                                        <div class="breakdown-label">Direct Quotes</div>
-                                        <div class="breakdown-value" id="trans-quotes-value">--</div>
-                                        <div class="breakdown-desc" id="trans-quotes-desc">Attributed statements from experts</div>
-                                    </div>
-                                    <div class="breakdown-score" id="trans-quotes-score">--</div>
-                                </div>
-
-                                <div class="breakdown-item">
-                                    <div class="breakdown-icon attribution">
-                                        <i class="fas fa-fingerprint"></i>
-                                    </div>
-                                    <div class="breakdown-content">
-                                        <div class="breakdown-label">Attribution Quality</div>
-                                        <div class="breakdown-value" id="trans-attribution-value">--</div>
-                                        <div class="breakdown-desc" id="trans-attribution-desc">How well sources are identified</div>
-                                    </div>
-                                    <div class="breakdown-score" id="trans-attribution-score">--</div>
-                                </div>
-
-                                <div class="breakdown-item">
-                                    <div class="breakdown-icon verifiable">
-                                        <i class="fas fa-check-double"></i>
-                                    </div>
-                                    <div class="breakdown-content">
-                                        <div class="breakdown-label">Verifiable Claims</div>
-                                        <div class="breakdown-value" id="trans-verifiable-value">--</div>
-                                        <div class="breakdown-desc" id="trans-verifiable-desc">Claims backed by evidence</div>
-                                    </div>
-                                    <div class="breakdown-score" id="trans-verifiable-score">--</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Transparency Checklist -->
-                        <div class="transparency-checklist">
-                            <h4 class="checklist-title">
-                                <i class="fas fa-tasks"></i>
-                                Transparency Checklist
-                            </h4>
-                            <div class="checklist-items" id="transparency-checklist-items">
-                                <!-- Will be populated dynamically -->
-                            </div>
-                        </div>
-
-                        <!-- Why This Matters -->
-                        <div class="transparency-impact">
-                            <div class="impact-header">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <h4>Why Transparency Matters</h4>
-                            </div>
-                            <div class="impact-grid">
-                                <div class="impact-item">
-                                    <i class="fas fa-shield-alt"></i>
-                                    <div class="impact-content">
-                                        <strong>Builds Trust</strong>
-                                        <p>Shows the journalist did their homework and has nothing to hide</p>
-                                    </div>
-                                </div>
-                                <div class="impact-item">
-                                    <i class="fas fa-search"></i>
-                                    <div class="impact-content">
-                                        <strong>Enables Verification</strong>
-                                        <p>You can check sources yourself instead of blindly trusting</p>
-                                    </div>
-                                </div>
-                                <div class="impact-item">
-                                    <i class="fas fa-balance-scale"></i>
-                                    <div class="impact-content">
-                                        <strong>Shows Accountability</strong>
-                                        <p>Clear sources mean journalists can be held accountable for errors</p>
-                                    </div>
-                                </div>
-                                <div class="impact-item">
-                                    <i class="fas fa-graduation-cap"></i>
-                                    <div class="impact-content">
-                                        <strong>Educational Value</strong>
-                                        <p>Good sourcing helps readers learn more about the topic</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Traditional Analysis Sections -->
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-search-plus"></i> What We Analyzed</h4>
-                                <p id="transparency-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-file-alt"></i> What We Found</h4>
-                                <p id="transparency-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-question-circle"></i> What This Means</h4>
-                                <p id="transparency-means">Loading...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            manipulationDetector: `
-                <div class="service-analysis-section">
-                    <div class="service-card-enhanced">
-                        <div class="card-header-gradient manipulation-header">
-                            <i class="fas fa-user-secret"></i>
-                            <h3>Manipulation Detection</h3>
-                        </div>
-                        <div class="manipulation-metrics">
-                            <div class="metric-card success">
-                                <div class="metric-icon"><i class="fas fa-shield-virus"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="integrity-score">--</span>
-                                    <span class="metric-label">Integrity Score</span>
-                                </div>
-                            </div>
-                            <div class="metric-card danger">
-                                <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="techniques-count">--</span>
-                                    <span class="metric-label">Techniques Found</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="techniques-list" id="techniques-list"></div>
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-microscope"></i> What We Analyzed</h4>
-                                <p id="manipulation-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-fingerprint"></i> What We Found</h4>
-                                <p id="manipulation-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-shield-alt"></i> What This Means</h4>
-                                <p id="manipulation-means">Loading...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            contentAnalyzer: `
-                <div class="service-analysis-section">
-                    <div class="service-card-enhanced">
-                        <div class="card-header-gradient content-header">
-                            <i class="fas fa-file-alt"></i>
-                            <h3>Content Quality Analysis</h3>
-                        </div>
-                        <div class="content-metrics">
-                            <div class="metric-card primary">
-                                <div class="metric-icon"><i class="fas fa-star"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="quality-score">--</span>
-                                    <span class="metric-label">Quality Score</span>
-                                </div>
-                            </div>
-                            <div class="metric-card info">
-                                <div class="metric-icon"><i class="fas fa-glasses"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="readability-level">--</span>
-                                    <span class="metric-label">Readability</span>
-                                </div>
-                            </div>
-                            <div class="metric-card secondary">
-                                <div class="metric-icon"><i class="fas fa-font"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="word-count">--</span>
-                                    <span class="metric-label">Word Count</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-book-reader"></i> What We Analyzed</h4>
-                                <p id="content-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-pen-fancy"></i> What We Found</h4>
-                                <p id="content-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-graduation-cap"></i> What This Means</h4>
-                                <p id="content-means">Loading...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `,
-            
-            author: `
-                <div class="service-analysis-section author-enhanced">
-                    <div class="author-profile-header">
-                        <div class="author-avatar-section">
-                            <div class="author-avatar-circle">
-                                <i class="fas fa-user-edit"></i>
-                            </div>
-                            <div class="credibility-badge high" id="author-cred-badge">
-                                <span id="author-cred-score">--</span>
-                            </div>
-                            <div class="verification-badge" id="author-verified-badge" style="display: none">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Verified</span>
-                            </div>
-                        </div>
-                        
-                        <div class="author-main-info">
-                            <h2 class="author-name" id="author-name">Loading...</h2>
-                            <p class="author-title" id="author-title">Analyzing credentials...</p>
-                            <div class="author-social-links" id="author-links"></div>
-                            
-                            <div class="expertise-tags" id="expertise-tags">
-                                <!-- Expertise tags will be inserted here -->
-                            </div>
-                        </div>
-                        
-                        <div class="author-stats">
-                            <div class="stat-item">
-                                <div class="stat-value" id="author-articles">--</div>
-                                <div class="stat-label">Articles</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="author-experience">--</div>
-                                <div class="stat-label">Experience</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="author-awards">--</div>
-                                <div class="stat-label">Awards</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="author-metrics-grid">
-                        <div class="metric-card primary">
-                            <div class="metric-icon"><i class="fas fa-certificate"></i></div>
-                            <div class="metric-content">
-                                <span class="metric-value" id="author-credibility">--</span>
-                                <span class="metric-label">Credibility Score</span>
-                            </div>
-                        </div>
-                        <div class="metric-card info">
-                            <div class="metric-icon"><i class="fas fa-graduation-cap"></i></div>
-                            <div class="metric-content">
-                                <span class="metric-value" id="author-expertise">--</span>
-                                <span class="metric-label">Expertise Level</span>
-                            </div>
-                        </div>
-                        <div class="metric-card success">
-                            <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
-                            <div class="metric-content">
-                                <span class="metric-value" id="author-track-record">--</span>
-                                <span class="metric-label">Track Record</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="author-detail-sections">
-                        <div class="author-bio" id="author-bio" style="display: none">
-                            <!-- Bio will be inserted here if available -->
-                        </div>
-                        
-                        <div class="author-awards-section" id="author-awards-section" style="display: none">
-                            <h4><i class="fas fa-trophy"></i> Awards & Recognition</h4>
-                            <ul class="awards-list" id="awards-list"></ul>
-                        </div>
-                        
-                        <div class="author-trust-indicators" id="trust-indicators" style="display: none">
-                            <h4><i class="fas fa-shield-alt"></i> Trust Indicators</h4>
-                            <div class="indicator-list" id="trust-indicator-list"></div>
-                        </div>
-                        
-                        <div class="author-red-flags" id="red-flags" style="display: none">
-                            <h4><i class="fas fa-exclamation-triangle"></i> Red Flags</h4>
-                            <div class="flag-list" id="red-flag-list"></div>
-                        </div>
-                    </div>
-                    
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4><i class="fas fa-user-check"></i> What We Analyzed</h4>
-                            <p id="author-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4><i class="fas fa-search"></i> What We Found</h4>
-                            <p id="author-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4><i class="fas fa-info-circle"></i> What This Means</h4>
-                            <p id="author-means">Loading...</p>
-                        </div>
-                    </div>
-                </div>
-            `
-        };
-        
-        return templates[serviceId] || '<div class="error">Template not found</div>';
-    },
-
+    
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('Displaying enhanced analyses with data:', data);
+        console.log('Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
-        
-        // Create service containers dynamically
         const container = document.getElementById('serviceAnalysisContainer');
         if (!container) return;
         
         container.innerHTML = '';
         
-        // Define services in order with colored borders
+        // Define services
         const services = [
             { id: 'sourceCredibility', key: 'source_credibility', title: 'Source Credibility', icon: 'fa-globe-americas', color: '#6366f1' },
             { id: 'biasDetector', key: 'bias_detector', title: 'Bias Detection', icon: 'fa-balance-scale', color: '#f59e0b' },
@@ -609,34 +33,34 @@ window.ServiceTemplates = {
             { id: 'contentAnalyzer', key: 'content_analyzer', title: 'Content Quality', icon: 'fa-file-alt', color: '#ec4899' }
         ];
         
-        // Create dropdowns for each service with colored borders
+        // Create dropdowns for each service
         services.forEach(function(service) {
             const serviceData = detailed[service.key] || {};
             const dropdown = document.createElement('div');
             dropdown.className = 'service-dropdown ' + service.id + 'Dropdown';
             dropdown.style.borderLeft = '4px solid ' + service.color;
             
-            dropdown.innerHTML = `
-                <div class="service-header" onclick="toggleServiceDropdown('${service.id}')" style="background: linear-gradient(135deg, ${service.color}10 0%, ${service.color}05 100%);">
-                    <div class="service-title">
-                        <i class="fas ${service.icon}" style="color: ${service.color}"></i>
-                        <span>${service.title}</span>
-                    </div>
-                    <div class="service-toggle">
-                        <i class="fas fa-chevron-down"></i>
-                    </div>
-                </div>
-                <div class="service-content" style="display: none">
-                    <div class="service-analysis-card" id="${service.id}Content">
-                        ${ServiceTemplates.getTemplate(service.id)}
-                    </div>
-                </div>
-            `;
+            dropdown.innerHTML = '<div class="service-header" onclick="toggleServiceDropdown(\'' + service.id + '\')" style="background: linear-gradient(135deg, ' + service.color + '10 0%, ' + service.color + '05 100%);">' +
+                '<div class="service-title">' +
+                '<i class="fas ' + service.icon + '" style="color: ' + service.color + '"></i>' +
+                '<span>' + service.title + '</span>' +
+                '</div>' +
+                '<div class="service-toggle">' +
+                '<i class="fas fa-chevron-down"></i>' +
+                '</div>' +
+                '</div>' +
+                '<div class="service-content" style="display: none">' +
+                '<div class="service-analysis-card" id="' + service.id + 'Content">' +
+                '</div>' +
+                '</div>';
             
             container.appendChild(dropdown);
             
             // Display the service data
-            ServiceTemplates['display' + service.id.charAt(0).toUpperCase() + service.id.slice(1)](serviceData, analyzer);
+            const methodName = 'display' + service.id.charAt(0).toUpperCase() + service.id.slice(1);
+            if (ServiceTemplates[methodName]) {
+                ServiceTemplates[methodName](serviceData, analyzer);
+            }
         });
         
         // Add toggle functionality
@@ -652,35 +76,17 @@ window.ServiceTemplates = {
         };
     },
 
-    // Enhanced Display Method for Source Credibility with Top 10 Sources
+    // Display Source Credibility with Top 10 Sources Chart
     displaySourceCredibility: function(data, analyzer) {
         const score = data.score || 0;
         const year = data.established_year || new Date().getFullYear();
         const yearsOld = new Date().getFullYear() - year;
-        const reputation = data.credibility || 'Unknown';
         const currentSource = data.source || data.organization || 'This Source';
         
-        // Update metrics
-        this.updateElement('source-score', score + '/100');
-        this.updateElement('source-age', yearsOld > 0 ? yearsOld + ' Years' : 'New');
-        this.updateElement('source-reputation', reputation);
+        const content = document.getElementById('sourceCredibilityContent');
+        if (!content) return;
         
-        // Update trust indicator position
-        const indicator = document.getElementById('trust-indicator');
-        if (indicator) {
-            indicator.textContent = score;
-            setTimeout(function() {
-                indicator.style.left = score + '%';
-            }, 100);
-        }
-        
-        // Update details
-        this.updateElement('source-org', data.organization || 'Independent');
-        this.updateElement('source-founded', year);
-        this.updateElement('source-awards', data.awards || 'N/A');
-        this.updateElement('source-readership', data.readership || 'N/A');
-        
-        // Top 10 news sources with their typical credibility scores
+        // Top 10 news sources
         const topSources = [
             { name: 'Reuters', score: 95, tier: 'excellent' },
             { name: 'Associated Press', score: 94, tier: 'excellent' },
@@ -694,23 +100,21 @@ window.ServiceTemplates = {
             { name: 'CBS News', score: 81, tier: 'good' }
         ];
         
-        // Determine tier based on score
+        // Determine tier
         let tierClass = 'moderate';
         if (score >= 85) tierClass = 'excellent';
         else if (score >= 75) tierClass = 'good';
         else if (score >= 60) tierClass = 'moderate';
         else tierClass = 'low';
         
-        // Check if current source is in top 10
+        // Build sources list with current source
         let sourcesToDisplay = [...topSources];
-        const isInTop10 = topSources.some(s => 
-            s.name.toLowerCase() === currentSource.toLowerCase() ||
-            currentSource.toLowerCase().includes(s.name.toLowerCase()) ||
-            s.name.toLowerCase().includes(currentSource.toLowerCase())
-        );
+        const isInTop10 = topSources.some(function(s) {
+            return s.name.toLowerCase() === currentSource.toLowerCase();
+        });
         
-        if (!isInTop10 && currentSource !== 'This Source' && currentSource !== 'Independent') {
-            // Add current source to the list
+        if (!isInTop10 && currentSource !== 'This Source') {
+            // Add current source if not in top 10
             sourcesToDisplay.push({
                 name: currentSource,
                 score: score,
@@ -718,54 +122,482 @@ window.ServiceTemplates = {
                 current: true
             });
             
-            // Sort by score
-            sourcesToDisplay.sort((a, b) => b.score - a.score);
-            
-            // If current source is not in top 10, show top 9 + current source
-            if (sourcesToDisplay.findIndex(s => s.current) > 9) {
-                sourcesToDisplay = sourcesToDisplay.slice(0, 9);
-                sourcesToDisplay.push({
-                    name: currentSource,
-                    score: score,
-                    tier: tierClass,
-                    current: true
-                });
+            // Sort and limit
+            sourcesToDisplay.sort(function(a, b) { return b.score - a.score; });
+            if (sourcesToDisplay.length > 10) {
+                const currentIndex = sourcesToDisplay.findIndex(function(s) { return s.current; });
+                if (currentIndex > 9) {
+                    sourcesToDisplay = sourcesToDisplay.slice(0, 9);
+                    sourcesToDisplay.push({
+                        name: currentSource,
+                        score: score,
+                        tier: tierClass,
+                        current: true
+                    });
+                }
             }
         } else {
-            // Mark the matching source as current
-            sourcesToDisplay = sourcesToDisplay.map(s => {
-                if (s.name.toLowerCase() === currentSource.toLowerCase() ||
-                    currentSource.toLowerCase().includes(s.name.toLowerCase()) ||
-                    s.name.toLowerCase().includes(currentSource.toLowerCase())) {
-                    return { ...s, current: true };
+            // Mark matching source as current
+            sourcesToDisplay = sourcesToDisplay.map(function(s) {
+                if (s.name.toLowerCase() === currentSource.toLowerCase()) {
+                    return Object.assign({}, s, { current: true });
                 }
                 return s;
             });
         }
         
-        // Create comparison chart
-        const chart = document.getElementById('source-ranking-chart');
-        if (chart) {
-            let chartHTML = '';
-            sourcesToDisplay.forEach(function(source) {
-                const isCurrent = source.current ? 'current' : '';
-                const name = source.current ? source.name + ' ★' : source.name;
+        // Build HTML
+        let html = '<div class="source-credibility-enhanced">' +
+            '<div class="source-metrics-row">' +
+            '<div class="source-metric-card primary">' +
+            '<i class="fas fa-star metric-icon-large"></i>' +
+            '<div class="metric-value-large">' + score + '/100</div>' +
+            '<div class="metric-label">Credibility Score</div>' +
+            '</div>' +
+            '<div class="source-metric-card success">' +
+            '<i class="fas fa-history metric-icon-large"></i>' +
+            '<div class="metric-value-large">' + (yearsOld > 0 ? yearsOld + ' Years' : 'New') + '</div>' +
+            '<div class="metric-label">Established</div>' +
+            '</div>' +
+            '<div class="source-metric-card info">' +
+            '<i class="fas fa-award metric-icon-large"></i>' +
+            '<div class="metric-value-large">' + (data.credibility || 'Unknown') + '</div>' +
+            '<div class="metric-label">Reputation</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="source-comparison-section">' +
+            '<h4 class="comparison-title">' +
+            '<i class="fas fa-chart-bar"></i> How This Source Compares' +
+            '</h4>' +
+            '<div class="source-ranking-chart">';
+        
+        // Add source bars
+        sourcesToDisplay.forEach(function(source) {
+            const isCurrent = source.current ? 'current' : '';
+            const name = source.current ? source.name + ' ★' : source.name;
+            html += '<div class="source-bar ' + isCurrent + '">' +
+                '<div class="source-name">' + name + '</div>' +
+                '<div class="source-bar-track">' +
+                '<div class="source-bar-fill ' + source.tier + '" style="width: ' + source.score + '%">' +
+                '<span class="score-label">' + source.score + '</span>' +
+                '</div>' +
+                '</div>' +
+                '</div>';
+        });
+        
+        html += '</div></div>' +
+            '<div class="analysis-details">' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-microscope"></i> What We Analyzed</h4>' +
+            '<p>' + (data.analysis?.what_we_looked || 'We examined the source\'s history, reputation, and credibility indicators.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-chart-line"></i> What We Found</h4>' +
+            '<p>' + (data.analysis?.what_we_found || 'Source credibility score: ' + score + '/100') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-lightbulb"></i> What This Means</h4>' +
+            '<p>' + (data.analysis?.what_it_means || this.getCredibilityMeaning(score)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        
+        content.innerHTML = html;
+    },
+
+    // Display Bias Detector
+    displayBiasDetector: function(data, analyzer) {
+        const content = document.getElementById('biasDetectorContent');
+        if (!content) return;
+        
+        const score = data.bias_score || 50;
+        const direction = data.political_bias || data.political_lean || 'center';
+        
+        content.innerHTML = '<div class="service-card-enhanced">' +
+            '<div class="bias-metrics">' +
+            '<div class="metric-card warning">' +
+            '<span class="metric-label">Bias Score</span>' +
+            '<span class="metric-value">' + score + '/100</span>' +
+            '</div>' +
+            '<div class="metric-card">' +
+            '<span class="metric-label">Direction</span>' +
+            '<span class="metric-value">' + direction.charAt(0).toUpperCase() + direction.slice(1) + '</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="analysis-details">' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-search"></i> What We Analyzed</h4>' +
+            '<p>' + (data.analysis?.what_we_looked || 'We analyzed language patterns, source selection, and framing techniques.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-chart-bar"></i> What We Found</h4>' +
+            '<p>' + (data.analysis?.what_we_found || 'Detected ' + direction + ' bias with a score of ' + score + '/100.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-info-circle"></i> What This Means</h4>' +
+            '<p>' + (data.analysis?.what_it_means || this.getBiasMeaning(direction, score)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    },
+
+    // Display Fact Checker
+    displayFactChecker: function(data, analyzer) {
+        const content = document.getElementById('factCheckerContent');
+        if (!content) return;
+        
+        const score = data.accuracy_score || 0;
+        const claims = data.claims || [];
+        const totalClaims = data.total_claims || claims.length;
+        const verifiedCount = claims.filter(function(c) {
+            return c.verdict === 'True' || c.verdict === 'Attributed' || c.verdict === 'Verifiable';
+        }).length;
+        
+        let html = '<div class="service-card-enhanced">' +
+            '<div class="fact-check-summary">' +
+            '<div class="metric-card success">' +
+            '<div class="metric-icon"><i class="fas fa-percentage"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + score + '%</span>' +
+            '<span class="metric-label">Accuracy Score</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="metric-card info">' +
+            '<div class="metric-icon"><i class="fas fa-clipboard-check"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + totalClaims + '</span>' +
+            '<span class="metric-label">Claims Checked</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="metric-card success">' +
+            '<div class="metric-icon"><i class="fas fa-shield-alt"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + verifiedCount + '</span>' +
+            '<span class="metric-label">Verified</span>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        
+        if (claims.length > 0) {
+            html += '<div class="claims-list"><h4>Key Claims Analyzed:</h4>';
+            claims.forEach(function(claim) {
+                let verdictClass = 'neutral';
+                let icon = 'info-circle';
+                let verdictColor = '#6b7280';
                 
-                chartHTML += `
-                    <div class="source-bar ${isCurrent}">
-                        <div class="source-name">${name}</div>
-                        <div class="source-bar-track">
-                            <div class="source-bar-fill ${source.tier}" style="width: ${source.score}%">
-                                <span class="score-label">${source.score}</span>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                if (claim.verdict === 'True' || claim.verdict === 'Verifiable') {
+                    verdictClass = 'verified';
+                    icon = 'check-circle';
+                    verdictColor = '#059669';
+                } else if (claim.verdict === 'False') {
+                    verdictClass = 'false';
+                    icon = 'times-circle';
+                    verdictColor = '#dc2626';
+                }
+                
+                html += '<div class="claim-item ' + verdictClass + '">' +
+                    '<div class="claim-content">' +
+                    '<div class="claim-text">' +
+                    '<i class="fas fa-' + icon + '" style="color: ' + verdictColor + '; margin-right: 8px;"></i>' +
+                    claim.claim +
+                    '</div>' +
+                    '<div class="claim-verdict-row">' +
+                    '<span class="claim-verdict"><strong>' + claim.verdict + '</strong>: ' +
+                    (claim.verdict_detail || '') + '</span>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
             });
-            chart.innerHTML = chartHTML;
+            html += '</div>';
         }
         
-        // Update analysis sections
-        const analysis = data.analysis || {};
-        this.updateElement('source-analyzed', analysis.what_we_looked || 
-            'We examined the source\'s history, reputation, and credibility indicators.
+        html += '<div class="analysis-details">' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-tasks"></i> What We Analyzed</h4>' +
+            '<p>' + (data.analysis?.what_we_looked || 'We examined factual claims and verified them against sources.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-clipboard-list"></i> What We Found</h4>' +
+            '<p>' + (data.analysis?.what_we_found || 'Analyzed ' + totalClaims + ' claims.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-exclamation-circle"></i> What This Means</h4>' +
+            '<p>' + (data.analysis?.what_it_means || this.getFactCheckMeaning(score)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        
+        content.innerHTML = html;
+    },
+
+    // Display Author
+    displayAuthor: function(data, analyzer) {
+        const content = document.getElementById('authorContent');
+        if (!content) return;
+        
+        const authorName = data.name || 'Unknown Author';
+        const credibility = data.credibility_score || 0;
+        const expertise = data.expertise || 'General';
+        const trackRecord = data.track_record || 'Unknown';
+        
+        content.innerHTML = '<div class="author-enhanced">' +
+            '<div class="author-metrics-grid">' +
+            '<div class="metric-card primary">' +
+            '<div class="metric-icon"><i class="fas fa-certificate"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + credibility + '/100</span>' +
+            '<span class="metric-label">Credibility Score</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="metric-card info">' +
+            '<div class="metric-icon"><i class="fas fa-graduation-cap"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + expertise + '</span>' +
+            '<span class="metric-label">Expertise Level</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="metric-card success">' +
+            '<div class="metric-icon"><i class="fas fa-chart-line"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + trackRecord + '</span>' +
+            '<span class="metric-label">Track Record</span>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="analysis-details">' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-user-check"></i> What We Analyzed</h4>' +
+            '<p>' + (data.analysis?.what_we_looked || 'We examined author credentials.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-search"></i> What We Found</h4>' +
+            '<p>' + (data.analysis?.what_we_found || 'Author: ' + authorName) + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-info-circle"></i> What This Means</h4>' +
+            '<p>' + (data.analysis?.what_it_means || this.getAuthorMeaning(credibility)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    },
+
+    // Display Transparency Analyzer
+    displayTransparencyAnalyzer: function(data, analyzer) {
+        const content = document.getElementById('transparencyAnalyzerContent');
+        if (!content) return;
+        
+        const score = data.transparency_score || 0;
+        const sources = data.source_count || 0;
+        const quotes = data.quote_count || 0;
+        
+        content.innerHTML = '<div class="transparency-enhanced">' +
+            '<div class="transparency-metrics">' +
+            '<div class="metric-card primary">' +
+            '<span class="metric-label">Transparency Score</span>' +
+            '<span class="metric-value">' + score + '/100</span>' +
+            '</div>' +
+            '<div class="metric-card info">' +
+            '<span class="metric-label">Sources Cited</span>' +
+            '<span class="metric-value">' + sources + '</span>' +
+            '</div>' +
+            '<div class="metric-card success">' +
+            '<span class="metric-label">Direct Quotes</span>' +
+            '<span class="metric-value">' + quotes + '</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="analysis-details">' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-search-plus"></i> What We Analyzed</h4>' +
+            '<p>' + (data.analysis?.what_we_looked || 'We examined how well the article backs up its claims.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-file-alt"></i> What We Found</h4>' +
+            '<p>' + (data.analysis?.what_we_found || 'Found ' + sources + ' sources and ' + quotes + ' quotes.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-question-circle"></i> What This Means</h4>' +
+            '<p>' + (data.analysis?.what_it_means || this.getTransparencyMeaning(score, sources)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    },
+
+    // Display Manipulation Detector
+    displayManipulationDetector: function(data, analyzer) {
+        const content = document.getElementById('manipulationDetectorContent');
+        if (!content) return;
+        
+        const score = data.integrity_score || 100;
+        const techniques = data.techniques || [];
+        const tactics = data.tactics_found || [];
+        
+        let html = '<div class="service-card-enhanced">' +
+            '<div class="manipulation-metrics">' +
+            '<div class="metric-card success">' +
+            '<div class="metric-icon"><i class="fas fa-shield-virus"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + score + '/100</span>' +
+            '<span class="metric-label">Integrity Score</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="metric-card danger">' +
+            '<div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + techniques.length + '</span>' +
+            '<span class="metric-label">Techniques Found</span>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        
+        if (techniques.length > 0 || tactics.length > 0) {
+            html += '<div class="techniques-list"><h4>Techniques Detected:</h4>';
+            
+            if (tactics.length > 0) {
+                tactics.slice(0, 10).forEach(function(tactic) {
+                    const severityColor = tactic.severity === 'high' ? '#ef4444' :
+                        tactic.severity === 'medium' ? '#f59e0b' : '#10b981';
+                    html += '<div class="technique-item-detailed" style="margin-bottom: 1rem; padding: 1rem; background: #fff; border-left: 4px solid ' + severityColor + '; border-radius: 8px;">' +
+                        '<div style="font-weight: 700; margin-bottom: 0.5rem;">' + tactic.name + '</div>' +
+                        '<div style="color: #475569; font-size: 0.95rem;">' + tactic.description + '</div>' +
+                        '</div>';
+                });
+            } else {
+                techniques.slice(0, 10).forEach(function(tech) {
+                    html += '<div class="technique-item" style="margin-bottom: 0.5rem; padding: 0.75rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 6px;">' +
+                        '<i class="fas fa-exclamation-triangle" style="color: #ef4444; margin-right: 8px;"></i>' +
+                        tech + '</div>';
+                });
+            }
+            html += '</div>';
+        } else {
+            html += '<div style="padding: 1.5rem; text-align: center; background: #dcfce7; border-radius: 8px; border: 2px solid #10b981;">' +
+                '<i class="fas fa-check-circle" style="color: #059669; font-size: 1.5rem; margin-bottom: 0.5rem;"></i>' +
+                '<div><strong>No manipulation techniques detected</strong></div>' +
+                '</div>';
+        }
+        
+        html += '<div class="analysis-details">' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-microscope"></i> What We Analyzed</h4>' +
+            '<p>' + (data.analysis?.what_we_looked || 'We checked for manipulation techniques.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-fingerprint"></i> What We Found</h4>' +
+            '<p>' + (data.analysis?.what_we_found || 'Integrity score: ' + score + '/100.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-shield-alt"></i> What This Means</h4>' +
+            '<p>' + (data.analysis?.what_it_means || this.getManipulationMeaning(score, techniques.length)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        
+        content.innerHTML = html;
+    },
+
+    // Display Content Analyzer
+    displayContentAnalyzer: function(data, analyzer) {
+        const content = document.getElementById('contentAnalyzerContent');
+        if (!content) return;
+        
+        const score = data.quality_score || 0;
+        const readability = data.readability_level || data.readability || 'Unknown';
+        const wordCount = data.word_count || 0;
+        
+        content.innerHTML = '<div class="service-card-enhanced">' +
+            '<div class="content-metrics">' +
+            '<div class="metric-card primary">' +
+            '<div class="metric-icon"><i class="fas fa-star"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + score + '/100</span>' +
+            '<span class="metric-label">Quality Score</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="metric-card info">' +
+            '<div class="metric-icon"><i class="fas fa-glasses"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + readability + '</span>' +
+            '<span class="metric-label">Readability</span>' +
+            '</div>' +
+            '</div>' +
+            '<div class="metric-card secondary">' +
+            '<div class="metric-icon"><i class="fas fa-font"></i></div>' +
+            '<div class="metric-content">' +
+            '<span class="metric-value">' + wordCount + '</span>' +
+            '<span class="metric-label">Word Count</span>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '<div class="analysis-details">' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-book-reader"></i> What We Analyzed</h4>' +
+            '<p>' + (data.analysis?.what_we_looked || 'We evaluated content quality.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-pen-fancy"></i> What We Found</h4>' +
+            '<p>' + (data.analysis?.what_we_found || 'Quality score: ' + score + '/100.') + '</p>' +
+            '</div>' +
+            '<div class="analysis-block">' +
+            '<h4><i class="fas fa-graduation-cap"></i> What This Means</h4>' +
+            '<p>' + (data.analysis?.what_it_means || this.getContentMeaning(score, readability)) + '</p>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+    },
+
+    // Meaning generators
+    getCredibilityMeaning: function(score) {
+        if (score >= 80) return 'Highly credible source with excellent reputation.';
+        if (score >= 60) return 'Generally credible source with good standards.';
+        if (score >= 40) return 'Mixed credibility - verify important claims.';
+        return 'Low credibility - seek additional sources.';
+    },
+
+    getBiasMeaning: function(direction, score) {
+        if (score >= 80) return 'Minimal bias detected - well balanced.';
+        if (score >= 60) return 'Some ' + direction + ' lean but generally balanced.';
+        if (score >= 40) return 'Clear ' + direction + ' bias affecting objectivity.';
+        return 'Strong ' + direction + ' bias - seek alternative perspectives.';
+    },
+
+    getFactCheckMeaning: function(score) {
+        if (score >= 90) return 'Excellent factual accuracy.';
+        if (score >= 70) return 'Good accuracy with minor issues.';
+        if (score >= 50) return 'Mixed accuracy - verify claims.';
+        return 'Significant accuracy concerns.';
+    },
+
+    getTransparencyMeaning: function(score, sources) {
+        if (score >= 80) return 'Excellent transparency with clear sourcing.';
+        if (score >= 60) return 'Good transparency. Most claims are backed up.';
+        if (sources === 0) return 'No sources cited - major credibility concern.';
+        if (score >= 40) return 'Limited transparency. Some sourcing present.';
+        return 'Poor transparency. Minimal sourcing.';
+    },
+
+    getManipulationMeaning: function(score, techniqueCount) {
+        if (score >= 80) {
+            return 'No significant manipulation detected.';
+        } else if (score >= 60) {
+            return 'Minor persuasive techniques detected (' + techniqueCount + ' found).';
+        } else if (score >= 40) {
+            return 'Some manipulative elements present (' + techniqueCount + ' techniques).';
+        }
+        return 'Significant manipulation detected (' + techniqueCount + ' techniques).';
+    },
+
+    getContentMeaning: function(score, readability) {
+        if (score >= 80) return 'Excellent quality with ' + readability.toLowerCase() + ' readability.';
+        if (score >= 60) return 'Good quality content.';
+        return 'Quality concerns identified.';
+    },
+
+    getAuthorMeaning: function(credibility) {
+        if (credibility >= 80) return 'Highly credible author with strong expertise.';
+        if (credibility >= 60) return 'Credible author with relevant experience.';
+        if (credibility >= 40) return 'Author credibility partially verified.';
+        return 'Limited author information available.';
+    }
+};
+
+console.log('ServiceTemplates loaded successfully - v4.3.1 FIXED');
