@@ -1156,7 +1156,7 @@ class AuthorAnalyzer:
 # Routes
 @app.route('/')
 def index():
-    return render_template('unified_index.html')
+    return render_template('index.html')
 
 @app.route('/health')
 def health():
