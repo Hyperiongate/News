@@ -64,7 +64,6 @@ class ArticleExtractorCore:
     
     # Sites that should NOT use ScraperAPI (they block it)
     DIRECT_FETCH_SITES = [
-        'abcnews.go.com',
         'abc.net.au',
         'washingtonpost.com',
         'wsj.com',
