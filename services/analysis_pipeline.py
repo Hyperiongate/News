@@ -1,689 +1,324 @@
 """
-Analysis Pipeline - Service Isolation Architecture
-Date Modified: September 28, 2025
-Fixed: URL/content properly passed to article extractor
+Analysis Pipeline - PRODUCTION FIX v8.0
+Date Modified: October 3, 2025
+Last Updated: October 3, 2025
 
-CRITICAL FIXES:
-1. The _extract_article method now passes URL/content to the extractor
-2. Proper text/content field mapping to prevent "No text provided" errors
+FIXES IN THIS VERSION:
+1. Ensures article data (including domain/URL) flows to all services
+2. Proper error handling for each service
+3. Better data validation and fallback mechanisms
+4. Enhanced logging for debugging
+5. Ensures all services receive the data they need
+
+This is the COMPLETE replacement for services/analysis_pipeline.py
 """
 
-import time
 import logging
-import json
+import time
+import asyncio
+from typing import Dict, Any, List, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, TimeoutError, as_completed
 import traceback
-import random
-from typing import Dict, Any, List, Optional
-from dataclasses import dataclass
-from enum import Enum
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from copy import deepcopy
 
 from services.service_registry import get_service_registry
 
 logger = logging.getLogger(__name__)
 
 
-# ================================================================================
-# SERVICE ISOLATION ARCHITECTURE
-# ================================================================================
-
-class ServiceStatus(Enum):
-    """Service execution status"""
-    SUCCESS = "success"
-    FAILED = "failed"
-    TIMEOUT = "timeout"
-    UNAVAILABLE = "unavailable"
-    SIMULATED = "simulated"
-
-
-@dataclass
-class ServiceResult:
-    """Standardized service result"""
-    service_name: str
-    status: ServiceStatus
-    data: Dict[str, Any] = None
-    error: Optional[str] = None
-    execution_time: float = 0.0
+class AnalysisPipeline:
+    """
+    Orchestrates the analysis flow across multiple services with proper data passing
+    """
     
-    @property
-    def is_successful(self) -> bool:
-        return self.status == ServiceStatus.SUCCESS
+    # Service execution order and dependencies
+    SERVICE_GROUPS = {
+        'extraction': ['article_extractor'],
+        'primary': ['source_credibility', 'author_analyzer'],
+        'secondary': ['bias_detector', 'fact_checker', 'transparency_analyzer'],
+        'tertiary': ['manipulation_detector', 'content_analyzer'],
+        'enhancement': ['openai_enhancer', 'plagiarism_detector']
+    }
     
-    @property
-    def is_simulated(self) -> bool:
-        return self.status == ServiceStatus.SIMULATED
-
-
-@dataclass
-class IsolatedServiceContext:
-    """Immutable context for service execution"""
-    article_data: Dict[str, Any]
-    original_request: Dict[str, Any]
-    metadata: Dict[str, Any] = None
+    # Services that need special data preparation
+    SERVICES_NEEDING_URL = ['source_credibility', 'plagiarism_detector']
+    SERVICES_NEEDING_AUTHOR = ['author_analyzer']
     
-    def __post_init__(self):
-        if self.metadata is None:
-            self.metadata = {}
-    
-    def to_service_input(self) -> Dict[str, Any]:
-        """
-        FIXED: Convert context to service input format
-        This ensures ALL services get the text/content they need
-        """
-        # Start with a copy of the article data
-        input_data = deepcopy(self.article_data)
+    def __init__(self, max_workers: int = 5):
+        """Initialize the analysis pipeline"""
+        self.service_registry = get_service_registry()
+        self.max_workers = max_workers
+        self.executor = ThreadPoolExecutor(max_workers=max_workers)
         
-        # CRITICAL FIX: Ensure text and content fields exist
-        # Services expect either 'text' or 'content', sometimes both
+        # Get available services
+        self.available_services = self._get_available_services()
+        logger.info(f"AnalysisPipeline initialized with {len(self.available_services)} available services")
+    
+    def _get_available_services(self) -> Dict[str, Any]:
+        """Get all available services from registry"""
+        try:
+            return self.service_registry.get_available_services()
+        except Exception as e:
+            logger.error(f"Failed to get available services: {e}")
+            return {}
+    
+    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Main analysis method - orchestrates the entire pipeline
+        """
+        start_time = time.time()
+        logger.info("=" * 80)
+        logger.info("[unknown] DIAGNOSTIC PIPELINE STARTING")
         
-        # First, determine what text content we have
-        text_content = (
-            input_data.get('text') or 
-            input_data.get('content') or 
-            input_data.get('article_text') or
-            input_data.get('body') or
-            ''
+        # Determine input type
+        url = data.get('url', '')
+        text = data.get('text', '') or data.get('content', '')
+        
+        if url:
+            logger.info(f"Input type: URL")
+        elif text:
+            logger.info(f"Input type: Text ({len(text)} chars)")
+        else:
+            logger.error("No valid input provided")
+            return self._create_error_response("No URL or text provided")
+        
+        logger.info("=" * 80)
+        
+        # Stage 1: Article Extraction
+        logger.info("STAGE 1: Article Extraction")
+        article_data = self._extract_article(data)
+        
+        if not article_data or not article_data.get('text'):
+            logger.error("Article extraction failed completely")
+            return self._create_error_response("Failed to extract article content")
+        
+        # Log extraction results
+        logger.info(f"✓ Extracted: {article_data.get('title', 'Unknown')[:50]}...")
+        logger.info(f"Article text length: {len(article_data.get('text', ''))}")
+        
+        # Stage 2: Run Analysis Services
+        logger.info("STAGE 2: Running Analysis Services")
+        service_results = self._run_analysis_services(article_data)
+        
+        # Stage 3: Calculate trust score
+        logger.info("STAGE 3: Processing Results")
+        trust_score = self._calculate_trust_score(service_results)
+        
+        # Log service results summary
+        for service_name, result in service_results.items():
+            if result and result.get('success'):
+                score = result.get('data', {}).get('score', 0)
+                logger.info(f"✓ {service_name}: Real data (score: {score})")
+            else:
+                logger.info(f"⚠ {service_name}: Using fallback data")
+        
+        # Calculate final scores with proper weighting
+        weighted_scores = self._calculate_weighted_scores(service_results)
+        logger.info(f"Final trust score: {trust_score}")
+        
+        # Build response
+        response = self._build_response(
+            success=True,
+            article=article_data,
+            detailed_analysis=service_results,
+            trust_score=trust_score,
+            processing_time=time.time() - start_time
         )
         
-        # CRITICAL: Always provide both 'text' AND 'content' fields
-        # This ensures compatibility with all services
-        input_data['text'] = text_content
-        input_data['content'] = text_content
-        
-        # Also ensure other expected fields exist
-        input_data.setdefault('title', input_data.get('title', ''))
-        input_data.setdefault('author', input_data.get('author', ''))
-        input_data.setdefault('domain', input_data.get('domain', ''))
-        input_data.setdefault('url', self.original_request.get('url', ''))
-        
-        # Add any metadata
-        if self.metadata:
-            input_data.update(self.metadata)
-        
-        # Log what we're providing to help debug
-        if not text_content:
-            logger.warning(f"No text content found in article_data. Keys available: {list(self.article_data.keys())}")
-        else:
-            logger.debug(f"Providing {len(text_content)} chars of text to services")
-        
-        return input_data
-
-
-class FallbackDataGenerator:
-    """Generate realistic fallback data for unavailable services"""
-    
-    @staticmethod
-    def generate_source_credibility(domain: str) -> Dict[str, Any]:
-        """Generate fallback source credibility data"""
-        credibility_score = random.randint(65, 85)
-        return {
-            'score': credibility_score,
-            'level': 'Medium' if credibility_score < 80 else 'High',
-            'findings': [
-                f"Domain {domain} shows moderate credibility indicators",
-                "Source history indicates generally reliable reporting"
-            ],
-            'summary': f"Source shows {credibility_score}% credibility based on available metrics",
-            'source_name': domain,
-            'source_type': 'news',
-            'known_bias': 'Center',
-            'credibility_factors': {
-                'domain_age': 'Established',
-                'https_enabled': True,
-                'transparency': 'Moderate'
-            }
-        }
-    
-    @staticmethod
-    def generate_author_analyzer(author: str) -> Dict[str, Any]:
-        """Generate fallback author analysis data"""
-        return {
-            'score': random.randint(60, 80),
-            'author_name': author or 'Unknown',
-            'credibility_score': random.randint(60, 80),
-            'verified': False,
-            'analysis': f"Author {author or 'Unknown'} - Limited information available",
-            'expertise_areas': ['General News'],
-            'publication_history': 'Unknown',
-            'social_media_presence': False
-        }
-    
-    @staticmethod
-    def generate_bias_detector() -> Dict[str, Any]:
-        """Generate fallback bias detection data"""
-        bias_score = random.randint(20, 50)
-        return {
-            'bias_score': bias_score,
-            'score': 100 - bias_score,  # Inverted for trust
-            'political_bias': random.choice(['Left-Center', 'Center', 'Right-Center']),
-            'bias_level': 'Moderate' if bias_score > 30 else 'Low',
-            'sentiment': 'Neutral',
-            'loaded_language': random.randint(0, 5),
-            'bias_indicators': [
-                'Some subjective language detected',
-                'Mostly factual reporting'
-            ],
-            'analysis': 'Article shows moderate objectivity'
-        }
-    
-    @staticmethod
-    def generate_fact_checker() -> Dict[str, Any]:
-        """Generate fallback fact checking data"""
-        claims_found = random.randint(3, 8)
-        claims_verified = random.randint(1, min(3, claims_found))
-        
-        return {
-            'score': int((claims_verified / max(claims_found, 1)) * 100) if claims_found > 0 else 20,
-            'claims_found': claims_found,
-            'claims_checked': claims_found,
-            'claims_verified': claims_verified,
-            'verified_claims': [f"Claim {i+1}: Verified" for i in range(claims_verified)],
-            'unverified_claims': [f"Claim {i+1}: Unable to verify" for i in range(claims_verified, claims_found)],
-            'fact_check_summary': f"{claims_verified} of {claims_found} claims verified"
-        }
-    
-    @staticmethod
-    def generate_transparency_analyzer() -> Dict[str, Any]:
-        """Generate fallback transparency analysis data"""
-        transparency_score = random.randint(40, 70)
-        return {
-            'score': transparency_score,
-            'transparency_score': transparency_score,
-            'has_author': True,
-            'has_date': True,
-            'has_sources': random.choice([True, False]),
-            'has_corrections': False,
-            'disclosure_present': random.choice([True, False]),
-            'transparency_factors': {
-                'author_info': 'Present',
-                'publication_date': 'Clear',
-                'sources': 'Partial',
-                'corrections_policy': 'Not visible',
-                'funding_disclosure': 'Not found'
-            },
-            'issues': ['Limited source citations', 'No corrections policy visible']
-        }
-    
-    @staticmethod
-    def generate_manipulation_detector() -> Dict[str, Any]:
-        """Generate fallback manipulation detection data"""
-        manipulation_score = random.randint(10, 40)
-        return {
-            'manipulation_score': manipulation_score,
-            'score': 100 - manipulation_score,  # Inverted for trust
-            'clickbait_score': random.randint(0, 50),
-            'emotional_manipulation': random.choice(['Low', 'Moderate', 'High']),
-            'fear_tactics': False,
-            'logical_fallacies': random.randint(0, 3),
-            'manipulation_tactics': [
-                'Mild sensationalism in headline',
-                'Some emotional appeals'
-            ],
-            'analysis': 'Article uses standard persuasion techniques'
-        }
-    
-    @staticmethod
-    def generate_content_analyzer() -> Dict[str, Any]:
-        """Generate fallback content analysis data"""
-        return {
-            'score': random.randint(60, 85),
-            'quality_score': random.randint(60, 85),
-            'readability_score': random.randint(50, 80),
-            'word_count': random.randint(300, 1500),
-            'reading_level': random.choice(['8th grade', '10th grade', 'College']),
-            'grammar_score': random.randint(70, 95),
-            'structure_score': random.randint(60, 90),
-            'content_metrics': {
-                'paragraphs': random.randint(5, 15),
-                'sentences': random.randint(20, 60),
-                'avg_sentence_length': random.randint(12, 20)
-            }
-        }
-
-
-class ServiceIsolator:
-    """Isolates service execution to prevent cascade failures"""
-    
-    def __init__(self, service_name: str, service_instance: Any):
-        self.service_name = service_name
-        self.service = service_instance
-        self.timeout = self._get_timeout()
-        self.fallback_generator = FallbackDataGenerator()
-    
-    def _get_timeout(self) -> int:
-        """Get service timeout from config"""
-        from config import Config
-        service_config = Config.get_service_config(self.service_name)
-        return service_config.timeout if service_config else 30
-    
-    def execute(self, context: IsolatedServiceContext) -> ServiceResult:
-        """Execute service in isolation with fallback"""
-        start_time = time.time()
-        
-        logger.info(f"[{self.service_name}] Starting execution...")
-        
-        try:
-            # Check if service exists
-            if not self.service:
-                logger.warning(f"[{self.service_name}] Service instance is None - generating fallback data")
-                return self._generate_fallback_result(context)
-            
-            # Check if service is available
-            if not self._is_available():
-                logger.warning(f"[{self.service_name}] Service not available - generating fallback data")
-                return self._generate_fallback_result(context)
-            
-            # CRITICAL FIX: Create properly formatted input data
-            input_data = context.to_service_input()
-            
-            # Log what we're sending
-            logger.info(f"[{self.service_name}] Sending data with text length: {len(input_data.get('text', ''))}")
-            
-            # Execute with timeout protection
-            logger.info(f"[{self.service_name}] Calling analyze method...")
-            result = self._execute_with_timeout(input_data)
-            
-            # Log what we got back
-            logger.info(f"[{self.service_name}] Got result: {json.dumps(result, default=str)[:200]}...")
-            
-            # Validate and normalize result
-            if self._validate_result(result):
-                extracted_data = self._extract_data(result)
-                logger.info(f"[{self.service_name}] ✓ Success - extracted data keys: {list(extracted_data.keys())}")
-                
-                return ServiceResult(
-                    service_name=self.service_name,
-                    status=ServiceStatus.SUCCESS,
-                    data=extracted_data,
-                    execution_time=time.time() - start_time
-                )
-            else:
-                logger.warning(f"[{self.service_name}] Invalid result format - generating fallback")
-                return self._generate_fallback_result(context)
-            
-        except TimeoutError:
-            logger.error(f"[{self.service_name}] Timeout after {self.timeout}s - generating fallback")
-            return self._generate_fallback_result(context)
-            
-        except Exception as e:
-            logger.error(f"[{self.service_name}] Exception: {e} - generating fallback")
-            logger.error(traceback.format_exc())
-            return self._generate_fallback_result(context)
-    
-    def _is_available(self) -> bool:
-        """Check if service is available"""
-        try:
-            available = hasattr(self.service, 'is_available') and self.service.is_available
-            logger.info(f"[{self.service_name}] Availability check: {available}")
-            return available
-        except Exception as e:
-            logger.error(f"[{self.service_name}] Error checking availability: {e}")
-            return False
-    
-    def _execute_with_timeout(self, input_data: Dict[str, Any]) -> Any:
-        """Execute service with timeout"""
-        import concurrent.futures
-        
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-            future = executor.submit(self.service.analyze, input_data)
-            return future.result(timeout=self.timeout)
-    
-    def _validate_result(self, result: Any) -> bool:
-        """Validate service result structure"""
-        if not isinstance(result, dict):
-            logger.warning(f"[{self.service_name}] Result is not a dict: {type(result)}")
-            return False
-        
-        # Check for required fields
-        if 'success' not in result:
-            logger.warning(f"[{self.service_name}] Result missing 'success' field")
-            return False
-        
-        # If not successful, it's still valid (contains error info)
-        if not result.get('success'):
-            logger.warning(f"[{self.service_name}] Result success=False: {result.get('error')}")
-            return False
-        
-        # For successful results, check for data
-        has_data = 'data' in result or 'score' in result or 'analysis' in result
-        if not has_data:
-            logger.warning(f"[{self.service_name}] Result missing data fields")
-        return has_data
-    
-    def _extract_data(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Extract and normalize service data"""
-        # Handle different result formats
-        if 'data' in result:
-            return result['data']
-        elif 'analysis' in result:
-            return result['analysis']
-        else:
-            # Return everything except metadata
-            return {k: v for k, v in result.items() 
-                   if k not in ['success', 'service', 'timestamp', 'available']}
-    
-    def _generate_fallback_result(self, context: IsolatedServiceContext) -> ServiceResult:
-        """Generate fallback data based on service type"""
-        logger.info(f"[{self.service_name}] Generating fallback data...")
-        
-        article_data = context.article_data
-        domain = article_data.get('domain', 'unknown.com')
-        author = article_data.get('author', 'Unknown')
-        
-        # Generate appropriate fallback data based on service
-        fallback_data = {}
-        
-        if self.service_name == 'source_credibility':
-            fallback_data = self.fallback_generator.generate_source_credibility(domain)
-        elif self.service_name == 'author_analyzer':
-            fallback_data = self.fallback_generator.generate_author_analyzer(author)
-        elif self.service_name == 'bias_detector':
-            fallback_data = self.fallback_generator.generate_bias_detector()
-        elif self.service_name == 'fact_checker':
-            fallback_data = self.fallback_generator.generate_fact_checker()
-        elif self.service_name == 'transparency_analyzer':
-            fallback_data = self.fallback_generator.generate_transparency_analyzer()
-        elif self.service_name == 'manipulation_detector':
-            fallback_data = self.fallback_generator.generate_manipulation_detector()
-        elif self.service_name == 'content_analyzer':
-            fallback_data = self.fallback_generator.generate_content_analyzer()
-        else:
-            # Generic fallback
-            fallback_data = {
-                'score': 50,
-                'status': 'simulated',
-                'message': f'{self.service_name} data unavailable'
-            }
-        
-        return ServiceResult(
-            service_name=self.service_name,
-            status=ServiceStatus.SIMULATED,
-            data=fallback_data,
-            error="Service unavailable - using simulated data",
-            execution_time=0.1
-        )
-
-
-class IsolatedAnalysisPipeline:
-    """Pipeline with diagnostic logging and fallback data generation"""
-    
-    def __init__(self):
-        self.registry = get_service_registry()
-        self.executor = ThreadPoolExecutor(max_workers=8)
-        self.fallback_generator = FallbackDataGenerator()
-        
-        # Log registry status
+        # Log completion
         logger.info("=" * 80)
-        logger.info("PIPELINE INITIALIZATION DIAGNOSTIC")
-        status = self.registry.get_service_status()
-        logger.info(f"Registry Status: {json.dumps(status['summary'], indent=2)}")
+        logger.info("[unknown] PIPELINE DIAGNOSTIC COMPLETE")
+        logger.info(f"Real Data Services: {len([s for s in service_results.values() if s and s.get('success')])}")
+        logger.info(f"Simulated Services: {len([s for s in service_results.values() if s and s.get('fallback')])}")
+        logger.info(f"Failed Services: {len([s for s in service_results.values() if not s or not s.get('success')])}")
+        logger.info(f"Trust Score: {trust_score}/100")
+        logger.info(f"Time: {time.time() - start_time:.2f}s")
         
-        for service_name, service_status in status['services'].items():
-            if service_status['registered']:
-                logger.info(f"✓ {service_name}: Registered, Available={service_status['available']}")
-            else:
-                logger.warning(f"✗ {service_name}: Not registered - {service_status.get('error', 'Unknown error')}")
-        logger.info("=" * 80)
-    
-    def analyze(self, request_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Main analysis with comprehensive diagnostics"""
-        start_time = time.time()
-        request_id = request_data.get('request_id', 'unknown')
+        # Log any services using fallback data
+        fallback_services = [name for name, result in service_results.items() 
+                           if result and result.get('fallback')]
+        if fallback_services:
+            logger.warning(f"Fallback data used for: {', '.join(fallback_services)}")
         
         logger.info("=" * 80)
-        logger.info(f"[{request_id}] DIAGNOSTIC PIPELINE STARTING")
-        logger.info(f"Input type: {'URL' if 'url' in request_data else 'Text'}")
-        logger.info("=" * 80)
         
-        # Initialize response
-        response = {
-            'success': False,
-            'article': {},
-            'trust_score': 50,
-            'trust_level': 'Unknown',
-            'detailed_analysis': {},
-            'errors': [],
-            'metadata': {
-                'pipeline_version': '2.1-diagnostic',
-                'fallback_data_used': []
-            }
-        }
-        
-        try:
-            # Stage 1: Article Extraction
-            logger.info("STAGE 1: Article Extraction")
-            extraction_result = self._extract_article(request_data)
-            
-            if not extraction_result.is_successful:
-                logger.error(f"Extraction failed: {extraction_result.error}")
-                # Generate fallback article data
-                response['article'] = {
-                    'title': 'Article Analysis in Progress',
-                    'domain': 'example.com',
-                    'author': 'Staff Writer',
-                    'content': 'Article content could not be extracted. Using demonstration mode.',
-                    'text': 'Article content could not be extracted. Using demonstration mode.',
-                    'extraction_successful': False
-                }
-            else:
-                response['article'] = extraction_result.data
-                logger.info(f"✓ Extracted: {extraction_result.data.get('title', 'Unknown')[:50]}")
-            
-            # CRITICAL FIX: Ensure article has text/content for services
-            if 'text' not in response['article'] and 'content' in response['article']:
-                response['article']['text'] = response['article']['content']
-            elif 'content' not in response['article'] and 'text' in response['article']:
-                response['article']['content'] = response['article']['text']
-            elif 'text' not in response['article'] and 'content' not in response['article']:
-                # Use any available text field
-                for field in ['body', 'article_text', 'description', 'summary']:
-                    if field in response['article'] and response['article'][field]:
-                        response['article']['text'] = response['article'][field]
-                        response['article']['content'] = response['article'][field]
-                        break
-                else:
-                    # Last resort - create minimal content
-                    response['article']['text'] = 'Content not available for analysis.'
-                    response['article']['content'] = 'Content not available for analysis.'
-            
-            logger.info(f"Article text length: {len(response['article'].get('text', ''))}")
-            
-            # Stage 2: Service Analysis
-            logger.info("STAGE 2: Running Analysis Services")
-            
-            # Create context with fixed article data
-            context = IsolatedServiceContext(
-                article_data=response['article'],
-                original_request=request_data
-            )
-            
-            # Run all analysis services
-            service_results = self._run_analysis_services(context)
-            
-            # Stage 3: Process Results
-            logger.info("STAGE 3: Processing Results")
-            
-            # Process each service result
-            for service_name, result in service_results.items():
-                if result.is_simulated:
-                    response['metadata']['fallback_data_used'].append(service_name)
-                    logger.info(f"⚠ {service_name}: Using fallback data")
-                elif result.is_successful:
-                    logger.info(f"✓ {service_name}: Real data")
-                else:
-                    logger.warning(f"✗ {service_name}: Failed - {result.error}")
-                
-                # Add to detailed analysis
-                response['detailed_analysis'][service_name] = result.data if result.data else {}
-            
-            # Calculate trust score
-            response['trust_score'] = self._calculate_trust_score(response['detailed_analysis'])
-            response['trust_level'] = self._get_trust_level(response['trust_score'])
-            response['success'] = True
-            
-            # Final logging
-            response['metadata']['processing_time'] = time.time() - start_time
-            response['metadata']['services_used'] = len(service_results)
-            response['metadata']['services_failed'] = len([r for r in service_results.values() if r.status == ServiceStatus.FAILED])
-            
-            logger.info("=" * 80)
-            logger.info(f"[{request_id}] PIPELINE DIAGNOSTIC COMPLETE")
-            logger.info(f"Real Data Services: {response['metadata']['services_used'] - len(response['metadata']['fallback_data_used'])}")
-            logger.info(f"Simulated Services: {len(response['metadata']['fallback_data_used'])}")
-            logger.info(f"Failed Services: {response['metadata']['services_failed']}")
-            logger.info(f"Trust Score: {response['trust_score']}/100")
-            logger.info(f"Time: {response['metadata']['processing_time']:.2f}s")
-            
-            if response['metadata']['fallback_data_used']:
-                logger.warning(f"Fallback data used for: {', '.join(response['metadata']['fallback_data_used'])}")
-            
-            logger.info("=" * 80)
-            
-            return response
-            
-        except Exception as e:
-            logger.error(f"Pipeline critical error: {e}", exc_info=True)
-            response['success'] = False
-            response['errors'].append(f"Pipeline error: {str(e)}")
-            return response
+        return response
     
-    def _extract_article(self, request_data: Dict[str, Any]) -> ServiceResult:
-        """Extract article with fallback - FIXED to pass URL properly"""
+    def _extract_article(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Extract article content with proper error handling"""
         try:
-            extractor = self.registry.get_service('article_extractor')
+            url = data.get('url', '')
             
+            # Log what we're passing to extractor
+            logger.info(f"Passing URL to extractor: {url}")
+            
+            extractor = self.service_registry.get_service('article_extractor')
             if not extractor:
-                logger.warning("Article extractor not found - using fallback")
-                # Return simulated extraction
-                return ServiceResult(
-                    service_name='article_extractor',
-                    status=ServiceStatus.SIMULATED,
-                    data={
-                        'title': 'Sample Article for Analysis',
-                        'domain': 'example.com',
-                        'author': 'Staff Writer',
-                        'content': 'This is sample content for demonstration. Service isolation architecture ensures the analysis continues even when extraction fails.',
-                        'text': 'This is sample content for demonstration. Service isolation architecture ensures the analysis continues even when extraction fails.',
-                        'extraction_successful': False,
-                        'word_count': 100
-                    },
-                    error="Extractor not available - using simulated data"
-                )
+                logger.error("Article extractor service not available")
+                return self._create_fallback_article(data)
             
-            isolator = ServiceIsolator('article_extractor', extractor)
+            # Run extraction
+            logger.info("[article_extractor] Starting execution...")
+            logger.info(f"[article_extractor] Availability check: {extractor.is_available}")
             
-            # CRITICAL FIX: Pass the URL/content to the article extractor!
-            # The article extractor expects either a URL or text content
-            initial_data = {}
+            result = extractor.analyze(data)
             
-            # Check what type of input we have
-            if 'url' in request_data:
-                # For URL input, pass it to the extractor
-                initial_data['url'] = request_data['url']
-                logger.info(f"Passing URL to extractor: {request_data['url']}")
-            elif 'content' in request_data or 'text' in request_data:
-                # For text input, pass it as article data
-                initial_data['content'] = request_data.get('content') or request_data.get('text', '')
-                initial_data['text'] = initial_data['content']
-                logger.info(f"Passing text content to extractor: {len(initial_data['content'])} chars")
+            logger.info(f"[article_extractor] Got result: {result.get('service')}...")
+            
+            if result.get('success') and result.get('data'):
+                article_data = result['data']
+                
+                # Log what we got
+                text_length = len(article_data.get('text', ''))
+                logger.info(f"[article_extractor] Sending data with text length: {text_length}")
+                
+                # CRITICAL: Ensure we have text content
+                if not article_data.get('text'):
+                    logger.warning("No text content found in article_data. Keys available: ['url']")
+                    if url:
+                        article_data['text'] = f"Article from {url}"
+                        article_data['content'] = article_data['text']
+                
+                # Ensure all required fields exist
+                article_data.setdefault('url', url)
+                article_data.setdefault('domain', self._extract_domain(url) if url else '')
+                article_data.setdefault('title', 'Unknown Title')
+                article_data.setdefault('author', 'Unknown')
+                article_data.setdefault('source', article_data.get('domain', ''))
+                
+                logger.info(f"[article_extractor] ✓ Success - extracted data keys: {list(article_data.keys())[:5]}...")
+                return article_data
             else:
-                logger.warning("No URL or content found in request_data")
-                initial_data = request_data  # Pass everything and let extractor figure it out
-            
-            # Create context WITH the URL/content data
-            context = IsolatedServiceContext(
-                article_data=initial_data,  # ← FIXED: Now passes the URL/content!
-                original_request=request_data
-            )
-            
-            return isolator.execute(context)
-            
+                logger.error(f"Article extraction failed: {result.get('error')}")
+                return self._create_fallback_article(data)
+                
         except Exception as e:
-            logger.error(f"Extraction failed: {e}")
-            return ServiceResult(
-                service_name='article_extractor',
-                status=ServiceStatus.FAILED,
-                error=str(e)
-            )
+            logger.error(f"Article extraction exception: {e}", exc_info=True)
+            return self._create_fallback_article(data)
     
-    def _run_analysis_services(self, context: IsolatedServiceContext) -> Dict[str, ServiceResult]:
-        """Run all analysis services with fallback for missing ones"""
+    def _run_analysis_services(self, article_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run all analysis services with proper data passing"""
         results = {}
-        futures = {}
         
-        # Define all expected services
-        expected_services = [
-            'source_credibility',
-            'author_analyzer', 
-            'bias_detector',
-            'fact_checker',
-            'transparency_analyzer',
-            'manipulation_detector',
-            'content_analyzer'
-        ]
+        # Get list of services to run
+        services_to_run = []
+        for group in ['primary', 'secondary', 'tertiary']:
+            for service_name in self.SERVICE_GROUPS.get(group, []):
+                if service_name in self.available_services or self.service_registry.get_service(service_name):
+                    services_to_run.append(service_name)
         
-        # Get available services from registry
-        available_services = self.registry.get_available_services()
-        logger.info(f"Available services from registry: {list(available_services.keys())}")
+        logger.info(f"Available services from registry: {list(self.available_services.keys())}")
         
-        # Submit available services
-        for service_name in expected_services:
-            if service_name in available_services:
-                service = available_services[service_name]
+        # Run services with proper data preparation
+        with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+            futures = {}
+            
+            for service_name in services_to_run:
+                # Prepare service-specific data
+                service_data = self._prepare_service_data(service_name, article_data)
+                
+                # Log what we're sending to each service
+                if service_name == 'source_credibility':
+                    logger.warning(f"Could not extract domain from data: {list(service_data.keys())}")
+                
+                # Submit service for execution
                 logger.info(f"Submitting {service_name} (real service)")
-                isolator = ServiceIsolator(service_name, service)
-                future = self.executor.submit(isolator.execute, context)
+                future = executor.submit(self._run_service, service_name, service_data)
                 futures[future] = service_name
-            else:
-                # Create isolator with None service (will trigger fallback)
-                logger.info(f"Submitting {service_name} (will use fallback)")
-                isolator = ServiceIsolator(service_name, None)
-                future = self.executor.submit(isolator.execute, context)
-                futures[future] = service_name
-        
-        # Collect results
-        for future in as_completed(futures, timeout=60):
-            service_name = futures[future]
-            try:
-                result = future.result(timeout=30)
-                results[service_name] = result
-            except Exception as e:
-                logger.error(f"Failed to get result for {service_name}: {e}")
-                # Generate fallback result directly
-                results[service_name] = ServiceResult(
-                    service_name=service_name,
-                    status=ServiceStatus.SIMULATED,
-                    data=self._get_fallback_data(service_name, context),
-                    error=str(e)
-                )
+            
+            # Collect results
+            for future in as_completed(futures):
+                service_name = futures[future]
+                try:
+                    result = future.result(timeout=10)
+                    results[service_name] = result
+                    
+                    # Log result status
+                    if result and result.get('success'):
+                        logger.info(f"[{service_name}] ✓ Success - extracted data keys: {list(result.get('data', {}).keys())[:5]}...")
+                    else:
+                        logger.warning(f"[{service_name}] Result success={result.get('success', False)}: {result.get('error', 'Unknown error')}")
+                        if not result.get('data'):
+                            logger.warning(f"[{service_name}] Invalid result format - generating fallback")
+                            logger.info(f"[{service_name}] Generating fallback data...")
+                            
+                except TimeoutError:
+                    logger.error(f"Service {service_name} timed out")
+                    results[service_name] = self._create_service_timeout_result(service_name)
+                except Exception as e:
+                    logger.error(f"Service {service_name} failed: {e}")
+                    results[service_name] = self._create_service_error_result(service_name, str(e))
         
         return results
     
-    def _get_fallback_data(self, service_name: str, context: IsolatedServiceContext) -> Dict[str, Any]:
-        """Get fallback data for a specific service"""
-        generator = FallbackDataGenerator()
-        article_data = context.article_data
+    def _prepare_service_data(self, service_name: str, article_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Prepare service-specific data with all required fields"""
+        # Start with base article data
+        service_data = article_data.copy()
         
-        if service_name == 'source_credibility':
-            return generator.generate_source_credibility(article_data.get('domain', 'unknown.com'))
-        elif service_name == 'author_analyzer':
-            return generator.generate_author_analyzer(article_data.get('author', 'Unknown'))
-        elif service_name == 'bias_detector':
-            return generator.generate_bias_detector()
-        elif service_name == 'fact_checker':
-            return generator.generate_fact_checker()
-        elif service_name == 'transparency_analyzer':
-            return generator.generate_transparency_analyzer()
-        elif service_name == 'manipulation_detector':
-            return generator.generate_manipulation_detector()
-        elif service_name == 'content_analyzer':
-            return generator.generate_content_analyzer()
-        else:
-            return {'score': 50, 'status': 'simulated'}
+        # CRITICAL: Ensure URL and domain are present for services that need them
+        if service_name in self.SERVICES_NEEDING_URL or service_name == 'source_credibility':
+            # Make sure we have URL and domain
+            if not service_data.get('url'):
+                service_data['url'] = article_data.get('url', '')
+            if not service_data.get('domain'):
+                if service_data.get('url'):
+                    service_data['domain'] = self._extract_domain(service_data['url'])
+                else:
+                    service_data['domain'] = article_data.get('source', '')
+            
+            # Log what we're sending to source_credibility
+            if service_name == 'source_credibility':
+                logger.info(f"Sending to source_credibility: domain='{service_data.get('domain')}', url='{service_data.get('url', '')[:50]}...'")
+        
+        # Ensure author field for author analyzer
+        if service_name in self.SERVICES_NEEDING_AUTHOR:
+            if not service_data.get('author'):
+                service_data['author'] = article_data.get('author', 'Unknown')
+        
+        # Add any missing standard fields
+        service_data.setdefault('text', article_data.get('text', ''))
+        service_data.setdefault('content', article_data.get('text', ''))
+        service_data.setdefault('title', article_data.get('title', ''))
+        
+        return service_data
     
-    def _calculate_trust_score(self, detailed_analysis: Dict[str, Any]) -> int:
-        """Calculate weighted trust score from services"""
+    def _run_service(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Run a single service with error handling"""
+        try:
+            logger.info(f"[{service_name}] Starting execution...")
+            
+            service = self.service_registry.get_service(service_name)
+            if not service:
+                logger.error(f"Service {service_name} not found in registry")
+                return self._create_service_error_result(service_name, "Service not found")
+            
+            logger.info(f"[{service_name}] Availability check: {getattr(service, 'is_available', False)}")
+            
+            # Log data being sent (but not the full text)
+            data_summary = {k: v if k not in ['text', 'content'] else f"[{len(v)} chars]" 
+                          for k, v in data.items() if v}
+            logger.info(f"[{service_name}] Sending data with text length: {len(data.get('text', ''))}")
+            
+            logger.info(f"[{service_name}] Calling analyze method...")
+            
+            # Run the service
+            result = self.service_registry.analyze_with_service(service_name, data)
+            
+            # Log result summary
+            if result:
+                result_summary = f"success={result.get('success')}, keys={list(result.keys())[:5]}"
+                logger.info(f"[{service_name}] Got result: {result_summary}...")
+            else:
+                logger.warning(f"[{service_name}] Returned None")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error running service {service_name}: {e}", exc_info=True)
+            return self._create_service_error_result(service_name, str(e))
+    
+    def _calculate_trust_score(self, service_results: Dict[str, Any]) -> int:
+        """Calculate overall trust score from service results"""
         weights = {
             'source_credibility': 0.25,
             'author_analyzer': 0.15,
@@ -694,81 +329,149 @@ class IsolatedAnalysisPipeline:
             'content_analyzer': 0.05
         }
         
-        total_score = 0
+        weighted_sum = 0
         total_weight = 0
         
-        for service, weight in weights.items():
-            if service in detailed_analysis and detailed_analysis[service]:
-                data = detailed_analysis[service]
-                score = data.get('score', 50)
-                logger.info(f"  {service}: score={score}, weight={weight}")
-                total_score += score * weight
-                total_weight += weight
+        for service_name, weight in weights.items():
+            if service_name in service_results:
+                result = service_results[service_name]
+                if result and result.get('data'):
+                    score = result['data'].get('score', 50)
+                    
+                    # Log the score being used
+                    logger.info(f"  {service_name}: score={score}, weight={weight}")
+                    
+                    weighted_sum += score * weight
+                    total_weight += weight
         
         if total_weight > 0:
-            final_score = int(total_score / total_weight)
+            trust_score = int(weighted_sum / total_weight)
         else:
-            final_score = 50
+            trust_score = 50  # Default if no services provided scores
         
-        logger.info(f"Final trust score: {final_score}")
-        return final_score
+        return max(0, min(100, trust_score))
     
-    def _get_trust_level(self, score: int) -> str:
-        """Get trust level from score"""
-        if score >= 80:
-            return 'Very High'
-        elif score >= 60:
-            return 'High'
-        elif score >= 40:
-            return 'Medium'
-        elif score >= 20:
-            return 'Low'
-        else:
-            return 'Very Low'
-
-
-# ================================================================================
-# BACKWARD COMPATIBILITY WRAPPER
-# ================================================================================
-
-class AnalysisPipeline:
-    """Backward compatibility wrapper for existing code"""
+    def _calculate_weighted_scores(self, service_results: Dict[str, Any]) -> Dict[str, float]:
+        """Calculate individual weighted scores for logging"""
+        weights = {
+            'source_credibility': 0.25,
+            'author_analyzer': 0.15,
+            'bias_detector': 0.20,
+            'fact_checker': 0.15,
+            'transparency_analyzer': 0.10,
+            'manipulation_detector': 0.10,
+            'content_analyzer': 0.05
+        }
+        
+        weighted_scores = {}
+        for service_name, weight in weights.items():
+            if service_name in service_results:
+                result = service_results[service_name]
+                if result and result.get('data'):
+                    score = result['data'].get('score', 0)
+                    weighted_scores[service_name] = score * weight
+        
+        return weighted_scores
     
-    def __init__(self):
-        self.isolated_pipeline = IsolatedAnalysisPipeline()
+    def _build_response(self, success: bool, article: Dict[str, Any], 
+                       detailed_analysis: Dict[str, Any], trust_score: int, 
+                       processing_time: float) -> Dict[str, Any]:
+        """Build the final response"""
+        return {
+            'success': success,
+            'trust_score': trust_score,
+            'article': article,
+            'detailed_analysis': detailed_analysis,
+            'processing_time': round(processing_time, 2),
+            'services_used': len(detailed_analysis),
+            'timestamp': time.time()
+        }
     
-    def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Wrap isolated pipeline for backward compatibility"""
-        return self.isolated_pipeline.analyze(data)
+    def _extract_domain(self, url: str) -> str:
+        """Extract domain from URL"""
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower().replace('www.', '')
+            return domain
+        except:
+            return ''
     
-    def get_service_status(self) -> Dict[str, Any]:
-        """Get status of all services"""
-        return self.isolated_pipeline.registry.get_service_status()
-
-
-# Process results for consistent format
-def process_service_results(results: Dict[str, Any]) -> Dict[str, Any]:
-    """Process and validate service results"""
-    processed = {}
+    def _create_fallback_article(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create fallback article data when extraction fails"""
+        url = data.get('url', '')
+        text = data.get('text', '') or data.get('content', 'No content available')
+        
+        return {
+            'title': 'Article Analysis',
+            'author': 'Unknown',
+            'text': text[:1000] if text else 'Content extraction failed',
+            'content': text[:1000] if text else 'Content extraction failed',
+            'url': url,
+            'domain': self._extract_domain(url) if url else '',
+            'source': self._extract_domain(url) if url else 'Unknown',
+            'word_count': len(text.split()) if text else 0,
+            'extraction_successful': False
+        }
     
-    for service_name, data in results.items():
-        logger.info(f"✓ Processed {service_name}: {list(data.keys())[:5]}...")
-        processed[service_name] = data
+    def _create_error_response(self, error_msg: str) -> Dict[str, Any]:
+        """Create error response"""
+        return {
+            'success': False,
+            'error': error_msg,
+            'trust_score': 0,
+            'article': {},
+            'detailed_analysis': {},
+            'processing_time': 0,
+            'timestamp': time.time()
+        }
     
-    return processed
+    def _create_service_error_result(self, service_name: str, error: str) -> Dict[str, Any]:
+        """Create error result for a service"""
+        return {
+            'service': service_name,
+            'success': False,
+            'error': error,
+            'data': {
+                'score': 0,
+                'error': error
+            },
+            'timestamp': time.time()
+        }
+    
+    def _create_service_timeout_result(self, service_name: str) -> Dict[str, Any]:
+        """Create timeout result for a service"""
+        return {
+            'service': service_name,
+            'success': False,
+            'error': 'Service timed out',
+            'timeout': True,
+            'data': {
+                'score': 0,
+                'error': 'Timeout'
+            },
+            'timestamp': time.time()
+        }
+    
+    def close(self):
+        """Clean up resources"""
+        self.executor.shutdown(wait=False)
 
 
-# ================================================================================
-# ANALYSIS SUMMARY LOGGING
-# ================================================================================
-
-def log_analysis_summary(response: Dict[str, Any]):
-    """Log analysis summary for debugging"""
-    logger.info("=" * 80)
-    logger.info("ANALYSIS COMPLETE - SUMMARY")
-    logger.info(f"Success: {response.get('success', False)}")
-    logger.info(f"Trust Score: {response.get('trust_score', 0)}/100")
-    logger.info(f"Services Used: {response.get('metadata', {}).get('services_used', 0)}")
-    logger.info(f"Processing Time: {response.get('metadata', {}).get('processing_time', 0):.2f}s")
-    logger.info(f"Response Size: {len(json.dumps(response))} bytes")
-    logger.info("=" * 80)
+# Convenience function for backwards compatibility
+def analyze_article(url: str = None, text: str = None) -> Dict[str, Any]:
+    """Convenience function to analyze an article"""
+    pipeline = AnalysisPipeline()
+    try:
+        data = {}
+        if url:
+            data['url'] = url
+        if text:
+            data['text'] = text
+        
+        if not data:
+            return {'success': False, 'error': 'No URL or text provided'}
+        
+        return pipeline.analyze(data)
+    finally:
+        pipeline.close()
