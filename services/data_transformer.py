@@ -287,16 +287,16 @@ class DataTransformer:
         result['credibility_score'] = cred_score
         result['credibility'] = cred_score
         
-        # Get expertise - author_analyzer returns this as a list
-        expertise = raw_data.get('expertise', [])
+        # Get expertise - author_analyzer returns this as 'expertise_areas' or 'expertise'
+        expertise = raw_data.get('expertise_areas', raw_data.get('expertise', []))
         if isinstance(expertise, list) and expertise:
             result['expertise'] = ', '.join(str(e) for e in expertise[:3])
         else:
             result['expertise'] = 'General reporting'
         
-        # Set other fields from author_analyzer
-        result['track_record'] = raw_data.get('track_record', 'Unknown')
-        result['years_experience'] = raw_data.get('years_experience', 'Unknown')
+        # Set other fields from author_analyzer - use actual field names
+        result['track_record'] = raw_data.get('trust_explanation', raw_data.get('track_record', 'Unknown'))
+        result['years_experience'] = str(raw_data.get('years_experience', 'Unknown'))
         result['outlet'] = raw_data.get('organization', raw_data.get('outlet', article.get('source', 'Unknown')))
         
         # Handle awards
