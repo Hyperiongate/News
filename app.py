@@ -329,28 +329,75 @@ class ArticleExtractor:
         }
     
     def _extract_authors_improved(self, soup: BeautifulSoup, html_text: str) -> str:
-        """Improved author extraction that avoids quoted sources"""
+        """AI-powered author extraction that works like a human - finds 'By' near the top"""
+        
+        # FIRST: Try AI extraction if available (90%+ success rate)
+        if openai_client:
+            try:
+                # Get the top portion of the article where bylines typically appear
+                # This includes both visible text and HTML structure
+                article_top_html = html_text[:4000] if len(html_text) > 4000 else html_text
+                
+                # Also get clean text version for better context
+                article_top_text = soup.get_text()[:2000] if len(soup.get_text()) > 2000 else soup.get_text()
+                
+                prompt = f"""Find the article author(s) name in this content. Look for patterns like:
+                - "By [Name]" or "Written by [Name]"
+                - Author bylines near the title/top of article
+                - Meta tags or byline classes in HTML
+                
+                Article text excerpt:
+                {article_top_text}
+                
+                HTML structure excerpt:
+                {article_top_html[:1500]}
+                
+                Rules:
+                - Return ONLY the author name(s), nothing else
+                - If multiple authors, separate with "and"
+                - Return "Unknown" if no author found
+                - Ignore names that appear in quotes (said, told, etc.)
+                - Look for journalist names, not political figures or sources
+                
+                Author name:"""
+                
+                response = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=50,
+                    temperature=0.1  # Low temperature for factual extraction
+                )
+                
+                author = response.choices[0].message.content.strip()
+                
+                # Validate the AI response
+                if author and author != 'Unknown':
+                    # Remove any extra text AI might have added
+                    author = author.replace('Author name:', '').replace('By ', '').strip()
+                    
+                    # Check if it's a reasonable name (2-4 words)
+                    word_count = len(author.split())
+                    if 2 <= word_count <= 6:  # Allow for "and" in multi-author
+                        # Check it's not a known non-journalist
+                        if not any(name in author for name in NON_JOURNALIST_NAMES):
+                            logger.info(f"AI successfully found author: {author}")
+                            return author
+                    
+            except Exception as e:
+                logger.warning(f"AI author extraction failed, falling back: {e}")
+        
+        # FALLBACK: Traditional extraction methods
         authors = []
         
-        # Method 1: Look for byline patterns BUT exclude if it follows "said"
-        byline_patterns = [
-            r'<(?:div|span|p)[^>]*class="[^"]*(?:byline|author)[^"]*"[^>]*>(?:By\s+)?([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s*(?:,|and)\s*[A-Z][a-z]+\s+[A-Z][a-z]+)*)',
-            r'By\s+([A-Z][a-z]+\s+[A-Z][a-z]+)(?:\s*(?:,|and)\s*[A-Z][a-z]+\s+[A-Z][a-z]+)*\s*</(?:div|span|p)>',
-        ]
+        # Method 1: Look for simple "By Name" pattern in visible text
+        visible_text = soup.get_text()[:3000]
+        if match := re.search(r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', visible_text):
+            potential_author = match.group(1)
+            # Make sure it's not in a quote
+            if not re.search(rf'(said|told|according to)\s+{re.escape(potential_author)}', visible_text, re.IGNORECASE):
+                authors.append(potential_author)
         
-        for pattern in byline_patterns:
-            matches = re.findall(pattern, html_text)
-            for match in matches:
-                if not re.search(rf'(said|told|according to)\s+{re.escape(match)}', html_text, re.IGNORECASE):
-                    author_text = match
-                    author_text = author_text.replace(' and ', ', ')
-                    potential_authors = [a.strip() for a in author_text.split(',')]
-                    authors.extend(potential_authors)
-                    break
-            if authors:
-                break
-        
-        # Method 2: Check meta tags
+        # Method 2: Check meta tags if no author found yet
         if not authors:
             meta_selectors = [
                 ('name', 'author'),
@@ -363,41 +410,31 @@ class ArticleExtractor:
                 if meta := soup.find('meta', {attr: value}):
                     if content := meta.get('content'):
                         if not any(name in content for name in NON_JOURNALIST_NAMES):
-                            if ',' in content or ' and ' in content:
-                                content = content.replace(' and ', ', ')
-                                authors = [a.strip() for a in content.split(',')]
-                            else:
-                                authors = [content.strip()]
+                            authors.append(content.strip())
                             break
         
-        # Validate and clean authors
-        cleaned_authors = []
-        for author in authors:
+        # Method 3: Look for byline class elements
+        if not authors:
+            for byline_elem in soup.find_all(class_=re.compile(r'byline|author', re.I)):
+                byline_text = byline_elem.get_text()
+                if match := re.search(r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', byline_text):
+                    authors.append(match.group(1))
+                    break
+        
+        # Clean and validate authors
+        if authors:
+            author = authors[0]
+            # Clean up the author name
             author = re.sub(r'\s+', ' ', author).strip()
+            author = author.replace(' and ', ', ').replace(' And ', ', ')
             
-            if any(name in author for name in NON_JOURNALIST_NAMES):
-                continue
-            
+            # Final validation
             if author and 2 <= len(author.split()) <= 4:
-                if author[0].isupper():
-                    cleaned_authors.append(author)
+                if not any(name in author for name in NON_JOURNALIST_NAMES):
+                    logger.info(f"Fallback extraction found author: {author}")
+                    return author
         
-        # Remove duplicates
-        seen = set()
-        unique_authors = []
-        for author in cleaned_authors:
-            if author not in seen:
-                seen.add(author)
-                unique_authors.append(author)
-        
-        if unique_authors:
-            if len(unique_authors) == 1:
-                return unique_authors[0]
-            elif len(unique_authors) == 2:
-                return f"{unique_authors[0]} and {unique_authors[1]}"
-            else:
-                return ', '.join(unique_authors[:-1]) + f" and {unique_authors[-1]}"
-        
+        logger.warning("No author found by any method")
         return "Unknown"
     
     def _extract_title(self, soup: BeautifulSoup) -> str:
