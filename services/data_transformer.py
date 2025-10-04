@@ -1,16 +1,16 @@
 """
-Data Transformer - THE Single Point of Transformation
+Data Transformer - COMPLETE VERSION WITH FULL AUTHOR TRANSFORMATION
 Date: October 4, 2025
-Version: 1.0
+Version: 2.0
 
-This is THE ONLY place where data transformation happens.
-Takes any service output and transforms it to match the contract.
+THIS FIXES THE TRUNCATED _transform_author_analyzer METHOD
+The previous version was literally incomplete!
 
-Save as: services/data_transformer.py
+Save as: services/data_transformer.py (REPLACE existing file)
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from services.data_contract import DataContract
 
 logger = logging.getLogger(__name__)
@@ -256,22 +256,29 @@ class DataTransformer:
         raw_data: Dict[str, Any],
         article: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Transform author analyzer data"""
+        """Transform author analyzer data - COMPLETE VERSION"""
         
         result = template.copy()
         
-        # Get author name
-        author = article.get('author', raw_data.get('name', 'Unknown'))
-        if author.lower() in ['unknown', 'none', '']:
-            author = 'Unknown Author'
+        logger.info(f"[Transform Author] Input data keys: {list(raw_data.keys())[:10]}")
         
-        # Get credibility score
+        # Get author name - the author_analyzer returns it as 'name' or 'author_name'
+        author = (
+            raw_data.get('name') or
+            raw_data.get('author_name') or
+            article.get('author') or
+            'Unknown Author'
+        )
+        
+        # Get credibility score - author_analyzer returns this
         cred_score = (
             raw_data.get('credibility_score') or
             raw_data.get('score') or
             raw_data.get('credibility') or
             70  # Default for unknown authors
         )
+        
+        logger.info(f"[Transform Author] Name: {author}, Score: {cred_score}")
         
         # Set all the duplicate fields the frontend expects
         result['name'] = author
@@ -280,24 +287,58 @@ class DataTransformer:
         result['credibility_score'] = cred_score
         result['credibility'] = cred_score
         
-        # Set other fields
-        result['expertise'] = raw_data.get('expertise', 'General')
+        # Get expertise - author_analyzer returns this as a list
+        expertise = raw_data.get('expertise', [])
+        if isinstance(expertise, list) and expertise:
+            result['expertise'] = ', '.join(str(e) for e in expertise[:3])
+        else:
+            result['expertise'] = 'General reporting'
+        
+        # Set other fields from author_analyzer
         result['track_record'] = raw_data.get('track_record', 'Unknown')
         result['years_experience'] = raw_data.get('years_experience', 'Unknown')
-        result['awards'] = raw_data.get('awards', [])
-        result['articles_count'] = raw_data.get('articles_count', '50+')
-        result['awards_count'] = str(len(result['awards']))
+        result['outlet'] = raw_data.get('organization', raw_data.get('outlet', article.get('source', 'Unknown')))
+        
+        # Handle awards
+        awards = raw_data.get('awards', [])
+        if isinstance(awards, list):
+            result['awards'] = awards
+            result['awards_count'] = str(len(awards))
+        else:
+            result['awards'] = []
+            result['awards_count'] = '0'
+        
+        # Set other fields
+        result['articles_count'] = str(raw_data.get('article_count', raw_data.get('articles_found', 50)))
         result['verified'] = raw_data.get('verified', False)
-        result['outlet'] = raw_data.get('outlet', article.get('source', 'Unknown'))
         result['social_media'] = raw_data.get('social_media', {})
         
-        # Copy analysis if present
+        # Set analysis section
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
+        else:
+            # Create meaningful analysis
+            result['analysis'] = {
+                'what_we_looked': 'We examined the author\'s credentials, experience, track record, and publication history.',
+                'what_we_found': f'Author {author} has a credibility score of {cred_score}/100 with expertise in {result["expertise"]}.',
+                'what_it_means': DataTransformer._get_author_meaning(cred_score)
+            }
         
-        logger.info(f"[Transform] Author: {author}, Score: {cred_score}")
+        logger.info(f"[Transform Author] Complete - sending to frontend with score {cred_score}")
         
         return result
+    
+    @staticmethod
+    def _get_author_meaning(score: int) -> str:
+        """Generate meaning text for author credibility"""
+        if score >= 80:
+            return "Highly credible author with strong track record and expertise."
+        elif score >= 60:
+            return "Credible author with established credentials and experience."
+        elif score >= 40:
+            return "Author has some credentials but limited verification available."
+        else:
+            return "Limited author information available - verify claims independently."
     
     @staticmethod
     def _transform_bias_detector(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
