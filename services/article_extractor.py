@@ -1,9 +1,14 @@
 """
-Article Extractor - WORKING VERSION THAT USES SCRAPERAPI
+Article Extractor - ENHANCED WITH AI AUTHOR EXTRACTION
 Date: October 4, 2025
-Version: 13.0
+Version: 14.0
 
-This ACTUALLY uses your ScraperAPI key when it's configured.
+CHANGES:
+- Added AI-powered author extraction using OpenAI
+- Enhanced fallback methods for author detection
+- Added comprehensive logging for debugging
+- Maintains all ScraperAPI functionality
+
 Complete replacement for services/article_extractor.py
 """
 
@@ -11,18 +16,36 @@ import os
 import re
 import time
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from urllib.parse import urlparse
 
 import requests
 from bs4 import BeautifulSoup
 
+# Import OpenAI if available
+try:
+    from openai import OpenAI
+    openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+    openai_available = True
+except Exception as e:
+    openai_client = None
+    openai_available = False
+
 logger = logging.getLogger(__name__)
+
+# Known non-journalists to exclude
+NON_JOURNALIST_NAMES = {
+    "Donald Trump", "Joe Biden", "Kamala Harris", "Mike Pence", "Barack Obama",
+    "Hillary Clinton", "Bernie Sanders", "Elizabeth Warren", "Nancy Pelosi",
+    "Mitch McConnell", "Kevin McCarthy", "Chuck Schumer", "Ron DeSantis",
+    "Gavin Newsom", "Greg Abbott", "Mike Johnson", "Hakeem Jeffries",
+    "Elon Musk", "Bill Gates", "Jeff Bezos", "Mark Zuckerberg", "Warren Buffett"
+}
 
 
 class ArticleExtractor:
     """
-    Article extractor that ACTUALLY USES ScraperAPI
+    Article extractor with AI-powered author detection
     """
     
     def __init__(self):
@@ -44,6 +67,11 @@ class ArticleExtractor:
             logger.info(f"[ArticleExtractor] ✓ ScraperAPI KEY FOUND: {self.scraperapi_key[:8]}...")
         else:
             logger.warning("[ArticleExtractor] ✗ No ScraperAPI key - will use fallback")
+        
+        if openai_available:
+            logger.info("[ArticleExtractor] ✓ OpenAI available for AI author extraction")
+        else:
+            logger.warning("[ArticleExtractor] ✗ OpenAI not available - using fallback author extraction")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Service interface - calls extract internally"""
@@ -100,6 +128,7 @@ class ArticleExtractor:
                     result = self._parse_html(html, url)
                     if result['extraction_successful']:
                         logger.info(f"[ArticleExtractor] ✓ ScraperAPI SUCCESS: {result['word_count']} words")
+                        logger.info(f"[ArticleExtractor] Author found: {result['author']}")
                         return result
                     else:
                         logger.warning("[ArticleExtractor] ScraperAPI returned content but parsing failed")
@@ -116,6 +145,7 @@ class ArticleExtractor:
                 result = self._parse_html(html, url)
                 if result['extraction_successful']:
                     logger.info(f"[ArticleExtractor] ✓ Direct fetch SUCCESS: {result['word_count']} words")
+                    logger.info(f"[ArticleExtractor] Author found: {result['author']}")
                     return result
         except Exception as e:
             logger.error(f"[ArticleExtractor] Direct fetch error: {e}")
@@ -199,7 +229,7 @@ class ArticleExtractor:
             return None
     
     def _parse_html(self, html: str, url: str) -> Dict[str, Any]:
-        """Parse HTML content"""
+        """Parse HTML content with enhanced author extraction"""
         
         soup = BeautifulSoup(html, 'html.parser')
         
@@ -210,7 +240,10 @@ class ArticleExtractor:
         # Extract components
         title = self._extract_title(soup)
         text = self._extract_text(soup)
-        author = self._extract_author(soup)
+        
+        # ENHANCED AUTHOR EXTRACTION
+        author = self._extract_author_ai_enhanced(soup, html)
+        
         source = self._get_source_from_url(url)
         domain = urlparse(url).netloc.replace('www.', '')
         
@@ -219,6 +252,7 @@ class ArticleExtractor:
         extraction_successful = len(text) > 200
         
         logger.info(f"[Parser] Title: {title[:50]}")
+        logger.info(f"[Parser] Author: {author}")
         logger.info(f"[Parser] Text length: {len(text)}")
         logger.info(f"[Parser] Word count: {word_count}")
         logger.info(f"[Parser] Successful: {extraction_successful}")
@@ -288,25 +322,134 @@ class ArticleExtractor:
         
         return text
     
-    def _extract_author(self, soup: BeautifulSoup) -> str:
-        """Extract author"""
+    def _extract_author_ai_enhanced(self, soup: BeautifulSoup, html: str) -> str:
+        """AI-Enhanced author extraction"""
         
-        # Try meta author
-        author_meta = soup.find('meta', {'name': 'author'})
+        logger.info("=" * 60)
+        logger.info("[AUTHOR EXTRACTION] Starting enhanced author extraction")
+        logger.info(f"[AUTHOR EXTRACTION] OpenAI available: {openai_available}")
+        
+        # FIRST: Try AI extraction if available
+        if openai_available and openai_client:
+            logger.info("[AUTHOR EXTRACTION] Using AI-powered extraction")
+            try:
+                # Get clean text from the top of the article
+                visible_text = soup.get_text()[:3000]
+                
+                # Also get a snippet of HTML for structure
+                html_snippet = html[:4000] if len(html) > 4000 else html
+                
+                # Check if there's a clear "By" pattern
+                if 'By ' in visible_text[:1000] or 'by ' in visible_text[:1000]:
+                    logger.info("[AUTHOR EXTRACTION] Found 'By' pattern in text - good sign!")
+                
+                prompt = f"""Find the article author name. Look for:
+- "By [Name]" pattern near the top
+- Author bylines
+- Meta tags with author
+- NOT quotes or people mentioned in the article
+
+Article text start:
+{visible_text[:1500]}
+
+HTML snippet:
+{html_snippet[:1000]}
+
+Return ONLY the author name(s) or "Unknown" if not found.
+Do not include "By" or any other text.
+
+Author name:"""
+                
+                logger.info("[AUTHOR EXTRACTION] Sending to OpenAI...")
+                response = openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=50,
+                    temperature=0.1
+                )
+                
+                author = response.choices[0].message.content.strip()
+                logger.info(f"[AUTHOR EXTRACTION] OpenAI returned: '{author}'")
+                
+                # Clean and validate
+                if author and author.lower() != 'unknown':
+                    # Remove common prefixes
+                    author = author.replace('By ', '').replace('by ', '')
+                    author = author.replace('Author name:', '').strip()
+                    
+                    # Validate it's a real name
+                    word_count = len(author.split())
+                    if 2 <= word_count <= 6:
+                        # Check it's not a politician
+                        is_politician = any(name in author for name in NON_JOURNALIST_NAMES)
+                        if not is_politician:
+                            logger.info(f"[AUTHOR EXTRACTION] SUCCESS - AI found: {author}")
+                            logger.info("=" * 60)
+                            return author
+                        else:
+                            logger.info(f"[AUTHOR EXTRACTION] Rejected - politician: {author}")
+                    else:
+                        logger.info(f"[AUTHOR EXTRACTION] Rejected - word count: {word_count}")
+                        
+            except Exception as e:
+                logger.error(f"[AUTHOR EXTRACTION] AI extraction failed: {e}")
+        
+        # FALLBACK: Traditional extraction
+        logger.info("[AUTHOR EXTRACTION] Using fallback extraction methods")
+        
+        # Method 1: Meta tags
+        for meta_name in ['author', 'byl', 'DC.creator']:
+            author_meta = soup.find('meta', {'name': meta_name})
+            if author_meta and author_meta.get('content'):
+                author = author_meta['content'].strip()
+                author = re.sub(r'^(by|By)\s+', '', author)
+                if author and 2 <= len(author.split()) <= 4:
+                    logger.info(f"[AUTHOR EXTRACTION] Found in meta tag: {author}")
+                    logger.info("=" * 60)
+                    return author
+        
+        # Method 2: Property meta tags
+        author_meta = soup.find('meta', {'property': 'article:author'})
         if author_meta and author_meta.get('content'):
             author = author_meta['content'].strip()
             author = re.sub(r'^(by|By)\s+', '', author)
-            return author
+            if author and 2 <= len(author.split()) <= 4:
+                logger.info(f"[AUTHOR EXTRACTION] Found in property tag: {author}")
+                logger.info("=" * 60)
+                return author
         
-        # Try byline
-        byline = soup.find(class_=re.compile(r'byline|author', re.I))
-        if byline:
-            text = byline.get_text().strip()
-            text = re.sub(r'^(by|By)\s+', '', text)
-            if text and len(text) < 100:
-                return text
+        # Method 3: Byline class
+        for byline_class in ['byline', 'author', 'by-line', 'article-author']:
+            byline = soup.find(class_=re.compile(byline_class, re.I))
+            if byline:
+                text = byline.get_text().strip()
+                # Extract name after "By"
+                match = re.search(r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', text)
+                if match:
+                    author = match.group(1)
+                    logger.info(f"[AUTHOR EXTRACTION] Found in byline: {author}")
+                    logger.info("=" * 60)
+                    return author
         
+        # Method 4: Simple text pattern
+        visible_text = soup.get_text()[:2000]
+        match = re.search(r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', visible_text)
+        if match:
+            author = match.group(1)
+            # Make sure it's not in a quote
+            context = visible_text[max(0, match.start()-50):match.end()+50]
+            if not re.search(r'(said|told|according to)', context, re.I):
+                logger.info(f"[AUTHOR EXTRACTION] Found in text pattern: {author}")
+                logger.info("=" * 60)
+                return author
+        
+        logger.warning("[AUTHOR EXTRACTION] No author found by any method")
+        logger.info("=" * 60)
         return "Unknown"
+    
+    def _extract_author(self, soup: BeautifulSoup) -> str:
+        """Legacy author extraction - redirects to enhanced version"""
+        return self._extract_author_ai_enhanced(soup, str(soup))
     
     def _get_source_from_url(self, url: str) -> str:
         """Get source name from URL"""
