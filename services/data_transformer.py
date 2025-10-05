@@ -1,10 +1,12 @@
 """
-Data Transformer - COMPLETE VERSION WITH FULL AUTHOR TRANSFORMATION
-Date: October 4, 2025
-Version: 2.0
+Data Transformer - WITH COMPLETE DEBUG LOGGING
+Date: October 5, 2025
+Version: 2.1
 
-THIS FIXES THE TRUNCATED _transform_author_analyzer METHOD
-The previous version was literally incomplete!
+CRITICAL FIX:
+- Line 144: Changed from `[:10]` to show ALL keys, not just first 10
+- Added check to verify critical author fields are present
+- This will reveal if news_analyzer is actually passing the data
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -256,11 +258,26 @@ class DataTransformer:
         raw_data: Dict[str, Any],
         article: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Transform author analyzer data - COMPLETE VERSION"""
+        """Transform author analyzer data - WITH COMPLETE DEBUG LOGGING"""
         
         result = template.copy()
         
-        logger.info(f"[Transform Author] Input data keys: {list(raw_data.keys())[:10]}")
+        # CRITICAL FIX: Show ALL keys, not just first 10!
+        all_keys = list(raw_data.keys())
+        logger.info(f"[Transform Author] Input data has {len(all_keys)} keys total")
+        logger.info(f"[Transform Author] All keys: {all_keys}")
+        
+        # Check for critical fields
+        critical_fields = ['articles_found', 'article_count', 'years_experience', 'awards', 'awards_count']
+        missing_fields = [f for f in critical_fields if f not in raw_data]
+        present_fields = [f for f in critical_fields if f in raw_data]
+        
+        if missing_fields:
+            logger.warning(f"[Transform Author] MISSING FIELDS: {missing_fields}")
+        if present_fields:
+            logger.info(f"[Transform Author] PRESENT FIELDS: {present_fields}")
+            for field in present_fields:
+                logger.info(f"[Transform Author]   {field} = {raw_data.get(field)}")
         
         # Get author name - the author_analyzer returns it as 'name' or 'author_name'
         author = (
@@ -292,7 +309,7 @@ class DataTransformer:
         if isinstance(expertise, list) and expertise:
             result['expertise'] = ', '.join(str(e) for e in expertise[:3])
         else:
-            result['expertise'] = 'General reporting'
+            result['expertise'] = str(expertise) if expertise else 'General reporting'
         
         # Set other fields from author_analyzer - use actual field names
         result['track_record'] = raw_data.get('trust_explanation', raw_data.get('track_record', 'Unknown'))
@@ -308,8 +325,8 @@ class DataTransformer:
             result['awards'] = []
             result['awards_count'] = '0'
         
-        # Set other fields
-        result['articles_count'] = str(raw_data.get('article_count', raw_data.get('articles_found', 50)))
+        # CRITICAL: Use the fields if they exist in raw_data
+        result['articles_count'] = str(raw_data.get('articles_found', raw_data.get('article_count', 0)))
         result['verified'] = raw_data.get('verified', False)
         result['social_media'] = raw_data.get('social_media', {})
         
@@ -324,7 +341,7 @@ class DataTransformer:
                 'what_it_means': DataTransformer._get_author_meaning(cred_score)
             }
         
-        logger.info(f"[Transform Author] Complete - sending to frontend with score {cred_score}")
+        logger.info(f"[Transform Author] Complete - sending articles_count={result['articles_count']}, years_experience={result['years_experience']}")
         
         return result
     
