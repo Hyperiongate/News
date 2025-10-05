@@ -1,13 +1,14 @@
 """
-Analysis Pipeline - CLEAN AND WORKING VERSION
-Date: October 4, 2025
-Version: 12.0
+Analysis Pipeline - WITH DEBUG LOGGING FOR AUTHOR DATA
+Date: October 5, 2025
+Version: 12.1 - ADDED DEBUG LOGGING
 
-This is a COMPLETE, CLEAN replacement for services/analysis_pipeline.py
-- Removes all contradictory code
-- Maintains ALL functionality
-- Properly handles extraction failures
-- Clean data flow to all services
+CHANGES FROM 12.0:
+- Added detailed logging for author_analyzer to track where fields get lost
+- Lines 172-177: Debug output showing what author_analyzer returns
+- All existing functionality preserved
+
+Save as: services/analysis_pipeline.py (REPLACE existing file)
 """
 
 import logging
@@ -43,7 +44,7 @@ class AnalysisPipeline:
         self.services = {}
         self._load_services()
         
-        logger.info(f"[Pipeline v12.0] Initialized with {len(self.services)} services")
+        logger.info(f"[Pipeline v12.1] Initialized with {len(self.services)} services")
     
     def _load_services(self):
         """Load available services"""
@@ -227,6 +228,22 @@ class AnalysisPipeline:
             # Call service
             result = service.analyze(data)
             
+            # DEBUG LOGGING FOR AUTHOR ANALYZER
+            if service_name == 'author_analyzer':
+                logger.info("=" * 60)
+                logger.info("[DEBUG AUTHOR] Raw result from author_analyzer:")
+                if isinstance(result, dict):
+                    logger.info(f"[DEBUG AUTHOR] Top-level keys: {list(result.keys())}")
+                    if 'data' in result:
+                        data_keys = list(result['data'].keys())
+                        logger.info(f"[DEBUG AUTHOR] Data keys ({len(data_keys)}): {data_keys}")
+                        logger.info(f"[DEBUG AUTHOR] articles_found: {result['data'].get('articles_found', 'MISSING')}")
+                        logger.info(f"[DEBUG AUTHOR] article_count: {result['data'].get('article_count', 'MISSING')}")
+                        logger.info(f"[DEBUG AUTHOR] years_experience: {result['data'].get('years_experience', 'MISSING')}")
+                        logger.info(f"[DEBUG AUTHOR] awards: {result['data'].get('awards', 'MISSING')}")
+                        logger.info(f"[DEBUG AUTHOR] awards_count: {result['data'].get('awards_count', 'MISSING')}")
+                logger.info("=" * 60)
+            
             # Extract and flatten data
             if isinstance(result, dict):
                 # If result has 'data' field, extract it
@@ -234,6 +251,10 @@ class AnalysisPipeline:
                     service_data = result['data']
                 else:
                     service_data = result
+                
+                # DEBUG: Show what we're returning for author
+                if service_name == 'author_analyzer':
+                    logger.info(f"[DEBUG AUTHOR] Returning to pipeline with keys: {list(service_data.keys())}")
                 
                 # Ensure required fields
                 if 'score' not in service_data:
@@ -253,6 +274,7 @@ class AnalysisPipeline:
             
         except Exception as e:
             logger.error(f"Service {service_name} failed: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return self._get_default_service_data(service_name)
     
     def _get_default_service_data(self, service_name: str) -> Dict[str, Any]:
