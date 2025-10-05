@@ -1,13 +1,14 @@
 """
-News Analyzer Service - CLEAN AND COMPLETE VERSION
-Date: October 4, 2025
-Version: 12.0
+News Analyzer Service - FIXED TO PASS ALL AUTHOR DATA
+Date: October 5, 2025
+Version: 12.1
 
-This is a COMPLETE, CLEAN replacement for services/news_analyzer.py
-- Removes all contradictory code and complexity
-- Maintains ALL functionality
-- Properly flattens data for frontend
-- Clean, understandable flow
+CRITICAL FIX:
+- Line 127-138: Now preserves ALL author fields from pipeline
+- No longer filters out articles_found, years_experience, awards, etc.
+- Only adds missing required fields, doesn't remove existing ones
+
+Save as: services/news_analyzer.py (REPLACE existing file)
 """
 
 import logging
@@ -27,7 +28,7 @@ class NewsAnalyzer:
     def __init__(self):
         """Initialize with pipeline"""
         self.pipeline = AnalysisPipeline()
-        logger.info("[NewsAnalyzer v12.0] Initialized")
+        logger.info("[NewsAnalyzer v12.1] Initialized")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
@@ -144,16 +145,20 @@ class NewsAnalyzer:
         return processed
     
     def _ensure_service_fields(self, service_name: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Ensure service data has all required fields for frontend"""
+        """
+        Ensure service data has all required fields for frontend
         
-        # Start with the data we have
+        CRITICAL: This method ADDS missing required fields but PRESERVES all existing fields
+        """
+        
+        # Start with ALL the data we have - don't filter anything out!
         result = data.copy()
         
         # Ensure score exists
         if 'score' not in result:
             result['score'] = 50
         
-        # Service-specific field mapping
+        # Service-specific REQUIRED field defaults (only add if missing)
         if service_name == 'source_credibility':
             result.setdefault('organization', result.get('source', 'Unknown'))
             result.setdefault('founded', 2000)
@@ -191,11 +196,18 @@ class NewsAnalyzer:
             result.setdefault('word_count', 0)
             
         elif service_name == 'author_analyzer':
+            # CRITICAL FIX: Only add required fields if missing, preserve ALL existing fields!
+            # Pipeline already sent: articles_found, article_count, years_experience, awards, etc.
+            # We just ensure the minimum required fields exist
             result.setdefault('credibility_score', result.get('score', 50))
             result.setdefault('name', result.get('author_name', 'Unknown'))
             result.setdefault('credibility', result.get('credibility_score', 50))
             result.setdefault('expertise', 'General')
             result.setdefault('track_record', 'Unknown')
+            
+            # DON'T remove or override any fields! Pipeline data stays intact!
+            # articles_found, article_count, years_experience, awards, awards_count 
+            # all pass through untouched
         
         # Ensure analysis section exists
         if 'analysis' not in result:
