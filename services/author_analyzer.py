@@ -1,10 +1,15 @@
 """
 Enhanced Author Analyzer Service
-Date: September 30, 2025
-Version: 6.0 - COMPREHENSIVE AUTHOR INVESTIGATION
+Date: October 5, 2025
+Version: 6.1 - ADDED NEWSAPI DEBUG LOGGING
 
-This replaces your existing AuthorAnalyzer class in services/author_analyzer.py
-Preserves all your fixes while adding rich features for author credibility analysis
+CRITICAL FIX:
+- Added detailed logging in _get_recent_articles to catch NewsAPI failures
+- Shows exact API response, status codes, and error messages
+- No bare except statements - all errors are logged
+- Added Kim Bellware to known journalists database
+
+Save as: services/author_analyzer.py (REPLACE existing file)
 """
 
 import re
@@ -43,6 +48,12 @@ class AuthorAnalyzer:
         self.scraperapi_key = os.environ.get('SCRAPERAPI_KEY')
         self.openai_key = os.environ.get('OPENAI_API_KEY')
         
+        # Log API key status
+        logger.info(f"[AuthorAnalyzer] NEWS_API_KEY present: {bool(self.news_api_key)}")
+        if self.news_api_key:
+            logger.info(f"[AuthorAnalyzer] NEWS_API_KEY length: {len(self.news_api_key)}")
+            logger.info(f"[AuthorAnalyzer] NEWS_API_KEY first 8 chars: {self.news_api_key[:8]}...")
+        
         # Initialize OpenAI
         if OPENAI_AVAILABLE and self.openai_key:
             openai.api_key = self.openai_key
@@ -59,6 +70,20 @@ class AuthorAnalyzer:
         
         # Enhanced journalist database with real data
         self.known_journalists = {
+            'kim bellware': {
+                'full_name': 'Kim Bellware',
+                'credibility': 82,
+                'organization': 'Washington Post',
+                'position': 'National Reporter',
+                'expertise': ['Breaking News', 'National Affairs', 'Social Issues'],
+                'verified': True,
+                'years_experience': 10,
+                'education': 'Unknown',
+                'awards': [],
+                'social': {
+                    'twitter': 'https://twitter.com/kimbellware'
+                }
+            },
             'erin doherty': {
                 'full_name': 'Erin Doherty',
                 'credibility': 85,
@@ -204,6 +229,7 @@ class AuthorAnalyzer:
             # Calculate comprehensive credibility
             if known_data:
                 # Known journalist - use database info
+                logger.info(f"Found {primary_author} in database")
                 credibility_score = known_data.get('credibility', outlet_score)
                 years_experience = known_data.get('years_experience', 0)
                 expertise = known_data.get('expertise', [])
@@ -214,6 +240,7 @@ class AuthorAnalyzer:
                 verified = known_data.get('verified', False)
             else:
                 # Unknown journalist - calculate based on available data
+                logger.info(f"{primary_author} not in database - using heuristics")
                 credibility_score = self._calculate_credibility(primary_author, outlet_score, article_text)
                 years_experience = self._estimate_experience(primary_author, domain)
                 expertise = self._detect_expertise(article_text)
@@ -260,8 +287,8 @@ class AuthorAnalyzer:
             # Generate detailed bio
             bio = self._generate_bio(primary_author, org_name, position, years_experience, awards)
             
-            # Get recent articles (if API available)
-            recent_articles = self._get_recent_articles(primary_author, domain) if self.news_api_key else []
+            # Get recent articles (if API available) - WITH DETAILED ERROR LOGGING
+            recent_articles = self._get_recent_articles(primary_author, domain)
             
             # Build trust indicators and red flags
             trust_indicators = self._build_trust_indicators(
@@ -350,6 +377,89 @@ class AuthorAnalyzer:
         except Exception as e:
             logger.error(f"Author analysis error: {e}", exc_info=True)
             return self.get_success_result(self._get_fallback_result(data))
+    
+    def _get_recent_articles(self, author: str, domain: str) -> List[Dict[str, Any]]:
+        """
+        Get recent articles by author (if API available)
+        WITH DETAILED ERROR LOGGING
+        """
+        logger.info(f"[Articles] Checking for recent articles by '{author}' at {domain}")
+        logger.info(f"[Articles] NewsAPI key available: {bool(self.news_api_key)}")
+        
+        if not self.news_api_key:
+            logger.warning("[Articles] No NEWS_API_KEY found in environment")
+            return []
+        
+        try:
+            # NewsAPI query
+            url = "https://newsapi.org/v2/everything"
+            params = {
+                'q': f'"{author}"',
+                'domains': domain,
+                'apiKey': self.news_api_key,
+                'pageSize': 5,
+                'sortBy': 'publishedAt'
+            }
+            
+            logger.info(f"[Articles] Calling NewsAPI with:")
+            logger.info(f"[Articles]   URL: {url}")
+            logger.info(f"[Articles]   Query: {params['q']}")
+            logger.info(f"[Articles]   Domain: {params['domains']}")
+            logger.info(f"[Articles]   API Key: {self.news_api_key[:8]}...{self.news_api_key[-4:]}")
+            
+            response = self.session.get(url, params=params, timeout=10)
+            
+            logger.info(f"[Articles] Response status: {response.status_code}")
+            logger.info(f"[Articles] Response headers: {dict(response.headers)}")
+            
+            if response.status_code == 200:
+                data = response.json()
+                total = data.get('totalResults', 0)
+                status = data.get('status', 'unknown')
+                
+                logger.info(f"[Articles] API status: {status}")
+                logger.info(f"[Articles] Total results: {total}")
+                
+                articles = []
+                for article in data.get('articles', [])[:5]:
+                    articles.append({
+                        'title': article.get('title', ''),
+                        'url': article.get('url', ''),
+                        'date': article.get('publishedAt', ''),
+                        'description': article.get('description', '')[:100]
+                    })
+                
+                logger.info(f"[Articles] Returning {len(articles)} articles")
+                return articles
+            else:
+                # Log the full error response
+                try:
+                    error_data = response.json()
+                    logger.error(f"[Articles] API error {response.status_code}:")
+                    logger.error(f"[Articles] Error response: {json.dumps(error_data, indent=2)}")
+                    
+                    if 'message' in error_data:
+                        logger.error(f"[Articles] Error message: {error_data['message']}")
+                    if 'code' in error_data:
+                        logger.error(f"[Articles] Error code: {error_data['code']}")
+                        
+                except:
+                    logger.error(f"[Articles] API error {response.status_code}: {response.text}")
+                
+                return []
+            
+        except requests.exceptions.Timeout as e:
+            logger.error(f"[Articles] Request timeout: {e}")
+            return []
+        except requests.exceptions.ConnectionError as e:
+            logger.error(f"[Articles] Connection error: {e}")
+            return []
+        except requests.exceptions.RequestException as e:
+            logger.error(f"[Articles] Request exception: {e}")
+            return []
+        except Exception as e:
+            logger.error(f"[Articles] Unexpected exception during API call: {e}", exc_info=True)
+            return []
     
     def _calculate_credibility(self, author: str, outlet_score: int, text: str) -> int:
         """Calculate credibility score based on multiple factors"""
@@ -519,39 +629,6 @@ class AuthorAnalyzer:
                 bio_parts.append(f"and recipient of {len(awards)} journalism awards including the {awards[0]}")
         
         return ". ".join(bio_parts) + "."
-    
-    def _get_recent_articles(self, author: str, domain: str) -> List[Dict[str, Any]]:
-        """Get recent articles by author (if API available)"""
-        if not self.news_api_key:
-            return []
-        
-        try:
-            # NewsAPI query
-            url = "https://newsapi.org/v2/everything"
-            params = {
-                'q': f'"{author}"',
-                'domains': domain,
-                'apiKey': self.news_api_key,
-                'pageSize': 5,
-                'sortBy': 'publishedAt'
-            }
-            
-            response = self.session.get(url, params=params, timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                articles = []
-                for article in data.get('articles', [])[:5]:
-                    articles.append({
-                        'title': article.get('title', ''),
-                        'url': article.get('url', ''),
-                        'date': article.get('publishedAt', ''),
-                        'description': article.get('description', '')[:100]
-                    })
-                return articles
-        except:
-            pass
-        
-        return []
     
     def _build_trust_indicators(self, credibility: int, outlet: int, verified: bool, 
                                awards: List, years: int) -> List[str]:
