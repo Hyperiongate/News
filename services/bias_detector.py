@@ -1,10 +1,15 @@
 """
-Bias Detector Service - COMPLETE FIXED VERSION
-CRITICAL FIXES:
-1. Proper data structure with consistent wrapper format
-2. Enhanced error handling and timeout protection
-3. Bulletproof AI enhancement integration
-4. Comprehensive bias analysis with reliable scoring
+Bias Detector Service - OBJECTIVITY SCORING VERSION
+Date: October 6, 2025
+Version: 5.0.0 - INVERTED TO OBJECTIVITY SCORING
+
+CRITICAL CHANGE:
+- Now calculates OBJECTIVITY score (higher = more objective)
+- Changed from "bias amount" to "objectivity level"
+- 98/100 = Very objective (previously 2/100 bias)
+- All scores inverted: higher scores = better journalism
+
+This makes scoring intuitive: HIGHER IS ALWAYS BETTER
 """
 
 import re
@@ -31,7 +36,8 @@ except ImportError:
 
 class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
     """
-    FIXED: Advanced bias detection with proper data structure and bulletproof AI enhancement
+    OBJECTIVITY-FOCUSED BIAS DETECTION
+    Now returns OBJECTIVITY scores where HIGHER = MORE OBJECTIVE
     """
     
     def __init__(self):
@@ -46,7 +52,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
         # Initialize all bias patterns and indicators
         self._initialize_bias_patterns()
         
-        logger.info(f"BiasDetector initialized with AI enhancement: {self._ai_available}")
+        logger.info(f"BiasDetector initialized (OBJECTIVITY SCORING) with AI enhancement: {self._ai_available}")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -54,7 +60,8 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        FIXED: Perform comprehensive bias analysis with proper data structure
+        Perform comprehensive bias analysis with OBJECTIVITY scoring
+        HIGHER SCORES = MORE OBJECTIVE = BETTER
         """
         try:
             start_time = time.time()
@@ -66,7 +73,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             title = data.get('title', '')
             full_text = f"{title}\n\n{text}" if title else text
             
-            logger.info(f"Analyzing bias in {len(full_text)} characters of text")
+            logger.info(f"Analyzing objectivity in {len(full_text)} characters of text")
             
             # Core bias analysis with timeout protection
             try:
@@ -78,9 +85,9 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             except Exception as analysis_error:
                 logger.warning(f"Bias analysis components failed: {analysis_error}")
                 # Provide minimal analysis if detailed analysis fails
-                political_bias = {'label': 'Unknown', 'score': 0}
-                sensationalism = {'level': 'Unknown', 'score': 0}
-                corporate_bias = {'bias': 'Unknown', 'score': 0}
+                political_bias = {'label': 'Center', 'score': 0}
+                sensationalism = {'level': 'Low', 'score': 0}
+                corporate_bias = {'bias': 'Neutral', 'score': 0}
                 loaded_language = {'phrases': [], 'count': 0}
                 framing_analysis = {'issues': []}
             
@@ -93,17 +100,22 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 'framing': framing_analysis
             }
             
-            overall_bias_score = self._calculate_overall_bias_score(bias_dimensions)
-            objectivity_score = 100 - overall_bias_score
-            bias_level = self._get_bias_level(overall_bias_score)
+            # Calculate BIAS amount (for internal use)
+            overall_bias_amount = self._calculate_overall_bias_score(bias_dimensions)
             
-            # Generate findings
-            findings = self._generate_findings(bias_dimensions, overall_bias_score)
+            # CRITICAL: Convert to OBJECTIVITY score (invert)
+            objectivity_score = 100 - overall_bias_amount
             
-            # Generate summary
-            summary = self._generate_summary(bias_dimensions, overall_bias_score, bias_level)
+            objectivity_level = self._get_objectivity_level(objectivity_score)
+            bias_direction = self._get_bias_direction(political_bias)
             
-            # FIXED: Build response with proper data structure wrapper
+            # Generate findings (with objectivity focus)
+            findings = self._generate_objectivity_findings(bias_dimensions, objectivity_score)
+            
+            # Generate summary (with objectivity focus)
+            summary = self._generate_objectivity_summary(bias_dimensions, objectivity_score, objectivity_level)
+            
+            # Build response with OBJECTIVITY scoring
             result = {
                 'service': self.service_name,
                 'success': True,
@@ -111,20 +123,25 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 'timestamp': time.time(),
                 'analysis_complete': True,
                 'data': {
-                    'score': overall_bias_score,
-                    'bias_score': overall_bias_score,
-                    'level': bias_level,
-                    'bias_level': bias_level,
+                    # PRIMARY SCORES - Objectivity (higher is better)
+                    'score': objectivity_score,
                     'objectivity_score': objectivity_score,
+                    'level': objectivity_level,
+                    'objectivity_level': objectivity_level,
+                    
+                    # LEGACY FIELDS - Bias amount (for backward compatibility)
+                    'bias_score': overall_bias_amount,
+                    'bias_level': self._get_bias_level(overall_bias_amount),
+                    
+                    # Analysis results
                     'findings': findings,
                     'summary': summary,
                     'dimensions': bias_dimensions,
-                    'loaded_phrases': loaded_language.get('phrases', [])[:10],  # Top 10
-                    'dominant_bias': self._get_dominant_bias(bias_dimensions),
-                    'political_label': political_bias.get('label', 'Neutral'),
+                    'loaded_phrases': loaded_language.get('phrases', [])[:10],
+                    'dominant_issue': self._get_dominant_bias(bias_dimensions),
+                    'political_label': political_bias.get('label', 'Center'),
                     'sensationalism_level': sensationalism.get('level', 'Low'),
-                    'overall_bias_score': overall_bias_score,
-                    'bias_direction': self._get_bias_direction(political_bias),
+                    'bias_direction': bias_direction,
                     'political_leaning': political_bias.get('label', 'Center'),
                     'patterns': self._get_bias_patterns_summary(bias_dimensions),
                     'details': {
@@ -139,7 +156,8 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     'analysis_time': time.time() - start_time,
                     'text_length': len(full_text),
                     'analyzed_with_title': bool(title),
-                    'ai_enhancement_attempted': self._ai_available
+                    'ai_enhancement_attempted': self._ai_available,
+                    'scoring_type': 'objectivity'  # NEW: Indicates scoring type
                 }
             }
             
@@ -160,7 +178,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     logger.warning(f"AI enhancement failed safely: {ai_error}")
                     result['metadata']['ai_enhancement_failed'] = str(ai_error)
             
-            logger.info(f"Bias analysis complete: {overall_bias_score}/100 ({bias_level})")
+            logger.info(f"Objectivity analysis complete: {objectivity_score}/100 ({objectivity_level})")
             return result
             
         except Exception as e:
@@ -214,7 +232,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
         ]
     
     def _analyze_political_bias(self, text: str) -> Dict[str, Any]:
-        """Analyze political bias in the text with timeout protection"""
+        """Analyze political bias in the text"""
         try:
             text_lower = text.lower()
             
@@ -228,7 +246,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             # Calculate political lean
             total_political = left_score + right_score
             if total_political == 0:
-                political_lean = 'Neutral'
+                political_lean = 'Center'
                 lean_intensity = 0
             elif left_score > right_score:
                 lean_intensity = min(100, (left_score / total_political) * 100)
@@ -250,7 +268,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             }
         except Exception as e:
             logger.warning(f"Political bias analysis failed: {e}")
-            return {'label': 'Unknown', 'score': 0}
+            return {'label': 'Center', 'score': 0}
     
     def _analyze_sensationalism(self, text: str) -> Dict[str, Any]:
         """Analyze sensationalism in the text"""
@@ -285,7 +303,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             }
         except Exception as e:
             logger.warning(f"Sensationalism analysis failed: {e}")
-            return {'score': 0, 'level': 'Unknown'}
+            return {'score': 0, 'level': 'Minimal'}
     
     def _analyze_corporate_bias(self, text: str) -> Dict[str, Any]:
         """Analyze corporate/business bias"""
@@ -316,20 +334,20 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             }
         except Exception as e:
             logger.warning(f"Corporate bias analysis failed: {e}")
-            return {'bias': 'Unknown', 'score': 0}
+            return {'bias': 'Neutral', 'score': 0}
     
     def _detect_loaded_language(self, text: str) -> Dict[str, Any]:
-        """Detect loaded/biased language with timeout protection"""
+        """Detect loaded/biased language"""
         try:
             sentences = re.split(r'[.!?]+', text)
             
             loaded_phrases = []
-            for sentence in sentences[:100]:  # Limit to prevent timeout
+            for sentence in sentences[:100]:
                 sentence_lower = sentence.lower()
                 for pattern in self.loaded_patterns:
                     if pattern in sentence_lower:
                         context = sentence.strip()
-                        if len(context) > 10:  # Skip very short sentences
+                        if len(context) > 10:
                             loaded_phrases.append({
                                 'phrase': pattern,
                                 'context': context[:200],
@@ -345,7 +363,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     seen_contexts.add(phrase['context'])
             
             return {
-                'phrases': unique_phrases[:15],  # Limit to 15 examples
+                'phrases': unique_phrases[:15],
                 'count': len(unique_phrases),
                 'density': len(unique_phrases) / max(len(sentences), 1)
             }
@@ -387,7 +405,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             return {'issues': [], 'emotional_language_count': 0, 'source_diversity_score': 0}
     
     def _calculate_overall_bias_score(self, dimensions: Dict[str, Any]) -> int:
-        """Calculate overall bias score from all dimensions"""
+        """Calculate overall BIAS amount (internal use - will be inverted for objectivity)"""
         try:
             political_score = dimensions['political'].get('score', 0)
             sensationalism_score = dimensions['sensationalism'].get('score', 0)
@@ -407,10 +425,23 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             return min(100, int(weighted_score))
         except Exception as e:
             logger.warning(f"Bias score calculation failed: {e}")
-            return 25  # Default moderate score
+            return 25
+    
+    def _get_objectivity_level(self, score: int) -> str:
+        """Convert objectivity score to level (HIGHER IS BETTER)"""
+        if score >= 85:
+            return 'Highly Objective'
+        elif score >= 70:
+            return 'Very Objective'
+        elif score >= 50:
+            return 'Moderately Objective'
+        elif score >= 30:
+            return 'Some Bias Present'
+        else:
+            return 'Significant Bias'
     
     def _get_bias_level(self, score: int) -> str:
-        """Convert bias score to level"""
+        """Convert bias amount to level (for legacy compatibility)"""
         if score >= 70:
             return 'High Bias'
         elif score >= 50:
@@ -443,22 +474,21 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
     def _get_bias_direction(self, political_bias: Dict[str, Any]) -> str:
         """Get bias direction from political analysis"""
         try:
-            label = political_bias.get('label', 'Neutral')
+            label = political_bias.get('label', 'Center')
             if 'Left' in label:
                 return 'left'
             elif 'Right' in label:
                 return 'right'
             else:
-                return 'neutral'
+                return 'center'
         except Exception:
-            return 'neutral'
+            return 'center'
     
     def _get_bias_patterns_summary(self, dimensions: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Get summary of detected bias patterns"""
         try:
             patterns = []
             
-            # Political patterns
             political = dimensions['political']
             if political.get('score', 0) > 30:
                 patterns.append({
@@ -467,7 +497,6 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     'strength': political.get('score', 0)
                 })
             
-            # Sensationalism patterns
             sensationalism = dimensions['sensationalism']
             if sensationalism.get('score', 0) > 40:
                 patterns.append({
@@ -476,7 +505,6 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     'strength': sensationalism.get('score', 0)
                 })
             
-            # Loaded language patterns
             loaded = dimensions['loaded_language']
             if loaded.get('count', 0) > 3:
                 patterns.append({
@@ -490,32 +518,39 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             logger.warning(f"Pattern summary failed: {e}")
             return []
     
-    def _generate_findings(self, dimensions: Dict[str, Any], overall_score: int) -> List[Dict[str, Any]]:
-        """Generate findings based on bias analysis"""
+    def _generate_objectivity_findings(self, dimensions: Dict[str, Any], objectivity_score: int) -> List[Dict[str, Any]]:
+        """Generate findings based on OBJECTIVITY analysis"""
         findings = []
         
         try:
-            # Overall assessment
-            if overall_score >= 70:
-                findings.append({
-                    'type': 'warning',
-                    'severity': 'high',
-                    'text': f'High bias detected ({overall_score}/100)',
-                    'explanation': 'Article shows significant bias that may affect objectivity'
-                })
-            elif overall_score >= 40:
-                findings.append({
-                    'type': 'warning',
-                    'severity': 'medium',
-                    'text': f'Moderate bias detected ({overall_score}/100)',
-                    'explanation': 'Article shows some bias that readers should be aware of'
-                })
-            elif overall_score < 20:
+            # Overall objectivity assessment
+            if objectivity_score >= 85:
                 findings.append({
                     'type': 'positive',
                     'severity': 'positive',
-                    'text': f'Low bias detected ({overall_score}/100)',
-                    'explanation': 'Article maintains good objectivity'
+                    'text': f'High objectivity detected ({objectivity_score}/100)',
+                    'explanation': 'Article maintains excellent objectivity with minimal bias'
+                })
+            elif objectivity_score >= 70:
+                findings.append({
+                    'type': 'positive',
+                    'severity': 'positive',
+                    'text': f'Good objectivity ({objectivity_score}/100)',
+                    'explanation': 'Article shows good objectivity with minor bias elements'
+                })
+            elif objectivity_score >= 50:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'medium',
+                    'text': f'Moderate objectivity ({objectivity_score}/100)',
+                    'explanation': 'Article shows some bias that readers should be aware of'
+                })
+            else:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'high',
+                    'text': f'Low objectivity ({objectivity_score}/100)',
+                    'explanation': 'Article shows significant bias that may affect interpretation'
                 })
             
             # Political bias
@@ -534,7 +569,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 findings.append({
                     'type': 'warning',
                     'severity': 'medium',
-                    'text': f'High sensationalism ({sensationalism.get("score", 0)}/100)',
+                    'text': f'High sensationalism detected',
                     'explanation': 'Article uses sensational language that may exaggerate issues'
                 })
             
@@ -553,45 +588,43 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             findings.append({
                 'type': 'info',
                 'severity': 'medium',
-                'text': 'Bias analysis completed with some limitations',
+                'text': 'Objectivity analysis completed with some limitations',
                 'explanation': 'Full analysis could not be completed but basic assessment was performed'
             })
         
         return findings
     
-    def _generate_summary(self, dimensions: Dict[str, Any], score: int, level: str) -> str:
-        """Generate summary of bias analysis"""
+    def _generate_objectivity_summary(self, dimensions: Dict[str, Any], objectivity_score: int, level: str) -> str:
+        """Generate summary of OBJECTIVITY analysis"""
         try:
-            objectivity = 100 - score
-            
-            if score < 20:
+            if objectivity_score >= 85:
                 base = "This article maintains excellent objectivity with minimal bias."
-            elif score < 40:
-                base = "This article shows some bias but maintains reasonable objectivity."
-            elif score < 60:
-                base = "This article contains moderate bias that may influence interpretation."
+            elif objectivity_score >= 70:
+                base = "This article shows good objectivity with only minor bias elements."
+            elif objectivity_score >= 50:
+                base = "This article shows moderate objectivity with some bias present."
             else:
-                base = "This article shows significant bias that substantially affects objectivity."
+                base = "This article shows limited objectivity with significant bias elements."
             
             # Add specific findings
             dominant = self._get_dominant_bias(dimensions)
             if dominant != 'None' and dominant != 'Unknown':
-                base += f" Primary bias type: {dominant}."
+                base += f" Primary concern: {dominant}."
             
-            base += f" Objectivity score: {objectivity}%."
+            base += f" Objectivity score: {objectivity_score}%."
             
             return base
         
         except Exception as e:
             logger.warning(f"Summary generation failed: {e}")
-            return f"Bias analysis completed with {score}% bias score. See detailed findings for more information."
+            return f"Objectivity analysis completed with {objectivity_score}% objectivity score. See detailed findings for more information."
     
     def get_service_info(self) -> Dict[str, Any]:
         """Get service information"""
         info = super().get_service_info()
         info.update({
             'capabilities': [
-                'Multi-dimensional bias analysis',
+                'Multi-dimensional objectivity analysis',
                 'Political spectrum detection',
                 'Sensationalism measurement',
                 'Corporate bias detection',
@@ -599,12 +632,14 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 'Framing analysis',
                 'Source diversity assessment',
                 'AI-enhanced bias detection' if self._ai_available else 'Pattern-based bias detection',
-                'Timeout-protected analysis'
+                'Timeout-protected analysis',
+                'Objectivity scoring (higher is better)'
             ],
             'dimensions_analyzed': 5,
             'patterns_detected': len(self.loaded_patterns),
             'visualization_ready': True,
             'ai_enhanced': self._ai_available,
-            'timeout_protected': True
+            'timeout_protected': True,
+            'scoring_type': 'objectivity'
         })
         return info
