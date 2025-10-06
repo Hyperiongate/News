@@ -1,12 +1,13 @@
 """
-Data Transformer - WITH COMPLETE DEBUG LOGGING
-Date: October 5, 2025
-Version: 2.1
+Data Transformer - UPDATED FOR OBJECTIVITY SCORING
+Date: October 6, 2025
+Version: 2.2
 
-CRITICAL FIX:
-- Line 144: Changed from `[:10]` to show ALL keys, not just first 10
-- Added check to verify critical author fields are present
-- This will reveal if news_analyzer is actually passing the data
+CHANGES IN THIS VERSION:
+- Added objectivity score transformation for bias_detector
+- Handles both old "bias_score" and new "objectivity_score"
+- Ensures frontend gets OBJECTIVITY score (higher is better)
+- All existing functionality preserved
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -262,7 +263,7 @@ class DataTransformer:
         
         result = template.copy()
         
-        # CRITICAL FIX: Show ALL keys, not just first 10!
+        # Show ALL keys
         all_keys = list(raw_data.keys())
         logger.info(f"[Transform Author] Input data has {len(all_keys)} keys total")
         logger.info(f"[Transform Author] All keys: {all_keys}")
@@ -279,7 +280,7 @@ class DataTransformer:
             for field in present_fields:
                 logger.info(f"[Transform Author]   {field} = {raw_data.get(field)}")
         
-        # Get author name - the author_analyzer returns it as 'name' or 'author_name'
+        # Get author name
         author = (
             raw_data.get('name') or
             raw_data.get('author_name') or
@@ -287,12 +288,12 @@ class DataTransformer:
             'Unknown Author'
         )
         
-        # Get credibility score - author_analyzer returns this
+        # Get credibility score
         cred_score = (
             raw_data.get('credibility_score') or
             raw_data.get('score') or
             raw_data.get('credibility') or
-            70  # Default for unknown authors
+            70
         )
         
         logger.info(f"[Transform Author] Name: {author}, Score: {cred_score}")
@@ -304,14 +305,14 @@ class DataTransformer:
         result['credibility_score'] = cred_score
         result['credibility'] = cred_score
         
-        # Get expertise - author_analyzer returns this as 'expertise_areas' or 'expertise'
+        # Get expertise
         expertise = raw_data.get('expertise_areas', raw_data.get('expertise', []))
         if isinstance(expertise, list) and expertise:
             result['expertise'] = ', '.join(str(e) for e in expertise[:3])
         else:
             result['expertise'] = str(expertise) if expertise else 'General reporting'
         
-        # Set other fields from author_analyzer - use actual field names
+        # Set other fields
         result['track_record'] = raw_data.get('trust_explanation', raw_data.get('track_record', 'Unknown'))
         result['years_experience'] = str(raw_data.get('years_experience', 'Unknown'))
         result['outlet'] = raw_data.get('organization', raw_data.get('outlet', article.get('source', 'Unknown')))
@@ -325,7 +326,7 @@ class DataTransformer:
             result['awards'] = []
             result['awards_count'] = '0'
         
-        # CRITICAL: Use the fields if they exist in raw_data
+        # Articles count
         result['articles_count'] = str(raw_data.get('articles_found', raw_data.get('article_count', 0)))
         result['verified'] = raw_data.get('verified', False)
         result['social_media'] = raw_data.get('social_media', {})
@@ -334,7 +335,6 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         else:
-            # Create meaningful analysis
             result['analysis'] = {
                 'what_we_looked': 'We examined the author\'s credentials, experience, track record, and publication history.',
                 'what_we_found': f'Author {author} has a credibility score of {cred_score}/100 with expertise in {result["expertise"]}.',
@@ -359,18 +359,44 @@ class DataTransformer:
     
     @staticmethod
     def _transform_bias_detector(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform bias detector data"""
+        """
+        Transform bias detector data - HANDLES OBJECTIVITY SCORING
+        
+        New bias_detector returns objectivity_score (higher is better)
+        We need to handle both old and new formats
+        """
         
         result = template.copy()
         
-        score = raw_data.get('bias_score', raw_data.get('score', 50))
+        # Check if this is new objectivity scoring or old bias scoring
+        if 'objectivity_score' in raw_data:
+            # NEW FORMAT: Use objectivity score directly
+            objectivity_score = raw_data.get('objectivity_score', 50)
+            result['score'] = objectivity_score
+            result['objectivity_score'] = objectivity_score
+            
+            # Legacy bias_score for backward compatibility
+            result['bias_score'] = 100 - objectivity_score
+            
+            logger.info(f"[Transform Bias] NEW FORMAT - Objectivity: {objectivity_score}/100")
+        else:
+            # OLD FORMAT: Invert bias_score to get objectivity
+            bias_score = raw_data.get('bias_score', raw_data.get('score', 50))
+            objectivity_score = 100 - bias_score
+            
+            result['score'] = objectivity_score
+            result['objectivity_score'] = objectivity_score
+            result['bias_score'] = bias_score
+            
+            logger.info(f"[Transform Bias] OLD FORMAT - Bias: {bias_score}, Converted to Objectivity: {objectivity_score}/100")
+        
+        # Get direction and other metadata
         direction = raw_data.get('direction', raw_data.get('political_lean', 'center'))
         
-        result['score'] = score
-        result['bias_score'] = score
         result['direction'] = direction
         result['political_lean'] = direction
         
+        # Copy analysis if present
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
@@ -382,12 +408,13 @@ class DataTransformer:
         
         result = template.copy()
         
-        score = raw_data.get('accuracy_score', raw_data.get('score', 50))
+        score = raw_data.get('accuracy_score', raw_data.get('score', raw_data.get('verification_score', 50)))
         checked = raw_data.get('claims_checked', 0)
         verified = raw_data.get('claims_verified', 0)
         
         result['score'] = score
         result['accuracy_score'] = score
+        result['verification_score'] = score
         result['claims_checked'] = checked
         result['claims_verified'] = verified
         result['claims_found'] = checked
