@@ -1,14 +1,17 @@
 """
-News Analyzer Service - FIXED TO PASS ALL AUTHOR DATA
-Date: October 5, 2025
-Version: 12.1
+News Analyzer Service - WITH INSIGHT GENERATION
+Date: October 6, 2025
+Version: 12.2
 
-CRITICAL FIX:
-- Line 127-138: Now preserves ALL author fields from pipeline
-- No longer filters out articles_found, years_experience, awards, etc.
-- Only adds missing required fields, doesn't remove existing ones
+CHANGES FROM 12.1:
+- Added InsightGenerator integration
+- Added DataEnricher integration
+- Preserves ALL existing functionality
+- Adds executive insights to response
+- Adds comparative context to all services
 
-Save as: services/news_analyzer.py (REPLACE existing file)
+DEPLOYMENT:
+Replace services/news_analyzer.py with this file
 """
 
 import logging
@@ -16,6 +19,8 @@ import time
 from typing import Dict, Any, Optional
 
 from services.analysis_pipeline import AnalysisPipeline
+from services.insight_generator import InsightGenerator
+from services.data_enricher import DataEnricher
 
 logger = logging.getLogger(__name__)
 
@@ -26,9 +31,11 @@ class NewsAnalyzer:
     """
     
     def __init__(self):
-        """Initialize with pipeline"""
+        """Initialize with pipeline and enhancement services"""
         self.pipeline = AnalysisPipeline()
-        logger.info("[NewsAnalyzer v12.1] Initialized")
+        self.insight_generator = InsightGenerator()
+        self.data_enricher = DataEnricher()
+        logger.info("[NewsAnalyzer v12.2] Initialized with insights & enrichment")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
@@ -40,7 +47,7 @@ class NewsAnalyzer:
             pro_mode: Not used (for compatibility)
             
         Returns:
-            Properly formatted analysis results
+            Properly formatted analysis results with insights
         """
         
         analysis_start = time.time()
@@ -78,6 +85,21 @@ class NewsAnalyzer:
                 content_type,
                 analysis_start
             )
+            
+            # ===== ENHANCEMENT PHASE =====
+            try:
+                logger.info("[NewsAnalyzer] Generating executive insights...")
+                insights = self.insight_generator.generate_insights(response)
+                response['insights'] = insights
+                
+                logger.info("[NewsAnalyzer] Enriching data with comparative context...")
+                response = self.data_enricher.enrich_data(response)
+                
+                logger.info("[NewsAnalyzer] ✓ Insights and enrichment complete")
+            except Exception as e:
+                logger.error(f"[NewsAnalyzer] Enhancement error (continuing): {e}")
+                # Continue without enhancements if there's an error
+            # ===== END ENHANCEMENT PHASE =====
             
             logger.info(f"[NewsAnalyzer] Complete - Trust Score: {response['trust_score']}")
             logger.info("=" * 80)
@@ -197,17 +219,11 @@ class NewsAnalyzer:
             
         elif service_name == 'author_analyzer':
             # CRITICAL FIX: Only add required fields if missing, preserve ALL existing fields!
-            # Pipeline already sent: articles_found, article_count, years_experience, awards, etc.
-            # We just ensure the minimum required fields exist
             result.setdefault('credibility_score', result.get('score', 50))
             result.setdefault('name', result.get('author_name', 'Unknown'))
             result.setdefault('credibility', result.get('credibility_score', 50))
             result.setdefault('expertise', 'General')
             result.setdefault('track_record', 'Unknown')
-            
-            # DON'T remove or override any fields! Pipeline data stays intact!
-            # articles_found, article_count, years_experience, awards, awards_count 
-            # all pass through untouched
         
         # Ensure analysis section exists
         if 'analysis' not in result:
