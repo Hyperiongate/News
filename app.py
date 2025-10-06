@@ -1,14 +1,13 @@
 """
-TruthLens News Analyzer - Complete with Data Transformer Integration
-Version: 8.0.0
-Date: October 4, 2025
+TruthLens News Analyzer - Complete with Data Transformer Integration + DIAGNOSTICS
+Version: 8.1.0
+Date: October 6, 2025
 
-CHANGES FROM 7.8.0:
-1. Integrated DataTransformer for guaranteed frontend contract compliance
-2. Simplified /api/analyze endpoint with clean 3-step process
-3. Added comprehensive logging for debugging
-4. ALL ORIGINAL FUNCTIONALITY PRESERVED
-5. Fixes NPR/source display issues and author credibility
+CHANGES FROM 8.0.0:
+1. Added diagnostic endpoints for troubleshooting track record system
+2. Added API key checking endpoint
+3. Added direct API testing endpoint
+4. All existing functionality preserved
 
 This is the COMPLETE file - replace your entire app.py with this
 """
@@ -18,6 +17,7 @@ import re
 import json
 import time
 import logging
+import traceback
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Tuple
 from urllib.parse import urlparse
@@ -335,10 +335,7 @@ class ArticleExtractor:
         if openai_client:
             try:
                 # Get the top portion of the article where bylines typically appear
-                # This includes both visible text and HTML structure
                 article_top_html = html_text[:4000] if len(html_text) > 4000 else html_text
-                
-                # Also get clean text version for better context
                 article_top_text = soup.get_text()[:2000] if len(soup.get_text()) > 2000 else soup.get_text()
                 
                 prompt = f"""Find the article author(s) name in this content. Look for patterns like:
@@ -365,20 +362,15 @@ class ArticleExtractor:
                     model="gpt-3.5-turbo",
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=50,
-                    temperature=0.1  # Low temperature for factual extraction
+                    temperature=0.1
                 )
                 
                 author = response.choices[0].message.content.strip()
                 
-                # Validate the AI response
                 if author and author != 'Unknown':
-                    # Remove any extra text AI might have added
                     author = author.replace('Author name:', '').replace('By ', '').strip()
-                    
-                    # Check if it's a reasonable name (2-4 words)
                     word_count = len(author.split())
-                    if 2 <= word_count <= 6:  # Allow for "and" in multi-author
-                        # Check it's not a known non-journalist
+                    if 2 <= word_count <= 6:
                         if not any(name in author for name in NON_JOURNALIST_NAMES):
                             logger.info(f"AI successfully found author: {author}")
                             return author
@@ -389,15 +381,12 @@ class ArticleExtractor:
         # FALLBACK: Traditional extraction methods
         authors = []
         
-        # Method 1: Look for simple "By Name" pattern in visible text
         visible_text = soup.get_text()[:3000]
         if match := re.search(r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)', visible_text):
             potential_author = match.group(1)
-            # Make sure it's not in a quote
             if not re.search(rf'(said|told|according to)\s+{re.escape(potential_author)}', visible_text, re.IGNORECASE):
                 authors.append(potential_author)
         
-        # Method 2: Check meta tags if no author found yet
         if not authors:
             meta_selectors = [
                 ('name', 'author'),
@@ -413,7 +402,6 @@ class ArticleExtractor:
                             authors.append(content.strip())
                             break
         
-        # Method 3: Look for byline class elements
         if not authors:
             for byline_elem in soup.find_all(class_=re.compile(r'byline|author', re.I)):
                 byline_text = byline_elem.get_text()
@@ -421,14 +409,11 @@ class ArticleExtractor:
                     authors.append(match.group(1))
                     break
         
-        # Clean and validate authors
         if authors:
             author = authors[0]
-            # Clean up the author name
             author = re.sub(r'\s+', ' ', author).strip()
             author = author.replace(' and ', ', ').replace(' And ', ', ')
             
-            # Final validation
             if author and 2 <= len(author.split()) <= 4:
                 if not any(name in author for name in NON_JOURNALIST_NAMES):
                     logger.info(f"Fallback extraction found author: {author}")
@@ -574,7 +559,6 @@ class TruthLensAnalyzer:
         try:
             logger.info(f"TruthLensAnalyzer starting analysis for: {url}")
             
-            # Extract article
             article_data = self.extractor.extract(url)
             
             if not article_data['extraction_successful']:
@@ -583,13 +567,11 @@ class TruthLensAnalyzer:
             
             logger.info(f"Article extracted - Author: {article_data['author']}, Source: {article_data['source']}")
             
-            # Analyze author
             author_analysis = self.author_analyzer.analyze(
                 article_data['author'],
                 article_data['source']
             )
             
-            # Run manipulation detection if available
             manipulation_results = {}
             if manipulation_detector:
                 try:
@@ -598,14 +580,12 @@ class TruthLensAnalyzer:
                 except Exception as e:
                     logger.error(f"Manipulation detection failed: {e}")
             
-            # Build response with proper source metadata
             response = self._build_response(article_data, author_analysis, manipulation_results)
             
             return response
             
         except Exception as e:
             logger.error(f"Analysis failed: {e}")
-            import traceback
             traceback.print_exc()
             return self._error_response(str(e))
     
@@ -614,7 +594,6 @@ class TruthLensAnalyzer:
         
         trust_score = self._calculate_trust_score(article_data, author_analysis, manipulation_results)
         
-        # Get source metadata with CORRECT founded year
         source_name = article_data['source']
         source_info = SOURCE_METADATA.get(source_name, {})
         
@@ -628,8 +607,8 @@ class TruthLensAnalyzer:
             'detailed_analysis': {
                 'source_credibility': {
                     **self._analyze_source(source_name),
-                    'organization': source_name,  # Use actual source name
-                    'founded': source_info.get('founded'),  # Use CORRECT founded year
+                    'organization': source_name,
+                    'founded': source_info.get('founded'),
                     'type': source_info.get('type', 'News Organization'),
                     'ownership': source_info.get('ownership', 'Unknown'),
                     'readership': source_info.get('readership', 'Unknown'),
@@ -665,7 +644,6 @@ class TruthLensAnalyzer:
             ]
         }
         
-        # Add AI enhancement if available
         if openai_client and author_analysis.get('author_name'):
             try:
                 prompt = f"""Provide a brief assessment of journalist {author_analysis.get('author_name')} 
@@ -772,7 +750,6 @@ class TruthLensAnalyzer:
             ]
         }
         
-        # Add AI enhancement for deeper bias detection
         if openai_client and len(text) > 500:
             try:
                 prompt = f"""Analyze this article excerpt for subtle bias indicators:
@@ -988,12 +965,11 @@ class TruthLensAnalyzer:
         for line in lines:
             line = line.strip()
             if line and (line[0].isdigit() or line.startswith('-') or line.startswith('•')):
-                # Clean up the line
                 cleaned = re.sub(r'^[\d\-•\.]+\s*', '', line)
                 if cleaned:
                     key_points.append(cleaned)
         
-        return key_points[:3]  # Return top 3 key points
+        return key_points[:3]
     
     def _calculate_trust_score(self, article_data: Dict, author_analysis: Dict, manipulation_results: Dict) -> int:
         if not article_data.get('text'):
@@ -1012,7 +988,6 @@ class TruthLensAnalyzer:
         
         content_score = self._analyze_content(article_data)['score']
         
-        # Weighted average
         scores = [
             source_score * 0.25,
             author_score * 0.20,
@@ -1123,7 +1098,6 @@ class AuthorAnalyzer:
                 ai_text = response.choices[0].message.content
                 try:
                     ai_data = json.loads(ai_text)
-                    # Validate AI data to prevent nonsense
                     if ai_data.get('years_experience'):
                         years = ai_data['years_experience']
                         if isinstance(years, (int, float)) and years < 50:
@@ -1194,7 +1168,10 @@ class AuthorAnalyzer:
         }
 
 
-# Routes
+# ============================================================================
+# MAIN ROUTES
+# ============================================================================
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -1203,30 +1180,21 @@ def index():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '8.0.0',
+        'version': '8.1.0',
         'services': {
             'openai': 'connected' if openai_client else 'not configured',
             'author_analyzer': 'enhanced with database',
             'manipulation_detector': 'loaded' if manipulation_detector else 'using fallback',
             'scraperapi': 'configured' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
-            'news_analyzer': 'active with data transformer'
+            'news_analyzer': 'active with data transformer',
+            'track_record_system': 'available' if author_analyzer else 'not available'
         }
     })
 
-@app.route('/debug/scraper')
-def debug_scraper():
-    return jsonify({
-        'scraperapi_configured': bool(os.getenv('SCRAPERAPI_KEY')),
-        'key_present': 'SCRAPERAPI_KEY' in os.environ,
-        'key_length': len(os.getenv('SCRAPERAPI_KEY', ''))
-    })
-
-# SIMPLIFIED AND FIXED /api/analyze endpoint
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
     """
-    Simplified API endpoint with guaranteed data structure
-    Uses 3-step process: Analyze → Transform → Send
+    Main analysis endpoint - Analyze → Transform → Send
     """
     try:
         data = request.json
@@ -1234,11 +1202,10 @@ def analyze():
         text = data.get('text')
         
         logger.info("=" * 80)
-        logger.info("API /analyze endpoint called - Version 8.0.0")
+        logger.info("API /analyze endpoint called - Version 8.1.0")
         logger.info(f"URL provided: {bool(url)}")
         logger.info(f"Text provided: {bool(text)} ({len(text) if text else 0} chars)")
         
-        # Determine content and type
         if url:
             content = url
             content_type = 'url'
@@ -1251,7 +1218,6 @@ def analyze():
             logger.error("No URL or text provided")
             return jsonify({'success': False, 'error': 'No URL or text provided'}), 400
         
-        # Step 1: Run the analyzer (gets raw data)
         logger.info("Step 1: Running NewsAnalyzer...")
         raw_results = news_analyzer_service.analyze(
             content=content,
@@ -1259,18 +1225,15 @@ def analyze():
             pro_mode=data.get('pro_mode', False)
         )
         
-        # Step 2: Transform to match contract (guaranteed structure)
         logger.info("Step 2: Transforming data to match frontend contract...")
         transformed_results = data_transformer.transform_response(raw_results)
         
-        # Log what we're sending
         logger.info(f"Sending to frontend:")
         logger.info(f"  - Success: {transformed_results.get('success')}")
         logger.info(f"  - Trust Score: {transformed_results.get('trust_score')}")
         logger.info(f"  - Source: {transformed_results.get('source')}")
         logger.info(f"  - Author: {transformed_results.get('author')}")
         
-        # Verify critical fields
         services = transformed_results.get('detailed_analysis', {})
         if 'source_credibility' in services:
             sc = services['source_credibility']
@@ -1283,27 +1246,225 @@ def analyze():
         
         logger.info("=" * 80)
         
-        # Step 3: Send transformed data to frontend
         return jsonify(transformed_results)
         
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
-        import traceback
         traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+# ============================================================================
+# DIAGNOSTIC ENDPOINTS (NEW IN v8.1.0)
+# ============================================================================
+
+@app.route('/debug/api-keys', methods=['GET'])
+def debug_api_keys():
+    """
+    Check which API keys are configured (does NOT expose actual keys)
+    """
+    return jsonify({
+        'api_keys_status': {
+            'OPENAI_API_KEY': 'configured' if os.getenv('OPENAI_API_KEY') else 'missing',
+            'SCRAPERAPI_KEY': 'configured' if os.getenv('SCRAPERAPI_KEY') else 'missing',
+            'MEDIASTACK_API_KEY': 'configured' if os.getenv('MEDIASTACK_API_KEY') else 'missing',
+            'NEWS_API_KEY': 'configured' if os.getenv('NEWS_API_KEY') else 'missing',
+        },
+        'key_lengths': {
+            'OPENAI': len(os.getenv('OPENAI_API_KEY', '')),
+            'SCRAPER': len(os.getenv('SCRAPERAPI_KEY', '')),
+            'MEDIASTACK': len(os.getenv('MEDIASTACK_API_KEY', '')),
+            'NEWSAPI': len(os.getenv('NEWS_API_KEY', ''))
+        },
+        'warning': 'If any keys show 0 length, they are not set in Render environment variables',
+        'instructions': 'Go to Render Dashboard → Your Service → Environment → Add keys there'
+    })
+
+
+@app.route('/debug/scraper')
+def debug_scraper():
+    """Legacy endpoint - check ScraperAPI key"""
+    return jsonify({
+        'scraperapi_configured': bool(os.getenv('SCRAPERAPI_KEY')),
+        'key_present': 'SCRAPERAPI_KEY' in os.environ,
+        'key_length': len(os.getenv('SCRAPERAPI_KEY', ''))
+    })
+
+
+@app.route('/debug/track-record', methods=['POST'])
+def debug_track_record():
+    """
+    Test author track record system directly
+    
+    POST Body:
+    {
+        "author": "Justin Jouvenal",
+        "domain": "washingtonpost.com"
+    }
+    """
+    try:
+        data = request.json
+        author_name = data.get('author', 'Justin Jouvenal')
+        domain = data.get('domain', 'washingtonpost.com')
+        
+        logger.info("=" * 80)
+        logger.info(f"[DEBUG ENDPOINT] Testing track record for: {author_name}")
+        logger.info("=" * 80)
+        
+        try:
+            from services.author_track_record import AuthorTrackRecord
+            track_record = AuthorTrackRecord()
+            
+            articles = track_record.get_author_article_history(author_name, domain, limit=10)
+            
+            stats = track_record.get_stats()
+            
+            return jsonify({
+                'success': True,
+                'author': author_name,
+                'domain': domain,
+                'articles_found': len(articles),
+                'articles': articles[:5],
+                'api_statistics': stats,
+                'system_status': {
+                    'track_record_available': True,
+                    'mediastack_configured': bool(os.getenv('MEDIASTACK_API_KEY')),
+                    'newsapi_configured': bool(os.getenv('NEWS_API_KEY'))
+                },
+                'troubleshooting': {
+                    'if_zero_articles': [
+                        'Author may not be in API databases',
+                        'Check API keys are correct in Render environment',
+                        'Verify domain format (e.g., "washingtonpost.com" not "www.washingtonpost.com")',
+                        'Check Render logs for detailed API request/response info',
+                        'Try a different well-known journalist to test if APIs work at all'
+                    ],
+                    'check_logs': 'Look in Render logs for lines starting with [MEDIASTACK] or [NEWS_API]',
+                    'test_suggestions': {
+                        'known_authors': [
+                            {'author': 'Kim Bellware', 'domain': 'washingtonpost.com'},
+                            {'author': 'Dasha Burns', 'domain': 'nbcnews.com'},
+                            {'author': 'Jeremy Bowen', 'domain': 'bbc.com'}
+                        ]
+                    }
+                }
+            })
+            
+        except ImportError as e:
+            return jsonify({
+                'success': False,
+                'error': 'Track record system not available',
+                'details': str(e),
+                'fix': 'Make sure author_track_record.py exists in services/ directory'
+            }), 500
+            
+    except Exception as e:
+        logger.error(f"[DEBUG ENDPOINT] Error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+@app.route('/debug/test-apis', methods=['POST'])
+def debug_test_apis():
+    """
+    Make test API calls to verify they're working
+    
+    POST Body (optional):
+    {
+        "test_mediastack": true,
+        "test_newsapi": true
+    }
+    """
+    try:
+        data = request.json or {}
+        test_mediastack = data.get('test_mediastack', True)
+        test_newsapi = data.get('test_newsapi', True)
+        
+        results = {
+            'timestamp': datetime.now().isoformat(),
+            'tests': {}
+        }
+        
+        # Test MEDIASTACK
+        if test_mediastack and os.getenv('MEDIASTACK_API_KEY'):
+            try:
+                url = "http://api.mediastack.com/v1/news"
+                params = {
+                    'access_key': os.getenv('MEDIASTACK_API_KEY'),
+                    'sources': 'cnn',
+                    'limit': 1
+                }
+                response = requests.get(url, params=params, timeout=10)
+                
+                results['tests']['mediastack'] = {
+                    'status': 'success' if response.status_code == 200 else 'failed',
+                    'status_code': response.status_code,
+                    'response_keys': list(response.json().keys()) if response.status_code == 200 else None,
+                    'error': response.text[:200] if response.status_code != 200 else None
+                }
+            except Exception as e:
+                results['tests']['mediastack'] = {
+                    'status': 'error',
+                    'error': str(e)
+                }
+        
+        # Test NEWS_API
+        if test_newsapi and os.getenv('NEWS_API_KEY'):
+            try:
+                url = "https://newsapi.org/v2/top-headlines"
+                params = {
+                    'apiKey': os.getenv('NEWS_API_KEY'),
+                    'country': 'us',
+                    'pageSize': 1
+                }
+                response = requests.get(url, params=params, timeout=10)
+                
+                results['tests']['newsapi'] = {
+                    'status': 'success' if response.status_code == 200 else 'failed',
+                    'status_code': response.status_code,
+                    'response_keys': list(response.json().keys()) if response.status_code == 200 else None,
+                    'error': response.text[:200] if response.status_code != 200 else None
+                }
+            except Exception as e:
+                results['tests']['newsapi'] = {
+                    'status': 'error',
+                    'error': str(e)
+                }
+        
+        return jsonify(results)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# ============================================================================
+# STARTUP
+# ============================================================================
+
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS v8.0.0 - WITH DATA TRANSFORMER FIX")
+    logger.info("TRUTHLENS v8.1.0 - WITH DIAGNOSTIC ENDPOINTS")
     logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
     logger.info(f"ScraperAPI: {'✓ CONFIGURED' if os.getenv('SCRAPERAPI_KEY') else '✗ NOT CONFIGURED'}")
+    logger.info(f"MEDIASTACK API: {'✓ CONFIGURED' if os.getenv('MEDIASTACK_API_KEY') else '✗ NOT CONFIGURED'}")
+    logger.info(f"NEWS API: {'✓ CONFIGURED' if os.getenv('NEWS_API_KEY') else '✗ NOT CONFIGURED'}")
     logger.info(f"Author Database: {len(JOURNALIST_DATABASE)} journalists loaded")
     logger.info(f"Source Database: {len(SOURCE_METADATA)} sources with metadata")
     logger.info(f"Manipulation Detector: {'✓ ENHANCED SERVICE' if manipulation_detector else '✗ Using fallback'}")
     logger.info(f"Author Analyzer: {'✓ SERVICE LOADED' if author_analyzer else '✗ Using built-in'}")
     logger.info(f"NewsAnalyzer: ✓ ACTIVE")
-    logger.info(f"DataTransformer: ✓ ACTIVE - Frontend contract guaranteed")
+    logger.info(f"DataTransformer: ✓ ACTIVE")
+    logger.info("")
+    logger.info("DIAGNOSTIC ENDPOINTS AVAILABLE:")
+    logger.info("  GET  /debug/api-keys      - Check API key configuration")
+    logger.info("  POST /debug/track-record  - Test track record system")
+    logger.info("  POST /debug/test-apis     - Test API connectivity")
     logger.info("=" * 80)
     
     port = int(os.getenv('PORT', 5000))
