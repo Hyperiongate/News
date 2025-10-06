@@ -73,15 +73,36 @@ class AuthorAnalyzer:
         
         # Initialize new systems
         if ADVANCED_SYSTEMS_AVAILABLE:
-            self.track_record = AuthorTrackRecord()
-            self.credibility = AuthorCredibilityChecker()
-            self.deviation = AuthorDeviationAnalyzer()
-            logger.info("[AuthorAnalyzer] ✓ Advanced systems loaded")
+            try:
+                self.track_record = AuthorTrackRecord()
+                logger.info("[AuthorAnalyzer] ✓ Track record system initialized")
+            except Exception as e:
+                logger.error(f"[AuthorAnalyzer] ✗ Track record init failed: {e}")
+                self.track_record = None
+            
+            try:
+                self.credibility = AuthorCredibilityChecker()
+                logger.info("[AuthorAnalyzer] ✓ Credibility checker initialized")
+            except Exception as e:
+                logger.error(f"[AuthorAnalyzer] ✗ Credibility checker init failed: {e}")
+                self.credibility = None
+            
+            try:
+                self.deviation = AuthorDeviationAnalyzer()
+                logger.info("[AuthorAnalyzer] ✓ Deviation analyzer initialized")
+            except Exception as e:
+                logger.error(f"[AuthorAnalyzer] ✗ Deviation analyzer init failed: {e}")
+                self.deviation = None
+            
+            if self.track_record and self.credibility and self.deviation:
+                logger.info("[AuthorAnalyzer] ✓ All advanced systems loaded successfully")
+            else:
+                logger.warning(f"[AuthorAnalyzer] ⚠ Partial load - Track:{bool(self.track_record)}, Cred:{bool(self.credibility)}, Dev:{bool(self.deviation)}")
         else:
             self.track_record = None
             self.credibility = None
             self.deviation = None
-            logger.warning("[AuthorAnalyzer] ⚠ Using basic mode only")
+            logger.warning("[AuthorAnalyzer] ⚠ Using basic mode - ADVANCED_SYSTEMS_AVAILABLE = False")
         
         # Session for requests
         self.session = requests.Session()
