@@ -1,13 +1,23 @@
 """
-Author Analyzer - WORKING VERSION (RESTORED)
+Author Analyzer - FIXED COMPLETE VERSION
 Date: October 6, 2025
-Version: RESTORED - Back to what worked
+Version: 1.0.1 - Fixed missing methods and truncation
+Last Updated: October 6, 2025
 
-This is the version that was working perfectly in your app.
-Uses journalist database + simple heuristics + OpenAI enhancement.
-NO complex APIs that don't work.
+FIXES APPLIED:
+- Added missing get_success_result() method (was causing AttributeError)
+- Completed _get_fallback_result() method (was truncated)
+- Added get_error_result() method for consistency
+- All methods are now complete and functional
+- No external API dependencies (MEDIASTACK, NEWS_API, etc.)
 
-REPLACES: backend/services/author_analyzer.py
+REPLACES: services/author_analyzer.py (or backend/services/author_analyzer.py)
+
+HOW IT WORKS:
+1. Checks journalist database for known authors
+2. For unknown authors: calculates credibility from outlet score + text analysis
+3. Returns complete data structure with all required fields
+4. NO external API calls - fast and reliable
 """
 
 import re
@@ -33,7 +43,7 @@ except:
 
 class AuthorAnalyzer:
     """
-    Working author analyzer - the version that actually works
+    Simple, reliable author analyzer - NO complex external APIs
     """
     
     def __init__(self):
@@ -42,7 +52,7 @@ class AuthorAnalyzer:
         self.available = True
         self.is_available = True
         
-        logger.info("[AuthorAnalyzer] Initializing WORKING version")
+        logger.info("[AuthorAnalyzer] Initializing FIXED version 1.0.1")
         
         # Journalist database
         self.known_journalists = self._load_journalist_database()
@@ -56,6 +66,10 @@ class AuthorAnalyzer:
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Analyze author credibility
+        Args:
+            data: Dict with 'author', 'domain', 'text' keys
+        Returns:
+            Dict with success status and author analysis data
         """
         try:
             raw_author = data.get('author', '').strip()
@@ -212,6 +226,27 @@ class AuthorAnalyzer:
         except Exception as e:
             logger.error(f"[AuthorAnalyzer] Analysis error: {e}", exc_info=True)
             return self.get_success_result(self._get_fallback_result(data))
+    
+    def get_success_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Wrap data in success response format
+        This method was MISSING - causing AttributeError
+        """
+        return {
+            'success': True,
+            'data': data,
+            'error': None
+        }
+    
+    def get_error_result(self, error_msg: str) -> Dict[str, Any]:
+        """
+        Create error response format
+        """
+        return {
+            'success': False,
+            'data': {},
+            'error': error_msg
+        }
     
     def _load_journalist_database(self) -> Dict[str, Dict]:
         """Load known journalist database"""
@@ -528,10 +563,60 @@ class AuthorAnalyzer:
             'awards': [],
             'articles_found': 0,
             'article_count': 0,
+            'recent_articles': [],
+            'social_profiles': [],
+            'professional_links': [],
+            'trust_indicators': [],
+            'red_flags': ['Author not identified'],
+            'verified': False,
             'track_record': {},
-            'deviation_analysis': {}
+            'deviation_analysis': {},
+            'bio': 'Author information not available',
+            'organization': self._get_org_name(domain),
+            'domain': domain
         }
     
     def _get_fallback_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Fallback result"""
-        domain = data.get('domain', '')
+        """
+        Fallback result when analysis fails
+        This method was TRUNCATED - now complete
+        """
+        domain = data.get('domain', 'unknown')
+        author = data.get('author', 'Unknown')
+        
+        outlet_info = self.major_outlets.get(domain.lower().replace('www.', ''), {'score': 50})
+        outlet_score = outlet_info.get('score', 50)
+        
+        return {
+            'name': author if author else 'Unknown Author',
+            'author_name': author if author else 'Unknown Author',
+            'credibility_score': max(40, outlet_score - 10),
+            'score': max(40, outlet_score - 10),
+            'outlet_score': outlet_score,
+            'can_trust': 'MAYBE',
+            'trust_explanation': 'Limited information available for analysis',
+            'credibility_level': 'Moderate',
+            'trust_reasoning': 'Analysis incomplete - verify independently',
+            'years_experience': 'Unknown',
+            'expertise': ['General reporting'],
+            'awards': [],
+            'articles_found': 0,
+            'article_count': 0,
+            'recent_articles': [],
+            'social_profiles': [],
+            'professional_links': [],
+            'trust_indicators': [f"Publishing in {self._get_org_name(domain)}"],
+            'red_flags': ['Limited author information', 'Analysis incomplete'],
+            'verified': False,
+            'verification_status': 'Unverified',
+            'reputation_score': outlet_score,
+            'track_record': {},
+            'deviation_analysis': {},
+            'bio': f"Author at {self._get_org_name(domain)}",
+            'organization': self._get_org_name(domain),
+            'domain': domain,
+            'position': 'Journalist',
+            'analysis_timestamp': time.time(),
+            'data_sources': ['Publication metadata'],
+            'advanced_analysis_available': False
+        }
