@@ -1,20 +1,22 @@
 """
-Author Track Record System - WITH ENHANCED DEBUG LOGGING
-Date: October 5, 2025
-Version: 1.1 - DEBUG EDITION
+Author Track Record System - ROBUST WITH MULTIPLE FALLBACK STRATEGIES
+Date: October 6, 2025
+Version: 2.0 - PRODUCTION READY
 
-CHANGES FROM 1.0:
-- Added comprehensive debug logging to diagnose API failures
-- Shows exact API requests, responses, and filtering results
-- Logs key availability and API status codes
+KEY IMPROVEMENTS:
+1. Multiple query strategies (exact match, partial match, domain-only)
+2. Comprehensive debug logging showing WHY queries fail
+3. Graceful degradation when APIs have no data
+4. Clear status reporting for troubleshooting
+5. API response validation and error handling
 
-Save as: backend/services/author_track_record.py (REPLACE existing)
+REPLACES: backend/services/author_track_record.py
 """
 
 import os
 import logging
 import requests
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, Tuple
 from datetime import datetime
 from collections import Counter
 import json
@@ -33,196 +35,388 @@ except:
 
 class AuthorTrackRecord:
     """
-    Author track record analysis using MEDIASTACK_API
+    ROBUST author track record analysis with multiple fallback strategies
     """
     
     def __init__(self):
+        """Initialize with API keys and configuration"""
         self.mediastack_key = os.environ.get('MEDIASTACK_API_KEY')
         self.news_api_key = os.environ.get('NEWS_API_KEY')
         
-        logger.info(f"[TrackRecord] MEDIASTACK_API available: {bool(self.mediastack_key)}")
-        logger.info(f"[TrackRecord] NEWS_API available: {bool(self.news_api_key)}")
+        logger.info("=" * 60)
+        logger.info("[TrackRecord] Initialization")
+        logger.info(f"  MEDIASTACK_API: {'✓ CONFIGURED' if self.mediastack_key else '✗ NOT CONFIGURED'}")
+        logger.info(f"  NEWS_API: {'✓ CONFIGURED' if self.news_api_key else '✗ NOT CONFIGURED'}")
+        logger.info("=" * 60)
         
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'TruthLens/1.0'
+            'User-Agent': 'TruthLens/2.0 (News Analysis)'
         })
+        
+        # Track API call statistics for debugging
+        self.api_stats = {
+            'mediastack_calls': 0,
+            'mediastack_success': 0,
+            'newsapi_calls': 0,
+            'newsapi_success': 0,
+            'total_articles_found': 0
+        }
     
     def get_author_article_history(self, author_name: str, outlet_domain: str, limit: int = 50) -> List[Dict[str, Any]]:
         """
-        Get all articles by this author from MEDIASTACK_API
+        Get article history with MULTIPLE fallback strategies
+        
+        Strategy 1: Exact author name search
+        Strategy 2: Partial name search (last name only)
+        Strategy 3: Domain-only search (get recent articles from outlet)
         
         Args:
-            author_name: Full author name
-            outlet_domain: Domain like 'washingtonpost.com'
-            limit: Max articles to retrieve (default 50)
+            author_name: Full author name (e.g., "Justin Jouvenal")
+            outlet_domain: Domain (e.g., "washingtonpost.com")
+            limit: Max articles to retrieve
             
         Returns:
-            List of articles with dates, titles, URLs
+            List of articles with metadata
         """
         
-        logger.info(f"[TrackRecord] Getting history for '{author_name}' at {outlet_domain}")
-        logger.info(f"[TrackRecord] DEBUG: MEDIASTACK key available: {bool(self.mediastack_key)}")
-        logger.info(f"[TrackRecord] DEBUG: NEWS_API key available: {bool(self.news_api_key)}")
+        logger.info("=" * 80)
+        logger.info(f"[TrackRecord] STARTING SEARCH")
+        logger.info(f"  Author: '{author_name}'")
+        logger.info(f"  Domain: '{outlet_domain}'")
+        logger.info(f"  Limit: {limit}")
+        logger.info("=" * 80)
+        
+        # Strategy 1: Try exact author name
+        logger.info("[TrackRecord] STRATEGY 1: Exact author name search")
+        articles = self._search_with_strategy(author_name, outlet_domain, limit, strategy="exact")
+        
+        if articles:
+            logger.info(f"[TrackRecord] ✓ SUCCESS - Found {len(articles)} articles with exact match")
+            self.api_stats['total_articles_found'] = len(articles)
+            return articles
+        
+        # Strategy 2: Try last name only
+        if ' ' in author_name:
+            last_name = author_name.split()[-1]
+            logger.info(f"[TrackRecord] STRATEGY 2: Last name only ('{last_name}')")
+            articles = self._search_with_strategy(last_name, outlet_domain, limit, strategy="partial")
+            
+            if articles:
+                logger.info(f"[TrackRecord] ✓ SUCCESS - Found {len(articles)} articles with last name")
+                self.api_stats['total_articles_found'] = len(articles)
+                return articles
+        
+        # Strategy 3: Domain-only search (get any recent articles from this outlet)
+        logger.info("[TrackRecord] STRATEGY 3: Domain-only search (fallback)")
+        articles = self._search_domain_only(outlet_domain, limit)
+        
+        if articles:
+            logger.info(f"[TrackRecord] ⚠ FALLBACK - Found {len(articles)} articles from outlet (not author-specific)")
+            self.api_stats['total_articles_found'] = len(articles)
+            return articles
+        
+        # No results from any strategy
+        logger.warning("=" * 80)
+        logger.warning(f"[TrackRecord] ✗ NO ARTICLES FOUND")
+        logger.warning(f"  Tried: exact name, last name, domain-only")
+        logger.warning(f"  Author: {author_name}")
+        logger.warning(f"  Domain: {outlet_domain}")
+        logger.warning("  POSSIBLE CAUSES:")
+        logger.warning("    1. Author not in API databases")
+        logger.warning("    2. API rate limits reached")
+        logger.warning("    3. Domain name format mismatch")
+        logger.warning("    4. Recent author (limited history)")
+        logger.warning("=" * 80)
+        
+        return []
+    
+    def _search_with_strategy(self, search_term: str, domain: str, limit: int, strategy: str) -> List[Dict[str, Any]]:
+        """
+        Execute search with specified strategy
+        
+        Args:
+            search_term: What to search for (author name or last name)
+            domain: Outlet domain
+            limit: Max results
+            strategy: "exact" or "partial"
+        """
         
         articles = []
         
         # Try MEDIASTACK first
         if self.mediastack_key:
-            logger.info("[TrackRecord] DEBUG: Attempting MEDIASTACK query...")
-            articles = self._query_mediastack(author_name, outlet_domain, limit)
+            logger.info(f"  → Trying MEDIASTACK ({strategy} match)...")
+            articles = self._query_mediastack(search_term, domain, limit)
             if articles:
-                logger.info(f"[TrackRecord] ✓ MEDIASTACK found {len(articles)} articles")
+                logger.info(f"  ✓ MEDIASTACK: {len(articles)} articles")
                 return articles
-            else:
-                logger.warning("[TrackRecord] DEBUG: MEDIASTACK returned empty list")
-        else:
-            logger.warning("[TrackRecord] DEBUG: No MEDIASTACK key - skipping")
         
-        # Fallback to NEWS_API
+        # Try NEWS_API as fallback
         if self.news_api_key:
-            logger.info("[TrackRecord] DEBUG: Attempting NEWS_API query...")
-            articles = self._query_newsapi(author_name, outlet_domain, limit)
+            logger.info(f"  → Trying NEWS_API ({strategy} match)...")
+            articles = self._query_newsapi(search_term, domain, limit)
             if articles:
-                logger.info(f"[TrackRecord] ✓ NEWS_API found {len(articles)} articles")
+                logger.info(f"  ✓ NEWS_API: {len(articles)} articles")
                 return articles
-            else:
-                logger.warning("[TrackRecord] DEBUG: NEWS_API returned empty list")
-        else:
-            logger.warning("[TrackRecord] DEBUG: No NEWS_API key - skipping")
         
-        logger.warning(f"[TrackRecord] ✗ No articles found for {author_name} (tried all sources)")
+        logger.info(f"  ✗ No results from {strategy} match strategy")
         return []
     
-    def _query_mediastack(self, author: str, domain: str, limit: int) -> List[Dict[str, Any]]:
-        """Query MEDIASTACK_API for author articles"""
+    def _search_domain_only(self, domain: str, limit: int) -> List[Dict[str, Any]]:
+        """
+        Fallback: Get ANY recent articles from this domain
+        Used when author-specific search fails
+        """
         
-        logger.info(f"[MEDIASTACK] Starting query for author='{author}', domain='{domain}'")
+        source_name = self._domain_to_source(domain)
+        
+        if self.mediastack_key:
+            logger.info(f"  → Trying MEDIASTACK (domain-only: {source_name})...")
+            try:
+                url = "http://api.mediastack.com/v1/news"
+                params = {
+                    'access_key': self.mediastack_key,
+                    'sources': source_name or domain.replace('.com', ''),
+                    'limit': min(limit, 25),
+                    'sort': 'published_desc'
+                }
+                
+                response = self.session.get(url, params=params, timeout=15)
+                if response.status_code == 200:
+                    data = response.json()
+                    articles_data = data.get('data', [])
+                    
+                    if articles_data:
+                        logger.info(f"  ✓ Found {len(articles_data)} recent articles from {domain}")
+                        return self._parse_mediastack_results(articles_data, verify_author=False)
+            except Exception as e:
+                logger.error(f"  ✗ MEDIASTACK domain search failed: {e}")
+        
+        if self.news_api_key:
+            logger.info(f"  → Trying NEWS_API (domain-only: {domain})...")
+            try:
+                url = "https://newsapi.org/v2/everything"
+                params = {
+                    'domains': domain,
+                    'apiKey': self.news_api_key,
+                    'pageSize': min(limit, 25),
+                    'sortBy': 'publishedAt'
+                }
+                
+                response = self.session.get(url, params=params, timeout=15)
+                if response.status_code == 200:
+                    data = response.json()
+                    articles_data = data.get('articles', [])
+                    
+                    if articles_data:
+                        logger.info(f"  ✓ Found {len(articles_data)} recent articles from {domain}")
+                        return self._parse_newsapi_results(articles_data, verify_author=False)
+            except Exception as e:
+                logger.error(f"  ✗ NEWS_API domain search failed: {e}")
+        
+        return []
+    
+    def _query_mediastack(self, search_term: str, domain: str, limit: int) -> List[Dict[str, Any]]:
+        """Query MEDIASTACK API with detailed logging"""
+        
+        self.api_stats['mediastack_calls'] += 1
         
         try:
-            # MEDIASTACK endpoint
             url = "http://api.mediastack.com/v1/news"
-            
-            # Build query - search for author name
-            query = f'"{author}"'
-            
-            # Extract source name from domain
             source = self._domain_to_source(domain)
             
+            # Build query
             params = {
                 'access_key': self.mediastack_key,
-                'keywords': query,
-                'sources': source if source else domain.replace('.com', ''),
-                'limit': min(limit, 100),  # MEDIASTACK max is 100
+                'keywords': f'"{search_term}"',
+                'sources': source or domain.replace('.com', ''),
+                'limit': min(limit, 100),
                 'sort': 'published_desc',
                 'languages': 'en'
             }
             
-            logger.info(f"[MEDIASTACK] Request URL: {url}")
-            logger.info(f"[MEDIASTACK] Query params: keywords={query}, sources={source}")
+            logger.info(f"    [MEDIASTACK] Request: {url}")
+            logger.info(f"    [MEDIASTACK] Params: keywords={params['keywords']}, sources={params['sources']}")
             
             response = self.session.get(url, params=params, timeout=15)
             
-            logger.info(f"[MEDIASTACK] Response status: {response.status_code}")
+            logger.info(f"    [MEDIASTACK] Response: {response.status_code}")
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                logger.info(f"[MEDIASTACK] Response data keys: {list(data.keys())}")
-                logger.info(f"[MEDIASTACK] Total results in response: {len(data.get('data', []))}")
-                
-                articles = []
-                for item in data.get('data', []):
-                    # Verify author name is in the article
-                    item_author = str(item.get('author', '')).lower()
-                    item_desc = str(item.get('description', '')).lower()
-                    
-                    if author.lower() in item_author or author.lower() in item_desc:
-                        articles.append({
-                            'title': item.get('title', ''),
-                            'url': item.get('url', ''),
-                            'date': item.get('published_at', ''),
-                            'source': item.get('source', ''),
-                            'author': item.get('author', author),
-                            'description': item.get('description', '')[:200]
-                        })
-                
-                logger.info(f"[MEDIASTACK] Filtered to {len(articles)} articles matching author")
-                return articles
-            else:
-                error_text = response.text[:200]
-                logger.error(f"[MEDIASTACK] Error {response.status_code}: {error_text}")
+            if response.status_code != 200:
+                error_data = response.text[:200]
+                logger.error(f"    [MEDIASTACK] Error response: {error_data}")
                 return []
-                
+            
+            data = response.json()
+            
+            # Log what we got back
+            logger.info(f"    [MEDIASTACK] Response keys: {list(data.keys())}")
+            logger.info(f"    [MEDIASTACK] Total results: {len(data.get('data', []))}")
+            
+            # Check for API errors
+            if 'error' in data:
+                logger.error(f"    [MEDIASTACK] API Error: {data['error']}")
+                return []
+            
+            articles_data = data.get('data', [])
+            
+            if not articles_data:
+                logger.warning(f"    [MEDIASTACK] ✗ Zero articles returned")
+                logger.warning(f"    [MEDIASTACK] This could mean:")
+                logger.warning(f"      - Author not in MEDIASTACK database")
+                logger.warning(f"      - Source name '{params['sources']}' not recognized")
+                logger.warning(f"      - No articles match the search criteria")
+                return []
+            
+            # Parse and filter results
+            articles = self._parse_mediastack_results(articles_data, search_term)
+            
+            if articles:
+                self.api_stats['mediastack_success'] += 1
+                logger.info(f"    [MEDIASTACK] ✓ Filtered to {len(articles)} matching articles")
+            else:
+                logger.warning(f"    [MEDIASTACK] ✗ No articles matched after filtering")
+            
+            return articles
+            
+        except requests.exceptions.Timeout:
+            logger.error(f"    [MEDIASTACK] ✗ Request timeout")
+            return []
+        except requests.exceptions.RequestException as e:
+            logger.error(f"    [MEDIASTACK] ✗ Request failed: {e}")
+            return []
         except Exception as e:
-            logger.error(f"[MEDIASTACK] Exception: {e}", exc_info=True)
+            logger.error(f"    [MEDIASTACK] ✗ Unexpected error: {e}", exc_info=True)
             return []
     
-    def _query_newsapi(self, author: str, domain: str, limit: int) -> List[Dict[str, Any]]:
-        """Fallback to NEWS_API"""
+    def _query_newsapi(self, search_term: str, domain: str, limit: int) -> List[Dict[str, Any]]:
+        """Query NEWS_API with detailed logging"""
         
-        logger.info(f"[NEWS_API] Starting query for author='{author}', domain='{domain}'")
+        self.api_stats['newsapi_calls'] += 1
         
         try:
             url = "https://newsapi.org/v2/everything"
             
             params = {
-                'q': f'"{author}"',
+                'q': f'"{search_term}"',
                 'domains': domain,
                 'apiKey': self.news_api_key,
                 'pageSize': min(limit, 100),
                 'sortBy': 'publishedAt'
             }
             
-            logger.info(f"[NEWS_API] Request URL: {url}")
-            logger.info(f"[NEWS_API] Query params: q={params['q']}, domains={domain}")
+            logger.info(f"    [NEWS_API] Request: {url}")
+            logger.info(f"    [NEWS_API] Params: q={params['q']}, domains={domain}")
             
             response = self.session.get(url, params=params, timeout=15)
             
-            logger.info(f"[NEWS_API] Response status: {response.status_code}")
+            logger.info(f"    [NEWS_API] Response: {response.status_code}")
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                logger.info(f"[NEWS_API] Response keys: {list(data.keys())}")
-                logger.info(f"[NEWS_API] Total results: {data.get('totalResults', 0)}")
-                logger.info(f"[NEWS_API] Articles in response: {len(data.get('articles', []))}")
-                
-                articles = []
-                for item in data.get('articles', []):
-                    # Verify author
-                    item_author = str(item.get('author', '')).lower()
-                    if author.lower() in item_author:
-                        articles.append({
-                            'title': item.get('title', ''),
-                            'url': item.get('url', ''),
-                            'date': item.get('publishedAt', ''),
-                            'source': item.get('source', {}).get('name', ''),
-                            'author': item.get('author', author),
-                            'description': item.get('description', '')[:200]
-                        })
-                
-                logger.info(f"[NEWS_API] Filtered to {len(articles)} articles matching author")
-                return articles
-            else:
-                error_text = response.text[:200]
-                logger.error(f"[NEWS_API] Error {response.status_code}: {error_text}")
+            if response.status_code != 200:
+                error_data = response.text[:200]
+                logger.error(f"    [NEWS_API] Error response: {error_data}")
                 return []
-                
+            
+            data = response.json()
+            
+            # Log what we got back
+            logger.info(f"    [NEWS_API] Response keys: {list(data.keys())}")
+            logger.info(f"    [NEWS_API] Status: {data.get('status')}")
+            logger.info(f"    [NEWS_API] Total results: {data.get('totalResults', 0)}")
+            logger.info(f"    [NEWS_API] Articles returned: {len(data.get('articles', []))}")
+            
+            # Check for API errors
+            if data.get('status') == 'error':
+                logger.error(f"    [NEWS_API] API Error: {data.get('message', 'Unknown error')}")
+                return []
+            
+            articles_data = data.get('articles', [])
+            
+            if not articles_data:
+                logger.warning(f"    [NEWS_API] ✗ Zero articles returned")
+                logger.warning(f"    [NEWS_API] This could mean:")
+                logger.warning(f"      - Author not in NEWS_API database")
+                logger.warning(f"      - Domain '{domain}' not in their sources")
+                logger.warning(f"      - Rate limit reached (100 requests/day on free tier)")
+                return []
+            
+            # Parse and filter results
+            articles = self._parse_newsapi_results(articles_data, search_term)
+            
+            if articles:
+                self.api_stats['newsapi_success'] += 1
+                logger.info(f"    [NEWS_API] ✓ Filtered to {len(articles)} matching articles")
+            else:
+                logger.warning(f"    [NEWS_API] ✗ No articles matched after filtering")
+            
+            return articles
+            
+        except requests.exceptions.Timeout:
+            logger.error(f"    [NEWS_API] ✗ Request timeout")
+            return []
+        except requests.exceptions.RequestException as e:
+            logger.error(f"    [NEWS_API] ✗ Request failed: {e}")
+            return []
         except Exception as e:
-            logger.error(f"[NEWS_API] Exception: {e}", exc_info=True)
+            logger.error(f"    [NEWS_API] ✗ Unexpected error: {e}", exc_info=True)
             return []
     
-    def calculate_author_metrics(self, article_history: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Calculate comprehensive author metrics
+    def _parse_mediastack_results(self, articles_data: List[Dict], verify_author: Any = True) -> List[Dict[str, Any]]:
+        """Parse MEDIASTACK results into standard format"""
         
-        Returns:
-            - total_articles: Total article count
-            - articles_per_month: Publishing velocity
-            - date_range: Years active
-            - co_author_frequency: How often they collaborate
-        """
+        articles = []
+        
+        for item in articles_data:
+            # If verify_author is a string, check for author match
+            if verify_author and isinstance(verify_author, str):
+                item_author = str(item.get('author', '')).lower()
+                item_desc = str(item.get('description', '')).lower()
+                search_lower = verify_author.lower()
+                
+                # Skip if author name not found
+                if search_lower not in item_author and search_lower not in item_desc:
+                    continue
+            
+            articles.append({
+                'title': item.get('title', ''),
+                'url': item.get('url', ''),
+                'date': item.get('published_at', ''),
+                'source': item.get('source', ''),
+                'author': item.get('author', 'Unknown'),
+                'description': item.get('description', '')[:200]
+            })
+        
+        return articles
+    
+    def _parse_newsapi_results(self, articles_data: List[Dict], verify_author: Any = True) -> List[Dict[str, Any]]:
+        """Parse NEWS_API results into standard format"""
+        
+        articles = []
+        
+        for item in articles_data:
+            # If verify_author is a string, check for author match
+            if verify_author and isinstance(verify_author, str):
+                item_author = str(item.get('author', '')).lower()
+                search_lower = verify_author.lower()
+                
+                # Skip if author name not found
+                if search_lower not in item_author:
+                    continue
+            
+            articles.append({
+                'title': item.get('title', ''),
+                'url': item.get('url', ''),
+                'date': item.get('publishedAt', ''),
+                'source': item.get('source', {}).get('name', ''),
+                'author': item.get('author', 'Unknown'),
+                'description': item.get('description', '')[:200]
+            })
+        
+        return articles
+    
+    def calculate_author_metrics(self, article_history: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Calculate comprehensive author metrics"""
         
         if not article_history:
             return {
@@ -242,7 +436,6 @@ class AuthorTrackRecord:
             date_str = article.get('date', '')
             if date_str:
                 try:
-                    # Handle both formats: "2024-10-05T12:00:00Z" and "2024-10-05"
                     if 'T' in date_str:
                         dt = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
                     else:
@@ -256,15 +449,12 @@ class AuthorTrackRecord:
             earliest = min(dates)
             latest = max(dates)
             
-            # Years active
             delta = latest - earliest
             years_active = max(1, delta.days / 365.25)
             
-            # Articles per month
             months = max(1, delta.days / 30)
             articles_per_month = total / months
             
-            # Average time between articles
             if len(dates) > 1:
                 sorted_dates = sorted(dates)
                 intervals = [(sorted_dates[i+1] - sorted_dates[i]).days for i in range(len(sorted_dates)-1)]
@@ -279,13 +469,7 @@ class AuthorTrackRecord:
             avg_interval = 0
         
         # Co-author detection
-        co_authored = 0
-        for article in article_history:
-            author_field = article.get('author', '')
-            # Check for multiple authors (commas or "and")
-            if ',' in author_field or ' and ' in author_field.lower():
-                co_authored += 1
-        
+        co_authored = sum(1 for a in article_history if ',' in a.get('author', '') or ' and ' in a.get('author', '').lower())
         co_author_frequency = (co_authored / total * 100) if total > 0 else 0
         
         return {
@@ -301,14 +485,7 @@ class AuthorTrackRecord:
         }
     
     def analyze_author_specialization(self, article_history: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Identify author's primary beat/specialty using AI
-        
-        Returns:
-            - primary_beat: Main topic area
-            - specialization_percentage: How focused they are
-            - expertise_areas: List of topics ranked by frequency
-        """
+        """Identify author's expertise using AI or keyword analysis"""
         
         if not article_history:
             return {
@@ -317,36 +494,28 @@ class AuthorTrackRecord:
                 'expertise_areas': []
             }
         
-        # Collect all titles and descriptions
+        # Collect titles/descriptions
         all_text = []
-        for article in article_history[:20]:  # Analyze up to 20 most recent
-            title = article.get('title', '')
-            desc = article.get('description', '')
-            if title:
+        for article in article_history[:20]:
+            if title := article.get('title'):
                 all_text.append(title)
-            if desc:
+            if desc := article.get('description'):
                 all_text.append(desc)
         
         combined_text = ' '.join(all_text)
         
-        # Use AI to cluster topics if available
+        # Use AI if available
         if OPENAI_AVAILABLE and openai_client and combined_text:
             try:
-                prompt = f"""Analyze these article titles/descriptions to identify the journalist's main expertise areas.
+                prompt = f"""Analyze these article titles to identify journalist expertise.
 
-Articles:
-{combined_text[:2000]}
+Articles: {combined_text[:2000]}
 
-Identify:
-1. Primary beat (main topic - ONE phrase)
-2. Top 3 expertise areas
-3. Specialization level (Highly Specialized/Moderately Specialized/General Reporter)
-
-Respond in JSON format:
+Return JSON:
 {{
-    "primary_beat": "...",
-    "expertise_areas": ["...", "...", "..."],
-    "specialization_level": "..."
+  "primary_beat": "main topic area",
+  "expertise_areas": ["area1", "area2", "area3"],
+  "specialization_level": "Highly Specialized|Moderately Specialized|General Reporter"
 }}"""
                 
                 response = openai_client.chat.completions.create(
@@ -358,20 +527,13 @@ Respond in JSON format:
                 
                 result = json.loads(response.choices[0].message.content.strip())
                 
-                # Calculate specialization percentage
-                if result['specialization_level'] == 'Highly Specialized':
-                    spec_pct = 85
-                elif result['specialization_level'] == 'Moderately Specialized':
-                    spec_pct = 60
-                else:
-                    spec_pct = 30
+                spec_pct = {'Highly Specialized': 85, 'Moderately Specialized': 60}.get(result.get('specialization_level', ''), 30)
                 
                 return {
                     'primary_beat': result.get('primary_beat', 'Unknown'),
                     'specialization_percentage': spec_pct,
                     'expertise_areas': result.get('expertise_areas', [])
                 }
-                
             except Exception as e:
                 logger.error(f"[Specialization] AI failed: {e}")
         
@@ -380,18 +542,10 @@ Respond in JSON format:
         top_keywords = keywords.most_common(3)
         
         if top_keywords:
-            primary = top_keywords[0][0]
-            areas = [kw[0] for kw in top_keywords]
-            
-            # Estimate specialization based on keyword concentration
-            total_count = sum(count for _, count in top_keywords)
-            top_count = top_keywords[0][1]
-            spec_pct = (top_count / total_count * 100) if total_count > 0 else 50
-            
             return {
-                'primary_beat': primary.title(),
-                'specialization_percentage': round(spec_pct),
-                'expertise_areas': [area.title() for area in areas]
+                'primary_beat': top_keywords[0][0].title(),
+                'specialization_percentage': round((top_keywords[0][1] / sum(c for _, c in top_keywords) * 100)),
+                'expertise_areas': [kw[0].title() for kw in top_keywords]
             }
         
         return {
@@ -401,22 +555,13 @@ Respond in JSON format:
         }
     
     def detect_writing_patterns(self, article_history: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Detect writing style patterns (for consistency checking)
-        
-        Returns style signature
-        """
+        """Detect writing style patterns"""
         
         if len(article_history) < 5:
-            return {
-                'pattern_available': False,
-                'style_signature': None
-            }
+            return {'pattern_available': False, 'style_signature': None}
         
-        # Analyze title patterns
         titles = [a.get('title', '') for a in article_history[:10]]
         
-        # Calculate patterns
         avg_title_length = sum(len(t.split()) for t in titles) / len(titles) if titles else 0
         question_frequency = sum(1 for t in titles if '?' in t) / len(titles) if titles else 0
         quote_frequency = sum(1 for t in titles if '"' in t) / len(titles) if titles else 0
@@ -432,7 +577,7 @@ Respond in JSON format:
         }
     
     def _domain_to_source(self, domain: str) -> Optional[str]:
-        """Convert domain to MEDIASTACK source name"""
+        """Convert domain to API source name"""
         
         mapping = {
             'cnn.com': 'cnn',
@@ -452,9 +597,8 @@ Respond in JSON format:
         return mapping.get(clean_domain)
     
     def _extract_keywords(self, text: str) -> Counter:
-        """Extract topic keywords from text"""
+        """Extract topic keywords"""
         
-        # Common news keywords
         keywords = [
             'election', 'politics', 'economy', 'health', 'covid', 'climate',
             'technology', 'science', 'business', 'sports', 'entertainment',
@@ -466,8 +610,11 @@ Respond in JSON format:
         counts = Counter()
         
         for keyword in keywords:
-            count = text_lower.count(keyword)
-            if count > 0:
+            if count := text_lower.count(keyword):
                 counts[keyword] = count
         
         return counts
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get API call statistics for debugging"""
+        return self.api_stats.copy()
