@@ -1,20 +1,14 @@
 """
-Author Track Record System - NEW
+Author Track Record System - WITH ENHANCED DEBUG LOGGING
 Date: October 5, 2025
-Version: 1.0
+Version: 1.1 - DEBUG EDITION
 
-PURPOSE:
-Build comprehensive author history analysis using MEDIASTACK_API
-Provides algorithmic insights users can't get from Google
+CHANGES FROM 1.0:
+- Added comprehensive debug logging to diagnose API failures
+- Shows exact API requests, responses, and filtering results
+- Logs key availability and API status codes
 
-FEATURES:
-- Article history retrieval
-- Publishing velocity calculation
-- Specialization detection
-- Co-author pattern analysis
-- Track record metrics
-
-Save as: backend/services/author_track_record.py (NEW FILE)
+Save as: backend/services/author_track_record.py (REPLACE existing)
 """
 
 import os
@@ -68,28 +62,42 @@ class AuthorTrackRecord:
         """
         
         logger.info(f"[TrackRecord] Getting history for '{author_name}' at {outlet_domain}")
+        logger.info(f"[TrackRecord] DEBUG: MEDIASTACK key available: {bool(self.mediastack_key)}")
+        logger.info(f"[TrackRecord] DEBUG: NEWS_API key available: {bool(self.news_api_key)}")
         
         articles = []
         
         # Try MEDIASTACK first
         if self.mediastack_key:
+            logger.info("[TrackRecord] DEBUG: Attempting MEDIASTACK query...")
             articles = self._query_mediastack(author_name, outlet_domain, limit)
             if articles:
                 logger.info(f"[TrackRecord] ✓ MEDIASTACK found {len(articles)} articles")
                 return articles
+            else:
+                logger.warning("[TrackRecord] DEBUG: MEDIASTACK returned empty list")
+        else:
+            logger.warning("[TrackRecord] DEBUG: No MEDIASTACK key - skipping")
         
         # Fallback to NEWS_API
         if self.news_api_key:
+            logger.info("[TrackRecord] DEBUG: Attempting NEWS_API query...")
             articles = self._query_newsapi(author_name, outlet_domain, limit)
             if articles:
                 logger.info(f"[TrackRecord] ✓ NEWS_API found {len(articles)} articles")
                 return articles
+            else:
+                logger.warning("[TrackRecord] DEBUG: NEWS_API returned empty list")
+        else:
+            logger.warning("[TrackRecord] DEBUG: No NEWS_API key - skipping")
         
-        logger.warning(f"[TrackRecord] No articles found for {author_name}")
+        logger.warning(f"[TrackRecord] ✗ No articles found for {author_name} (tried all sources)")
         return []
     
     def _query_mediastack(self, author: str, domain: str, limit: int) -> List[Dict[str, Any]]:
         """Query MEDIASTACK_API for author articles"""
+        
+        logger.info(f"[MEDIASTACK] Starting query for author='{author}', domain='{domain}'")
         
         try:
             # MEDIASTACK endpoint
@@ -110,19 +118,26 @@ class AuthorTrackRecord:
                 'languages': 'en'
             }
             
-            logger.info(f"[MEDIASTACK] Query: {query}, Source: {source}")
+            logger.info(f"[MEDIASTACK] Request URL: {url}")
+            logger.info(f"[MEDIASTACK] Query params: keywords={query}, sources={source}")
             
             response = self.session.get(url, params=params, timeout=15)
+            
+            logger.info(f"[MEDIASTACK] Response status: {response.status_code}")
             
             if response.status_code == 200:
                 data = response.json()
                 
+                logger.info(f"[MEDIASTACK] Response data keys: {list(data.keys())}")
+                logger.info(f"[MEDIASTACK] Total results in response: {len(data.get('data', []))}")
+                
                 articles = []
                 for item in data.get('data', []):
                     # Verify author name is in the article
-                    if author.lower() in str(item.get('author', '')).lower() or \
-                       author.lower() in str(item.get('description', '')).lower():
-                        
+                    item_author = str(item.get('author', '')).lower()
+                    item_desc = str(item.get('description', '')).lower()
+                    
+                    if author.lower() in item_author or author.lower() in item_desc:
                         articles.append({
                             'title': item.get('title', ''),
                             'url': item.get('url', ''),
@@ -132,17 +147,21 @@ class AuthorTrackRecord:
                             'description': item.get('description', '')[:200]
                         })
                 
+                logger.info(f"[MEDIASTACK] Filtered to {len(articles)} articles matching author")
                 return articles
             else:
-                logger.error(f"[MEDIASTACK] Error {response.status_code}: {response.text}")
+                error_text = response.text[:200]
+                logger.error(f"[MEDIASTACK] Error {response.status_code}: {error_text}")
                 return []
                 
         except Exception as e:
-            logger.error(f"[MEDIASTACK] Exception: {e}")
+            logger.error(f"[MEDIASTACK] Exception: {e}", exc_info=True)
             return []
     
     def _query_newsapi(self, author: str, domain: str, limit: int) -> List[Dict[str, Any]]:
         """Fallback to NEWS_API"""
+        
+        logger.info(f"[NEWS_API] Starting query for author='{author}', domain='{domain}'")
         
         try:
             url = "https://newsapi.org/v2/everything"
@@ -155,15 +174,25 @@ class AuthorTrackRecord:
                 'sortBy': 'publishedAt'
             }
             
+            logger.info(f"[NEWS_API] Request URL: {url}")
+            logger.info(f"[NEWS_API] Query params: q={params['q']}, domains={domain}")
+            
             response = self.session.get(url, params=params, timeout=15)
+            
+            logger.info(f"[NEWS_API] Response status: {response.status_code}")
             
             if response.status_code == 200:
                 data = response.json()
                 
+                logger.info(f"[NEWS_API] Response keys: {list(data.keys())}")
+                logger.info(f"[NEWS_API] Total results: {data.get('totalResults', 0)}")
+                logger.info(f"[NEWS_API] Articles in response: {len(data.get('articles', []))}")
+                
                 articles = []
                 for item in data.get('articles', []):
                     # Verify author
-                    if author.lower() in str(item.get('author', '')).lower():
+                    item_author = str(item.get('author', '')).lower()
+                    if author.lower() in item_author:
                         articles.append({
                             'title': item.get('title', ''),
                             'url': item.get('url', ''),
@@ -173,13 +202,15 @@ class AuthorTrackRecord:
                             'description': item.get('description', '')[:200]
                         })
                 
+                logger.info(f"[NEWS_API] Filtered to {len(articles)} articles matching author")
                 return articles
             else:
-                logger.error(f"[NEWS_API] Error {response.status_code}")
+                error_text = response.text[:200]
+                logger.error(f"[NEWS_API] Error {response.status_code}: {error_text}")
                 return []
                 
         except Exception as e:
-            logger.error(f"[NEWS_API] Exception: {e}")
+            logger.error(f"[NEWS_API] Exception: {e}", exc_info=True)
             return []
     
     def calculate_author_metrics(self, article_history: List[Dict[str, Any]]) -> Dict[str, Any]:
