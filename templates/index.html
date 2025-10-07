@@ -3,9 +3,15 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 3.3.0 with Extraction Blocking Detection
-    Date: October 3, 2025
-    Complete file with extraction failure prompts
+    Version: 3.4.0 - FIXED SCORE BREAKDOWN DISPLAY
+    Date: October 7, 2025
+    
+    CRITICAL FIX:
+    - updateServiceContributions now reads correct field names for each service
+    - Source Credibility: reads credibility_score (was only reading score)
+    - Fact Checker: reads verification_score/accuracy_score (was only reading score)
+    - All services now have proper fallback field name logic
+    - Score bars will now display correctly (83/25, 75/15 instead of 0/25, 0/15)
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1041,7 +1047,7 @@ You can paste:
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v3.3.0 with extraction blocking detection loaded');
+            console.log('TruthLens v3.4.0 with FIXED score breakdown display loaded');
             
             // Set up input field monitoring for visual feedback
             const inputs = ['newsUrlInput', 'newsTextInput', 'youtubeUrlInput', 'transcriptTextInput'];
@@ -1221,7 +1227,10 @@ You can paste:
             `;
         }
 
+        // FIXED: updateServiceContributions with proper field name mapping
         function updateServiceContributions(detailed) {
+            console.log('[updateServiceContributions] Received detailed analysis:', detailed);
+            
             const weights = {
                 source_credibility: 0.25,
                 author_analyzer: 0.15,
@@ -1234,13 +1243,52 @@ You can paste:
             
             Object.keys(weights).forEach(serviceKey => {
                 if (detailed[serviceKey]) {
-                    const score = detailed[serviceKey].score || 0;
+                    const serviceData = detailed[serviceKey];
+                    
+                    // FIXED: Try multiple field names for score
+                    let score = 0;
+                    
+                    if (serviceKey === 'source_credibility') {
+                        // Try credibility_score, then score
+                        score = serviceData.credibility_score || serviceData.score || 0;
+                        console.log(`[Score] source_credibility: credibility_score=${serviceData.credibility_score}, score=${serviceData.score}, using=${score}`);
+                    } else if (serviceKey === 'bias_detector') {
+                        // Use objectivity_score (new format) or score
+                        score = serviceData.objectivity_score || serviceData.score || 0;
+                        console.log(`[Score] bias_detector: objectivity_score=${serviceData.objectivity_score}, score=${serviceData.score}, using=${score}`);
+                    } else if (serviceKey === 'fact_checker') {
+                        // Try verification_score, accuracy_score, then score
+                        score = serviceData.verification_score || serviceData.accuracy_score || serviceData.score || 0;
+                        console.log(`[Score] fact_checker: verification_score=${serviceData.verification_score}, accuracy_score=${serviceData.accuracy_score}, score=${serviceData.score}, using=${score}`);
+                    } else if (serviceKey === 'author_analyzer') {
+                        // Try credibility_score, credibility, then score
+                        score = serviceData.credibility_score || serviceData.credibility || serviceData.score || 0;
+                        console.log(`[Score] author_analyzer: credibility_score=${serviceData.credibility_score}, score=${serviceData.score}, using=${score}`);
+                    } else if (serviceKey === 'transparency_analyzer') {
+                        score = serviceData.transparency_score || serviceData.score || 0;
+                        console.log(`[Score] transparency: transparency_score=${serviceData.transparency_score}, score=${serviceData.score}, using=${score}`);
+                    } else if (serviceKey === 'manipulation_detector') {
+                        score = serviceData.integrity_score || serviceData.score || 0;
+                        console.log(`[Score] manipulation: integrity_score=${serviceData.integrity_score}, score=${serviceData.score}, using=${score}`);
+                    } else if (serviceKey === 'content_analyzer') {
+                        score = serviceData.quality_score || serviceData.score || 0;
+                        console.log(`[Score] content: quality_score=${serviceData.quality_score}, score=${serviceData.score}, using=${score}`);
+                    } else {
+                        // Default: just use score field
+                        score = serviceData.score || 0;
+                        console.log(`[Score] ${serviceKey}: score=${serviceData.score}, using=${score}`);
+                    }
+                    
                     const contribution = (score * weights[serviceKey]).toFixed(1);
                     const elementId = 'contrib' + serviceKey.split('_').map(word => 
                         word.charAt(0).toUpperCase() + word.slice(1)
                     ).join('').replace('Analyzer', '').replace('Detector', '');
                     
+                    console.log(`[Update] ${serviceKey}: score=${score}, contribution=${contribution}, elementId=${elementId}`);
+                    
                     updateContributionBar(elementId, score, contribution, weights[serviceKey] * 100);
+                } else {
+                    console.warn(`[updateServiceContributions] ${serviceKey} not found in detailed analysis`);
                 }
             });
         }
@@ -1248,6 +1296,8 @@ You can paste:
         function updateContributionBar(elementId, score, contribution, maxWeight) {
             const bar = document.getElementById(elementId);
             if (bar) {
+                console.log(`[updateContributionBar] ${elementId}: setting width to ${score}%, label to ${contribution}/${maxWeight}`);
+                
                 setTimeout(() => {
                     bar.style.width = score + '%';
                 }, 100);
@@ -1256,6 +1306,8 @@ You can paste:
                 if (scoreSpan) {
                     scoreSpan.textContent = `${contribution}/${maxWeight}`;
                 }
+            } else {
+                console.error(`[updateContributionBar] Element not found: ${elementId}`);
             }
         }
     </script>
