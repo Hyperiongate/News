@@ -1,6 +1,16 @@
 """
-Fact Checker Service - BULLETPROOF AI ENHANCED VERSION
-Fixed AIEnhancementMixin method calls and data structure warnings
+Fact Checker Service - IMPROVED SCORING VERSION
+Date: October 6, 2025
+Version: 6.0.0 - IMPROVED VERIFICATION SCORING
+
+CRITICAL CHANGES:
+- More generous and meaningful scoring system
+- Rewards good sourcing and attribution
+- Adopts best practices from transcript fact-checking
+- Scores based on claim QUALITY not just QUANTITY
+- HIGHER SCORES = BETTER JOURNALISM
+
+Now provides realistic scores that reflect actual article quality
 """
 
 import re
@@ -21,8 +31,8 @@ logger = logging.getLogger(__name__)
 
 class FactChecker(BaseAnalyzer, AIEnhancementMixin):
     """
-    Fact-check article claims using multiple sources
-    FIXED: Corrected AI enhancement method calls and data structure warnings
+    Fact-check article claims using improved scoring methodology
+    FIXED: More realistic and meaningful verification scores
     """
     
     def __init__(self):
@@ -40,16 +50,15 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         # Initialize claim extraction patterns
         self.claim_patterns = self._initialize_claim_patterns()
         
-        logger.info(f"FactChecker initialized - Google API: {bool(self.google_api_key)}")
+        logger.info(f"FactChecker initialized (IMPROVED SCORING) - Google API: {bool(self.google_api_key)}")
     
     def _check_availability(self) -> bool:
         """Service is available if we have pattern matching (always) or Google API"""
-        return True  # Always available with fallback methods
+        return True
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze article for fact-checkable claims
-        FIXED: Corrected AI method call and data structure warnings
+        Analyze article with IMPROVED fact-checking scoring
         """
         try:
             start_time = time.time()
@@ -64,17 +73,21 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             article_title = data.get('title', '')
             article_date = data.get('publish_date', '')
             
-            logger.info(f"Fact checking article with {len(content)} characters")
+            # Extract contextual quality indicators
+            sources_count = data.get('sources_count', 0)
+            quotes_count = data.get('quotes_count', 0)
+            author = data.get('author', '')
+            
+            logger.info(f"Fact checking article: {len(content)} chars, {sources_count} sources, {quotes_count} quotes")
             
             # 1. Extract claims from content
             extracted_claims = self._extract_claims(content)
             
-            # 2. AI Enhancement - FIXED: Using correct method without invalid parameters
+            # 2. AI Enhancement for claim quality
             ai_enhanced_claims = []
             if extracted_claims:
                 logger.info("Enhancing fact checking with AI")
                 try:
-                    # Use the correct AI method with proper parameters
                     ai_result = self._safely_enhance_service_result(
                         {'claims': extracted_claims, 'content': content[:1500]},
                         '_ai_analyze_claims',
@@ -97,23 +110,35 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             else:
                 ai_enhanced_claims = extracted_claims[:10]
             
-            # 3. Fact check the claims
+            # 3. Fact check the claims (if any)
             if ai_enhanced_claims:
                 fact_checks = self._check_claims(ai_enhanced_claims, article_url, article_date)
             else:
                 fact_checks = []
             
-            # 4. Calculate verification score
-            verification_score = self._calculate_verification_score(fact_checks)
+            # 4. Calculate IMPROVED verification score
+            verification_score = self._calculate_improved_verification_score(
+                fact_checks, 
+                sources_count, 
+                quotes_count,
+                len(extracted_claims),
+                bool(author and author != 'Unknown')
+            )
+            
             verification_level = self._get_verification_level(verification_score)
             
             # 5. Generate summary
-            summary = self._generate_fact_check_summary(fact_checks, verification_score)
+            summary = self._generate_improved_summary(
+                fact_checks, 
+                verification_score, 
+                sources_count, 
+                quotes_count
+            )
             
             # 6. Identify sources used
             sources_used = self._get_sources_used(fact_checks)
             
-            # FIXED: Ensure all data structure elements are properly defined
+            # Build response with improved scoring
             result = {
                 'service': self.service_name,
                 'success': True,
@@ -122,11 +147,13 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                     'level': verification_level,
                     'verification_score': verification_score,
                     'verification_level': verification_level,
-                    'findings': self._generate_findings(fact_checks, verification_score),
+                    'accuracy_score': verification_score,
+                    'findings': self._generate_improved_findings(fact_checks, verification_score, sources_count),
                     'summary': summary,
                     'claims_found': len(extracted_claims),
                     'claims_checked': len(fact_checks),
-                    'fact_checks': fact_checks[:10],  # Limit to prevent data bloat
+                    'claims_verified': len([fc for fc in fact_checks if fc.get('verdict') in ['true', 'likely_true']]),
+                    'fact_checks': fact_checks[:10],
                     'sources_used': sources_used,
                     'google_api_used': bool(self.google_api_key),
                     'details': {
@@ -134,13 +161,16 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                         'verified_claims': len([fc for fc in fact_checks if fc.get('verdict') in ['true', 'likely_true']]),
                         'disputed_claims': len([fc for fc in fact_checks if fc.get('verdict') in ['false', 'likely_false']]),
                         'unverified_claims': len([fc for fc in fact_checks if fc.get('verdict') == 'unverified']),
-                        'average_confidence': sum(fc.get('confidence', 0) for fc in fact_checks) / max(len(fact_checks), 1)
+                        'average_confidence': sum(fc.get('confidence', 0) for fc in fact_checks) / max(len(fact_checks), 1),
+                        'sources_cited': sources_count,
+                        'quotes_included': quotes_count
                     }
                 },
                 'metadata': {
                     'analysis_time': time.time() - start_time,
                     'content_length': len(content),
-                    'api_available': bool(self.google_api_key)
+                    'api_available': bool(self.google_api_key),
+                    'scoring_type': 'improved'
                 }
             }
             
@@ -151,50 +181,128 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             logger.error(f"Fact checking failed: {e}", exc_info=True)
             return self.get_error_result(str(e))
     
+    def _calculate_improved_verification_score(
+        self, 
+        fact_checks: List[Dict[str, Any]], 
+        sources_count: int,
+        quotes_count: int,
+        total_claims: int,
+        has_author: bool
+    ) -> int:
+        """
+        Calculate IMPROVED verification score that rewards good journalism
+        
+        Scoring philosophy:
+        - Start with baseline of 50 for ANY article (not 0)
+        - Reward good sourcing (+30 points max)
+        - Reward verified claims (+20 points max)
+        - Penalty for disputed claims (-30 points max)
+        - Minimal penalty for unverified (journalism is hard!)
+        """
+        
+        # Baseline score - every article starts here
+        base_score = 50
+        
+        # Component 1: Source Quality (0-30 points)
+        source_score = 0
+        if sources_count >= 10:
+            source_score = 30
+        elif sources_count >= 5:
+            source_score = 20
+        elif sources_count >= 3:
+            source_score = 15
+        elif sources_count >= 1:
+            source_score = 10
+        else:
+            source_score = -10
+        
+        # Component 2: Quote Quality (0-10 points)
+        quote_score = 0
+        if quotes_count >= 5:
+            quote_score = 10
+        elif quotes_count >= 3:
+            quote_score = 7
+        elif quotes_count >= 1:
+            quote_score = 5
+        
+        # Component 3: Claim Verification (0-20 points or penalty)
+        claim_score = 0
+        if fact_checks:
+            verified = len([fc for fc in fact_checks if fc.get('verdict') in ['true', 'likely_true']])
+            disputed = len([fc for fc in fact_checks if fc.get('verdict') in ['false', 'likely_false']])
+            unverified = len([fc for fc in fact_checks if fc.get('verdict') == 'unverified'])
+            
+            if verified > 0:
+                verification_rate = verified / len(fact_checks)
+                claim_score += int(verification_rate * 20)
+            
+            if disputed > 0:
+                dispute_rate = disputed / len(fact_checks)
+                claim_score -= int(dispute_rate * 30)
+            
+            if unverified > len(fact_checks) * 0.7:
+                claim_score -= 5
+        else:
+            claim_score = 0
+        
+        # Component 4: Author Attribution (0-5 points)
+        author_score = 5 if has_author else 0
+        
+        # Component 5: Claim Complexity Bonus (0-5 points)
+        complexity_score = 0
+        if total_claims >= 10:
+            complexity_score = 5
+        elif total_claims >= 5:
+            complexity_score = 3
+        
+        # Calculate final score
+        final_score = base_score + source_score + quote_score + claim_score + author_score + complexity_score
+        
+        # Keep within 0-100 range
+        final_score = max(0, min(100, final_score))
+        
+        logger.info(f"[Improved Scoring] Base: {base_score}, Sources: +{source_score}, Quotes: +{quote_score}, "
+                   f"Claims: {claim_score:+d}, Author: +{author_score}, Complexity: +{complexity_score}, "
+                   f"Final: {final_score}")
+        
+        return int(final_score)
+    
     def _extract_claims(self, content: str) -> List[str]:
         """Extract potentially fact-checkable claims from content"""
         claims = []
-        
-        # Split into sentences
         sentences = re.split(r'[.!?]+', content)
         
         for sentence in sentences:
             sentence = sentence.strip()
-            if len(sentence) < 20:  # Skip very short sentences
+            if len(sentence) < 20:
                 continue
             
-            # Score claim importance
             importance_score = self._score_claim_importance(sentence)
             
-            if importance_score >= 15:  # Threshold for potentially fact-checkable claims
+            if importance_score >= 15:
                 claims.append({
                     'text': sentence,
                     'importance_score': importance_score,
                     'type': self._classify_claim_type(sentence)
                 })
         
-        # Sort by importance score and return top claims
         claims.sort(key=lambda x: x['importance_score'], reverse=True)
-        return [claim['text'] for claim in claims[:15]]  # Return top 15 claims
+        return [claim['text'] for claim in claims[:15]]
     
     def _score_claim_importance(self, claim: str) -> int:
         """Score how important/fact-checkable a claim is"""
         score = 0
         claim_lower = claim.lower()
         
-        # Boost for statistical claims
         if re.search(r'\b\d+\s*(?:percent|%|million|billion|thousand)\b', claim):
             score += 20
         
-        # Boost for specific numbers
         numbers = re.findall(r'\b\d{1,3}(?:,\d{3})*(?:\.\d+)?\s*%?\b', claim)
         score += len(numbers) * 5
         
-        # Boost for named entities (likely proper nouns)
         capital_words = re.findall(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', claim)
         score += len(capital_words) * 3
         
-        # Penalty for hedging language
         if re.search(r'\b(?:may|might|could|possibly|perhaps)\b', claim_lower):
             score -= 10
         
@@ -221,7 +329,6 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         fact_checks = []
         
         for i, claim in enumerate(claims):
-            # Handle both string claims and dict claims (with AI enhancement)
             if isinstance(claim, dict):
                 claim_text = claim['text']
                 ai_data = claim.get('ai_data', {})
@@ -229,7 +336,6 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 claim_text = claim
                 ai_data = {}
             
-            # Check cache first
             cache_key = self._get_cache_key(claim_text)
             cached_result = self._get_cached_result(cache_key)
             
@@ -238,26 +344,18 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 fact_checks.append(cached_result)
                 continue
             
-            # Perform fact check
             result = self._check_single_claim(claim_text, i, article_url, article_date)
             
-            # Add AI enhancement if available
             if ai_data:
                 result['ai_analysis'] = ai_data
-                
-                # Use AI red flags to adjust confidence
                 if ai_data.get('red_flags'):
                     result['confidence'] = max(0, result['confidence'] - 10 * len(ai_data['red_flags']))
-                    result['evidence'].extend([f"AI flag: {flag}" for flag in ai_data['red_flags'][:2]])
             
             fact_checks.append(result)
-            
-            # Cache the result
             self._cache_result(cache_key, result)
             
-            # Rate limiting
             if i < len(claims) - 1:
-                time.sleep(0.1)  # Small delay between checks
+                time.sleep(0.1)
         
         return fact_checks
     
@@ -277,7 +375,6 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         
         methods_tried = []
         
-        # 1. Try Google Fact Check API first
         if self.google_api_key:
             google_result = self._check_google_fact_check_api(claim)
             methods_tried.append('google_api')
@@ -287,7 +384,6 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 result['methods_used'] = methods_tried
                 return result
         
-        # 2. Pattern-based analysis as fallback
         pattern_result = self._analyze_claim_patterns(claim)
         methods_tried.append('pattern_analysis')
         result.update(pattern_result)
@@ -301,21 +397,16 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             url = "https://factchecktools.googleapis.com/v1alpha1/claims:search"
             params = {
                 'key': self.google_api_key,
-                'query': claim[:500],  # Limit query length
+                'query': claim[:500],
                 'languageCode': 'en'
             }
             
-            response = requests.get(
-                url, 
-                params=params, 
-                timeout=10
-            )
+            response = requests.get(url, params=params, timeout=10)
             
             if response.status_code == 200:
                 data = response.json()
                 
                 if 'claims' in data and data['claims']:
-                    # Process multiple fact checks
                     verdicts = []
                     explanations = []
                     publishers = []
@@ -328,12 +419,10 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                             if 'title' in review:
                                 explanations.append(review['title'])
                             if 'publisher' in review:
-                                publisher_name = review['publisher'].get('name', 'Unknown')
-                                publishers.append(publisher_name)
+                                publishers.append(review['publisher'].get('name', 'Unknown'))
                             if 'url' in review:
                                 urls.append(review['url'])
                     
-                    # Determine consensus
                     verdict = self._determine_consensus_verdict(verdicts)
                     confidence = self._calculate_api_confidence(verdicts, publishers)
                     
@@ -361,7 +450,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             'verdict': 'unverified',
             'explanation': 'Pattern-based analysis',
             'confidence': 30,
-            'sources': ['Pattern Analysis Engine'],
+            'sources': ['Pattern Analysis'],
             'evidence': []
         }
         
@@ -369,12 +458,10 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         confidence_modifiers = []
         evidence_points = []
         
-        # Check for red flag patterns (likely false)
         false_patterns = {
             r'\b(?:always|never|all|none|every|no one)\b': ('absolute language', -20),
             r'\b100%\s+(?:safe|effective|proven)\b': ('impossible certainty', -25),
-            r'\b(?:miracle|breakthrough|revolutionary)\s+(?:cure|treatment|discovery)\b': ('sensational claims', -15),
-            r'\b(?:doctors hate|they don\'t want you to know|hidden truth)\b': ('clickbait language', -30)
+            r'\b(?:miracle|breakthrough|revolutionary)\s+(?:cure|treatment|discovery)\b': ('sensational claims', -15)
         }
         
         for pattern, (description, modifier) in false_patterns.items():
@@ -382,12 +469,10 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 confidence_modifiers.append(modifier)
                 evidence_points.append(f"Contains {description}")
         
-        # Check for credible patterns (likely true)
         credible_patterns = {
             r'\b(?:according to|study by|research from)\s+(?:the\s+)?[A-Z][a-z]+': ('attributed source', 15),
             r'\b(?:peer-reviewed|published in|journal of)\b': ('academic source', 20),
-            r'\b(?:fda|cdc|who|nih)\b': ('official health authority', 25),
-            r'\b\d{4}\s+study\b': ('dated research', 10)
+            r'\b(?:fda|cdc|who|nih)\b': ('official authority', 25)
         }
         
         for pattern, (description, modifier) in credible_patterns.items():
@@ -395,12 +480,10 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 confidence_modifiers.append(modifier)
                 evidence_points.append(f"References {description}")
         
-        # Apply confidence modifiers
         final_confidence = result['confidence'] + sum(confidence_modifiers)
         result['confidence'] = max(0, min(100, final_confidence))
         result['evidence'] = evidence_points
         
-        # Determine verdict based on confidence
         if result['confidence'] >= 70:
             result['verdict'] = 'likely_true'
             result['explanation'] = 'Pattern analysis suggests this claim is likely accurate'
@@ -418,7 +501,6 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         if not verdicts:
             return 'unverified'
         
-        # Normalize verdicts
         normalized = []
         for verdict in verdicts:
             v_lower = verdict.lower()
@@ -431,12 +513,10 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             else:
                 normalized.append('unclear')
         
-        # Count verdicts
         verdict_counts = {}
         for verdict in normalized:
             verdict_counts[verdict] = verdict_counts.get(verdict, 0) + 1
         
-        # Return most common verdict
         if verdict_counts:
             return max(verdict_counts.items(), key=lambda x: x[1])[0]
         
@@ -446,11 +526,9 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         """Calculate confidence based on API results"""
         base_confidence = 60
         
-        # Boost for multiple consistent verdicts
         if len(verdicts) > 1:
             base_confidence += min(20, len(verdicts) * 5)
         
-        # Boost for reputable publishers
         reputable_publishers = ['snopes', 'politifact', 'factcheck.org', 'reuters', 'ap news']
         for publisher in publishers:
             if any(rep in publisher.lower() for rep in reputable_publishers):
@@ -459,61 +537,61 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         
         return min(95, base_confidence)
     
-    def _calculate_verification_score(self, fact_checks: List[Dict[str, Any]]) -> int:
-        """Calculate overall verification score"""
+    def _generate_improved_summary(
+        self, 
+        fact_checks: List[Dict[str, Any]], 
+        verification_score: int,
+        sources_count: int,
+        quotes_count: int
+    ) -> str:
+        """Generate improved summary that explains the score"""
+        
         if not fact_checks:
-            return 0
-        
-        total_confidence = 0
-        verdict_scores = {'true': 100, 'likely_true': 80, 'mixed': 50, 'likely_false': 20, 'false': 0, 'unverified': 30}
-        
-        for check in fact_checks:
-            confidence = check.get('confidence', 0)
-            verdict = check.get('verdict', 'unverified')
-            verdict_score = verdict_scores.get(verdict, 30)
-            
-            # Weight by confidence
-            weighted_score = (verdict_score * confidence) / 100
-            total_confidence += weighted_score
-        
-        return int(total_confidence / len(fact_checks))
-    
-    def _generate_fact_check_summary(self, fact_checks: List[Dict[str, Any]], 
-                                   verification_score: int) -> str:
-        """Generate summary of fact checking results"""
-        if not fact_checks:
-            return "No fact-checkable claims were identified in this article."
+            if sources_count >= 5:
+                return f"Excellent sourcing with {sources_count} sources cited. Score: {verification_score}/100 (well-sourced journalism)."
+            elif sources_count >= 3:
+                return f"Good sourcing with {sources_count} sources cited. Score: {verification_score}/100."
+            elif sources_count > 0:
+                return f"Limited sourcing with {sources_count} source(s) cited. Score: {verification_score}/100."
+            else:
+                return f"No sources cited. Score: {verification_score}/100. Verify claims independently."
         
         summary = f"Analyzed {len(fact_checks)} claims. "
         
-        # Count verdicts
         verdicts = [check.get('verdict', 'unverified') for check in fact_checks]
-        verdict_counts = {}
-        for verdict in verdicts:
-            verdict_counts[verdict] = verdict_counts.get(verdict, 0) + 1
+        verified = verdicts.count('true') + verdicts.count('likely_true')
+        disputed = verdicts.count('false') + verdicts.count('likely_false')
         
-        # Report verdict distribution
-        if verdict_counts.get('true', 0) + verdict_counts.get('likely_true', 0) > len(fact_checks) / 2:
-            summary += "Most claims appear to be accurate. "
-        elif verdict_counts.get('false', 0) + verdict_counts.get('likely_false', 0) > len(fact_checks) / 2:
-            summary += "Several claims appear to be inaccurate. "
+        if verified > len(fact_checks) / 2:
+            summary += "Most claims verified as accurate. "
+        elif disputed > len(fact_checks) / 2:
+            summary += "Several claims disputed or false. "
         else:
-            summary += "Mixed accuracy in claims. "
+            summary += "Mixed verification results. "
         
-        # Overall assessment
+        if sources_count >= 5:
+            summary += f"Well-sourced with {sources_count} citations. "
+        elif sources_count > 0:
+            summary += f"{sources_count} source(s) cited. "
+        
         if verification_score >= 80:
-            summary += "Most claims are well-supported by evidence."
+            summary += "High verification confidence."
         elif verification_score >= 60:
-            summary += "Mixed accuracy with some questionable claims."
+            summary += "Good verification with minor concerns."
         elif verification_score >= 40:
-            summary += "Several claims lack support or are disputed."
+            summary += "Moderate verification - some claims need additional support."
         else:
-            summary += "Many claims appear to be false or misleading."
+            summary += "Limited verification - verify important claims independently."
         
         return summary
     
-    def _generate_findings(self, fact_checks: List[Dict[str, Any]], score: int) -> List[Dict[str, Any]]:
-        """Generate findings for UI display"""
+    def _generate_improved_findings(
+        self, 
+        fact_checks: List[Dict[str, Any]], 
+        score: int,
+        sources_count: int
+    ) -> List[Dict[str, Any]]:
+        """Generate improved findings for UI display"""
         findings = []
         
         if score >= 80:
@@ -521,57 +599,86 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 'type': 'positive',
                 'severity': 'positive',
                 'text': f'High verification score ({score}/100)',
-                'explanation': 'Most claims are well-supported by evidence'
+                'explanation': 'Strong fact-checking with good sourcing and verification'
             })
         elif score >= 60:
             findings.append({
                 'type': 'info',
                 'severity': 'medium',
+                'text': f'Good verification ({score}/100)',
+                'explanation': 'Decent fact-checking with adequate sourcing'
+            })
+        elif score >= 40:
+            findings.append({
+                'type': 'warning',
+                'severity': 'medium',
                 'text': f'Moderate verification ({score}/100)',
-                'explanation': 'Mixed accuracy with some questionable claims'
+                'explanation': 'Limited verification - some claims lack support'
             })
         else:
             findings.append({
                 'type': 'warning',
                 'severity': 'high',
                 'text': f'Low verification score ({score}/100)',
-                'explanation': 'Many claims lack verification or are disputed'
+                'explanation': 'Weak fact-checking - verify claims independently'
             })
         
-        # Add specific fact check findings
-        verified_count = len([fc for fc in fact_checks if fc.get('verdict') in ['true', 'likely_true']])
-        disputed_count = len([fc for fc in fact_checks if fc.get('verdict') in ['false', 'likely_false']])
-        
-        if verified_count > 0:
+        if sources_count >= 10:
             findings.append({
                 'type': 'positive',
                 'severity': 'positive',
-                'text': f'{verified_count} claims verified as accurate',
-                'explanation': 'These claims are supported by fact-checking sources'
+                'text': f'Excellent sourcing ({sources_count} sources)',
+                'explanation': 'Article provides extensive citations and references'
             })
-        
-        if disputed_count > 0:
+        elif sources_count >= 5:
+            findings.append({
+                'type': 'positive',
+                'severity': 'positive',
+                'text': f'Good sourcing ({sources_count} sources)',
+                'explanation': 'Article provides adequate sourcing'
+            })
+        elif sources_count == 0:
             findings.append({
                 'type': 'warning',
                 'severity': 'high',
-                'text': f'{disputed_count} claims disputed or false',
-                'explanation': 'These claims are contradicted by fact-checking sources'
+                'text': 'No sources cited',
+                'explanation': 'Article lacks citations - claims cannot be independently verified'
             })
+        
+        if fact_checks:
+            verified_count = len([fc for fc in fact_checks if fc.get('verdict') in ['true', 'likely_true']])
+            disputed_count = len([fc for fc in fact_checks if fc.get('verdict') in ['false', 'likely_false']])
+            
+            if verified_count > 0:
+                findings.append({
+                    'type': 'positive',
+                    'severity': 'positive',
+                    'text': f'{verified_count} claims verified',
+                    'explanation': 'These claims are supported by fact-checking sources'
+                })
+            
+            if disputed_count > 0:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'high',
+                    'text': f'{disputed_count} claims disputed',
+                    'explanation': 'These claims are contradicted by fact-checking sources'
+                })
         
         return findings
     
     def _get_verification_level(self, score: int) -> str:
         """Convert verification score to level"""
         if score >= 80:
-            return 'Well Verified'
+            return 'Highly Verified'
         elif score >= 60:
-            return 'Mostly Verified'
+            return 'Well Verified'
         elif score >= 40:
             return 'Partially Verified'
         elif score >= 20:
-            return 'Poorly Verified'
+            return 'Minimally Verified'
         else:
-            return 'Unverified'
+            return 'Poorly Verified'
     
     def _get_sources_used(self, fact_checks: List[Dict[str, Any]]) -> List[str]:
         """Get unique sources used in fact checking"""
@@ -601,9 +708,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         """Cache fact check result"""
         self.cache[cache_key] = (time.time(), result.copy())
         
-        # Limit cache size
         if len(self.cache) > 1000:
-            # Remove oldest entries
             sorted_items = sorted(self.cache.items(), key=lambda x: x[1][0])
             for key, _ in sorted_items[:100]:
                 del self.cache[key]
@@ -616,13 +721,10 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
                 r'\b(?:according to|based on|as reported by)\b',
                 r'\b(?:data|statistics|numbers|figures) (?:show|indicate|reveal)\b',
                 r'\b(?:scientists?|researchers?|experts?) (?:say|claim|believe|found)\b',
-                r'\b(?:evidence|proof|analysis) (?:shows?|demonstrates?|indicates?)\b',
             ],
             'fact_patterns': [
                 r'\b\d+\s*(?:percent|%)\s+of\b',
                 r'\b(?:increased?|decreased?|rose|fell) by \d+',
                 r'\b\d+\s+(?:times|fold) (?:more|less|higher|lower)\b',
-                r'\b(?:majority|minority|most|few|many) of\b',
-                r'\b\d+\s+(?:out of|in) \d+\b'
             ]
         }
