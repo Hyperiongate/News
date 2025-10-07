@@ -1,13 +1,23 @@
 """
-Data Transformer - UPDATED FOR OBJECTIVITY SCORING
-Date: October 6, 2025
-Version: 2.2
+Data Transformer - FIXED TO UNWRAP SERVICE DATA
+Date: October 7, 2025
+Version: 2.3
 
-CHANGES IN THIS VERSION:
-- Added objectivity score transformation for bias_detector
-- Handles both old "bias_score" and new "objectivity_score"
-- Ensures frontend gets OBJECTIVITY score (higher is better)
-- All existing functionality preserved
+CRITICAL FIX IN THIS VERSION:
+- Services return data wrapped: {success: True, data: {score: 69, ...}}
+- DataTransformer was looking at top level, missing the 'data' wrapper
+- NOW PROPERLY UNWRAPS the 'data' field before transformation
+- This fixes the bug where scores show as 0 in frontend
+
+THE BUG:
+  raw_service_data = {success: True, data: {score: 69, objectivity_score: 95, ...}}
+  result['score'] = raw_service_data.get('score', 50)  # Returns 50 (not found!)
+  
+THE FIX:
+  raw_service_data = raw_services.get(service_name, {})
+  if 'data' in raw_service_data:
+      raw_service_data = raw_service_data['data']  # Unwrap!
+  result['score'] = raw_service_data.get('score', 69)  # Now returns 69!
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -84,6 +94,14 @@ class DataTransformer:
             'readership': 'International',
             'awards': 'Multiple Pulitzer Prizes',
             'default_score': 94
+        },
+        'Fox News': {
+            'founded': 1996,
+            'type': 'Cable News',
+            'ownership': 'Fox Corporation',
+            'readership': 'National',
+            'awards': 'Various broadcasting awards',
+            'default_score': 65
         }
     }
     
@@ -99,6 +117,7 @@ class DataTransformer:
             Transformed data matching DataContract exactly
         """
         logger.info("[DataTransformer] Starting transformation")
+        logger.info(f"[DataTransformer] Raw data keys: {list(raw_data.keys())}")
         
         # Start with the contract template
         response = DataContract.get_response_template()
@@ -121,9 +140,24 @@ class DataTransformer:
         
         # Transform each service's data
         raw_services = raw_data.get('detailed_analysis', {})
+        logger.info(f"[DataTransformer] Raw services: {list(raw_services.keys())}")
         
         for service_name in response['detailed_analysis']:
             raw_service_data = raw_services.get(service_name, {})
+            
+            # CRITICAL FIX: Unwrap 'data' field if present
+            # Services return: {success: True, data: {score: 69, ...}}
+            # We need to extract the 'data' part
+            if isinstance(raw_service_data, dict) and 'data' in raw_service_data:
+                logger.info(f"[DataTransformer] Unwrapping 'data' field for {service_name}")
+                raw_service_data = raw_service_data['data']
+            
+            # Log what we're actually working with
+            if raw_service_data:
+                score_in_data = raw_service_data.get('score', 'NOT FOUND')
+                logger.info(f"[DataTransformer] {service_name} - score in data: {score_in_data}")
+                logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:10]}")
+            
             transformed = DataTransformer._transform_service(
                 service_name, 
                 raw_service_data,
@@ -131,6 +165,10 @@ class DataTransformer:
                 article
             )
             response['detailed_analysis'][service_name] = transformed
+            
+            # Verify score made it through
+            final_score = transformed.get('score', 'MISSING')
+            logger.info(f"[DataTransformer] {service_name} - final score after transform: {final_score}")
             
         logger.info(f"[DataTransformer] Transformation complete - Source: {source}")
         
@@ -214,8 +252,9 @@ class DataTransformer:
         
         result = template.copy()
         
-        # Get score
-        result['score'] = raw_data.get('score', 50)
+        # Get score - NOW IT WILL ACTUALLY BE THERE!
+        result['score'] = raw_data.get('score', raw_data.get('credibility_score', 50))
+        logger.info(f"[Transform SourceCred] Using score: {result['score']} from raw_data")
         
         # Get source metadata
         metadata = DataTransformer.SOURCE_METADATA.get(source_name, {})
@@ -249,7 +288,7 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        logger.info(f"[Transform] Source: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
+        logger.info(f"[Transform SourceCred] Final: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
         
         return result
     
@@ -259,26 +298,12 @@ class DataTransformer:
         raw_data: Dict[str, Any],
         article: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Transform author analyzer data - WITH COMPLETE DEBUG LOGGING"""
+        """Transform author analyzer data"""
         
         result = template.copy()
         
-        # Show ALL keys
-        all_keys = list(raw_data.keys())
-        logger.info(f"[Transform Author] Input data has {len(all_keys)} keys total")
-        logger.info(f"[Transform Author] All keys: {all_keys}")
-        
-        # Check for critical fields
-        critical_fields = ['articles_found', 'article_count', 'years_experience', 'awards', 'awards_count']
-        missing_fields = [f for f in critical_fields if f not in raw_data]
-        present_fields = [f for f in critical_fields if f in raw_data]
-        
-        if missing_fields:
-            logger.warning(f"[Transform Author] MISSING FIELDS: {missing_fields}")
-        if present_fields:
-            logger.info(f"[Transform Author] PRESENT FIELDS: {present_fields}")
-            for field in present_fields:
-                logger.info(f"[Transform Author]   {field} = {raw_data.get(field)}")
+        # Show ALL keys for debugging
+        logger.info(f"[Transform Author] Raw data keys: {list(raw_data.keys())[:15]}")
         
         # Get author name
         author = (
@@ -341,7 +366,7 @@ class DataTransformer:
                 'what_it_means': DataTransformer._get_author_meaning(cred_score)
             }
         
-        logger.info(f"[Transform Author] Complete - sending articles_count={result['articles_count']}, years_experience={result['years_experience']}")
+        logger.info(f"[Transform Author] Final score: {result['score']}")
         
         return result
     
@@ -380,15 +405,20 @@ class DataTransformer:
             
             logger.info(f"[Transform Bias] NEW FORMAT - Objectivity: {objectivity_score}/100")
         else:
-            # OLD FORMAT: Invert bias_score to get objectivity
-            bias_score = raw_data.get('bias_score', raw_data.get('score', 50))
-            objectivity_score = 100 - bias_score
+            # OLD FORMAT OR GENERIC: Check for score field
+            if 'score' in raw_data:
+                # Use score directly as objectivity
+                objectivity_score = raw_data.get('score', 50)
+            else:
+                # Fall back to inverting bias_score
+                bias_score = raw_data.get('bias_score', 50)
+                objectivity_score = 100 - bias_score
             
             result['score'] = objectivity_score
             result['objectivity_score'] = objectivity_score
-            result['bias_score'] = bias_score
+            result['bias_score'] = 100 - objectivity_score
             
-            logger.info(f"[Transform Bias] OLD FORMAT - Bias: {bias_score}, Converted to Objectivity: {objectivity_score}/100")
+            logger.info(f"[Transform Bias] Using Objectivity: {objectivity_score}/100")
         
         # Get direction and other metadata
         direction = raw_data.get('direction', raw_data.get('political_lean', 'center'))
@@ -400,6 +430,8 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        logger.info(f"[Transform Bias] Final score: {result['score']}")
+        
         return result
     
     @staticmethod
@@ -408,7 +440,14 @@ class DataTransformer:
         
         result = template.copy()
         
-        score = raw_data.get('accuracy_score', raw_data.get('score', raw_data.get('verification_score', 50)))
+        # Get score from various possible fields
+        score = (
+            raw_data.get('score') or
+            raw_data.get('accuracy_score') or 
+            raw_data.get('verification_score') or
+            50
+        )
+        
         checked = raw_data.get('claims_checked', 0)
         verified = raw_data.get('claims_verified', 0)
         
@@ -423,6 +462,8 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        logger.info(f"[Transform FactCheck] Final score: {result['score']}, Claims: {checked}")
+        
         return result
     
     @staticmethod
@@ -431,7 +472,11 @@ class DataTransformer:
         
         result = template.copy()
         
-        score = raw_data.get('transparency_score', raw_data.get('score', 50))
+        score = (
+            raw_data.get('score') or
+            raw_data.get('transparency_score') or
+            50
+        )
         sources = raw_data.get('sources_cited', raw_data.get('source_count', 0))
         quotes = raw_data.get('quotes_included', raw_data.get('quote_count', 0))
         
@@ -447,6 +492,8 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        logger.info(f"[Transform Transparency] Final score: {result['score']}")
+        
         return result
     
     @staticmethod
@@ -456,7 +503,12 @@ class DataTransformer:
         result = template.copy()
         
         # Higher score means better integrity
-        score = raw_data.get('integrity_score', raw_data.get('score', 80))
+        score = (
+            raw_data.get('score') or
+            raw_data.get('integrity_score') or
+            raw_data.get('manipulation_score') or
+            80
+        )
         
         result['score'] = score
         result['integrity_score'] = score
@@ -468,6 +520,8 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        logger.info(f"[Transform Manipulation] Final score: {result['score']}")
+        
         return result
     
     @staticmethod
@@ -476,7 +530,11 @@ class DataTransformer:
         
         result = template.copy()
         
-        score = raw_data.get('quality_score', raw_data.get('score', 50))
+        score = (
+            raw_data.get('score') or
+            raw_data.get('quality_score') or
+            50
+        )
         
         result['score'] = score
         result['quality_score'] = score
@@ -486,5 +544,7 @@ class DataTransformer:
         
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
+        
+        logger.info(f"[Transform Content] Final score: {result['score']}")
         
         return result
