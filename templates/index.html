@@ -1280,9 +1280,19 @@ You can paste:
                     }
                     
                     const contribution = (score * weights[serviceKey]).toFixed(1);
-                    const elementId = 'contrib' + serviceKey.split('_').map(word => 
-                        word.charAt(0).toUpperCase() + word.slice(1)
-                    ).join('').replace('Analyzer', '').replace('Detector', '');
+                    
+                    // FIXED: Map service keys to correct element IDs
+                    const elementIdMap = {
+                        'source_credibility': 'contribSource',
+                        'bias_detector': 'contribBias',
+                        'author_analyzer': 'contribAuthor',
+                        'fact_checker': 'contribFacts',
+                        'transparency_analyzer': 'contribTransparency',
+                        'manipulation_detector': 'contribManipulation',
+                        'content_analyzer': 'contribContent'
+                    };
+                    
+                    const elementId = elementIdMap[serviceKey] || 'contrib' + serviceKey;
                     
                     console.log(`[Update] ${serviceKey}: score=${score}, contribution=${contribution}, elementId=${elementId}`);
                     
