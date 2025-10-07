@@ -1,23 +1,20 @@
 """
-Data Transformer - FIXED TO UNWRAP SERVICE DATA
+Data Transformer - FIXED FACT_CHECKS FIELD
 Date: October 7, 2025
-Version: 2.3
+Version: 2.4
 
 CRITICAL FIX IN THIS VERSION:
-- Services return data wrapped: {success: True, data: {score: 69, ...}}
-- DataTransformer was looking at top level, missing the 'data' wrapper
-- NOW PROPERLY UNWRAPS the 'data' field before transformation
-- This fixes the bug where scores show as 0 in frontend
+- fact_checker.py returns 'fact_checks' array but transformer looked for 'claims'
+- Line 447: Now checks BOTH 'fact_checks' and 'claims' fields
+- This fixes the bug where claims show as empty even when checked
 
 THE BUG:
-  raw_service_data = {success: True, data: {score: 69, objectivity_score: 95, ...}}
-  result['score'] = raw_service_data.get('score', 50)  # Returns 50 (not found!)
+  fact_checker returns: {fact_checks: [{claim: "...", verdict: "..."}, ...]}
+  transformer looked for: raw_data.get('claims', [])  # Returns [] !
   
 THE FIX:
-  raw_service_data = raw_services.get(service_name, {})
-  if 'data' in raw_service_data:
-      raw_service_data = raw_service_data['data']  # Unwrap!
-  result['score'] = raw_service_data.get('score', 69)  # Now returns 69!
+  result['claims'] = raw_data.get('fact_checks', raw_data.get('claims', []))
+  Now checks 'fact_checks' FIRST, then falls back to 'claims'
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -436,7 +433,12 @@ class DataTransformer:
     
     @staticmethod
     def _transform_fact_checker(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform fact checker data"""
+        """
+        Transform fact checker data
+        
+        FIXED v2.4: Now checks for BOTH 'fact_checks' and 'claims' fields
+        fact_checker.py returns 'fact_checks', but we also support 'claims' for compatibility
+        """
         
         result = template.copy()
         
@@ -457,12 +459,21 @@ class DataTransformer:
         result['claims_checked'] = checked
         result['claims_verified'] = verified
         result['claims_found'] = checked
-        result['claims'] = raw_data.get('claims', [])
+        
+        # CRITICAL FIX: Check 'fact_checks' FIRST, then 'claims'
+        # fact_checker.py returns 'fact_checks', not 'claims'!
+        claims_array = raw_data.get('fact_checks', raw_data.get('claims', []))
+        result['claims'] = claims_array
+        
+        # Log for debugging
+        logger.info(f"[Transform FactCheck] Found {len(claims_array)} claims in array")
+        if claims_array and len(claims_array) > 0:
+            logger.info(f"[Transform FactCheck] First claim keys: {list(claims_array[0].keys())[:5]}")
         
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        logger.info(f"[Transform FactCheck] Final score: {result['score']}, Claims: {checked}")
+        logger.info(f"[Transform FactCheck] Final score: {result['score']}, Claims: {len(claims_array)}")
         
         return result
     
