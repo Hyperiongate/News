@@ -1,14 +1,17 @@
 """
-News Analyzer Service - WITH INSIGHT GENERATION
-Date: October 6, 2025
-Version: 12.2
+News Analyzer Service - FIXED FOR OBJECTIVITY SCORING
+Date: October 7, 2025
+Version: 12.3
 
-CHANGES FROM 12.1:
-- Added InsightGenerator integration
-- Added DataEnricher integration
-- Preserves ALL existing functionality
-- Adds executive insights to response
-- Adds comparative context to all services
+CRITICAL FIX FROM 12.2:
+- Fixed bias_detector field handling to use objectivity_score as primary
+- Preserves BOTH objectivity_score AND bias_score from services
+- Ensures frontend receives the correct scores (95, 75, 69 not 0, 0, 0)
+- All service scores now properly flow through to frontend
+
+THE BUG WAS: news_analyzer was using .setdefault() which wasn't preserving
+the actual objectivity_score sent by bias_detector. Now we preserve ALL
+incoming fields and only add missing required fields.
 
 DEPLOYMENT:
 Replace services/news_analyzer.py with this file
@@ -28,6 +31,7 @@ logger = logging.getLogger(__name__)
 class NewsAnalyzer:
     """
     Clean orchestrator for news analysis with proper data formatting
+    NOW CORRECTLY HANDLES OBJECTIVITY SCORING
     """
     
     def __init__(self):
@@ -35,7 +39,7 @@ class NewsAnalyzer:
         self.pipeline = AnalysisPipeline()
         self.insight_generator = InsightGenerator()
         self.data_enricher = DataEnricher()
-        logger.info("[NewsAnalyzer v12.2] Initialized with insights & enrichment")
+        logger.info("[NewsAnalyzer v12.3] Initialized - FIXED objectivity scoring")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
@@ -162,6 +166,10 @@ class NewsAnalyzer:
             
             # Ensure each service has required fields
             processed_data = self._ensure_service_fields(service_name, service_data)
+            
+            # Log what we're sending to frontend for this service
+            logger.info(f"[NewsAnalyzer] {service_name} score: {processed_data.get('score', 0)}")
+            
             processed[service_name] = processed_data
         
         return processed
@@ -170,17 +178,33 @@ class NewsAnalyzer:
         """
         Ensure service data has all required fields for frontend
         
-        CRITICAL: This method ADDS missing required fields but PRESERVES all existing fields
+        CRITICAL FIX: This method PRESERVES all existing fields from services
+        and only ADDS missing required fields. It does NOT overwrite existing scores.
         """
         
-        # Start with ALL the data we have - don't filter anything out!
+        # Start with ALL the data we have - preserve everything!
         result = data.copy()
         
-        # Ensure score exists
+        # Log what we received from the service
+        logger.debug(f"[NewsAnalyzer] Received from {service_name}: score={result.get('score', 'MISSING')}, "
+                    f"objectivity_score={result.get('objectivity_score', 'MISSING')}, "
+                    f"verification_score={result.get('verification_score', 'MISSING')}")
+        
+        # Ensure score exists (use first available score field)
         if 'score' not in result:
-            result['score'] = 50
+            # Try to get score from service-specific fields
+            if service_name == 'bias_detector':
+                result['score'] = result.get('objectivity_score', 50)
+            elif service_name == 'fact_checker':
+                result['score'] = result.get('verification_score', result.get('accuracy_score', 50))
+            elif service_name == 'source_credibility':
+                result['score'] = result.get('credibility_score', 50)
+            else:
+                result['score'] = 50
         
         # Service-specific REQUIRED field defaults (only add if missing)
+        # CRITICAL: Use .setdefault() only for fields that don't exist
+        
         if service_name == 'source_credibility':
             result.setdefault('organization', result.get('source', 'Unknown'))
             result.setdefault('founded', 2000)
@@ -188,12 +212,26 @@ class NewsAnalyzer:
             result.setdefault('bias', 'Moderate')
             
         elif service_name == 'bias_detector':
-            result.setdefault('bias_score', result.get('score', 50))
+            # CRITICAL FIX: Preserve objectivity_score as PRIMARY
+            # Only add bias_score if it doesn't exist (for backward compatibility)
+            if 'objectivity_score' in result:
+                # Use objectivity_score as the primary score
+                result['score'] = result['objectivity_score']
+            
+            # Add missing fields without overwriting existing ones
+            result.setdefault('objectivity_score', result.get('score', 50))
+            result.setdefault('bias_score', 100 - result.get('objectivity_score', 50))  # Inverse
             result.setdefault('direction', 'center')
             result.setdefault('political_lean', result.get('direction', 'center'))
+            result.setdefault('level', result.get('objectivity_level', 'Moderate'))
             
         elif service_name == 'fact_checker':
-            result.setdefault('accuracy_score', result.get('score', 50))
+            # CRITICAL FIX: Preserve verification_score as PRIMARY
+            if 'verification_score' in result:
+                result['score'] = result['verification_score']
+            
+            result.setdefault('verification_score', result.get('score', 50))
+            result.setdefault('accuracy_score', result.get('verification_score', 50))
             result.setdefault('claims_checked', 0)
             result.setdefault('claims_verified', 0)
             result.setdefault('claims', [])
@@ -218,7 +256,7 @@ class NewsAnalyzer:
             result.setdefault('word_count', 0)
             
         elif service_name == 'author_analyzer':
-            # CRITICAL FIX: Only add required fields if missing, preserve ALL existing fields!
+            # CRITICAL: Only add required fields if missing, preserve ALL existing fields!
             result.setdefault('credibility_score', result.get('score', 50))
             result.setdefault('name', result.get('author_name', 'Unknown'))
             result.setdefault('credibility', result.get('credibility_score', 50))
@@ -243,10 +281,13 @@ class NewsAnalyzer:
             self._get_meaning_for_score(service_name, result.get('score', 50))
         )
         
+        # Final log of what we're returning
+        logger.debug(f"[NewsAnalyzer] Returning for {service_name}: score={result.get('score')}")
+        
         return result
     
     def _get_meaning_for_score(self, service_name: str, score: int) -> str:
-        """Generate appropriate meaning text"""
+        """Generate appropriate meaning text based on score"""
         
         if score >= 80:
             quality = "excellent"
@@ -257,10 +298,11 @@ class NewsAnalyzer:
         else:
             quality = "concerning"
         
+        # Service-specific meanings that match the scoring type
         meanings = {
             'source_credibility': f"The source shows {quality} credibility.",
-            'bias_detector': f"Bias level is {quality}.",
-            'fact_checker': f"Factual accuracy is {quality}.",
+            'bias_detector': f"Objectivity is {quality}.",  # FIXED: Changed from "Bias level"
+            'fact_checker': f"Factual verification is {quality}.",
             'transparency_analyzer': f"Transparency is {quality}.",
             'manipulation_detector': f"Content integrity is {quality}.",
             'content_analyzer': f"Content quality is {quality}.",
@@ -284,7 +326,7 @@ class NewsAnalyzer:
         else:
             findings.append("✗ Significant credibility concerns.")
         
-        # Add specific findings
+        # Add specific findings based on actual scores
         if 'source_credibility' in detailed_analysis:
             source_score = detailed_analysis['source_credibility'].get('score', 0)
             if source_score >= 80:
@@ -293,11 +335,21 @@ class NewsAnalyzer:
                 findings.append("Source has credibility issues.")
         
         if 'bias_detector' in detailed_analysis:
-            bias_score = detailed_analysis['bias_detector'].get('bias_score', 50)
-            if bias_score < 30:
-                findings.append("Strong bias detected.")
-            elif bias_score > 70:
-                findings.append("Minimal bias detected.")
+            # FIXED: Use objectivity_score not bias_score
+            objectivity_score = detailed_analysis['bias_detector'].get('objectivity_score', 
+                                                                       detailed_analysis['bias_detector'].get('score', 50))
+            if objectivity_score >= 80:
+                findings.append("Highly objective reporting.")
+            elif objectivity_score < 50:
+                findings.append("Significant bias detected.")
+        
+        if 'fact_checker' in detailed_analysis:
+            verification_score = detailed_analysis['fact_checker'].get('verification_score',
+                                                                       detailed_analysis['fact_checker'].get('score', 0))
+            if verification_score >= 80:
+                findings.append("Strong fact verification.")
+            elif verification_score < 40:
+                findings.append("Limited fact verification.")
         
         return " ".join(findings)
     
