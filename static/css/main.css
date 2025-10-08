@@ -1397,3 +1397,311 @@ body {
         padding: 1.5rem;
     }
 }
+/**
+ * Chart Visualization Styles - SERVICE INTEGRATION
+ * Date: October 8, 2025
+ * Version: 2.0.0 - IN-SERVICE CHARTS
+ * 
+ * ADD THIS TO YOUR EXISTING static/css/main.css
+ * 
+ * Place this section AFTER the service dropdown styles
+ * These styles make charts look beautiful inside service cards
+ */
+
+/* ===== SERVICE CHART CONTAINERS ===== */
+.service-chart-container {
+    margin: 2rem 0 1rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.service-chart-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, 
+        #6366f1 0%, 
+        #8b5cf6 33%, 
+        #ec4899 66%, 
+        #06b6d4 100%);
+    opacity: 0.8;
+}
+
+.service-chart-container:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Chart Header */
+.service-chart-container > div:first-child {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+
+.service-chart-container i {
+    font-size: 1.25rem;
+}
+
+/* Canvas Styling */
+.service-chart-container canvas {
+    max-height: 300px;
+    width: 100% !important;
+    height: auto !important;
+    transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+/* Service-Specific Chart Container Colors */
+.sourceCredibilityDropdown .service-chart-container {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(99, 102, 241, 0.01) 100%);
+    border-color: rgba(99, 102, 241, 0.2);
+}
+
+.sourceCredibilityDropdown .service-chart-container:hover {
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.15);
+}
+
+.biasDetectorDropdown .service-chart-container {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.03) 0%, rgba(245, 158, 11, 0.01) 100%);
+    border-color: rgba(245, 158, 11, 0.2);
+}
+
+.biasDetectorDropdown .service-chart-container:hover {
+    box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15);
+}
+
+.factCheckerDropdown .service-chart-container {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, rgba(59, 130, 246, 0.01) 100%);
+    border-color: rgba(59, 130, 246, 0.2);
+}
+
+.factCheckerDropdown .service-chart-container:hover {
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
+}
+
+.transparencyAnalyzerDropdown .service-chart-container {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.03) 0%, rgba(139, 92, 246, 0.01) 100%);
+    border-color: rgba(139, 92, 246, 0.2);
+}
+
+.transparencyAnalyzerDropdown .service-chart-container:hover {
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.15);
+}
+
+.manipulationDetectorDropdown .service-chart-container {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.03) 0%, rgba(239, 68, 68, 0.01) 100%);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.manipulationDetectorDropdown .service-chart-container:hover {
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);
+}
+
+.authorDropdown .service-chart-container {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.03) 0%, rgba(6, 182, 212, 0.01) 100%);
+    border-color: rgba(6, 182, 212, 0.2);
+}
+
+.authorDropdown .service-chart-container:hover {
+    box-shadow: 0 4px 20px rgba(6, 182, 212, 0.15);
+}
+
+.contentAnalyzerDropdown .service-chart-container {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.03) 0%, rgba(236, 72, 153, 0.01) 100%);
+    border-color: rgba(236, 72, 153, 0.2);
+}
+
+.contentAnalyzerDropdown .service-chart-container:hover {
+    box-shadow: 0 4px 20px rgba(236, 72, 153, 0.15);
+}
+
+/* ===== CHART LOADING STATES ===== */
+.service-chart-container.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.service-chart-container.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f4f6;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: chartSpinner 0.8s linear infinite;
+}
+
+@keyframes chartSpinner {
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+/* ===== CHART EMPTY STATES ===== */
+.chart-no-data {
+    padding: 3rem 2rem;
+    text-align: center;
+    color: #6b7280;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.chart-no-data i {
+    font-size: 2.5rem;
+    color: #d1d5db;
+    margin-bottom: 1rem;
+    display: block;
+}
+
+/* ===== CHART ANIMATIONS ===== */
+@keyframes chartFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.service-chart-container canvas {
+    animation: chartFadeIn 0.5s ease-out;
+}
+
+/* ===== RESPONSIVE CHARTS ===== */
+@media (max-width: 768px) {
+    .service-chart-container {
+        padding: 1rem;
+        margin: 1.5rem 0 0.75rem 0;
+    }
+    
+    .service-chart-container canvas {
+        max-height: 250px;
+    }
+    
+    .service-chart-container > div:first-child {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .service-chart-container {
+        padding: 0.75rem;
+    }
+    
+    .service-chart-container canvas {
+        max-height: 200px;
+    }
+}
+
+/* ===== CHART LEGENDS (Enhanced) ===== */
+.service-chart-container .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.chart-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.chart-legend-color {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+/* ===== CHART TOOLTIPS (Custom Styling) ===== */
+.chartjs-tooltip {
+    background: rgba(0, 0, 0, 0.9) !important;
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(10px);
+}
+
+/* ===== HIDE OLD BOTTOM CHARTS SECTION ===== */
+#chartsSection {
+    display: none !important;
+}
+
+/* If you want to completely remove the old charts section */
+.charts-section.old-charts {
+    display: none !important;
+}
+
+/* ===== CHART INTERACTION STATES ===== */
+.service-chart-container canvas:hover {
+    cursor: pointer;
+}
+
+.service-chart-container canvas:active {
+    transform: scale(0.99);
+}
+
+/* ===== CHART PRINT STYLES ===== */
+@media print {
+    .service-chart-container {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+    
+    .service-chart-container canvas {
+        max-height: 400px;
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+.service-chart-container:focus-within {
+    outline: 2px solid #6366f1;
+    outline-offset: 2px;
+}
+
+/* ===== DARK MODE SUPPORT (Optional) ===== */
+@media (prefers-color-scheme: dark) {
+    .service-chart-container {
+        background: #1e293b;
+        border-color: #334155;
+    }
+    
+    .service-chart-container > div:first-child {
+        color: #f1f5f9;
+    }
+}
+
+/* ===== CHART PERFORMANCE OPTIMIZATIONS ===== */
+.service-chart-container canvas {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ===== END OF CHART STYLES ===== */
