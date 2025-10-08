@@ -1,16 +1,13 @@
 /**
- * TruthLens Service Templates - ENHANCED FACT CHECKING
- * Date: October 7, 2025
- * Version: 4.6.0 - ADDED DETAILED FACT CHECKING DISPLAY
+ * TruthLens Service Templates - ENHANCED FACT CHECKING + CHART INTEGRATION
+ * Date: October 8, 2025
+ * Version: 4.7.0 - ADDED CHART INTEGRATION
  * 
- * CHANGES FROM 4.5.0:
- * - Enhanced factChecker template with detailed claim cards
- * - Each claim now shows: verdict, confidence, evidence, sources
- * - Color-coded verdicts with icons
- * - Expandable claim details
- * - Confidence bars for each claim
- * - Better visual hierarchy
- * - All other functionality preserved (DO NO HARM)
+ * CHANGES FROM 4.6.0:
+ * - Added chart integration at end of file
+ * - Charts now render inside service cards
+ * - Enhanced displayAllAnalyses wraps original for chart support
+ * - All previous functionality preserved (DO NO HARM)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  */
@@ -1356,3 +1353,80 @@ window.ServiceTemplates = {
 };
 
 console.log('ServiceTemplates loaded successfully - v4.6.0 ENHANCED FACT CHECKING');
+
+/**
+ * ========================================================================
+ * CHART INTEGRATION ADD-ON - v4.7.0
+ * ========================================================================
+ * This section integrates charts into service cards.
+ * Added: October 8, 2025
+ * 
+ * WHAT THIS DOES:
+ * 1. Wraps the original displayAllAnalyses to add chart support
+ * 2. After services render, injects charts into appropriate cards
+ * 3. Uses ChartRenderer from chart-renderer.js
+ * 4. Preserves all existing functionality
+ */
+
+// Store reference to original displayAllAnalyses
+const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
+
+// Enhanced displayAllAnalyses with chart integration
+window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
+    console.log('[ServiceTemplates v4.7.0] displayAllAnalyses called with chart integration');
+    
+    // Call original function first to render all service cards
+    originalDisplayAllAnalyses.call(this, data, analyzer);
+    
+    // Then integrate charts after a short delay to let DOM render
+    setTimeout(() => {
+        integrateChartsIntoServices(data);
+    }, 500);
+};
+
+/**
+ * Chart integration function
+ * Renders charts inside service cards using ChartRenderer
+ */
+function integrateChartsIntoServices(data) {
+    console.log('[Charts] Integrating into service cards...');
+    
+    // Check if ChartRenderer is available
+    if (!window.ChartRenderer || !window.ChartRenderer.isReady()) {
+        console.warn('[Charts] ChartRenderer not available - charts will not render');
+        return;
+    }
+    
+    const detailed = data.detailed_analysis || {};
+    
+    // Service mapping with delays for smooth reveal animation
+    const serviceCharts = [
+        {id: 'sourceCredibility', key: 'source_credibility', delay: 300},
+        {id: 'biasDetector', key: 'bias_detector', delay: 400},
+        {id: 'factChecker', key: 'fact_checker', delay: 500},
+        {id: 'author', key: 'author_analyzer', delay: 600},
+        {id: 'transparencyAnalyzer', key: 'transparency_analyzer', delay: 700},
+        {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
+        {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
+    ];
+    
+    // Iterate through services and render charts where data exists
+    serviceCharts.forEach(service => {
+        const serviceData = detailed[service.key];
+        
+        if (serviceData && serviceData.chart_data) {
+            console.log(`[Charts] Rendering chart for ${service.id} with delay ${service.delay}ms`);
+            
+            // Stagger chart rendering for smooth animation
+            setTimeout(() => {
+                window.ChartRenderer.renderServiceChart(service.id, serviceData.chart_data);
+            }, service.delay);
+        } else {
+            console.log(`[Charts] No chart data for ${service.id}`);
+        }
+    });
+    
+    console.log('[Charts] ✓ Integration complete');
+}
+
+console.log('[Charts] Service Templates chart integration loaded - v4.7.0');
