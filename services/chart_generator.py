@@ -1,20 +1,18 @@
 """
 Chart Generator Service - SERVICE-INTEGRATED CHARTS
 Date: October 8, 2025
-Version: 2.0.0 - INTEGRATED INTO SERVICES
-
-CRITICAL CHANGES FROM 1.0.0:
-- Charts now generate PER SERVICE, not globally
-- Vibrant, service-specific color schemes
-- Contextual charts that tell the story
-- Each service gets its own relevant visualization
-
-PURPOSE:
-Generates chart data that gets embedded INSIDE each service card.
-No more bland charts at the bottom - each service has meaningful visuals.
+Version: 2.0.0 - COMPLETE REWRITE FOR SERVICE INTEGRATION
 
 DEPLOYMENT:
-Save as: services/chart_generator.py (REPLACE existing)
+Save as: services/chart_generator.py (REPLACE existing file completely)
+
+CHANGES:
+- Charts now embedded IN each service card
+- Vibrant, service-specific color schemes
+- Contextual visualizations that tell stories
+- No more separate charts section at bottom
+
+This is a COMPLETE file - deploy as-is.
 """
 
 import logging
@@ -117,10 +115,7 @@ class ChartGenerator:
             return None
     
     def _create_source_credibility_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Source Credibility: Comparison bar chart
-        Shows article score vs top outlets
-        """
+        """Source Credibility: Comparison bar chart"""
         article_score = data.get('credibility_score', data.get('score', 0))
         source_name = data.get('source_name', 'This Source')
         
@@ -186,14 +181,11 @@ class ChartGenerator:
         }
     
     def _create_bias_detector_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Bias Detector: Political spectrum with position marker
-        Shows where article falls on political spectrum
-        """
+        """Bias Detector: Political spectrum with position marker"""
         objectivity_score = data.get('objectivity_score', data.get('score', 50))
         political_label = data.get('political_label', 'Center')
         
-        # Convert political label to position (0-100 scale)
+        # Convert political label to position
         position_map = {
             'Far Left': 10, 'Left': 25, 'Center-Left': 40,
             'Center': 50, 'Center-Right': 60, 'Right': 75, 'Far Right': 90
@@ -245,10 +237,7 @@ class ChartGenerator:
         }
     
     def _create_fact_checker_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Fact Checker: Verdict breakdown pie chart
-        Vibrant colors showing verified vs false vs mixed
-        """
+        """Fact Checker: Verdict breakdown pie chart"""
         fact_checks = data.get('fact_checks', [])
         
         # Count verdicts
@@ -319,9 +308,7 @@ class ChartGenerator:
         }
     
     def _create_transparency_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Transparency: Stacked bar showing sources, quotes, attribution
-        """
+        """Transparency: Stacked bar showing sources, quotes, attribution"""
         sources = data.get('source_count', data.get('sources_cited', 0))
         quotes = data.get('quote_count', data.get('quotes_included', 0))
         
@@ -393,9 +380,7 @@ class ChartGenerator:
         }
     
     def _create_manipulation_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Manipulation: Horizontal bar showing technique severity
-        """
+        """Manipulation: Horizontal bar showing technique severity"""
         tactics = data.get('tactics_found', [])
         
         if not tactics:
@@ -455,9 +440,7 @@ class ChartGenerator:
         }
     
     def _create_author_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Author: Simple credibility meter
-        """
+        """Author: Simple credibility meter"""
         credibility = data.get('credibility_score', data.get('score', 50))
         
         # Determine color
@@ -496,9 +479,7 @@ class ChartGenerator:
         }
     
     def _create_content_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Content: Quality metrics radar
-        """
+        """Content: Quality metrics radar"""
         quality = data.get('quality_score', 0)
         readability = data.get('readability_score', 0) if data.get('readability_score') else 50
         
