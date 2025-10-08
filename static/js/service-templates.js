@@ -1,13 +1,22 @@
 /**
- * TruthLens Service Templates - ENHANCED FACT CHECKING + CHART INTEGRATION
+ * TruthLens Service Templates - WITH CANVAS ELEMENTS FOR CHARTS
  * Date: October 8, 2025
- * Version: 4.7.0 - ADDED CHART INTEGRATION
+ * Version: 4.8.0 - ADDED CANVAS ELEMENTS FOR CHART RENDERING
  * 
- * CHANGES FROM 4.6.0:
- * - Added chart integration at end of file
- * - Charts now render inside service cards
- * - Enhanced displayAllAnalyses wraps original for chart support
- * - All previous functionality preserved (DO NO HARM)
+ * CHANGES FROM 4.7.0:
+ * - Added <canvas> elements to all 7 service templates
+ * - Canvas IDs match what chart-renderer.js expects (e.g., "sourceCredibilityChart")
+ * - Canvas elements placed logically within each service's HTML structure
+ * - All existing functionality preserved (DO NO HARM)
+ * 
+ * Canvas Elements Added:
+ * 1. sourceCredibilityChart - after analysis details
+ * 2. biasDetectorChart - after analysis details
+ * 3. factCheckerChart - after analysis details
+ * 4. authorChart - after analysis details
+ * 5. transparencyAnalyzerChart - after analysis details
+ * 6. manipulationDetectorChart - after analysis details
+ * 7. contentAnalyzerChart - after analysis details
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  */
@@ -138,6 +147,15 @@ window.ServiceTemplates = {
                                 <p id="source-means">Loading...</p>
                             </div>
                         </div>
+                        
+                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
+                                <i class="fas fa-chart-bar" style="margin-right: 8px; color: #6366f1;"></i>
+                                Source Credibility Visualization
+                            </h4>
+                            <canvas id="sourceCredibilityChart" width="400" height="250" style="max-width: 100%;"></canvas>
+                        </div>
                     </div>
                 </div>
             `,
@@ -187,6 +205,15 @@ window.ServiceTemplates = {
                                 <h4><i class="fas fa-info-circle"></i> What This Means</h4>
                                 <p id="bias-means">Loading...</p>
                             </div>
+                        </div>
+                        
+                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
+                                <i class="fas fa-chart-radar" style="margin-right: 8px; color: #f59e0b;"></i>
+                                Bias Analysis Visualization
+                            </h4>
+                            <canvas id="biasDetectorChart" width="400" height="250" style="max-width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -250,6 +277,15 @@ window.ServiceTemplates = {
                                 <h4><i class="fas fa-exclamation-circle"></i> What This Means</h4>
                                 <p id="fact-means">Loading...</p>
                             </div>
+                        </div>
+                        
+                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
+                                <i class="fas fa-chart-pie" style="margin-right: 8px; color: #3b82f6;"></i>
+                                Fact Check Visualization
+                            </h4>
+                            <canvas id="factCheckerChart" width="400" height="250" style="max-width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -412,6 +448,15 @@ window.ServiceTemplates = {
                                 <p id="transparency-means">Loading...</p>
                             </div>
                         </div>
+                        
+                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
+                                <i class="fas fa-chart-bar" style="margin-right: 8px; color: #8b5cf6;"></i>
+                                Transparency Breakdown
+                            </h4>
+                            <canvas id="transparencyAnalyzerChart" width="400" height="250" style="max-width: 100%;"></canvas>
+                        </div>
                     </div>
                 </div>
             `,
@@ -453,6 +498,15 @@ window.ServiceTemplates = {
                                 <h4><i class="fas fa-shield-alt"></i> What This Means</h4>
                                 <p id="manipulation-means">Loading...</p>
                             </div>
+                        </div>
+                        
+                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
+                                <i class="fas fa-chart-line" style="margin-right: 8px; color: #ef4444;"></i>
+                                Manipulation Analysis
+                            </h4>
+                            <canvas id="manipulationDetectorChart" width="400" height="250" style="max-width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -501,6 +555,15 @@ window.ServiceTemplates = {
                                 <h4><i class="fas fa-graduation-cap"></i> What This Means</h4>
                                 <p id="content-means">Loading...</p>
                             </div>
+                        </div>
+                        
+                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
+                                <i class="fas fa-chart-area" style="margin-right: 8px; color: #ec4899;"></i>
+                                Content Quality Metrics
+                            </h4>
+                            <canvas id="contentAnalyzerChart" width="400" height="250" style="max-width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -606,6 +669,15 @@ window.ServiceTemplates = {
                             <h4><i class="fas fa-info-circle"></i> What This Means</h4>
                             <p id="author-means">Loading...</p>
                         </div>
+                    </div>
+                    
+                    <!-- *** CANVAS ELEMENT FOR CHART *** -->
+                    <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
+                            <i class="fas fa-chart-pie" style="margin-right: 8px; color: #06b6d4;"></i>
+                            Author Credibility Breakdown
+                        </h4>
+                        <canvas id="authorChart" width="400" height="250" style="max-width: 100%;"></canvas>
                     </div>
                 </div>
             `
@@ -1352,18 +1424,18 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.6.0 ENHANCED FACT CHECKING');
+console.log('ServiceTemplates loaded successfully - v4.8.0 WITH CANVAS ELEMENTS');
 
 /**
  * ========================================================================
- * CHART INTEGRATION ADD-ON - v4.7.0
+ * CHART INTEGRATION ADD-ON - v4.8.0
  * ========================================================================
  * This section integrates charts into service cards.
- * Added: October 8, 2025
+ * Updated: October 8, 2025
  * 
  * WHAT THIS DOES:
  * 1. Wraps the original displayAllAnalyses to add chart support
- * 2. After services render, injects charts into appropriate cards
+ * 2. After services render, injects charts into canvas elements
  * 3. Uses ChartRenderer from chart-renderer.js
  * 4. Preserves all existing functionality
  */
@@ -1373,9 +1445,9 @@ const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
 // Enhanced displayAllAnalyses with chart integration
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.7.0] displayAllAnalyses called with chart integration');
+    console.log('[ServiceTemplates v4.8.0] displayAllAnalyses called with canvas support');
     
-    // Call original function first to render all service cards
+    // Call original function first to render all service cards WITH CANVAS ELEMENTS
     originalDisplayAllAnalyses.call(this, data, analyzer);
     
     // Then integrate charts after a short delay to let DOM render
@@ -1419,7 +1491,7 @@ function integrateChartsIntoServices(data) {
             
             // Stagger chart rendering for smooth animation
             setTimeout(() => {
-                // renderChart expects canvas ID, so append 'Chart' to service ID
+                // Canvas ID matches what's in the templates (e.g., "sourceCredibilityChart")
                 const canvasId = service.id + 'Chart';
                 window.ChartRenderer.renderChart(canvasId, serviceData.chart_data);
             }, service.delay);
@@ -1431,4 +1503,4 @@ function integrateChartsIntoServices(data) {
     console.log('[Charts] ✓ Integration complete');
 }
 
-console.log('[Charts] Service Templates chart integration loaded - v4.7.0');
+console.log('[Charts] Service Templates chart integration loaded - v4.8.0 WITH CANVAS ELEMENTS');
