@@ -1,16 +1,15 @@
 """
 Chart Generator Service - SERVICE-INTEGRATED CHARTS
 Date: October 8, 2025
-Version: 2.0.0 - COMPLETE REWRITE FOR SERVICE INTEGRATION
+Version: 2.1.0 - COMPLETE WITH ALL METHODS
 
 DEPLOYMENT:
 Save as: services/chart_generator.py (REPLACE existing file completely)
 
-CHANGES:
-- Charts now embedded IN each service card
-- Vibrant, service-specific color schemes
-- Contextual visualizations that tell stories
-- No more separate charts section at bottom
+CRITICAL METHODS:
+- generate_service_chart(service_id, data) - For individual services
+- generate_all_charts(response) - For top-level charts
+- Both methods are required by news_analyzer.py
 
 This is a COMPLETE file - deploy as-is.
 """
@@ -75,18 +74,21 @@ class ChartGenerator:
             }
         }
         
-        logger.info("[ChartGenerator v2.0.0] Service-integrated charts initialized")
+        logger.info("[ChartGenerator v2.1.0] Service-integrated charts initialized")
     
-    def generate_service_charts(self, service_id: str, service_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    # ============================================================================
+    # CRITICAL METHOD 1: For individual service charts
+    # ============================================================================
+    def generate_service_chart(self, service_id: str, service_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
-        Generate chart for a SPECIFIC service
+        Generate chart for a SPECIFIC service (called by news_analyzer.py)
         
         Args:
             service_id: Service identifier (e.g., 'source_credibility')
             service_data: Data for that specific service
             
         Returns:
-            Chart configuration or None
+            Chart configuration dict or None
         """
         try:
             chart_generators = {
@@ -101,12 +103,13 @@ class ChartGenerator:
             
             generator = chart_generators.get(service_id)
             if not generator:
+                logger.debug(f"[ChartGenerator] No chart generator for {service_id}")
                 return None
             
             chart_data = generator(service_data)
             
             if chart_data:
-                logger.info(f"[ChartGenerator] ✓ Generated chart for {service_id}")
+                logger.debug(f"[ChartGenerator] ✓ Generated chart for {service_id}")
             
             return chart_data
             
@@ -114,103 +117,106 @@ class ChartGenerator:
             logger.error(f"[ChartGenerator] Error generating chart for {service_id}: {e}")
             return None
     
+    # ============================================================================
+    # CRITICAL METHOD 2: For top-level overview charts
+    # ============================================================================
+    def generate_all_charts(self, response: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate all top-level overview charts (called by news_analyzer.py)
+        
+        Args:
+            response: Complete analysis response
+            
+        Returns:
+            Dict with success status and charts dict
+        """
+        try:
+            logger.info("[ChartGenerator] Generating overview charts...")
+            
+            charts = {}
+            detailed = response.get('detailed_analysis', {})
+            trust_score = response.get('trust_score', 50)
+            
+            # Trust gauge chart
+            charts['trust_gauge'] = self._create_trust_gauge_chart(trust_score)
+            
+            # Service breakdown chart
+            charts['service_breakdown'] = self._create_service_breakdown_chart(detailed)
+            
+            # Bias radar chart
+            if 'bias_detector' in detailed:
+                charts['bias_radar'] = self._create_bias_radar_chart(detailed['bias_detector'])
+            
+            # Fact check pie chart
+            if 'fact_checker' in detailed:
+                charts['fact_check_pie'] = self._create_fact_check_pie_chart(detailed['fact_checker'])
+            
+            # Source comparison
+            if 'source_credibility' in detailed:
+                charts['source_comparison'] = self._create_source_comparison_chart(detailed['source_credibility'])
+            
+            # Transparency bars
+            if 'transparency_analyzer' in detailed:
+                charts['transparency_bars'] = self._create_transparency_bars_chart(detailed['transparency_analyzer'])
+            
+            chart_count = len(charts)
+            logger.info(f"[ChartGenerator] ✓ Generated {chart_count} overview charts")
+            
+            return {
+                'success': True,
+                'charts': charts,
+                'chart_count': chart_count
+            }
+            
+        except Exception as e:
+            logger.error(f"[ChartGenerator] Error generating overview charts: {e}")
+            return {
+                'success': False,
+                'charts': {},
+                'chart_count': 0,
+                'error': str(e)
+            }
+    
+    # ============================================================================
+    # INDIVIDUAL SERVICE CHART CREATORS
+    # ============================================================================
+    
     def _create_source_credibility_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Source Credibility: Comparison bar chart"""
         article_score = data.get('credibility_score', data.get('score', 0))
-        source_name = data.get('source_name', 'This Source')
+        source_name = data.get('source_name', data.get('source', 'This Source'))
         
         # Top outlets for comparison
         outlets = [
             {'name': 'Reuters', 'score': 95},
-            {'name': 'AP', 'score': 94},
-            {'name': 'BBC', 'score': 92},
-            {'name': 'NYT', 'score': 88},
-            {'name': source_name[:15], 'score': article_score, 'highlight': True}
+            {'name': 'Associated Press', 'score': 94},
+            {'name': 'BBC News', 'score': 92},
+            {'name': 'The New York Times', 'score': 88},
+            {'name': 'The Washington Post', 'score': 87}
         ]
         
-        # Sort and get top 6
+        # Add current source if not in list
+        if not any(o['name'].lower() == source_name.lower() for o in outlets):
+            outlets.append({'name': source_name, 'score': article_score})
+        
+        # Sort by score
         outlets.sort(key=lambda x: x['score'], reverse=True)
-        outlets = outlets[:6]
+        outlets = outlets[:6]  # Top 6
         
         labels = [o['name'] for o in outlets]
         scores = [o['score'] for o in outlets]
-        colors = [
-            self.colors['source_credibility']['primary'] if o.get('highlight') 
-            else self.colors['source_credibility']['gradient_start']
-            for o in outlets
-        ]
+        colors = [self.colors['source_credibility']['primary'] if o['name'] == source_name 
+                 else '#94a3b8' for o in outlets]
         
         return {
             'type': 'bar',
             'data': {
                 'labels': labels,
                 'datasets': [{
-                    'label': 'Credibility',
                     'data': scores,
                     'backgroundColor': colors,
                     'borderRadius': 8,
                     'barThickness': 40
-                }]
-            },
-            'options': {
-                'responsive': True,
-                'maintainAspectRatio': False,
-                'plugins': {
-                    'legend': {'display': False},
-                    'title': {
-                        'display': True,
-                        'text': 'How This Article Compares',
-                        'font': {'size': 16, 'weight': 'bold'},
-                        'color': '#1e293b',
-                        'padding': {'bottom': 20}
-                    }
-                },
-                'scales': {
-                    'y': {
-                        'beginAtZero': True,
-                        'max': 100,
-                        'grid': {'color': '#f1f5f9'},
-                        'ticks': {'color': '#64748b', 'font': {'size': 12}}
-                    },
-                    'x': {
-                        'grid': {'display': False},
-                        'ticks': {'color': '#334155', 'font': {'size': 13, 'weight': '600'}}
-                    }
-                }
-            }
-        }
-    
-    def _create_bias_detector_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Bias Detector: Political spectrum with position marker"""
-        objectivity_score = data.get('objectivity_score', data.get('score', 50))
-        political_label = data.get('political_label', 'Center')
-        
-        # Convert political label to position
-        position_map = {
-            'Far Left': 10, 'Left': 25, 'Center-Left': 40,
-            'Center': 50, 'Center-Right': 60, 'Right': 75, 'Far Right': 90
-        }
-        position = position_map.get(political_label, 50)
-        
-        # Create spectrum segments
-        segments = [
-            {'label': 'Far Left', 'score': 100 if position <= 10 else 0, 'color': self.colors['bias_detector']['far_left']},
-            {'label': 'Left', 'score': 100 if 10 < position <= 35 else 0, 'color': self.colors['bias_detector']['left']},
-            {'label': 'Center', 'score': 100 if 35 < position <= 65 else 0, 'color': self.colors['bias_detector']['center']},
-            {'label': 'Right', 'score': 100 if 65 < position <= 85 else 0, 'color': self.colors['bias_detector']['right']},
-            {'label': 'Far Right', 'score': 100 if position > 85 else 0, 'color': self.colors['bias_detector']['far_right']}
-        ]
-        
-        return {
-            'type': 'bar',
-            'data': {
-                'labels': [s['label'] for s in segments],
-                'datasets': [{
-                    'label': 'Position',
-                    'data': [s['score'] for s in segments],
-                    'backgroundColor': [s['color'] for s in segments],
-                    'borderRadius': 12,
-                    'barThickness': 50
                 }]
             },
             'options': {
@@ -221,49 +227,100 @@ class ChartGenerator:
                     'legend': {'display': False},
                     'title': {
                         'display': True,
-                        'text': f'Political Spectrum: {political_label}',
-                        'font': {'size': 16, 'weight': 'bold'},
-                        'color': '#1e293b'
+                        'text': 'Outlet Credibility Comparison',
+                        'font': {'size': 16, 'weight': 'bold'}
                     }
                 },
                 'scales': {
-                    'x': {'display': False},
+                    'x': {
+                        'beginAtZero': True,
+                        'max': 100,
+                        'grid': {'color': '#f1f5f9'}
+                    },
                     'y': {
-                        'grid': {'display': False},
-                        'ticks': {'font': {'size': 14, 'weight': '600'}}
+                        'grid': {'display': False}
                     }
                 }
             }
         }
     
+    def _create_bias_detector_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Bias: Radar chart showing dimensions"""
+        dimensions = data.get('dimensions', {})
+        
+        # Default dimensions if not provided
+        if not dimensions:
+            score = data.get('objectivity_score', data.get('score', 50))
+            dimensions = {
+                'language': score,
+                'source_selection': score,
+                'framing': score,
+                'tone': score,
+                'balance': score
+            }
+        
+        labels = [k.replace('_', ' ').title() for k in dimensions.keys()]
+        values = list(dimensions.values())
+        
+        return {
+            'type': 'radar',
+            'data': {
+                'labels': labels,
+                'datasets': [{
+                    'data': values,
+                    'backgroundColor': 'rgba(245, 158, 11, 0.2)',
+                    'borderColor': self.colors['bias_detector']['primary'],
+                    'borderWidth': 3,
+                    'pointBackgroundColor': self.colors['bias_detector']['primary'],
+                    'pointBorderColor': '#fff',
+                    'pointBorderWidth': 2,
+                    'pointRadius': 5
+                }]
+            },
+            'options': {
+                'responsive': True,
+                'maintainAspectRatio': False,
+                'scales': {
+                    'r': {
+                        'beginAtZero': True,
+                        'max': 100,
+                        'ticks': {'display': False},
+                        'grid': {'color': '#f1f5f9'}
+                    }
+                },
+                'plugins': {
+                    'legend': {'display': False}
+                }
+            }
+        }
+    
     def _create_fact_checker_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Fact Checker: Verdict breakdown pie chart"""
-        fact_checks = data.get('fact_checks', [])
+        """Fact Checker: Pie chart of verdicts"""
+        claims = data.get('fact_checks', data.get('claims', []))
         
         # Count verdicts
         verdicts = {'verified': 0, 'false': 0, 'mixed': 0, 'unverified': 0}
         
-        for check in fact_checks:
-            verdict = (check.get('verdict', 'unverified') or 'unverified').lower()
-            
-            if verdict in ['true', 'likely_true', 'verified']:
+        for claim in claims:
+            verdict = claim.get('verdict', 'unverified').lower()
+            if 'true' in verdict or 'verified' in verdict:
                 verdicts['verified'] += 1
-            elif verdict in ['false', 'likely_false']:
+            elif 'false' in verdict:
                 verdicts['false'] += 1
-            elif verdict in ['mixed', 'partially_true']:
+            elif 'mixed' in verdict or 'partial' in verdict:
                 verdicts['mixed'] += 1
             else:
                 verdicts['unverified'] += 1
         
         total = sum(verdicts.values())
-        
         if total == 0:
-            return None  # No data to show
+            verdicts['unverified'] = 1
+            total = 1
         
         return {
             'type': 'doughnut',
             'data': {
-                'labels': ['✓ Verified', '✗ False', '◐ Mixed', '? Unverified'],
+                'labels': ['Verified', 'False', 'Mixed', 'Unverified'],
                 'datasets': [{
                     'data': [verdicts['verified'], verdicts['false'], 
                             verdicts['mixed'], verdicts['unverified']],
@@ -295,28 +352,23 @@ class ChartGenerator:
                     'title': {
                         'display': True,
                         'text': f'{total} Claims Analyzed',
-                        'font': {'size': 16, 'weight': 'bold'},
-                        'color': '#1e293b'
+                        'font': {'size': 16, 'weight': 'bold'}
                     }
                 }
-            },
-            'centerText': {
-                'value': f'{verdicts["verified"]}/{total}',
-                'label': 'Verified',
-                'color': self.colors['fact_checker']['verified']
             }
         }
     
     def _create_transparency_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transparency: Stacked bar showing sources, quotes, attribution"""
+        """Transparency: Stacked bar showing components"""
         sources = data.get('source_count', data.get('sources_cited', 0))
         quotes = data.get('quote_count', data.get('quotes_included', 0))
+        score = data.get('transparency_score', data.get('score', 0))
         
-        # Calculate scores
+        # Calculate component scores
         source_score = min(30, sources * 5)
         quote_score = min(25, quotes * 8)
-        attribution = min(25, data.get('attribution_quality', 15))
-        verifiable = min(20, data.get('verifiable_claims', 10))
+        attribution_score = int(score * 0.25)
+        verifiable_score = int(score * 0.20)
         
         return {
             'type': 'bar',
@@ -324,72 +376,56 @@ class ChartGenerator:
                 'labels': ['Transparency Score'],
                 'datasets': [
                     {
-                        'label': f'Sources ({sources})',
+                        'label': 'Sources',
                         'data': [source_score],
-                        'backgroundColor': self.colors['transparency']['sources'],
-                        'borderRadius': {'topLeft': 8, 'topRight': 8}
+                        'backgroundColor': self.colors['transparency']['sources']
                     },
                     {
-                        'label': f'Quotes ({quotes})',
+                        'label': 'Quotes',
                         'data': [quote_score],
                         'backgroundColor': self.colors['transparency']['quotes']
                     },
                     {
                         'label': 'Attribution',
-                        'data': [attribution],
+                        'data': [attribution_score],
                         'backgroundColor': self.colors['transparency']['attribution']
                     },
                     {
                         'label': 'Verifiable',
-                        'data': [verifiable],
-                        'backgroundColor': self.colors['transparency']['verifiable'],
-                        'borderRadius': {'bottomLeft': 8, 'bottomRight': 8}
+                        'data': [verifiable_score],
+                        'backgroundColor': self.colors['transparency']['verifiable']
                     }
                 ]
             },
             'options': {
-                'indexAxis': 'y',
                 'responsive': True,
                 'maintainAspectRatio': False,
                 'scales': {
-                    'x': {
-                        'stacked': True,
-                        'max': 100,
-                        'grid': {'color': '#f1f5f9'},
-                        'ticks': {'callback': "function(value) { return value + ' pts'; }"}
-                    },
-                    'y': {
-                        'stacked': True,
-                        'display': False
-                    }
+                    'x': {'stacked': True, 'grid': {'display': False}},
+                    'y': {'stacked': True, 'max': 100, 'grid': {'color': '#f1f5f9'}}
                 },
                 'plugins': {
                     'legend': {
-                        'display': True,
                         'position': 'bottom',
                         'labels': {'padding': 15, 'font': {'size': 12}}
                     },
                     'title': {
                         'display': True,
                         'text': 'Transparency Breakdown',
-                        'font': {'size': 16, 'weight': 'bold'},
-                        'color': '#1e293b'
+                        'font': {'size': 16, 'weight': 'bold'}
                     }
                 }
             }
         }
     
     def _create_manipulation_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Manipulation: Horizontal bar showing technique severity"""
+        """Manipulation: Bar chart by severity"""
         tactics = data.get('tactics_found', [])
         
-        if not tactics:
-            return None
-        
-        # Group by severity
+        # Count by severity
         severity_counts = {'high': 0, 'medium': 0, 'low': 0}
         
-        for tactic in tactics[:10]:  # Top 10
+        for tactic in tactics:
             severity = tactic.get('severity', 'low').lower()
             if severity in severity_counts:
                 severity_counts[severity] += 1
@@ -399,12 +435,7 @@ class ChartGenerator:
             'data': {
                 'labels': ['High Risk', 'Medium Risk', 'Low Risk'],
                 'datasets': [{
-                    'label': 'Techniques',
-                    'data': [
-                        severity_counts['high'],
-                        severity_counts['medium'],
-                        severity_counts['low']
-                    ],
+                    'data': [severity_counts['high'], severity_counts['medium'], severity_counts['low']],
                     'backgroundColor': [
                         self.colors['manipulation']['high_risk'],
                         self.colors['manipulation']['medium_risk'],
@@ -423,24 +454,18 @@ class ChartGenerator:
                     'title': {
                         'display': True,
                         'text': 'Manipulation Techniques by Severity',
-                        'font': {'size': 16, 'weight': 'bold'},
-                        'color': '#1e293b'
+                        'font': {'size': 16, 'weight': 'bold'}
                     }
                 },
                 'scales': {
-                    'x': {
-                        'grid': {'color': '#f1f5f9'},
-                        'ticks': {'stepSize': 1}
-                    },
-                    'y': {
-                        'grid': {'display': False}
-                    }
+                    'x': {'grid': {'color': '#f1f5f9'}, 'ticks': {'stepSize': 1}},
+                    'y': {'grid': {'display': False}}
                 }
             }
         }
     
     def _create_author_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Author: Simple credibility meter"""
+        """Author: Simple credibility gauge"""
         credibility = data.get('credibility_score', data.get('score', 50))
         
         # Determine color
@@ -480,8 +505,8 @@ class ChartGenerator:
     
     def _create_content_chart(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Content: Quality metrics radar"""
-        quality = data.get('quality_score', 0)
-        readability = data.get('readability_score', 0) if data.get('readability_score') else 50
+        quality = data.get('quality_score', data.get('score', 0))
+        readability = data.get('readability_score', 50)
         
         return {
             'type': 'radar',
@@ -490,9 +515,9 @@ class ChartGenerator:
                 'datasets': [{
                     'data': [quality, readability, quality * 0.9, quality * 0.8],
                     'backgroundColor': 'rgba(236, 72, 153, 0.2)',
-                    'borderColor': self.colors['author']['primary'],
+                    'borderColor': '#ec4899',
                     'borderWidth': 3,
-                    'pointBackgroundColor': self.colors['author']['primary'],
+                    'pointBackgroundColor': '#ec4899',
                     'pointBorderColor': '#fff',
                     'pointBorderWidth': 2,
                     'pointRadius': 5
@@ -514,9 +539,119 @@ class ChartGenerator:
                 }
             }
         }
+    
+    # ============================================================================
+    # TOP-LEVEL OVERVIEW CHART CREATORS
+    # ============================================================================
+    
+    def _create_trust_gauge_chart(self, trust_score: int) -> Dict[str, Any]:
+        """Trust gauge (semi-circle)"""
+        if trust_score >= 80:
+            color = '#10b981'
+        elif trust_score >= 60:
+            color = '#3b82f6'
+        elif trust_score >= 40:
+            color = '#f59e0b'
+        else:
+            color = '#ef4444'
+        
+        return {
+            'type': 'doughnut',
+            'data': {
+                'datasets': [{
+                    'data': [trust_score, 100 - trust_score],
+                    'backgroundColor': [color, '#e5e7eb'],
+                    'borderWidth': 0,
+                    'circumference': 180,
+                    'rotation': 270
+                }]
+            },
+            'options': {
+                'responsive': True,
+                'maintainAspectRatio': False,
+                'cutout': '75%',
+                'plugins': {
+                    'legend': {'display': False},
+                    'tooltip': {'enabled': False}
+                }
+            },
+            'centerText': {
+                'value': str(trust_score),
+                'label': 'Trust Score',
+                'color': color
+            }
+        }
+    
+    def _create_service_breakdown_chart(self, detailed: Dict[str, Any]) -> Dict[str, Any]:
+        """Service scores bar chart"""
+        services = {
+            'Source': detailed.get('source_credibility', {}).get('score', 0),
+            'Bias': detailed.get('bias_detector', {}).get('score', 0),
+            'Facts': detailed.get('fact_checker', {}).get('score', 0),
+            'Author': detailed.get('author_analyzer', {}).get('score', 0),
+            'Transparency': detailed.get('transparency_analyzer', {}).get('score', 0),
+            'Manipulation': detailed.get('manipulation_detector', {}).get('score', 0),
+            'Content': detailed.get('content_analyzer', {}).get('score', 0)
+        }
+        
+        labels = list(services.keys())
+        scores = list(services.values())
+        
+        return {
+            'type': 'bar',
+            'data': {
+                'labels': labels,
+                'datasets': [{
+                    'data': scores,
+                    'backgroundColor': '#3b82f6',
+                    'borderRadius': 6,
+                    'barThickness': 40
+                }]
+            },
+            'options': {
+                'responsive': True,
+                'maintainAspectRatio': False,
+                'plugins': {
+                    'legend': {'display': False},
+                    'title': {
+                        'display': True,
+                        'text': 'Service Score Breakdown',
+                        'font': {'size': 16, 'weight': 'bold'}
+                    }
+                },
+                'scales': {
+                    'y': {
+                        'beginAtZero': True,
+                        'max': 100,
+                        'grid': {'color': '#f1f5f9'}
+                    },
+                    'x': {
+                        'grid': {'display': False}
+                    }
+                }
+            }
+        }
+    
+    def _create_bias_radar_chart(self, bias_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Bias dimensions radar (same as service chart)"""
+        return self._create_bias_detector_chart(bias_data)
+    
+    def _create_fact_check_pie_chart(self, fact_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Fact check pie (same as service chart)"""
+        return self._create_fact_checker_chart(fact_data)
+    
+    def _create_source_comparison_chart(self, source_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Source comparison (same as service chart)"""
+        return self._create_source_credibility_chart(source_data)
+    
+    def _create_transparency_bars_chart(self, trans_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Transparency bars (same as service chart)"""
+        return self._create_transparency_chart(trans_data)
 
 
-# Initialize singleton
+# ============================================================================
+# SINGLETON INSTANCE
+# ============================================================================
 _chart_generator_instance = None
 
 def get_chart_generator() -> ChartGenerator:
