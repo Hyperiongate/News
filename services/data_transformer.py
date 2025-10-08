@@ -1,15 +1,17 @@
 """
-Data Transformer - WITH CHART PASSTHROUGH
+Data Transformer - WITH CHART PRESERVATION
 Date: October 8, 2025
-Version: 2.5
+Version: 2.6 - FIXED CHART DATA PRESERVATION
 
-CHANGES FROM 2.4:
-- Added chart passthrough (lines 120-122)
-- All existing functionality preserved
-- Charts now included in final response
+CHANGES FROM 2.5:
+- CRITICAL FIX: All transform methods now preserve chart_data field
+- Added _preserve_chart_data() helper at line 183
+- Each service transformation now calls this helper
+- All existing functionality preserved (DO NO HARM)
 
 THE FIX:
-Backend generates charts → DataTransformer passes them through → Frontend receives them
+When news_analyzer adds chart_data to services, data_transformer now preserves it
+through the transformation process instead of losing it.
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -119,7 +121,7 @@ class DataTransformer:
         response['trust_score'] = raw_data.get('trust_score', 50)
         response['findings_summary'] = raw_data.get('findings_summary', '')
         
-        # TIER 2: Copy charts if present (NEW IN v2.5)
+        # TIER 2: Copy charts if present
         if 'charts' in raw_data:
             response['charts'] = raw_data['charts']
             logger.info(f"[DataTransformer] ✓ Charts included: {len(raw_data['charts'])} charts")
@@ -152,7 +154,8 @@ class DataTransformer:
             # Log what we're actually working with
             if raw_service_data:
                 score_in_data = raw_service_data.get('score', 'NOT FOUND')
-                logger.info(f"[DataTransformer] {service_name} - score in data: {score_in_data}")
+                has_chart_data = 'chart_data' in raw_service_data
+                logger.info(f"[DataTransformer] {service_name} - score: {score_in_data}, has_chart_data: {has_chart_data}")
                 logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:10]}")
             
             transformed = DataTransformer._transform_service(
@@ -163,13 +166,30 @@ class DataTransformer:
             )
             response['detailed_analysis'][service_name] = transformed
             
-            # Verify score made it through
+            # Verify score AND chart_data made it through
             final_score = transformed.get('score', 'MISSING')
-            logger.info(f"[DataTransformer] {service_name} - final score after transform: {final_score}")
+            final_chart = 'chart_data' in transformed
+            logger.info(f"[DataTransformer] {service_name} - final score: {final_score}, chart preserved: {final_chart}")
             
         logger.info(f"[DataTransformer] Transformation complete - Source: {source}")
         
         return response
+    
+    @staticmethod
+    def _preserve_chart_data(result: Dict[str, Any], raw_data: Dict[str, Any]) -> None:
+        """
+        CRITICAL v2.6: Preserve chart_data field if present in raw data
+        
+        This helper is called by ALL service transformation methods to ensure
+        chart_data is not lost during transformation.
+        
+        Args:
+            result: The transformed service data dict (modified in place)
+            raw_data: The original raw service data
+        """
+        if 'chart_data' in raw_data and raw_data['chart_data']:
+            result['chart_data'] = raw_data['chart_data']
+            logger.debug(f"[DataTransformer] ✓ Preserved chart_data")
     
     @staticmethod
     def _get_source_name(raw_data: Dict[str, Any], article: Dict[str, Any]) -> str:
@@ -249,7 +269,7 @@ class DataTransformer:
         
         result = template.copy()
         
-        # Get score - NOW IT WILL ACTUALLY BE THERE!
+        # Get score
         result['score'] = raw_data.get('score', raw_data.get('credibility_score', 50))
         logger.info(f"[Transform SourceCred] Using score: {result['score']} from raw_data")
         
@@ -284,6 +304,9 @@ class DataTransformer:
         # Copy analysis if present
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
+        
+        # CRITICAL v2.6: Preserve chart_data
+        DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform SourceCred] Final: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
         
@@ -363,6 +386,9 @@ class DataTransformer:
                 'what_it_means': DataTransformer._get_author_meaning(cred_score)
             }
         
+        # CRITICAL v2.6: Preserve chart_data
+        DataTransformer._preserve_chart_data(result, raw_data)
+        
         logger.info(f"[Transform Author] Final score: {result['score']}")
         
         return result
@@ -381,12 +407,7 @@ class DataTransformer:
     
     @staticmethod
     def _transform_bias_detector(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Transform bias detector data - HANDLES OBJECTIVITY SCORING
-        
-        New bias_detector returns objectivity_score (higher is better)
-        We need to handle both old and new formats
-        """
+        """Transform bias detector data - HANDLES OBJECTIVITY SCORING"""
         
         result = template.copy()
         
@@ -396,30 +417,23 @@ class DataTransformer:
             objectivity_score = raw_data.get('objectivity_score', 50)
             result['score'] = objectivity_score
             result['objectivity_score'] = objectivity_score
-            
-            # Legacy bias_score for backward compatibility
             result['bias_score'] = 100 - objectivity_score
-            
             logger.info(f"[Transform Bias] NEW FORMAT - Objectivity: {objectivity_score}/100")
         else:
             # OLD FORMAT OR GENERIC: Check for score field
             if 'score' in raw_data:
-                # Use score directly as objectivity
                 objectivity_score = raw_data.get('score', 50)
             else:
-                # Fall back to inverting bias_score
                 bias_score = raw_data.get('bias_score', 50)
                 objectivity_score = 100 - bias_score
             
             result['score'] = objectivity_score
             result['objectivity_score'] = objectivity_score
             result['bias_score'] = 100 - objectivity_score
-            
             logger.info(f"[Transform Bias] Using Objectivity: {objectivity_score}/100")
         
         # Get direction and other metadata
         direction = raw_data.get('direction', raw_data.get('political_lean', 'center'))
-        
         result['direction'] = direction
         result['political_lean'] = direction
         
@@ -427,18 +441,16 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        # CRITICAL v2.6: Preserve chart_data
+        DataTransformer._preserve_chart_data(result, raw_data)
+        
         logger.info(f"[Transform Bias] Final score: {result['score']}")
         
         return result
     
     @staticmethod
     def _transform_fact_checker(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Transform fact checker data
-        
-        FIXED v2.4: Now checks for BOTH 'fact_checks' and 'claims' fields
-        fact_checker.py returns 'fact_checks', but we also support 'claims' for compatibility
-        """
+        """Transform fact checker data"""
         
         result = template.copy()
         
@@ -461,7 +473,6 @@ class DataTransformer:
         result['claims_found'] = checked
         
         # CRITICAL FIX: Check 'fact_checks' FIRST, then 'claims'
-        # fact_checker.py returns 'fact_checks', not 'claims'!
         claims_array = raw_data.get('fact_checks', raw_data.get('claims', []))
         result['claims'] = claims_array
         
@@ -472,6 +483,9 @@ class DataTransformer:
         
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
+        
+        # CRITICAL v2.6: Preserve chart_data
+        DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform FactCheck] Final score: {result['score']}, Claims: {len(claims_array)}")
         
@@ -503,6 +517,9 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        # CRITICAL v2.6: Preserve chart_data
+        DataTransformer._preserve_chart_data(result, raw_data)
+        
         logger.info(f"[Transform Transparency] Final score: {result['score']}")
         
         return result
@@ -531,6 +548,9 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        # CRITICAL v2.6: Preserve chart_data
+        DataTransformer._preserve_chart_data(result, raw_data)
+        
         logger.info(f"[Transform Manipulation] Final score: {result['score']}")
         
         return result
@@ -555,6 +575,9 @@ class DataTransformer:
         
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
+        
+        # CRITICAL v2.6: Preserve chart_data
+        DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform Content] Final score: {result['score']}")
         
