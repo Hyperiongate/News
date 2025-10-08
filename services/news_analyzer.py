@@ -1,15 +1,16 @@
 """
-News Analyzer Service - WITH CHART GENERATION
+News Analyzer Service - WITH SERVICE-INTEGRATED CHARTS
 Date: October 8, 2025
-Version: 13.0 - ADDED TIER 2 CHARTS
+Version: 13.1 - CHARTS NOW EMBEDDED IN EACH SERVICE
 
-CHANGES FROM 12.4:
-- Added chart generation via ChartGenerator
-- All existing functionality preserved (Tier 1 insights + enrichment)
-- Charts added to response data
+CHANGES FROM 13.0:
+- Charts now embedded in each service's data (chart_data field)
+- Added _integrate_charts_into_services() method
+- Called after normalizing detailed_analysis in _build_response()
+- All existing functionality preserved (DO NO HARM)
 
 DEPLOYMENT:
-Replace services/news_analyzer.py with this file
+Replace services/news_analyzer.py with this complete file
 """
 
 import logging
@@ -33,7 +34,7 @@ class NewsAnalyzer:
         self.pipeline = AnalysisPipeline()
         self.insight_generator = InsightGenerator()
         self.data_enricher = DataEnricher()
-        logger.info("[NewsAnalyzer v13.0] Initialized - WITH CHART GENERATION")
+        logger.info("[NewsAnalyzer v13.1] Initialized - WITH SERVICE-INTEGRATED CHARTS")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
@@ -93,7 +94,7 @@ class NewsAnalyzer:
                 logger.info("[NewsAnalyzer] Enriching data with comparative context...")
                 response = self.data_enricher.enrich_data(response)
                 
-                # ===== TIER 2: CHART GENERATION =====
+                # ===== TIER 2: CHART GENERATION (TOP LEVEL - PRESERVED) =====
                 logger.info("[NewsAnalyzer] Generating chart visualizations...")
                 from services.chart_generator import ChartGenerator
                 chart_gen = ChartGenerator()
@@ -140,6 +141,13 @@ class NewsAnalyzer:
         author = article_data.get('author', 'Staff Writer')
         title = article_data.get('title', 'Article Analysis')
         
+        # Normalize detailed analysis (ensures consistent 'score' fields)
+        normalized_detailed = self._normalize_detailed_analysis(detailed)
+        
+        # ===== NEW v13.1: INTEGRATE CHARTS INTO EACH SERVICE =====
+        # This adds 'chart_data' field to each service's response
+        normalized_detailed = self._integrate_charts_into_services(normalized_detailed)
+        
         # Build response
         response = {
             'success': True,
@@ -147,8 +155,8 @@ class NewsAnalyzer:
             'article_summary': title[:200] if title else 'Article analyzed',
             'source': source,
             'author': author,
-            'findings_summary': self._generate_findings_summary(detailed, trust_score),
-            'detailed_analysis': self._normalize_detailed_analysis(detailed),
+            'findings_summary': self._generate_findings_summary(normalized_detailed, trust_score),
+            'detailed_analysis': normalized_detailed,
             'processing_time': round(time.time() - start_time, 2),
             'content_type': content_type,
             'word_count': article_data.get('word_count', 0)
@@ -190,6 +198,75 @@ class NewsAnalyzer:
             normalized[service_name] = normalized_service
         
         return normalized
+    
+    def _integrate_charts_into_services(self, detailed_analysis: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        ===== NEW METHOD v13.1 =====
+        Integrate chart data into each service's response
+        
+        This adds a 'chart_data' field to each service containing its visualization data.
+        Frontend (service-templates.js) will read this and render charts inside service cards.
+        
+        Args:
+            detailed_analysis: Normalized service data dict
+            
+        Returns:
+            Same dict with chart_data added to each service
+        """
+        try:
+            logger.info("[NewsAnalyzer] Integrating charts into service data...")
+            
+            from services.chart_generator import ChartGenerator
+            
+            chart_gen = ChartGenerator()
+            
+            # Service ID mapping (service key -> chart service ID)
+            service_map = {
+                'source_credibility': 'source_credibility',
+                'bias_detector': 'bias_detector',
+                'fact_checker': 'fact_checker',
+                'transparency_analyzer': 'transparency_analyzer',
+                'manipulation_detector': 'manipulation_detector',
+                'author_analyzer': 'author_analyzer',
+                'content_analyzer': 'content_analyzer'
+            }
+            
+            charts_generated = 0
+            
+            # Generate chart for each service
+            for service_key, chart_service_id in service_map.items():
+                if service_key in detailed_analysis:
+                    service_data = detailed_analysis[service_key]
+                    
+                    # Skip if data is empty or error
+                    if not service_data or not isinstance(service_data, dict):
+                        logger.debug(f"[Charts] Skipping {service_key} - no valid data")
+                        continue
+                    
+                    # Generate chart data for this service
+                    try:
+                        chart_data = chart_gen.generate_service_chart(chart_service_id, service_data)
+                        
+                        if chart_data:
+                            # Embed chart data into service response
+                            detailed_analysis[service_key]['chart_data'] = chart_data
+                            charts_generated += 1
+                            logger.debug(f"[Charts] ✓ {service_key}: chart integrated")
+                        else:
+                            logger.debug(f"[Charts] ✗ {service_key}: no chart data returned")
+                            
+                    except Exception as e:
+                        logger.warning(f"[Charts] Failed to generate chart for {service_key}: {e}")
+                        continue
+            
+            logger.info(f"[NewsAnalyzer] ✓ Integrated {charts_generated}/{len(service_map)} charts into services")
+            
+            return detailed_analysis
+            
+        except Exception as e:
+            logger.error(f"[NewsAnalyzer] Chart integration failed: {e}", exc_info=True)
+            # Non-critical - return original data if charts fail
+            return detailed_analysis
     
     def _generate_findings_summary(self, detailed: Dict[str, Any], trust_score: int) -> str:
         """Generate human-readable findings summary"""
