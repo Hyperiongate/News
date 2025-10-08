@@ -1,18 +1,17 @@
 /**
- * TruthLens Unified App Core - COMPLETE FIXED VERSION
- * Version: 6.3.0
- * Date: October 2, 2025
+ * TruthLens Unified App Core - WITH CHART SUPPORT
+ * Version: 6.4.0
+ * Date: October 8, 2025
  * 
- * FIXES:
- * - Corrected API request structure (sends 'url' field, not 'input_data')
- * - Properly detects URL vs text input
- * - Simple inline progress bar (not full-screen overlay)
- * - Professional and subtle animations
+ * CHANGES FROM 6.3.0:
+ * - Added explicit chart data handling
+ * - Calls renderCharts() when chart data available
+ * - Logs chart data for debugging
  * - All existing functionality preserved
  */
 
 function UnifiedTruthLensAnalyzer() {
-    console.log('[UnifiedTruthLens] Initializing v6.3.0 with API fix...');
+    console.log('[UnifiedTruthLens] Initializing v6.4.0 with chart support...');
     
     // Core properties
     this.currentMode = 'news';
@@ -45,7 +44,7 @@ UnifiedTruthLensAnalyzer.prototype.initialize = function() {
     this.setupTabs();
     this.setupResetButtons();
     
-    console.log('[UnifiedTruthLens] Ready with API fix');
+    console.log('[UnifiedTruthLens] Ready with chart support');
 };
 
 UnifiedTruthLensAnalyzer.prototype.setupTabs = function() {
@@ -216,6 +215,13 @@ UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input, isUrl) {
                     var data = JSON.parse(xhr.responseText);
                     console.log('[UnifiedTruthLens] Response received:', data);
                     
+                    // CRITICAL: Check for chart data
+                    if (data.charts) {
+                        console.log('[UnifiedTruthLens] ✓ Chart data present:', Object.keys(data.charts));
+                    } else {
+                        console.warn('[UnifiedTruthLens] ⚠ No chart data in response');
+                    }
+                    
                     if (!data.success) {
                         self.showError(data.error || 'Analysis failed');
                     } else if (data.error) {
@@ -277,6 +283,12 @@ UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
     
     if (resultsSection) {
         resultsSection.style.display = 'none';
+    }
+    
+    // Hide charts section
+    var chartsSection = document.getElementById('chartsSection');
+    if (chartsSection) {
+        chartsSection.style.display = 'none';
     }
     
     // Disable buttons
@@ -449,6 +461,22 @@ UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
         console.error('[UnifiedTruthLens] Service analysis container or ServiceTemplates not found');
     }
     
+    // CRITICAL: Render charts if available
+    if (data.charts && Object.keys(data.charts).length > 0) {
+        console.log('[UnifiedTruthLens] ✓ Rendering charts...');
+        
+        // Give the DOM time to render, then show charts
+        setTimeout(function() {
+            if (typeof renderCharts === 'function') {
+                renderCharts(data.charts);
+            } else {
+                console.error('[UnifiedTruthLens] renderCharts function not found!');
+            }
+        }, 300);
+    } else {
+        console.warn('[UnifiedTruthLens] No chart data available');
+    }
+    
     // Scroll to results
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
@@ -462,6 +490,17 @@ UnifiedTruthLensAnalyzer.prototype.clearResults = function() {
     var resultsSection = document.getElementById('resultsSection');
     if (resultsSection) {
         resultsSection.style.display = 'none';
+    }
+    
+    var chartsSection = document.getElementById('chartsSection');
+    if (chartsSection) {
+        chartsSection.style.display = 'none';
+    }
+    
+    // Destroy existing charts
+    if (window.ChartRenderer && window.ChartRenderer.destroyAllCharts) {
+        window.ChartRenderer.destroyAllCharts();
+        console.log('[UnifiedTruthLens] Cleared existing charts');
     }
 };
 
@@ -500,7 +539,7 @@ UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
 };
 
 // Initialize application
-console.log('[UnifiedTruthLens] Loading v6.3.0 with API fix...');
+console.log('[UnifiedTruthLens] Loading v6.4.0 with chart support...');
 var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 // Export for compatibility
