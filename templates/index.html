@@ -3,13 +3,14 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 3.5.0 - ADDED CHART.JS FOR TIER 2
+    Version: 3.6.0 - CHART.JS VISUALIZATIONS ADDED
     Date: October 8, 2025
     
-    CHANGES FROM 3.4.0:
-    - Added Chart.js CDN for visualizations
-    - Added chart-renderer.js to script loading order
-    - All existing functionality preserved
+    CHANGES FROM 3.5.0:
+    - Added canvas elements for Chart.js visualizations
+    - Added renderCharts() function to call ChartRenderer
+    - CSS for chart containers
+    - All existing functionality preserved (DO NO HARM)
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,7 +35,121 @@
     <link rel="stylesheet" href="/static/css/main.css">
     
     <style>
-        /* ===== NEW: EXTRACTION BLOCKED MESSAGE STYLES ===== */
+        /* ===== NEW: CHART VISUALIZATION STYLES ===== */
+        .charts-section {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+        
+        .charts-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+        
+        .charts-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 0;
+        }
+        
+        .charts-title i {
+            color: #6366f1;
+        }
+        
+        .charts-subtitle {
+            color: #64748b;
+            font-size: 0.95rem;
+            margin-top: 0.5rem;
+        }
+        
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        
+        .chart-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+        
+        .chart-card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+        
+        .chart-card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .chart-card-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.9rem;
+        }
+        
+        .chart-canvas-container {
+            position: relative;
+            width: 100%;
+            min-height: 250px;
+            max-height: 300px;
+        }
+        
+        .chart-canvas-container canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+        
+        /* Special sizing for specific chart types */
+        .chart-card.gauge .chart-canvas-container {
+            min-height: 200px;
+            max-height: 200px;
+        }
+        
+        .chart-card.wide {
+            grid-column: span 2;
+        }
+        
+        .chart-card.tall .chart-canvas-container {
+            min-height: 350px;
+            max-height: 400px;
+        }
+        
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-card.wide {
+                grid-column: span 1;
+            }
+        }
+
+        /* ===== EXISTING STYLES PRESERVED (DO NO HARM) ===== */
         .extraction-blocked-message {
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
             border: 2px solid #f59e0b;
@@ -115,7 +230,6 @@
             }
         }
         
-        /* Highlight text area when prompted */
         .textarea-field.highlight {
             border-color: #f59e0b;
             box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
@@ -131,7 +245,6 @@
             }
         }
 
-        /* ===== ENHANCED TRUST SCORE DISPLAY STYLES ===== */
         .trust-score-visual {
             display: flex;
             gap: 3rem;
@@ -334,7 +447,6 @@
             font-weight: 600;
         }
 
-        /* Service-specific colors */
         .contribution-source {
             background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
         }
@@ -429,7 +541,6 @@
             }
         }
 
-        /* Enhanced tab styles for unified interface */
         .mode-selector {
             display: flex;
             background: #f1f5f9;
@@ -470,7 +581,6 @@
             font-size: 1.1rem;
         }
 
-        /* Mode-specific content */
         .mode-content {
             display: none;
         }
@@ -479,7 +589,6 @@
             display: block;
         }
 
-        /* Enhanced input styles for transcript mode */
         .transcript-textarea {
             min-height: 200px;
             font-family: 'Inter', monospace;
@@ -487,7 +596,6 @@
             line-height: 1.6;
         }
 
-        /* YouTube URL helper */
         .youtube-helper {
             background: linear-gradient(135deg, rgba(255, 0, 0, 0.05) 0%, rgba(255, 0, 0, 0.02) 100%);
             border: 1px solid rgba(255, 0, 0, 0.2);
@@ -498,7 +606,6 @@
             color: #dc2626;
         }
 
-        /* Content type indicator */
         .content-type-indicator {
             position: absolute;
             top: 0.5rem;
@@ -521,7 +628,6 @@
             position: relative;
         }
 
-        /* Enhanced mode descriptions */
         .mode-description {
             text-align: center;
             margin-bottom: 2rem;
@@ -547,7 +653,6 @@
             font-size: 0.95rem;
         }
 
-        /* Analysis mode indicator in results */
         .analysis-mode-badge {
             position: absolute;
             top: 1rem;
@@ -570,7 +675,6 @@
             color: white;
         }
 
-        /* Source type indicators in results */
         .source-type-badge {
             display: inline-flex;
             align-items: center;
@@ -594,7 +698,6 @@
             color: #3b82f6;
         }
 
-        /* Responsive design */
         @media (max-width: 768px) {
             .mode-selector {
                 flex-direction: column;
@@ -722,7 +825,6 @@
                         <div class="content-type-indicator" id="newsTypeIndicator">NEWS</div>
                     </div>
 
-                    <!-- NEW: EXTRACTION BLOCKED MESSAGE -->
                     <div class="extraction-blocked-message" id="newsBlockedMessage">
                         <div class="blocked-header">
                             <div class="blocked-icon">
@@ -893,8 +995,110 @@ You can paste:
 
                 <!-- Enhanced Analysis Overview (Shared) -->
                 <div class="enhanced-analysis-overview" id="enhancedAnalysisOverview">
-                    <!-- Analysis mode will be shown here -->
                     <!-- Trust score and breakdown will be populated dynamically -->
+                </div>
+
+                <!-- NEW: CHART VISUALIZATIONS SECTION -->
+                <div class="charts-section" id="chartsSection" style="display: none;">
+                    <div class="charts-header">
+                        <h3 class="charts-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Visual Analytics
+                        </h3>
+                        <p class="charts-subtitle">Interactive charts showing detailed analysis breakdown</p>
+                    </div>
+
+                    <div class="charts-grid">
+                        <!-- Trust Score Gauge -->
+                        <div class="chart-card gauge">
+                            <div class="chart-card-header">
+                                <div class="chart-card-title">
+                                    <div class="chart-card-icon">
+                                        <i class="fas fa-tachometer-alt"></i>
+                                    </div>
+                                    Trust Score Gauge
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="trustGaugeChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Service Breakdown -->
+                        <div class="chart-card tall">
+                            <div class="chart-card-header">
+                                <div class="chart-card-title">
+                                    <div class="chart-card-icon">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </div>
+                                    Service Contributions
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="serviceBreakdownChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Bias Radar -->
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-card-title">
+                                    <div class="chart-card-icon">
+                                        <i class="fas fa-bullseye"></i>
+                                    </div>
+                                    Bias Analysis
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="biasRadarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Fact Check Pie -->
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-card-title">
+                                    <div class="chart-card-icon">
+                                        <i class="fas fa-check-circle"></i>
+                                    </div>
+                                    Fact-Check Results
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="factCheckPieChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Source Comparison -->
+                        <div class="chart-card wide tall">
+                            <div class="chart-card-header">
+                                <div class="chart-card-title">
+                                    <div class="chart-card-icon">
+                                        <i class="fas fa-building"></i>
+                                    </div>
+                                    Source Comparison
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="sourceComparisonChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Transparency Bars -->
+                        <div class="chart-card">
+                            <div class="chart-card-header">
+                                <div class="chart-card-title">
+                                    <div class="chart-card-icon">
+                                        <i class="fas fa-eye"></i>
+                                    </div>
+                                    Transparency Breakdown
+                                </div>
+                            </div>
+                            <div class="chart-canvas-container">
+                                <canvas id="transparencyBarsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Service Analysis Dropdowns Container (Shared) -->
@@ -946,7 +1150,46 @@ You can paste:
         // Global state for current mode
         let currentAnalysisMode = 'news';
 
-        // NEW: Functions to handle extraction blocking
+        // NEW: Render charts function
+        function renderCharts(chartData) {
+            console.log('[renderCharts] Received chart data:', chartData);
+            
+            if (!chartData || Object.keys(chartData).length === 0) {
+                console.log('[renderCharts] No chart data available');
+                return;
+            }
+            
+            // Show charts section
+            const chartsSection = document.getElementById('chartsSection');
+            if (chartsSection) {
+                chartsSection.style.display = 'block';
+            }
+            
+            // Render each chart
+            const chartMappings = {
+                'trust_gauge': 'trustGaugeChart',
+                'service_breakdown': 'serviceBreakdownChart',
+                'bias_radar': 'biasRadarChart',
+                'fact_check_pie': 'factCheckPieChart',
+                'source_comparison': 'sourceComparisonChart',
+                'transparency_bars': 'transparencyBarsChart'
+            };
+            
+            let chartsRendered = 0;
+            
+            for (const [dataKey, canvasId] of Object.entries(chartMappings)) {
+                if (chartData[dataKey]) {
+                    const chart = window.ChartRenderer.renderChart(canvasId, chartData[dataKey]);
+                    if (chart) {
+                        chartsRendered++;
+                    }
+                }
+            }
+            
+            console.log(`[renderCharts] ✓ Rendered ${chartsRendered} charts`);
+        }
+
+        // Functions to handle extraction blocking
         function showBlockedMessage(mode, message) {
             const blockedMsgId = mode === 'news' ? 'newsBlockedMessage' : 'transcriptBlockedMessage';
             const blockedTextId = mode === 'news' ? 'newsBlockedText' : 'transcriptBlockedText';
@@ -965,7 +1208,6 @@ You can paste:
                 textarea.classList.add('highlight');
                 textarea.focus();
                 
-                // Scroll to textarea
                 setTimeout(() => {
                     textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 }, 100);
@@ -994,21 +1236,17 @@ You can paste:
         function switchMode(mode) {
             currentAnalysisMode = mode;
             
-            // Update tab active states
             document.querySelectorAll('.mode-tab').forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.mode === mode);
             });
             
-            // Update content visibility
             document.querySelectorAll('.mode-content').forEach(content => {
                 content.classList.toggle('active', content.id === `${mode}-mode`);
             });
             
-            // Hide any blocked messages when switching modes
             hideBlockedMessage('news');
             hideBlockedMessage('transcript');
             
-            // Update progress subtitle
             const subtitle = document.querySelector('.progress-subtitle');
             if (subtitle) {
                 subtitle.textContent = mode === 'news' 
@@ -1029,29 +1267,36 @@ You can paste:
                 hideBlockedMessage('transcript');
             }
             
-            // Hide results
             const resultsSection = document.getElementById('resultsSection');
             if (resultsSection) {
                 resultsSection.style.display = 'none';
             }
             
-            // Hide progress
             const progressContainer = document.getElementById('progressContainer');
             if (progressContainer) {
                 progressContainer.style.display = 'none';
             }
+            
+            const chartsSection = document.getElementById('chartsSection');
+            if (chartsSection) {
+                chartsSection.style.display = 'none';
+            }
+            
+            // Destroy existing charts
+            if (window.ChartRenderer) {
+                window.ChartRenderer.destroyAllCharts();
+            }
         }
 
-        // Content type detection (visual feedback)
+        // Content type detection
         function updateContentTypeIndicator() {
-            // Implementation will be in unified-app-core.js
+            // Implementation in unified-app-core.js
         }
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v3.5.0 with Chart.js for Tier 2 loaded');
+            console.log('TruthLens v3.6.0 with Chart.js visualizations loaded');
             
-            // Set up input field monitoring for visual feedback
             const inputs = ['newsUrlInput', 'newsTextInput', 'youtubeUrlInput', 'transcriptTextInput'];
             inputs.forEach(id => {
                 const input = document.getElementById(id);
@@ -1061,27 +1306,29 @@ You can paste:
             });
         });
 
-        // Keep the existing trust score display functions
+        // EXISTING FUNCTIONS PRESERVED (DO NO HARM)
         function updateEnhancedTrustDisplay(data) {
             const trustScore = data.trust_score || 0;
             const detailed = data.detailed_analysis || {};
             const analysisMode = data.analysis_mode || 'news';
             
-            // Update analysis mode badge
             const modeBadge = document.getElementById('analysisModeBadge');
             if (modeBadge) {
                 modeBadge.textContent = analysisMode === 'news' ? 'News Analysis' : 'Transcript Analysis';
                 modeBadge.className = `analysis-mode-badge ${analysisMode}`;
             }
             
-            // Create enhanced overview HTML
             const overview = document.getElementById('enhancedAnalysisOverview');
             if (overview) {
                 overview.innerHTML = createEnhancedOverviewHTML(data);
             }
             
-            // Animate contributions
             setTimeout(() => updateServiceContributions(detailed), 300);
+            
+            // NEW: Render charts if available
+            if (data.charts && Object.keys(data.charts).length > 0) {
+                setTimeout(() => renderCharts(data.charts), 500);
+            }
         }
 
         function createEnhancedOverviewHTML(data) {
@@ -1229,7 +1476,6 @@ You can paste:
             `;
         }
 
-        // FIXED: updateServiceContributions with proper field name mapping
         function updateServiceContributions(detailed) {
             console.log('[updateServiceContributions] Received detailed analysis:', detailed);
             
@@ -1247,43 +1493,28 @@ You can paste:
                 if (detailed[serviceKey]) {
                     const serviceData = detailed[serviceKey];
                     
-                    // FIXED: Try multiple field names for score
                     let score = 0;
                     
                     if (serviceKey === 'source_credibility') {
-                        // Try credibility_score, then score
                         score = serviceData.credibility_score || serviceData.score || 0;
-                        console.log(`[Score] source_credibility: credibility_score=${serviceData.credibility_score}, score=${serviceData.score}, using=${score}`);
                     } else if (serviceKey === 'bias_detector') {
-                        // Use objectivity_score (new format) or score
                         score = serviceData.objectivity_score || serviceData.score || 0;
-                        console.log(`[Score] bias_detector: objectivity_score=${serviceData.objectivity_score}, score=${serviceData.score}, using=${score}`);
                     } else if (serviceKey === 'fact_checker') {
-                        // Try verification_score, accuracy_score, then score
                         score = serviceData.verification_score || serviceData.accuracy_score || serviceData.score || 0;
-                        console.log(`[Score] fact_checker: verification_score=${serviceData.verification_score}, accuracy_score=${serviceData.accuracy_score}, score=${serviceData.score}, using=${score}`);
                     } else if (serviceKey === 'author_analyzer') {
-                        // Try credibility_score, credibility, then score
                         score = serviceData.credibility_score || serviceData.credibility || serviceData.score || 0;
-                        console.log(`[Score] author_analyzer: credibility_score=${serviceData.credibility_score}, score=${serviceData.score}, using=${score}`);
                     } else if (serviceKey === 'transparency_analyzer') {
                         score = serviceData.transparency_score || serviceData.score || 0;
-                        console.log(`[Score] transparency: transparency_score=${serviceData.transparency_score}, score=${serviceData.score}, using=${score}`);
                     } else if (serviceKey === 'manipulation_detector') {
                         score = serviceData.integrity_score || serviceData.score || 0;
-                        console.log(`[Score] manipulation: integrity_score=${serviceData.integrity_score}, score=${serviceData.score}, using=${score}`);
                     } else if (serviceKey === 'content_analyzer') {
                         score = serviceData.quality_score || serviceData.score || 0;
-                        console.log(`[Score] content: quality_score=${serviceData.quality_score}, score=${serviceData.score}, using=${score}`);
                     } else {
-                        // Default: just use score field
                         score = serviceData.score || 0;
-                        console.log(`[Score] ${serviceKey}: score=${serviceData.score}, using=${score}`);
                     }
                     
                     const contribution = (score * weights[serviceKey]).toFixed(1);
                     
-                    // FIXED: Map service keys to correct element IDs
                     const elementIdMap = {
                         'source_credibility': 'contribSource',
                         'bias_detector': 'contribBias',
@@ -1296,11 +1527,7 @@ You can paste:
                     
                     const elementId = elementIdMap[serviceKey] || 'contrib' + serviceKey;
                     
-                    console.log(`[Update] ${serviceKey}: score=${score}, contribution=${contribution}, elementId=${elementId}`);
-                    
                     updateContributionBar(elementId, score, contribution, weights[serviceKey] * 100);
-                } else {
-                    console.warn(`[updateServiceContributions] ${serviceKey} not found in detailed analysis`);
                 }
             });
         }
@@ -1308,8 +1535,6 @@ You can paste:
         function updateContributionBar(elementId, score, contribution, maxWeight) {
             const bar = document.getElementById(elementId);
             if (bar) {
-                console.log(`[updateContributionBar] ${elementId}: setting width to ${score}%, label to ${contribution}/${maxWeight}`);
-                
                 setTimeout(() => {
                     bar.style.width = score + '%';
                 }, 100);
@@ -1318,8 +1543,6 @@ You can paste:
                 if (scoreSpan) {
                     scoreSpan.textContent = `${contribution}/${maxWeight}`;
                 }
-            } else {
-                console.error(`[updateContributionBar] Element not found: ${elementId}`);
             }
         }
     </script>
