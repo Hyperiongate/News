@@ -1,20 +1,15 @@
 """
-Data Transformer - FIXED FACT_CHECKS FIELD
-Date: October 7, 2025
-Version: 2.4
+Data Transformer - WITH CHART PASSTHROUGH
+Date: October 8, 2025
+Version: 2.5
 
-CRITICAL FIX IN THIS VERSION:
-- fact_checker.py returns 'fact_checks' array but transformer looked for 'claims'
-- Line 447: Now checks BOTH 'fact_checks' and 'claims' fields
-- This fixes the bug where claims show as empty even when checked
+CHANGES FROM 2.4:
+- Added chart passthrough (lines 120-122)
+- All existing functionality preserved
+- Charts now included in final response
 
-THE BUG:
-  fact_checker returns: {fact_checks: [{claim: "...", verdict: "..."}, ...]}
-  transformer looked for: raw_data.get('claims', [])  # Returns [] !
-  
 THE FIX:
-  result['claims'] = raw_data.get('fact_checks', raw_data.get('claims', []))
-  Now checks 'fact_checks' FIRST, then falls back to 'claims'
+Backend generates charts → DataTransformer passes them through → Frontend receives them
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -123,6 +118,11 @@ class DataTransformer:
         response['success'] = raw_data.get('success', True)
         response['trust_score'] = raw_data.get('trust_score', 50)
         response['findings_summary'] = raw_data.get('findings_summary', '')
+        
+        # TIER 2: Copy charts if present (NEW IN v2.5)
+        if 'charts' in raw_data:
+            response['charts'] = raw_data['charts']
+            logger.info(f"[DataTransformer] ✓ Charts included: {len(raw_data['charts'])} charts")
         
         # Handle article data
         article = raw_data.get('article', {})
