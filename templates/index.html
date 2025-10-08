@@ -3,15 +3,13 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 3.4.0 - FIXED SCORE BREAKDOWN DISPLAY
-    Date: October 7, 2025
+    Version: 3.5.0 - ADDED CHART.JS FOR TIER 2
+    Date: October 8, 2025
     
-    CRITICAL FIX:
-    - updateServiceContributions now reads correct field names for each service
-    - Source Credibility: reads credibility_score (was only reading score)
-    - Fact Checker: reads verification_score/accuracy_score (was only reading score)
-    - All services now have proper fallback field name logic
-    - Score bars will now display correctly (83/25, 75/15 instead of 0/25, 0/15)
+    CHANGES FROM 3.4.0:
+    - Added Chart.js CDN for visualizations
+    - Added chart-renderer.js to script loading order
+    - All existing functionality preserved
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -28,6 +26,9 @@
     
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- Chart.js for Tier 2 Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     
     <!-- External Styles -->
     <link rel="stylesheet" href="/static/css/main.css">
@@ -938,6 +939,7 @@ You can paste:
 
     <!-- Load JavaScript files in correct order -->
     <script src="/static/js/service-templates.js"></script>
+    <script src="/static/js/chart-renderer.js"></script>
     <script src="/static/js/unified-app-core.js"></script>
     
     <script>
@@ -1047,7 +1049,7 @@ You can paste:
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v3.4.0 with FIXED score breakdown display loaded');
+            console.log('TruthLens v3.5.0 with Chart.js for Tier 2 loaded');
             
             // Set up input field monitoring for visual feedback
             const inputs = ['newsUrlInput', 'newsTextInput', 'youtubeUrlInput', 'transcriptTextInput'];
