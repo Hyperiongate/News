@@ -1419,7 +1419,9 @@ function integrateChartsIntoServices(data) {
             
             // Stagger chart rendering for smooth animation
             setTimeout(() => {
-                window.ChartRenderer.renderServiceChart(service.id, serviceData.chart_data);
+                // renderChart expects canvas ID, so append 'Chart' to service ID
+                const canvasId = service.id + 'Chart';
+                window.ChartRenderer.renderChart(canvasId, serviceData.chart_data);
             }, service.delay);
         } else {
             console.log(`[Charts] No chart data for ${service.id}`);
