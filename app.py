@@ -1,13 +1,18 @@
 """
-TruthLens News Analyzer - Complete with Data Transformer Integration + DIAGNOSTICS
-Version: 8.1.0
-Date: October 6, 2025
+TruthLens News Analyzer - Complete with Data Transformer Integration + Chart Support
+Version: 8.2.0
+Date: October 8, 2025
 
-CHANGES FROM 8.0.0:
-1. Added diagnostic endpoints for troubleshooting track record system
-2. Added API key checking endpoint
-3. Added direct API testing endpoint
-4. All existing functionality preserved
+CHANGES FROM 8.1.0:
+1. FIXED: Explicit static folder configuration for proper file serving on Render
+2. Added static file debugging endpoint
+3. All previous functionality preserved
+
+CRITICAL FIX:
+Flask now explicitly configured with:
+- static_folder='static' 
+- static_url_path='/static'
+This ensures chart-renderer.js and all static files serve properly on Render.
 
 This is the COMPLETE file - replace your entire app.py with this
 """
@@ -23,7 +28,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 
@@ -41,9 +46,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Initialize Flask app
-app = Flask(__name__)
+# ============================================================================
+# CRITICAL FIX: EXPLICIT STATIC FOLDER CONFIGURATION
+# ============================================================================
+app = Flask(__name__, 
+            static_folder='static',
+            static_url_path='/static',
+            template_folder='templates')
 CORS(app)
+
+logger.info("=" * 80)
+logger.info("Flask app initialized with EXPLICIT static configuration:")
+logger.info(f"  static_folder: {app.static_folder}")
+logger.info(f"  static_url_path: {app.static_url_path}")
+logger.info(f"  template_folder: {app.template_folder}")
+logger.info("=" * 80)
 
 # OpenAI configuration
 try:
@@ -1180,7 +1197,7 @@ def index():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '8.1.0',
+        'version': '8.2.0',
         'services': {
             'openai': 'connected' if openai_client else 'not configured',
             'author_analyzer': 'enhanced with database',
@@ -1188,8 +1205,56 @@ def health():
             'scraperapi': 'configured' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
             'news_analyzer': 'active with data transformer',
             'track_record_system': 'available' if author_analyzer else 'not available'
+        },
+        'static_config': {
+            'static_folder': app.static_folder,
+            'static_url_path': app.static_url_path
         }
     })
+
+# ============================================================================
+# NEW: STATIC FILE DEBUG ENDPOINT
+# ============================================================================
+@app.route('/debug/static-files')
+def debug_static_files():
+    """Debug endpoint to check static file configuration"""
+    import os
+    
+    static_folder = app.static_folder
+    js_folder = os.path.join(static_folder, 'js')
+    
+    files_info = {}
+    
+    if os.path.exists(js_folder):
+        js_files = os.listdir(js_folder)
+        for filename in js_files:
+            filepath = os.path.join(js_folder, filename)
+            files_info[filename] = {
+                'exists': os.path.exists(filepath),
+                'size': os.path.getsize(filepath) if os.path.exists(filepath) else 0,
+                'readable': os.access(filepath, os.R_OK) if os.path.exists(filepath) else False
+            }
+    
+    return jsonify({
+        'static_folder': static_folder,
+        'static_url_path': app.static_url_path,
+        'js_folder_exists': os.path.exists(js_folder),
+        'js_files': files_info,
+        'chart_renderer_status': files_info.get('chart-renderer.js', {'exists': False}),
+        'all_js_files': list(files_info.keys()) if files_info else []
+    })
+
+# ============================================================================
+# EXPLICIT STATIC FILE ROUTE (BACKUP)
+# ============================================================================
+@app.route('/static/<path:filename>')
+def serve_static(filename):
+    """Explicit static file serving as backup"""
+    try:
+        return send_from_directory(app.static_folder, filename)
+    except Exception as e:
+        logger.error(f"Error serving static file {filename}: {e}")
+        return jsonify({'error': 'File not found'}), 404
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze():
@@ -1202,7 +1267,7 @@ def analyze():
         text = data.get('text')
         
         logger.info("=" * 80)
-        logger.info("API /analyze endpoint called - Version 8.1.0")
+        logger.info("API /analyze endpoint called - Version 8.2.0")
         logger.info(f"URL provided: {bool(url)}")
         logger.info(f"Text provided: {bool(text)} ({len(text) if text else 0} chars)")
         
@@ -1255,7 +1320,7 @@ def analyze():
 
 
 # ============================================================================
-# DIAGNOSTIC ENDPOINTS (NEW IN v8.1.0)
+# DIAGNOSTIC ENDPOINTS
 # ============================================================================
 
 @app.route('/debug/api-keys', methods=['GET'])
@@ -1449,7 +1514,7 @@ def debug_test_apis():
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS v8.1.0 - WITH DIAGNOSTIC ENDPOINTS")
+    logger.info("TRUTHLENS v8.2.0 - STATIC FILE SERVING FIXED")
     logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
     logger.info(f"ScraperAPI: {'✓ CONFIGURED' if os.getenv('SCRAPERAPI_KEY') else '✗ NOT CONFIGURED'}")
     logger.info(f"MEDIASTACK API: {'✓ CONFIGURED' if os.getenv('MEDIASTACK_API_KEY') else '✗ NOT CONFIGURED'}")
@@ -1462,9 +1527,15 @@ if __name__ == '__main__':
     logger.info(f"DataTransformer: ✓ ACTIVE")
     logger.info("")
     logger.info("DIAGNOSTIC ENDPOINTS AVAILABLE:")
-    logger.info("  GET  /debug/api-keys      - Check API key configuration")
-    logger.info("  POST /debug/track-record  - Test track record system")
-    logger.info("  POST /debug/test-apis     - Test API connectivity")
+    logger.info("  GET  /debug/api-keys       - Check API key configuration")
+    logger.info("  GET  /debug/static-files   - Check static file serving (NEW!)")
+    logger.info("  POST /debug/track-record   - Test track record system")
+    logger.info("  POST /debug/test-apis      - Test API connectivity")
+    logger.info("")
+    logger.info("STATIC FILE CONFIGURATION:")
+    logger.info(f"  static_folder: {app.static_folder}")
+    logger.info(f"  static_url_path: {app.static_url_path}")
+    logger.info("  Explicit routes: /static/<path:filename>")
     logger.info("=" * 80)
     
     port = int(os.getenv('PORT', 5000))
