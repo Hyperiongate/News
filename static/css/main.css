@@ -1705,3 +1705,468 @@ body {
 }
 
 /* ===== END OF CHART STYLES ===== */
+/**
+ * Transparency Service - REDESIGNED CSS
+ * Date: October 9, 2025
+ * 
+ * ADD THIS TO: static/css/main.css or static/css/truthlens-enhanced.css
+ * (Add at the end of your existing CSS file)
+ */
+
+/* ========================================
+   TRANSPARENCY REDESIGN - HERO SECTION
+   ======================================== */
+
+.transparency-hero {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+    border-radius: 20px;
+    padding: 3rem;
+    color: white;
+    margin-bottom: 2rem;
+    box-shadow: 0 20px 60px rgba(139, 92, 246, 0.3);
+    position: relative;
+    overflow: hidden;
+}
+
+.transparency-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.trans-hero-content {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 3rem;
+    align-items: center;
+}
+
+.trans-score-visual {
+    position: relative;
+    width: 180px;
+    height: 180px;
+}
+
+.trans-score-circle-bg {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.trans-score-number {
+    font-size: 4rem;
+    font-weight: 800;
+    line-height: 1;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.trans-score-label {
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.trans-hero-text h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.trans-hero-description {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    opacity: 0.95;
+}
+
+/* ========================================
+   QUICK STATS BAR
+   ======================================== */
+
+.trans-quick-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.trans-stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.trans-stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.trans-stat-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.trans-stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.trans-stat-label {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+/* ========================================
+   BREAKDOWN CARDS
+   ======================================== */
+
+.trans-breakdown-section {
+    margin-bottom: 2rem;
+}
+
+.trans-section-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.trans-section-title i {
+    font-size: 1.25rem;
+    color: #8b5cf6;
+}
+
+.trans-breakdown-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.trans-breakdown-card {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-left: 4px solid #8b5cf6;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.trans-breakdown-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -50px;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.trans-breakdown-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    border-left-color: #6d28d9;
+}
+
+.trans-breakdown-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.trans-breakdown-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.trans-breakdown-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+}
+
+.trans-breakdown-score {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #8b5cf6;
+}
+
+.trans-breakdown-content {
+    position: relative;
+    z-index: 1;
+}
+
+.trans-breakdown-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.trans-breakdown-desc {
+    color: #64748b;
+    line-height: 1.6;
+    font-size: 0.9375rem;
+}
+
+/* ========================================
+   PROGRESS BARS
+   ======================================== */
+
+.trans-progress-bar {
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 1rem;
+}
+
+.trans-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%);
+    border-radius: 10px;
+    transition: width 1s ease;
+    width: 0%; /* Start at 0 for animation */
+}
+
+/* ========================================
+   CHECKLIST
+   ======================================== */
+
+.trans-checklist {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-bottom: 2rem;
+}
+
+.trans-checklist-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.trans-checklist-item:hover {
+    background: #f8fafc;
+}
+
+.trans-checklist-item.present {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+}
+
+.trans-checklist-item.missing {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+}
+
+.trans-checklist-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.trans-checklist-item.present .trans-checklist-icon {
+    background: #10b981;
+    color: white;
+}
+
+.trans-checklist-item.missing .trans-checklist-icon {
+    background: #ef4444;
+    color: white;
+}
+
+.trans-checklist-text {
+    flex: 1;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.trans-checklist-status {
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+}
+
+.trans-checklist-item.present .trans-checklist-status {
+    background: #10b981;
+    color: white;
+}
+
+.trans-checklist-item.missing .trans-checklist-status {
+    background: #ef4444;
+    color: white;
+}
+
+/* ========================================
+   WHY IT MATTERS
+   ======================================== */
+
+.trans-why-matters {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    border-left: 4px solid #f59e0b;
+}
+
+.trans-why-matters h3 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #78350f;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.trans-why-matters h3 i {
+    font-size: 1.25rem;
+    color: #f59e0b;
+}
+
+.trans-matters-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.trans-matter-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+}
+
+.trans-matter-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.trans-matter-content h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.trans-matter-content p {
+    color: #64748b;
+    line-height: 1.5;
+    font-size: 0.875rem;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 768px) {
+    .trans-hero-content {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 2rem;
+    }
+
+    .trans-score-visual {
+        margin: 0 auto;
+    }
+
+    .trans-quick-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .trans-breakdown-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .trans-matters-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .transparency-hero {
+        padding: 2rem 1.5rem;
+    }
+
+    .trans-hero-text h2 {
+        font-size: 1.5rem;
+    }
+
+    .trans-hero-description {
+        font-size: 1rem;
+    }
+
+    .trans-score-number {
+        font-size: 3rem;
+    }
+}
+
+/* Animation for progress bars */
+@keyframes fillProgress {
+    from {
+        width: 0%;
+    }
+    to {
+        width: var(--target-width);
+    }
+}
