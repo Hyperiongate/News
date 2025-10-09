@@ -733,7 +733,7 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Bias Detector - v4.9.0 OBJECTIVITY FOCUSED
+    // Display Bias Detector - v4.11.0 OBJECTIVITY FOCUSED
     displayBiasDetector: function(data, analyzer) {
         console.log('[BiasDetector] Displaying data:', data);
         
@@ -758,11 +758,11 @@ window.ServiceTemplates = {
             }, 100);
         }
         
-        // Add explanatory text after the chart
-        const chartContainer = document.querySelector('.biasDetectorDropdown .chart-container');
-        if (chartContainer) {
+        // Add explanatory text after the metrics (find the bias-metrics container)
+        const metricsContainer = document.querySelector('.biasDetectorDropdown .bias-metrics');
+        if (metricsContainer) {
             // Remove any existing explanation
-            const existingExplanation = chartContainer.parentElement.querySelector('.bias-explanation-section');
+            const existingExplanation = metricsContainer.parentElement.querySelector('.bias-explanation-section');
             if (existingExplanation) {
                 existingExplanation.remove();
             }
@@ -862,8 +862,8 @@ window.ServiceTemplates = {
                 </div>
             `;
             
-            // Insert after chart container
-            chartContainer.parentElement.insertBefore(explanation, chartContainer.nextSibling);
+            // Insert after metrics container
+            metricsContainer.parentElement.insertBefore(explanation, metricsContainer.nextSibling);
         }
     },
     
