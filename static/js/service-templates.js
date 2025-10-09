@@ -163,12 +163,23 @@ window.ServiceTemplates = {
                         </div>
                         <div class="bias-metrics">
                             <div class="metric-card warning">
-                                <span class="metric-label">Objectivity Score</span>
+                                <span class="metric-label">Bias Score</span>
                                 <span class="metric-value" id="bias-score">--</span>
                             </div>
                             <div class="metric-card">
-                                <span class="metric-label">Political Lean</span>
+                                <span class="metric-label">Direction</span>
                                 <span class="metric-value" id="bias-direction">--</span>
+                            </div>
+                        </div>
+                        
+                        <!-- COMPACT SPIDER CHART -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);">
+                            <h4 style="margin-bottom: 15px; color: #ffffff; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-chart-radar" style="font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 6px; border-radius: 6px;"></i>
+                                Bias Analysis
+                            </h4>
+                            <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto;">
+                                <canvas id="biasDetectorChart" style="max-width: 100%; max-height: 250px;"></canvas>
                             </div>
                         </div>
                     </div>
