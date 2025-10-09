@@ -1,18 +1,20 @@
 """
-TruthLens News Analyzer - Complete with Data Transformer Integration + Chart Support
-Version: 8.2.0
-Date: October 8, 2025
+TruthLens News Analyzer - Complete with Enhanced Unknown Author Analysis
+Version: 8.3.0
+Date: October 9, 2025
 
-CHANGES FROM 8.1.0:
-1. FIXED: Explicit static folder configuration for proper file serving on Render
-2. Added static file debugging endpoint
-3. All previous functionality preserved
+CHANGES FROM 8.2.0:
+1. ENHANCED: Unknown author handler now provides outlet-based analysis
+2. ENHANCED: Author analyzer gives meaningful scores even without author name
+3. ENHANCED: Frontend receives actionable insights for anonymous articles
+4. All previous functionality preserved
 
 CRITICAL FIX:
-Flask now explicitly configured with:
-- static_folder='static' 
-- static_url_path='/static'
-This ensures chart-renderer.js and all static files serve properly on Render.
+When author = "Unknown", system now:
+- Provides outlet credibility as baseline score
+- Analyzes article quality indicators
+- Checks for journalistic standards
+- Gives actionable trust guidance
 
 This is the COMPLETE file - replace your entire app.py with this
 """
@@ -584,9 +586,11 @@ class TruthLensAnalyzer:
             
             logger.info(f"Article extracted - Author: {article_data['author']}, Source: {article_data['source']}")
             
+            # ENHANCED: Pass article_data to author analyzer for better context
             author_analysis = self.author_analyzer.analyze(
                 article_data['author'],
-                article_data['source']
+                article_data['source'],
+                article_data  # NEW: Pass full article data
             )
             
             manipulation_results = {}
@@ -1035,13 +1039,17 @@ class TruthLensAnalyzer:
 
 
 class AuthorAnalyzer:
-    """Rich author analysis with journalist database"""
+    """Rich author analysis with journalist database AND enhanced unknown author handling"""
     
-    def analyze(self, author_text: str, source: str) -> Dict:
+    def analyze(self, author_text: str, source: str, article_data: Dict = None) -> Dict:
+        """
+        NEW SIGNATURE: Now accepts article_data for enhanced unknown author analysis
+        """
         authors = self._parse_authors(author_text)
         
         if not authors or authors == ["Unknown"]:
-            return self._unknown_author_response()
+            # ENHANCED: Pass article_data and source for outlet-based analysis
+            return self._unknown_author_response(source, article_data)
         
         author_analyses = []
         overall_credibility = 0
@@ -1171,17 +1179,131 @@ class AuthorAnalyzer:
             "social_media": analyses[0].get('social_media', {})
         }
     
-    def _unknown_author_response(self) -> Dict:
+    def _unknown_author_response(self, source: str, article_data: Dict = None) -> Dict:
+        """
+        ENHANCED: Provide outlet-based analysis when author is unknown
+        This is the key fix - now gives meaningful information even without author
+        """
+        logger.info(f"[ENHANCED] Generating unknown author response for {source}")
+        
+        # Get outlet credibility as baseline
+        outlet_scores = {
+            'The New York Times': 90,
+            'The Washington Post': 88,
+            'BBC': 92,
+            'Reuters': 95,
+            'Associated Press': 93,
+            'ABC News': 85,
+            'NBC News': 83,
+            'CBS News': 84,
+            'CNN': 80,
+            'Fox News': 75,
+            'NPR': 88,
+            'The Wall Street Journal': 87,
+            'Politico': 82,
+            'The Hill': 78,
+            'Axios': 81
+        }
+        
+        outlet_score = outlet_scores.get(source, 65)
+        
+        # Build meaningful analysis based on outlet standards
+        if outlet_score >= 85:
+            credibility = 70  # High outlet = decent author credibility
+            track_record = "Likely Established"
+            expertise_note = f"Journalists at {source} typically have strong credentials"
+            trust_explanation = (
+                f"{source} maintains high editorial standards. While the author is not identified, "
+                f"the outlet's reputation (score: {outlet_score}/100) suggests professional journalism."
+            )
+            trust_indicators = [
+                f"Published by reputable outlet ({source})",
+                f"Outlet credibility: {outlet_score}/100",
+                "High editorial standards at this organization"
+            ]
+            red_flags = ["Author not identified - transparency issue"]
+            
+        elif outlet_score >= 70:
+            credibility = 60
+            track_record = "Likely Professional"
+            expertise_note = f"{source} generally employs qualified journalists"
+            trust_explanation = (
+                f"{source} is a recognized news organization (score: {outlet_score}/100). "
+                f"The lack of author attribution is a concern, but the outlet's standards "
+                f"suggest professional reporting."
+            )
+            trust_indicators = [
+                f"Published by established outlet ({source})",
+                f"Outlet credibility: {outlet_score}/100"
+            ]
+            red_flags = [
+                "Author not identified",
+                "Reduces accountability and transparency"
+            ]
+            
+        else:
+            credibility = 45
+            track_record = "Unknown"
+            expertise_note = "Insufficient information about journalist standards"
+            trust_explanation = (
+                f"Article published by {source} (score: {outlet_score}/100) with no author attribution. "
+                f"This significantly reduces credibility and accountability. Verify all claims independently."
+            )
+            trust_indicators = []
+            red_flags = [
+                "No author attribution provided",
+                "Lower outlet credibility score",
+                "Difficult to verify journalist credentials",
+                "Reduced accountability"
+            ]
+        
+        # Analyze article quality if data provided
+        if article_data:
+            sources_count = article_data.get('sources_count', 0)
+            quotes_count = article_data.get('quotes_count', 0)
+            word_count = article_data.get('word_count', 0)
+            
+            if sources_count >= 3:
+                credibility += 5
+                trust_indicators.append(f"Article cites {sources_count} sources")
+            
+            if quotes_count >= 2:
+                credibility += 5
+                trust_indicators.append(f"Includes {quotes_count} direct quotes")
+            
+            if word_count >= 800:
+                trust_indicators.append("Comprehensive article length")
+            
+            credibility = min(credibility, 75)  # Cap at 75 for unknown authors
+        
         return {
-            "outlet": "Unknown",
-            "expertise": ["Unable to verify"],
-            "credibility_score": 0,
+            "outlet": source,
+            "author_name": "Unknown Author",
+            "expertise": [expertise_note],
+            "credibility_score": credibility,
             "years_experience": "Unknown",
-            "track_record": "Unknown",
+            "track_record": track_record,
             "awards": [],
-            "recent_work": "No information available",
+            "recent_work": f"Article published in {source}",
             "social_media": {},
-            "findings": ["Author information not available - reduces credibility"]
+            "findings": [
+                f"Author not identified",
+                f"Outlet credibility: {outlet_score}/100",
+                f"Overall assessment: {credibility}/100 based on outlet standards"
+            ],
+            "trust_indicators": trust_indicators,
+            "red_flags": red_flags,
+            "analysis": {
+                "what_we_looked": (
+                    "We searched for author attribution in the article metadata, byline, "
+                    "and throughout the article text."
+                ),
+                "what_we_found": (
+                    f"No author information was provided. Article published by {source}, "
+                    f"which has a credibility score of {outlet_score}/100."
+                ),
+                "what_it_means": trust_explanation
+            }
         }
 
 
@@ -1197,10 +1319,10 @@ def index():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '8.2.0',
+        'version': '8.3.0',
         'services': {
             'openai': 'connected' if openai_client else 'not configured',
-            'author_analyzer': 'enhanced with database',
+            'author_analyzer': 'enhanced with unknown author support',
             'manipulation_detector': 'loaded' if manipulation_detector else 'using fallback',
             'scraperapi': 'configured' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
             'news_analyzer': 'active with data transformer',
@@ -1267,7 +1389,7 @@ def analyze():
         text = data.get('text')
         
         logger.info("=" * 80)
-        logger.info("API /analyze endpoint called - Version 8.2.0")
+        logger.info("API /analyze endpoint called - Version 8.3.0 - ENHANCED UNKNOWN AUTHOR")
         logger.info(f"URL provided: {bool(url)}")
         logger.info(f"Text provided: {bool(text)} ({len(text) if text else 0} chars)")
         
@@ -1307,7 +1429,7 @@ def analyze():
             
         if 'author_analyzer' in services:
             aa = services['author_analyzer']
-            logger.info(f"  - Author: {aa.get('name')} ({aa.get('credibility_score')}/100)")
+            logger.info(f"  - Author: Credibility {aa.get('credibility')}/100")
         
         logger.info("=" * 80)
         
@@ -1514,7 +1636,7 @@ def debug_test_apis():
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS v8.2.0 - STATIC FILE SERVING FIXED")
+    logger.info("TRUTHLENS v8.3.0 - ENHANCED UNKNOWN AUTHOR ANALYSIS")
     logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
     logger.info(f"ScraperAPI: {'✓ CONFIGURED' if os.getenv('SCRAPERAPI_KEY') else '✗ NOT CONFIGURED'}")
     logger.info(f"MEDIASTACK API: {'✓ CONFIGURED' if os.getenv('MEDIASTACK_API_KEY') else '✗ NOT CONFIGURED'}")
@@ -1522,13 +1644,19 @@ if __name__ == '__main__':
     logger.info(f"Author Database: {len(JOURNALIST_DATABASE)} journalists loaded")
     logger.info(f"Source Database: {len(SOURCE_METADATA)} sources with metadata")
     logger.info(f"Manipulation Detector: {'✓ ENHANCED SERVICE' if manipulation_detector else '✗ Using fallback'}")
-    logger.info(f"Author Analyzer: {'✓ SERVICE LOADED' if author_analyzer else '✗ Using built-in'}")
+    logger.info(f"Author Analyzer: {'✓ WITH UNKNOWN AUTHOR SUPPORT' if author_analyzer else '✗ Using built-in'}")
     logger.info(f"NewsAnalyzer: ✓ ACTIVE")
     logger.info(f"DataTransformer: ✓ ACTIVE")
     logger.info("")
+    logger.info("NEW IN v8.3.0:")
+    logger.info("  ✓ Unknown authors now get outlet-based credibility scores")
+    logger.info("  ✓ Meaningful analysis even without author attribution")
+    logger.info("  ✓ Article quality indicators boost unknown author scores")
+    logger.info("  ✓ Clear trust guidance based on outlet standards")
+    logger.info("")
     logger.info("DIAGNOSTIC ENDPOINTS AVAILABLE:")
     logger.info("  GET  /debug/api-keys       - Check API key configuration")
-    logger.info("  GET  /debug/static-files   - Check static file serving (NEW!)")
+    logger.info("  GET  /debug/static-files   - Check static file serving")
     logger.info("  POST /debug/track-record   - Test track record system")
     logger.info("  POST /debug/test-apis      - Test API connectivity")
     logger.info("")
