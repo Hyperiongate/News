@@ -1340,17 +1340,79 @@ function integrateChartsIntoServices(data) {
         const details = biasData.details;
         const biasChartData = {
             type: 'radar',
-            labels: ['Political', 'Sensationalism', 'Corporate', 'Loaded Language', 'Framing'],
-            datasets: [{
-                label: 'Objectivity Score',
-                data: [
-                    100 - (details.political_score || 0),           // Invert: low political bias = high objectivity
-                    100 - (details.sensationalism_score || 0),      // Invert: low sensationalism = high objectivity
-                    100 - (details.corporate_score || 0),           // Invert: low corporate bias = high objectivity
-                    100 - Math.min(100, (details.loaded_language_count || 0) * 10), // Invert and scale
-                    100 - Math.min(100, (details.framing_issues || 0) * 20)  // Invert and scale
-                ]
-            }]
+            data: {
+                labels: ['Political', 'Sensationalism', 'Corporate', 'Loaded Language', 'Framing'],
+                datasets: [{
+                    label: 'Objectivity Score',
+                    data: [
+                        100 - (details.political_score || 0),           // Invert: low political bias = high objectivity
+                        100 - (details.sensationalism_score || 0),      // Invert: low sensationalism = high objectivity
+                        100 - (details.corporate_score || 0),           // Invert: low corporate bias = high objectivity
+                        100 - Math.min(100, (details.loaded_language_count || 0) * 10), // Invert and scale
+                        100 - Math.min(100, (details.framing_issues || 0) * 20)  // Invert and scale
+                    ],
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 2,
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                    pointBorderColor: '#fff',
+                    pointHoverBackgroundColor: '#fff',
+                    pointHoverBorderColor: 'rgba(245, 158, 11, 1)',
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        min: 0,
+                        max: 100,
+                        ticks: {
+                            stepSize: 20,
+                            font: {
+                                size: 10
+                            }
+                        },
+                        pointLabels: {
+                            font: {
+                                size: 11,
+                                weight: '600'
+                            },
+                            color: '#1e293b'
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        },
+                        angleLines: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 13,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return 'Objectivity: ' + context.parsed.r + '/100';
+                            }
+                        }
+                    }
+                }
+            }
         };
         
         console.log('[Charts] Bias chart data prepared:', biasChartData);
