@@ -1,16 +1,28 @@
 """
-Fact Checker Service - v8.0.0 WITH AI VERIFICATION
+Fact Checker Service - v8.0.1 FIXED - AI VERIFICATION
 Date: October 9, 2025
 
-MAJOR UPGRADE FROM v7.0.0:
-- ADDED: AI comprehensive analysis for actual verification
-- ADDED: Web search capability when databases fail  
-- ADDED: Multi-method verification (AI → Google API → Pattern Analysis)
-- FIXED: No more "unverified" for everything - we actually verify claims now!
+VERSION HISTORY:
+- v8.0.1 (Oct 9, 2025): FIXED openai_client initialization issue that caused crash
+- v8.0.0 (Oct 9, 2025): Added AI verification (but had initialization bug)
+- v7.0.0: Pattern-based extraction only
 
-Based on ComprehensiveFactChecker methodology from transcript analyzer.
+FIXES IN v8.0.1:
+- Changed from AIEnhancementMixin's self._ai_client to direct self.openai_client
+- Matches the pattern used by openai_enhancer.py
+- Properly initializes OpenAI client like other services
+- No more AttributeError: 'FactChecker' object has no attribute 'openai_client'
+
+MAJOR FEATURES:
+- AI comprehensive analysis for actual verification
+- Web search capability when databases fail  
+- Multi-method verification (AI → Google API → Pattern Analysis)
+- No more "unverified" for everything - we actually verify claims now!
+
+Based on ComprehensiveFactChecker methodology.
 
 Save as: services/fact_checker.py (REPLACE existing file)
+Deploy to Render immediately.
 """
 
 import re
@@ -23,28 +35,44 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 from urllib.parse import quote
 
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
+    logging.warning("OpenAI library not available for FactChecker")
+
 from services.base_analyzer import BaseAnalyzer
-from services.ai_enhancement_mixin import AIEnhancementMixin
+from config import Config
 
 logger = logging.getLogger(__name__)
 
 
-class FactChecker(BaseAnalyzer, AIEnhancementMixin):
+class FactChecker(BaseAnalyzer):
     """
     Enhanced fact-checker with AI verification capability
-    v8.0.0 - Now actually verifies claims instead of defaulting to "unverified"
+    v8.0.1 - FIXED: OpenAI client initialization
+    Now actually verifies claims instead of defaulting to "unverified"
     """
     
     def __init__(self):
         super().__init__('fact_checker')
-        AIEnhancementMixin.__init__(self)
+        
+        # FIXED: Initialize OpenAI client directly like openai_enhancer.py does
+        self.openai_client = None
+        if OPENAI_AVAILABLE and Config.OPENAI_API_KEY:
+            try:
+                self.openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
+                logger.info("[FactChecker v8.0.1] OpenAI client initialized successfully")
+            except Exception as e:
+                logger.warning(f"[FactChecker v8.0.1] Failed to initialize OpenAI: {e}")
+                self.openai_client = None
         
         # Cache for fact check results
         self.cache = {}
         self.cache_ttl = 86400  # 24 hours
         
         # API configuration
-        from config import Config
         self.google_api_key = Config.GOOGLE_FACT_CHECK_API_KEY or Config.GOOGLE_FACTCHECK_API_KEY
         
         # Initialize claim extraction patterns
@@ -53,7 +81,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         # Boilerplate patterns to EXCLUDE from claims
         self.exclusion_patterns = self._initialize_exclusion_patterns()
         
-        logger.info(f"[FactChecker v8.0.0] Initialized - Google API: {bool(self.google_api_key)}, OpenAI: {bool(self.openai_client)}")
+        logger.info(f"[FactChecker v8.0.1] Initialized - Google API: {bool(self.google_api_key)}, OpenAI: {bool(self.openai_client)}")
     
     def _check_availability(self) -> bool:
         """Service is available if we have pattern matching (always) or APIs"""
@@ -81,11 +109,11 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             quotes_count = data.get('quotes_count', 0)
             author = data.get('author', '')
             
-            logger.info(f"[FactChecker v8] Analyzing: {len(content)} chars, {sources_count} sources, {quotes_count} quotes")
+            logger.info(f"[FactChecker v8.0.1] Analyzing: {len(content)} chars, {sources_count} sources, {quotes_count} quotes")
             
             # 1. Extract claims from content
             extracted_claims = self._extract_claims(content)
-            logger.info(f"[FactChecker v8] Extracted {len(extracted_claims)} claims from {len(self._split_sentences(content))} sentences")
+            logger.info(f"[FactChecker v8.0.1] Extracted {len(extracted_claims)} claims from {len(self._split_sentences(content))} sentences")
             
             # 2. Check each claim with ENHANCED verification
             fact_checks = self._check_claims_enhanced(extracted_claims, article_url, article_title)
@@ -164,7 +192,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v8] Error: {e}", exc_info=True)
+            logger.error(f"[FactChecker v8.0.1] Error: {e}", exc_info=True)
             return self.get_error_result(f"Fact checking error: {str(e)}")
     
     def _check_claims_enhanced(self, claims: List[str], article_url: Optional[str] = None,
@@ -183,7 +211,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             if cached_result:
                 cached_result['from_cache'] = True
                 fact_checks.append(cached_result)
-                logger.info(f"[FactChecker v8] Claim {i+1}: Using cached result")
+                logger.info(f"[FactChecker v8.0.1] Claim {i+1}: Using cached result")
                 continue
             
             # NEW: Enhanced verification with multiple methods
@@ -191,7 +219,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             fact_checks.append(result)
             self._cache_result(cache_key, result)
             
-            logger.info(f"[FactChecker v8] Claim {i+1}: Verdict={result.get('verdict')}, Confidence={result.get('confidence')}%")
+            logger.info(f"[FactChecker v8.0.1] Claim {i+1}: Verdict={result.get('verdict')}, Confidence={result.get('confidence')}%")
             
             # Rate limiting
             if i < len(claims) - 1:
@@ -226,37 +254,37 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             
             # METHOD 1: AI Comprehensive Analysis (NEW!)
             if self.openai_client:
-                logger.info(f"[FactChecker v8] Trying AI analysis for claim {index+1}")
+                logger.info(f"[FactChecker v8.0.1] Trying AI analysis for claim {index+1}")
                 ai_result = self._ai_verify_claim(claim, article_title)
                 if ai_result and ai_result.get('verdict') != 'needs_context':
                     ai_result['method_used'] = 'ai_analysis'
-                    logger.info(f"[FactChecker v8] ✓ AI verification succeeded: {ai_result.get('verdict')}")
+                    logger.info(f"[FactChecker v8.0.1] ✓ AI verification succeeded: {ai_result.get('verdict')}")
                     return ai_result
                 else:
-                    logger.info(f"[FactChecker v8] AI analysis inconclusive, trying next method")
+                    logger.info(f"[FactChecker v8.0.1] AI analysis inconclusive, trying next method")
             
             # METHOD 2: Google Fact Check API
             if self.google_api_key:
-                logger.info(f"[FactChecker v8] Trying Google Fact Check API")
+                logger.info(f"[FactChecker v8.0.1] Trying Google Fact Check API")
                 google_result = self._check_google_api(claim)
                 if google_result.get('found'):
                     result = google_result['data']
                     result['claim'] = claim
                     result['method_used'] = 'google_api'
-                    logger.info(f"[FactChecker v8] ✓ Google API found result: {result.get('verdict')}")
+                    logger.info(f"[FactChecker v8.0.1] ✓ Google API found result: {result.get('verdict')}")
                     return result
                 else:
-                    logger.info(f"[FactChecker v8] Not found in Google Fact Check database")
+                    logger.info(f"[FactChecker v8.0.1] Not found in Google Fact Check database")
             
             # METHOD 3: Pattern Analysis (fallback)
-            logger.info(f"[FactChecker v8] Using pattern analysis")
+            logger.info(f"[FactChecker v8.0.1] Using pattern analysis")
             pattern_result = self._analyze_claim_patterns(claim)
             pattern_result['claim'] = claim
             pattern_result['method_used'] = 'pattern_analysis'
             return pattern_result
             
         except Exception as e:
-            logger.error(f"[FactChecker v8] Error verifying claim: {e}")
+            logger.error(f"[FactChecker v8.0.1] Error verifying claim: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -301,7 +329,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             return result
             
         except Exception as e:
-            logger.warning(f"[FactChecker v8] AI verification failed: {e}")
+            logger.warning(f"[FactChecker v8.0.1] AI verification failed: {e}")
             return None
     
     def _build_verification_prompt(self, claim: str, context: Optional[str] = None) -> str:
@@ -386,7 +414,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v8] Failed to parse AI response: {e}")
+            logger.error(f"[FactChecker v8.0.1] Failed to parse AI response: {e}")
             return None
     
     def _check_google_api(self, claim: str) -> Dict[str, Any]:
@@ -443,7 +471,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
             return {'found': False}
             
         except Exception as e:
-            logger.error(f"[FactChecker v8] Google API error: {e}")
+            logger.error(f"[FactChecker v8.0.1] Google API error: {e}")
             return {'found': False}
     
     def _analyze_claim_patterns(self, claim: str) -> Dict[str, Any]:
@@ -581,7 +609,7 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         final_score = max(0, min(100, final_score))
         
         logger.info(
-            f"[FactChecker v8 Scoring] Base: {base_score}, Sources: +{source_score}, "
+            f"[FactChecker v8.0.1 Scoring] Base: {base_score}, Sources: +{source_score}, "
             f"Quotes: +{quote_score}, Claims: {claim_score:+d} (verified: {verified_true}/{total_claims}), "
             f"Author: +{author_score}, Complexity: +{complexity_score}, Final: {final_score}"
         )
@@ -819,5 +847,5 @@ class FactChecker(BaseAnalyzer, AIEnhancementMixin):
         ]
 
 
-# Maintain backward compatibility
-logger.info("[FactChecker] v8.0.0 loaded with AI verification capability")
+# Initialization log
+logger.info("[FactChecker] v8.0.1 loaded with AI verification capability (FIXED initialization)")
