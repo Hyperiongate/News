@@ -1,22 +1,18 @@
 /**
- * TruthLens Service Templates - WITH CANVAS ELEMENTS FOR CHARTS
- * Date: October 8, 2025
- * Version: 4.8.0 - ADDED CANVAS ELEMENTS FOR CHART RENDERING
+ * TruthLens Service Templates - WITH CANVAS ELEMENTS (FIXED)
+ * Date: October 9, 2025
+ * Version: 4.8.1 - SYNTAX ERROR FIXED + OPTIMIZED CHARTS
  * 
- * CHANGES FROM 4.7.0:
- * - Added <canvas> elements to all 7 service templates
- * - Canvas IDs match what chart-renderer.js expects (e.g., "sourceCredibilityChart")
- * - Canvas elements placed logically within each service's HTML structure
- * - All existing functionality preserved (DO NO HARM)
+ * CHANGES FROM 4.8.0:
+ * - Fixed syntax error in bias detector template
+ * - Removed unnecessary canvas elements (source, fact, transparency, author)
+ * - Kept only 3 optimized charts (bias, manipulation, content)
+ * - All charts are compact and properly sized
  * 
- * Canvas Elements Added:
- * 1. sourceCredibilityChart - after analysis details
- * 2. biasDetectorChart - after analysis details
- * 3. factCheckerChart - after analysis details
- * 4. authorChart - after analysis details
- * 5. transparencyAnalyzerChart - after analysis details
- * 6. manipulationDetectorChart - after analysis details
- * 7. contentAnalyzerChart - after analysis details
+ * Canvas Elements (3 total):
+ * 1. biasDetectorChart - compact spider chart (400px x 250px)
+ * 2. manipulationDetectorChart - tight bar chart (500px x 200px)
+ * 3. contentAnalyzerChart - readable bar chart (600px x 250px)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  */
@@ -198,7 +194,7 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- *** CANVAS ELEMENT FOR COMPACT SPIDER CHART *** -->
+                        <!-- COMPACT SPIDER CHART -->
                         <div class="chart-container" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);">
                             <h4 style="margin-bottom: 15px; color: #ffffff; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
                                 <i class="fas fa-chart-radar" style="font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 6px; border-radius: 6px;"></i>
@@ -206,15 +202,6 @@ window.ServiceTemplates = {
                             </h4>
                             <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto;">
                                 <canvas id="biasDetectorChart" style="max-width: 100%; max-height: 250px;"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `, padding: 8px; border-radius: 8px;"></i>
-                                Bias Analysis Visualization
-                            </h4>
-                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-                                <canvas id="biasDetectorChart" style="max-width: 100%; max-height: 300px;"></canvas>
                             </div>
                         </div>
                     </div>
@@ -441,17 +428,6 @@ window.ServiceTemplates = {
                                 <p id="transparency-means">Loading...</p>
                             </div>
                         </div>
-                        
-                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);">
-                            <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-chart-bar" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
-                                Transparency Breakdown
-                            </h4>
-                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-                                <canvas id="transparencyAnalyzerChart" style="max-width: 100%; max-height: 300px;"></canvas>
-                            </div>
-                        </div>
                     </div>
                 </div>
             `,
@@ -495,14 +471,14 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);">
-                            <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-chart-line" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
-                                Manipulation Analysis
+                        <!-- COMPACT MANIPULATION CHART -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);">
+                            <h4 style="margin-bottom: 15px; color: #ffffff; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-chart-line" style="font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 6px; border-radius: 6px;"></i>
+                                Manipulation Score
                             </h4>
-                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-                                <canvas id="manipulationDetectorChart" style="max-width: 100%; max-height: 300px;"></canvas>
+                            <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); max-width: 500px; margin: 0 auto;">
+                                <canvas id="manipulationDetectorChart" style="max-width: 100%; max-height: 200px;"></canvas>
                             </div>
                         </div>
                     </div>
@@ -554,14 +530,14 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(236, 72, 153, 0.3);">
-                            <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-chart-area" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
-                                Content Quality Metrics
+                        <!-- READABLE CONTENT QUALITY CHART -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(236, 72, 153, 0.3);">
+                            <h4 style="margin-bottom: 15px; color: #ffffff; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-chart-bar" style="font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 6px; border-radius: 6px;"></i>
+                                Quality Breakdown
                             </h4>
-                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-                                <canvas id="contentAnalyzerChart" style="max-width: 100%; max-height: 300px;"></canvas>
+                            <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto;">
+                                <canvas id="contentAnalyzerChart" style="max-width: 100%; max-height: 250px;"></canvas>
                             </div>
                         </div>
                     </div>
@@ -667,17 +643,6 @@ window.ServiceTemplates = {
                         <div class="analysis-block">
                             <h4><i class="fas fa-info-circle"></i> What This Means</h4>
                             <p id="author-means">Loading...</p>
-                        </div>
-                    </div>
-                    
-                    <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                    <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(6, 182, 212, 0.3);">
-                        <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                            <i class="fas fa-chart-pie" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
-                            Author Credibility Breakdown
-                        </h4>
-                        <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-                            <canvas id="authorChart" style="max-width: 100%; max-height: 300px;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -1295,46 +1260,34 @@ window.ServiceTemplates = {
     displayAuthor: function(data, analyzer) {
         console.log('[Author Display] Received data:', data);
         
-        // Get author name - data_transformer sends 'name' and 'author_name'
         const authorName = data.name || data.author_name || 'Unknown Author';
-        
-        // Get credibility score - data_transformer sends multiple versions
         const credibility = data.credibility_score || data.score || data.credibility || 70;
-        
-        // Get expertise - data_transformer sends as string, not array
         const expertise = data.expertise || 'General reporting';
-        
-        // Get track record
         const trackRecord = data.track_record || 'Unknown';
         
         console.log('[Author Display] Name:', authorName, 'Credibility:', credibility, 'Expertise:', expertise);
         
-        // Update main info
         this.updateElement('author-name', authorName);
         this.updateElement('author-credibility', credibility + '/100');
         this.updateElement('author-expertise', expertise);
         this.updateElement('author-track-record', trackRecord);
         
-        // Update badge
         const credBadge = document.getElementById('author-cred-badge');
         if (credBadge) {
             this.updateElement('author-cred-score', credibility);
             credBadge.className = 'credibility-badge ' + (credibility >= 70 ? 'high' : credibility >= 40 ? 'medium' : 'low');
         }
         
-        // FIXED: Stats - Use correct field names from data_transformer.py
         const articlesCount = data.articles_count || '0';
         const yearsExperience = data.years_experience || 'Unknown';
         const awardsCount = data.awards_count || '0';
         
         console.log('[Author Display] Stats - Articles:', articlesCount, 'Experience:', yearsExperience, 'Awards:', awardsCount);
         
-        // Display stats without adding '+' suffix
         this.updateElement('author-articles', articlesCount);
         this.updateElement('author-experience', yearsExperience);
         this.updateElement('author-awards', awardsCount);
         
-        // Analysis sections - use data from data_transformer
         const analysis = data.analysis || {};
         this.updateElement('author-analyzed', analysis.what_we_looked || analysis.what_we_analyzed ||
             'We examined the author\'s credentials, experience, track record, and publication history.');
@@ -1367,7 +1320,6 @@ window.ServiceTemplates = {
         return positions[direction.toLowerCase()] || 50;
     },
 
-    // Meaning generators
     getCredibilityMeaning: function(score) {
         if (score >= 80) return 'Highly credible source with excellent reputation.';
         if (score >= 60) return 'Generally credible source with good standards.';
@@ -1425,74 +1377,41 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.8.0 WITH CANVAS ELEMENTS');
+console.log('ServiceTemplates loaded successfully - v4.8.1 SYNTAX FIXED');
 
-/**
- * ========================================================================
- * CHART INTEGRATION ADD-ON - v4.8.0
- * ========================================================================
- * This section integrates charts into service cards.
- * Updated: October 8, 2025
- * 
- * WHAT THIS DOES:
- * 1. Wraps the original displayAllAnalyses to add chart support
- * 2. After services render, injects charts into canvas elements
- * 3. Uses ChartRenderer from chart-renderer.js
- * 4. Preserves all existing functionality
- */
-
-// Store reference to original displayAllAnalyses
+// Chart Integration
 const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
-// Enhanced displayAllAnalyses with chart integration
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.8.0] displayAllAnalyses called with canvas support');
-    
-    // Call original function first to render all service cards WITH CANVAS ELEMENTS
+    console.log('[ServiceTemplates v4.8.1] displayAllAnalyses called');
     originalDisplayAllAnalyses.call(this, data, analyzer);
-    
-    // Then integrate charts after a short delay to let DOM render
     setTimeout(() => {
         integrateChartsIntoServices(data);
     }, 500);
 };
 
-/**
- * Chart integration function
- * Renders charts inside service cards using ChartRenderer
- */
 function integrateChartsIntoServices(data) {
     console.log('[Charts] Integrating into service cards...');
     
-    // Check if ChartRenderer is available
     if (!window.ChartRenderer || !window.ChartRenderer.isReady()) {
-        console.warn('[Charts] ChartRenderer not available - charts will not render');
+        console.warn('[Charts] ChartRenderer not available');
         return;
     }
     
     const detailed = data.detailed_analysis || {};
     
-    // Service mapping with delays for smooth reveal animation
     const serviceCharts = [
-        {id: 'sourceCredibility', key: 'source_credibility', delay: 300},
         {id: 'biasDetector', key: 'bias_detector', delay: 400},
-        {id: 'factChecker', key: 'fact_checker', delay: 500},
-        {id: 'author', key: 'author_analyzer', delay: 600},
-        {id: 'transparencyAnalyzer', key: 'transparency_analyzer', delay: 700},
         {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
         {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
     ];
     
-    // Iterate through services and render charts where data exists
     serviceCharts.forEach(service => {
         const serviceData = detailed[service.key];
         
         if (serviceData && serviceData.chart_data) {
-            console.log(`[Charts] Rendering chart for ${service.id} with delay ${service.delay}ms`);
-            
-            // Stagger chart rendering for smooth animation
+            console.log(`[Charts] Rendering ${service.id} chart`);
             setTimeout(() => {
-                // Canvas ID matches what's in the templates (e.g., "sourceCredibilityChart")
                 const canvasId = service.id + 'Chart';
                 window.ChartRenderer.renderChart(canvasId, serviceData.chart_data);
             }, service.delay);
@@ -1504,4 +1423,4 @@ function integrateChartsIntoServices(data) {
     console.log('[Charts] ✓ Integration complete');
 }
 
-console.log('[Charts] Service Templates chart integration loaded - v4.8.0 WITH CANVAS ELEMENTS');
+console.log('[Charts] Service Templates v4.8.1 loaded - 3 optimized charts');
