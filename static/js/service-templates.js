@@ -147,17 +147,6 @@ window.ServiceTemplates = {
                                 <p id="source-means">Loading...</p>
                             </div>
                         </div>
-                        
-                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);">
-                            <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                                <i class="fas fa-chart-bar" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
-                                Source Credibility Visualization
-                            </h4>
-                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
-                                <canvas id="sourceCredibilityChart" style="max-width: 100%; max-height: 300px;"></canvas>
-                            </div>
-                        </div>
                     </div>
                 </div>
             `,
@@ -209,13 +198,24 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
-                                <i class="fas fa-chart-radar" style="margin-right: 8px; color: #f59e0b;"></i>
+                        <!-- *** CANVAS ELEMENT FOR COMPACT SPIDER CHART *** -->
+                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);">
+                            <h4 style="margin-bottom: 15px; color: #ffffff; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-chart-radar" style="font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 6px; border-radius: 6px;"></i>
+                                Bias Analysis
+                            </h4>
+                            <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto;">
+                                <canvas id="biasDetectorChart" style="max-width: 100%; max-height: 250px;"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `, padding: 8px; border-radius: 8px;"></i>
                                 Bias Analysis Visualization
                             </h4>
-                            <canvas id="biasDetectorChart" width="400" height="250" style="max-width: 100%;"></canvas>
+                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                                <canvas id="biasDetectorChart" style="max-width: 100%; max-height: 300px;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -279,15 +279,6 @@ window.ServiceTemplates = {
                                 <h4><i class="fas fa-exclamation-circle"></i> What This Means</h4>
                                 <p id="fact-means">Loading...</p>
                             </div>
-                        </div>
-                        
-                        <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
-                                <i class="fas fa-chart-pie" style="margin-right: 8px; color: #3b82f6;"></i>
-                                Fact Check Visualization
-                            </h4>
-                            <canvas id="factCheckerChart" width="400" height="250" style="max-width: 100%;"></canvas>
                         </div>
                     </div>
                 </div>
@@ -452,12 +443,14 @@ window.ServiceTemplates = {
                         </div>
                         
                         <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
-                                <i class="fas fa-chart-bar" style="margin-right: 8px; color: #8b5cf6;"></i>
+                        <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(139, 92, 246, 0.3);">
+                            <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-chart-bar" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
                                 Transparency Breakdown
                             </h4>
-                            <canvas id="transparencyAnalyzerChart" width="400" height="250" style="max-width: 100%;"></canvas>
+                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                                <canvas id="transparencyAnalyzerChart" style="max-width: 100%; max-height: 300px;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -503,12 +496,14 @@ window.ServiceTemplates = {
                         </div>
                         
                         <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
-                                <i class="fas fa-chart-line" style="margin-right: 8px; color: #ef4444;"></i>
+                        <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);">
+                            <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-chart-line" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
                                 Manipulation Analysis
                             </h4>
-                            <canvas id="manipulationDetectorChart" width="400" height="250" style="max-width: 100%;"></canvas>
+                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                                <canvas id="manipulationDetectorChart" style="max-width: 100%; max-height: 300px;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -560,12 +555,14 @@ window.ServiceTemplates = {
                         </div>
                         
                         <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                            <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
-                                <i class="fas fa-chart-area" style="margin-right: 8px; color: #ec4899;"></i>
+                        <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(236, 72, 153, 0.3);">
+                            <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                                <i class="fas fa-chart-area" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
                                 Content Quality Metrics
                             </h4>
-                            <canvas id="contentAnalyzerChart" width="400" height="250" style="max-width: 100%;"></canvas>
+                            <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                                <canvas id="contentAnalyzerChart" style="max-width: 100%; max-height: 300px;"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -674,12 +671,14 @@ window.ServiceTemplates = {
                     </div>
                     
                     <!-- *** CANVAS ELEMENT FOR CHART *** -->
-                    <div class="chart-container" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-                        <h4 style="margin-bottom: 15px; color: #333; font-size: 1.1rem;">
-                            <i class="fas fa-chart-pie" style="margin-right: 8px; color: #06b6d4;"></i>
+                    <div class="chart-container" style="margin-top: 30px; padding: 25px; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(6, 182, 212, 0.3);">
+                        <h4 style="margin-bottom: 20px; color: #ffffff; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 10px;">
+                            <i class="fas fa-chart-pie" style="font-size: 1.3rem; background: rgba(255,255,255,0.2); padding: 8px; border-radius: 8px;"></i>
                             Author Credibility Breakdown
                         </h4>
-                        <canvas id="authorChart" width="400" height="250" style="max-width: 100%;"></canvas>
+                        <div style="background: rgba(255,255,255,0.95); padding: 20px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1);">
+                            <canvas id="authorChart" style="max-width: 100%; max-height: 300px;"></canvas>
+                        </div>
                     </div>
                 </div>
             `
