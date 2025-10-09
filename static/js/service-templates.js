@@ -1,13 +1,14 @@
 /**
- * TruthLens Service Templates - WITH CANVAS ELEMENTS (FIXED)
+ * TruthLens Service Templates - CLEANED VERSION
  * Date: October 9, 2025
- * Version: 4.8.1 - SYNTAX ERROR FIXED + OPTIMIZED CHARTS
+ * Version: 4.9.0 - REMOVED GENERIC ANALYSIS SECTIONS
  * 
- * CHANGES FROM 4.8.0:
- * - Fixed syntax error in bias detector template
- * - Removed unnecessary canvas elements (source, fact, transparency, author)
- * - Kept only 3 optimized charts (bias, manipulation, content)
- * - All charts are compact and properly sized
+ * CHANGES FROM 4.8.1:
+ * - Removed "What We Analyzed/Found/Means" sections from ALL 7 services
+ * - Removed display logic for those placeholder sections
+ * - Removed helper functions (getCredibilityMeaning, getBiasMeaning, etc.)
+ * - Kept all meaningful visualizations and data displays
+ * - Code is now cleaner and more focused
  * 
  * Canvas Elements (3 total):
  * 1. biasDetectorChart - compact spider chart (400px x 250px)
@@ -127,22 +128,6 @@ window.ServiceTemplates = {
                                 </div>
                             </div>
                         </div>
-                        
-                        <!-- Analysis sections -->
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-microscope"></i> What We Analyzed</h4>
-                                <p id="source-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-chart-line"></i> What We Found</h4>
-                                <p id="source-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-lightbulb"></i> What This Means</h4>
-                                <p id="source-means">Loading...</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             `,
@@ -177,20 +162,6 @@ window.ServiceTemplates = {
                             <div class="metric-card">
                                 <span class="metric-label">Direction</span>
                                 <span class="metric-value" id="bias-direction">--</span>
-                            </div>
-                        </div>
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-search"></i> What We Analyzed</h4>
-                                <p id="bias-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-chart-bar"></i> What We Found</h4>
-                                <p id="bias-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-info-circle"></i> What This Means</h4>
-                                <p id="bias-means">Loading...</p>
                             </div>
                         </div>
                         
@@ -249,22 +220,6 @@ window.ServiceTemplates = {
                             </h4>
                             <div class="claims-list-enhanced" id="claims-list-enhanced">
                                 <!-- Claims will be populated here -->
-                            </div>
-                        </div>
-                        
-                        <!-- Analysis sections -->
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-tasks"></i> What We Analyzed</h4>
-                                <p id="fact-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-clipboard-list"></i> What We Found</h4>
-                                <p id="fact-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-exclamation-circle"></i> What This Means</h4>
-                                <p id="fact-means">Loading...</p>
                             </div>
                         </div>
                     </div>
@@ -412,22 +367,6 @@ window.ServiceTemplates = {
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Traditional Analysis Sections -->
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-search-plus"></i> What We Analyzed</h4>
-                                <p id="transparency-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-file-alt"></i> What We Found</h4>
-                                <p id="transparency-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-question-circle"></i> What This Means</h4>
-                                <p id="transparency-means">Loading...</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             `,
@@ -456,20 +395,6 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         <div class="techniques-list" id="techniques-list"></div>
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-microscope"></i> What We Analyzed</h4>
-                                <p id="manipulation-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-fingerprint"></i> What We Found</h4>
-                                <p id="manipulation-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-shield-alt"></i> What This Means</h4>
-                                <p id="manipulation-means">Loading...</p>
-                            </div>
-                        </div>
                         
                         <!-- COMPACT MANIPULATION CHART -->
                         <div class="chart-container" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(239, 68, 68, 0.3);">
@@ -513,20 +438,6 @@ window.ServiceTemplates = {
                                     <span class="metric-value" id="word-count">--</span>
                                     <span class="metric-label">Word Count</span>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="analysis-details">
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-book-reader"></i> What We Analyzed</h4>
-                                <p id="content-analyzed">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-pen-fancy"></i> What We Found</h4>
-                                <p id="content-found">Loading...</p>
-                            </div>
-                            <div class="analysis-block">
-                                <h4><i class="fas fa-graduation-cap"></i> What This Means</h4>
-                                <p id="content-means">Loading...</p>
                             </div>
                         </div>
                         
@@ -630,21 +541,6 @@ window.ServiceTemplates = {
                             <div class="flag-list" id="red-flag-list"></div>
                         </div>
                     </div>
-                    
-                    <div class="analysis-details">
-                        <div class="analysis-block">
-                            <h4><i class="fas fa-user-check"></i> What We Analyzed</h4>
-                            <p id="author-analyzed">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4><i class="fas fa-search"></i> What We Found</h4>
-                            <p id="author-found">Loading...</p>
-                        </div>
-                        <div class="analysis-block">
-                            <h4><i class="fas fa-info-circle"></i> What This Means</h4>
-                            <p id="author-means">Loading...</p>
-                        </div>
-                    </div>
                 </div>
             `
         };
@@ -654,7 +550,7 @@ window.ServiceTemplates = {
 
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('Displaying enhanced analyses with data:', data);
+        console.log('[ServiceTemplates v4.9.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -843,15 +739,6 @@ window.ServiceTemplates = {
             });
             chart.innerHTML = chartHTML;
         }
-        
-        // Update analysis sections
-        const analysis = data.analysis || {};
-        this.updateElement('source-analyzed', analysis.what_we_looked || analysis.what_we_analyzed || 
-            'We examined the source\'s history, reputation, and credibility indicators.');
-        this.updateElement('source-found', analysis.what_we_found || 
-            'Source credibility score: ' + score + '/100');
-        this.updateElement('source-means', analysis.what_it_means || 
-            this.getCredibilityMeaning(score));
     },
 
     // Display Bias Detector
@@ -870,20 +757,11 @@ window.ServiceTemplates = {
                 indicator.style.left = position + '%';
             }, 100);
         }
-        
-        // Analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('bias-analyzed', analysis.what_we_looked || analysis.what_we_analyzed ||
-            'We analyzed language patterns, source selection, and framing techniques.');
-        this.updateElement('bias-found', analysis.what_we_found || 
-            'Detected ' + direction + ' bias with a score of ' + score + '/100.');
-        this.updateElement('bias-means', analysis.what_it_means || 
-            this.getBiasMeaning(direction, score));
     },
 
-    // ENHANCED Display Fact Checker - v4.6.0
+    // Display Fact Checker - v4.9.0
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker Display v4.6.0] Data received:', data);
+        console.log('[FactChecker Display v4.9.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
@@ -1053,15 +931,6 @@ window.ServiceTemplates = {
             }
         }
         
-        // Update analysis blocks (preserved from original)
-        const analysis = data.analysis || {};
-        this.updateElement('fact-analyzed', analysis.what_we_looked || analysis.what_we_analyzed ||
-            'We examined factual claims and verified them against reliable sources.');
-        this.updateElement('fact-found', analysis.what_we_found || 
-            `Analyzed ${claimsChecked} claims, verified ${claimsVerified}.`);
-        this.updateElement('fact-means', analysis.what_it_means || 
-            this.getFactCheckMeaning(score));
-        
         console.log('[FactChecker Display] Complete');
     },
 
@@ -1156,15 +1025,6 @@ window.ServiceTemplates = {
             
             checklist.innerHTML = checklistHTML;
         }
-        
-        // Traditional analysis blocks
-        const analysis = data.analysis || {};
-        this.updateElement('transparency-analyzed', analysis.what_we_looked || analysis.what_we_analyzed ||
-            'We examined how well the article backs up its claims with sources, quotes, and verifiable information.');
-        this.updateElement('transparency-found', analysis.what_we_found || 
-            'Found ' + sources + ' sources cited and ' + quotes + ' direct quotes. Transparency score: ' + score + '/100.');
-        this.updateElement('transparency-means', analysis.what_it_means || 
-            this.getTransparencyMeaning(score, sources));
     },
 
     // Display Manipulation Detector
@@ -1227,14 +1087,6 @@ window.ServiceTemplates = {
                 techniquesList.innerHTML = '<div style="padding: 1.75rem; text-align: center; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b981; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);"><i class="fas fa-check-circle" style="margin-right: 0.75rem; font-size: 1.5rem; color: #059669;"></i><strong style="color: #166534; font-size: 1.05rem;">No manipulation techniques detected</strong><p style="color: #16a34a; margin-top: 0.5rem; margin-bottom: 0;">This article appears to present information fairly and objectively.</p></div>';
             }
         }
-        
-        const analysis = data.analysis || {};
-        this.updateElement('manipulation-analyzed', analysis.what_we_looked || analysis.what_we_analyzed ||
-            'We checked for emotional manipulation, propaganda techniques, logical fallacies, selective quoting, and deceptive framing.');
-        this.updateElement('manipulation-found', analysis.what_we_found || 
-            'Integrity score: ' + score + '/100. Detected ' + techniques.length + ' manipulation technique' + (techniques.length !== 1 ? 's' : '') + '.');
-        this.updateElement('manipulation-means', analysis.what_it_means || 
-            this.getManipulationMeaning(score, techniques.length));
     },
 
     // Display Content Analyzer
@@ -1246,14 +1098,6 @@ window.ServiceTemplates = {
         this.updateElement('quality-score', score + '/100');
         this.updateElement('readability-level', readability);
         this.updateElement('word-count', wordCount);
-        
-        const analysis = data.analysis || {};
-        this.updateElement('content-analyzed', analysis.what_we_looked || analysis.what_we_analyzed ||
-            'We evaluated content quality.');
-        this.updateElement('content-found', analysis.what_we_found || 
-            'Quality score: ' + score + '/100.');
-        this.updateElement('content-means', analysis.what_it_means || 
-            this.getContentMeaning(score, readability));
     },
 
     // Display Author
@@ -1288,14 +1132,6 @@ window.ServiceTemplates = {
         this.updateElement('author-experience', yearsExperience);
         this.updateElement('author-awards', awardsCount);
         
-        const analysis = data.analysis || {};
-        this.updateElement('author-analyzed', analysis.what_we_looked || analysis.what_we_analyzed ||
-            'We examined the author\'s credentials, experience, track record, and publication history.');
-        this.updateElement('author-found', analysis.what_we_found || 
-            'Author ' + authorName + ' has a credibility score of ' + credibility + '/100 with expertise in ' + expertise + '.');
-        this.updateElement('author-means', analysis.what_it_means || 
-            this.getAuthorMeaning(credibility));
-        
         console.log('[Author Display] Complete');
     },
 
@@ -1318,72 +1154,16 @@ window.ServiceTemplates = {
             'far-right': 90
         };
         return positions[direction.toLowerCase()] || 50;
-    },
-
-    getCredibilityMeaning: function(score) {
-        if (score >= 80) return 'Highly credible source with excellent reputation.';
-        if (score >= 60) return 'Generally credible source with good standards.';
-        if (score >= 40) return 'Mixed credibility - verify important claims.';
-        return 'Low credibility - seek additional sources.';
-    },
-
-    getBiasMeaning: function(direction, score) {
-        if (score >= 80) return 'Minimal bias detected - well balanced.';
-        if (score >= 60) return 'Some ' + direction + ' lean but generally balanced.';
-        if (score >= 40) return 'Clear ' + direction + ' bias affecting objectivity.';
-        return 'Strong ' + direction + ' bias - seek alternative perspectives.';
-    },
-
-    getFactCheckMeaning: function(score) {
-        if (score >= 90) return 'Excellent factual accuracy.';
-        if (score >= 70) return 'Good accuracy with minor issues.';
-        if (score >= 50) return 'Mixed accuracy - verify claims.';
-        return 'Significant accuracy concerns.';
-    },
-
-    getTransparencyMeaning: function(score, sources) {
-        if (score >= 80) return 'Excellent transparency with clear sourcing. Readers can easily verify claims and understand where information comes from.';
-        if (score >= 60) return 'Good transparency. Most claims are backed up, though some could use stronger sourcing.';
-        if (sources === 0) return 'No sources cited - major credibility concern. Claims cannot be independently verified.';
-        if (score >= 40) return 'Limited transparency. Some sourcing present but many claims lack backing.';
-        return 'Poor transparency. Minimal sourcing makes it difficult to verify information independently.';
-    },
-
-    getManipulationMeaning: function(score, techniqueCount) {
-        if (score >= 80) {
-            return 'No significant manipulation detected. The article appears to present information fairly and objectively.';
-        } else if (score >= 60) {
-            return 'Minor persuasive techniques detected (' + techniqueCount + ' technique' + (techniqueCount !== 1 ? 's' : '') + '). These could be stylistic choices rather than deliberate manipulation.';
-        } else if (score >= 40) {
-            return 'Some manipulative elements present (' + techniqueCount + ' techniques detected). The article uses psychological tactics to influence reader opinion. Read critically and verify claims.';
-        } else if (score >= 20) {
-            return 'Significant manipulation detected (' + techniqueCount + ' techniques). This article heavily employs psychological techniques to sway readers. Be very skeptical of its conclusions.';
-        } else {
-            return 'Extensive manipulation detected (' + techniqueCount + ' techniques). This content appears designed to manipulate rather than inform. Treat with extreme skepticism.';
-        }
-    },
-
-    getContentMeaning: function(score, readability) {
-        if (score >= 80) return 'Excellent quality with ' + readability.toLowerCase() + ' readability.';
-        if (score >= 60) return 'Good quality content.';
-        return 'Quality concerns identified.';
-    },
-
-    getAuthorMeaning: function(credibility) {
-        if (credibility >= 80) return 'Highly credible author with strong expertise.';
-        if (credibility >= 60) return 'Credible author with relevant experience.';
-        if (credibility >= 40) return 'Author credibility partially verified.';
-        return 'Limited author information available.';
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.8.1 SYNTAX FIXED');
+console.log('ServiceTemplates loaded successfully - v4.9.0 CLEANED');
 
 // Chart Integration
 const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.8.1] displayAllAnalyses called');
+    console.log('[ServiceTemplates v4.9.0] displayAllAnalyses called');
     originalDisplayAllAnalyses.call(this, data, analyzer);
     setTimeout(() => {
         integrateChartsIntoServices(data);
@@ -1423,4 +1203,4 @@ function integrateChartsIntoServices(data) {
     console.log('[Charts] ✓ Integration complete');
 }
 
-console.log('[Charts] Service Templates v4.8.1 loaded - 3 optimized charts');
+console.log('[Charts] Service Templates v4.9.0 loaded - 3 optimized charts - CLEANED');
