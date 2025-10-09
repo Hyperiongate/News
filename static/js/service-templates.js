@@ -1,26 +1,22 @@
 /**
- * TruthLens Service Templates - CLEANED VERSION
+ * TruthLens Service Templates - FINAL CLEANED VERSION
  * Date: October 9, 2025
- * Version: 4.10.0 - BIAS DETECTOR FIXED: OBJECTIVITY SCORING
+ * Version: 4.11.0 - BIAS DETECTOR SPIDER CHART REMOVED
  * 
- * CHANGES FROM 4.9.0:
+ * CHANGES FROM 4.10.0:
+ * - Removed problematic spider chart from Bias Detector
+ * - Chart was not rendering due to data structure issues
+ * - Bias Detector now shows clean metrics + comprehensive text analysis
+ * - Reduced from 3 charts to 2 charts (Manipulation, Content)
+ * 
+ * PREVIOUS CHANGES (v4.10.0):
  * - Fixed Bias Detector to display OBJECTIVITY scores (higher = better)
  * - Added comprehensive explanatory text to Bias Detection
- * - Fixed spider chart data mapping with actual dimension scores
- * - Inverted bias scores to objectivity for chart display
- * - Added "What We Analyzed/Found/Means" specifically for Bias Detector
+ * - Attempted spider chart data mapping (removed in v4.11.0)
  * 
- * PREVIOUS CHANGES (v4.9.0):
- * - Removed "What We Analyzed/Found/Means" sections from ALL 7 services
- * - Removed display logic for those placeholder sections
- * - Removed helper functions (getCredibilityMeaning, getBiasMeaning, etc.)
- * - Kept all meaningful visualizations and data displays
- * - Code is now cleaner and more focused
- * 
- * Canvas Elements (3 total):
- * 1. biasDetectorChart - compact spider chart with REAL DATA (400px x 250px)
- * 2. manipulationDetectorChart - tight bar chart (500px x 200px)
- * 3. contentAnalyzerChart - readable bar chart (600px x 250px)
+ * Canvas Elements (2 total):
+ * 1. manipulationDetectorChart - tight bar chart (500px x 200px)
+ * 2. contentAnalyzerChart - readable bar chart (600px x 250px)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  */
@@ -163,23 +159,12 @@ window.ServiceTemplates = {
                         </div>
                         <div class="bias-metrics">
                             <div class="metric-card warning">
-                                <span class="metric-label">Bias Score</span>
+                                <span class="metric-label">Objectivity Score</span>
                                 <span class="metric-value" id="bias-score">--</span>
                             </div>
                             <div class="metric-card">
-                                <span class="metric-label">Direction</span>
+                                <span class="metric-label">Political Lean</span>
                                 <span class="metric-value" id="bias-direction">--</span>
-                            </div>
-                        </div>
-                        
-                        <!-- COMPACT SPIDER CHART -->
-                        <div class="chart-container" style="margin-top: 30px; padding: 20px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 16px; box-shadow: 0 8px 32px rgba(245, 158, 11, 0.3);">
-                            <h4 style="margin-bottom: 15px; color: #ffffff; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-chart-radar" style="font-size: 1.1rem; background: rgba(255,255,255,0.2); padding: 6px; border-radius: 6px;"></i>
-                                Bias Analysis
-                            </h4>
-                            <div style="background: rgba(255,255,255,0.95); padding: 15px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto;">
-                                <canvas id="biasDetectorChart" style="max-width: 100%; max-height: 250px;"></canvas>
                             </div>
                         </div>
                     </div>
@@ -1307,13 +1292,13 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.10.0 BIAS DETECTOR FIXED');
+console.log('ServiceTemplates loaded successfully - v4.11.0 SPIDER CHART REMOVED');
 
 // Chart Integration
 const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.10.0] displayAllAnalyses called');
+    console.log('[ServiceTemplates v4.11.0] displayAllAnalyses called');
     originalDisplayAllAnalyses.call(this, data, analyzer);
     setTimeout(() => {
         integrateChartsIntoServices(data);
@@ -1330,99 +1315,7 @@ function integrateChartsIntoServices(data) {
     
     const detailed = data.detailed_analysis || {};
     
-    // Special handling for Bias Detector - build chart data from details
-    const biasData = detailed['bias_detector'];
-    if (biasData && biasData.details) {
-        console.log('[Charts] Building bias detector chart from details:', biasData.details);
-        
-        // Convert bias amounts to objectivity scores (invert them)
-        // Lower bias scores = higher objectivity for the chart
-        const details = biasData.details;
-        const biasChartData = {
-            type: 'radar',
-            data: {
-                labels: ['Political', 'Sensationalism', 'Corporate', 'Loaded Language', 'Framing'],
-                datasets: [{
-                    label: 'Objectivity Score',
-                    data: [
-                        100 - (details.political_score || 0),           // Invert: low political bias = high objectivity
-                        100 - (details.sensationalism_score || 0),      // Invert: low sensationalism = high objectivity
-                        100 - (details.corporate_score || 0),           // Invert: low corporate bias = high objectivity
-                        100 - Math.min(100, (details.loaded_language_count || 0) * 10), // Invert and scale
-                        100 - Math.min(100, (details.framing_issues || 0) * 20)  // Invert and scale
-                    ],
-                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
-                    borderColor: 'rgba(245, 158, 11, 1)',
-                    borderWidth: 2,
-                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: 'rgba(245, 158, 11, 1)',
-                    pointRadius: 4,
-                    pointHoverRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                scales: {
-                    r: {
-                        beginAtZero: true,
-                        min: 0,
-                        max: 100,
-                        ticks: {
-                            stepSize: 20,
-                            font: {
-                                size: 10
-                            }
-                        },
-                        pointLabels: {
-                            font: {
-                                size: 11,
-                                weight: '600'
-                            },
-                            color: '#1e293b'
-                        },
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        },
-                        angleLines: {
-                            color: 'rgba(0, 0, 0, 0.1)'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        padding: 12,
-                        titleFont: {
-                            size: 13,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 12
-                        },
-                        callbacks: {
-                            label: function(context) {
-                                return 'Objectivity: ' + context.parsed.r + '/100';
-                            }
-                        }
-                    }
-                }
-            }
-        };
-        
-        console.log('[Charts] Bias chart data prepared:', biasChartData);
-        
-        setTimeout(() => {
-            window.ChartRenderer.renderChart('biasDetectorChart', biasChartData);
-        }, 400);
-    }
-    
-    // Handle other charts normally
+    // Handle charts for services that have them
     const serviceCharts = [
         {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
         {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
@@ -1445,4 +1338,4 @@ function integrateChartsIntoServices(data) {
     console.log('[Charts] ✓ Integration complete');
 }
 
-console.log('[Charts] Service Templates v4.9.0 loaded - 3 optimized charts - CLEANED');
+console.log('[Charts] Service Templates v4.11.0 loaded - 2 optimized charts - SPIDER CHART REMOVED');
