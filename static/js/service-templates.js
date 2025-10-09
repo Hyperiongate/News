@@ -1,9 +1,16 @@
 /**
  * TruthLens Service Templates - CLEANED VERSION
  * Date: October 9, 2025
- * Version: 4.9.0 - REMOVED GENERIC ANALYSIS SECTIONS
+ * Version: 4.10.0 - BIAS DETECTOR FIXED: OBJECTIVITY SCORING
  * 
- * CHANGES FROM 4.8.1:
+ * CHANGES FROM 4.9.0:
+ * - Fixed Bias Detector to display OBJECTIVITY scores (higher = better)
+ * - Added comprehensive explanatory text to Bias Detection
+ * - Fixed spider chart data mapping with actual dimension scores
+ * - Inverted bias scores to objectivity for chart display
+ * - Added "What We Analyzed/Found/Means" specifically for Bias Detector
+ * 
+ * PREVIOUS CHANGES (v4.9.0):
  * - Removed "What We Analyzed/Found/Means" sections from ALL 7 services
  * - Removed display logic for those placeholder sections
  * - Removed helper functions (getCredibilityMeaning, getBiasMeaning, etc.)
@@ -11,7 +18,7 @@
  * - Code is now cleaner and more focused
  * 
  * Canvas Elements (3 total):
- * 1. biasDetectorChart - compact spider chart (400px x 250px)
+ * 1. biasDetectorChart - compact spider chart with REAL DATA (400px x 250px)
  * 2. manipulationDetectorChart - tight bar chart (500px x 200px)
  * 3. contentAnalyzerChart - readable bar chart (600px x 250px)
  * 
@@ -741,21 +748,164 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Bias Detector
+    // Display Bias Detector - v4.9.0 OBJECTIVITY FOCUSED
     displayBiasDetector: function(data, analyzer) {
-        const score = data.bias_score || data.score || 50;
-        const direction = data.political_bias || data.direction || data.political_lean || 'center';
+        console.log('[BiasDetector] Displaying data:', data);
         
-        this.updateElement('bias-score', score + '/100');
-        this.updateElement('bias-direction', direction.charAt(0).toUpperCase() + direction.slice(1));
+        // Get OBJECTIVITY score (higher is better!)
+        const objectivityScore = data.objectivity_score || data.score || 50;
+        const direction = data.bias_direction || data.political_bias || data.direction || 'center';
+        const politicalLabel = data.political_label || data.political_leaning || 'Center';
+        const sensationalismLevel = data.sensationalism_level || 'Unknown';
         
-        // Position bias indicator
+        console.log('[BiasDetector] Objectivity:', objectivityScore, 'Direction:', direction);
+        
+        // Update main metrics - SHOW OBJECTIVITY (not bias!)
+        this.updateElement('bias-score', objectivityScore + '/100');
+        this.updateElement('bias-direction', politicalLabel);
+        
+        // Position bias indicator on spectrum
         const indicator = document.getElementById('bias-indicator');
         if (indicator) {
-            const position = this.getBiasPosition(direction, score);
+            const position = this.getBiasPosition(direction, objectivityScore);
             setTimeout(function() {
                 indicator.style.left = position + '%';
             }, 100);
+        }
+        
+        // Add explanatory text after the chart
+        const chartContainer = document.querySelector('.biasDetectorDropdown .chart-container');
+        if (chartContainer) {
+            // Remove any existing explanation
+            const existingExplanation = chartContainer.parentElement.querySelector('.bias-explanation-section');
+            if (existingExplanation) {
+                existingExplanation.remove();
+            }
+            
+            // Create comprehensive explanation
+            const explanation = document.createElement('div');
+            explanation.className = 'bias-explanation-section';
+            explanation.style.cssText = 'margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); border-radius: 12px; border-left: 4px solid #f59e0b;';
+            
+            // Determine objectivity level description
+            let objectivityDescription = '';
+            let objectivityIcon = '';
+            let objectivityColor = '';
+            
+            if (objectivityScore >= 85) {
+                objectivityDescription = 'This article demonstrates <strong>excellent objectivity</strong> with minimal bias detected. The language is balanced and fair.';
+                objectivityIcon = 'fa-check-circle';
+                objectivityColor = '#10b981';
+            } else if (objectivityScore >= 70) {
+                objectivityDescription = 'This article shows <strong>good objectivity</strong> with only minor bias elements. Most content is balanced and fair.';
+                objectivityIcon = 'fa-check-circle';
+                objectivityColor = '#3b82f6';
+            } else if (objectivityScore >= 50) {
+                objectivityDescription = 'This article shows <strong>moderate objectivity</strong> with some bias present. Consider seeking additional perspectives.';
+                objectivityIcon = 'fa-exclamation-circle';
+                objectivityColor = '#f59e0b';
+            } else {
+                objectivityDescription = 'This article shows <strong>limited objectivity</strong> with significant bias elements. Read critically and verify claims independently.';
+                objectivityIcon = 'fa-exclamation-triangle';
+                objectivityColor = '#ef4444';
+            }
+            
+            // Build detailed findings
+            const details = data.details || {};
+            const findings = [];
+            
+            // Political analysis
+            if (politicalLabel && politicalLabel !== 'Center') {
+                findings.push(`<li><strong>Political Lean:</strong> ${politicalLabel} perspective detected based on language patterns and topic framing.</li>`);
+            } else {
+                findings.push(`<li><strong>Political Lean:</strong> Center/Neutral - No significant political bias detected.</li>`);
+            }
+            
+            // Sensationalism
+            findings.push(`<li><strong>Sensationalism:</strong> ${sensationalismLevel} - ${this.getSensationalismExplanation(sensationalismLevel)}</li>`);
+            
+            // Loaded language
+            const loadedCount = details.loaded_language_count || 0;
+            if (loadedCount > 0) {
+                findings.push(`<li><strong>Loaded Language:</strong> Found ${loadedCount} instance${loadedCount !== 1 ? 's' : ''} of emotionally charged or biased language.</li>`);
+            } else {
+                findings.push(`<li><strong>Loaded Language:</strong> None detected - Language is neutral and factual.</li>`);
+            }
+            
+            // Framing issues
+            const framingIssues = details.framing_issues || 0;
+            if (framingIssues > 0) {
+                findings.push(`<li><strong>Framing:</strong> ${framingIssues} framing issue${framingIssues !== 1 ? 's' : ''} detected (e.g., one-sided presentation, limited counterarguments).</li>`);
+            } else {
+                findings.push(`<li><strong>Framing:</strong> No issues - Article presents balanced perspectives.</li>`);
+            }
+            
+            explanation.innerHTML = `
+                <div style="margin-bottom: 1.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                        <i class="fas ${objectivityIcon}" style="font-size: 1.5rem; color: ${objectivityColor};"></i>
+                        <h4 style="margin: 0; color: #1e293b; font-size: 1.1rem;">Objectivity Analysis: ${objectivityScore}/100</h4>
+                    </div>
+                    <p style="margin: 0 0 1rem 0; color: #475569; line-height: 1.6;">${objectivityDescription}</p>
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.8); padding: 1.25rem; border-radius: 8px;">
+                    <h5 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem; font-weight: 600;">
+                        <i class="fas fa-search" style="margin-right: 0.5rem; color: #f59e0b;"></i>
+                        What We Analyzed
+                    </h5>
+                    <p style="margin: 0 0 1rem 0; color: #475569; line-height: 1.6;">
+                        We examined the article for political bias, sensationalism, loaded language, corporate bias, and framing techniques. 
+                        Our multi-dimensional analysis looks at word choice, tone, source diversity, and how issues are presented.
+                    </p>
+                    
+                    <h5 style="margin: 1.5rem 0 1rem 0; color: #1e293b; font-size: 1rem; font-weight: 600;">
+                        <i class="fas fa-clipboard-list" style="margin-right: 0.5rem; color: #f59e0b;"></i>
+                        What We Found
+                    </h5>
+                    <ul style="margin: 0; padding-left: 1.5rem; color: #475569; line-height: 1.8;">
+                        ${findings.join('')}
+                    </ul>
+                    
+                    <h5 style="margin: 1.5rem 0 1rem 0; color: #1e293b; font-size: 1rem; font-weight: 600;">
+                        <i class="fas fa-lightbulb" style="margin-right: 0.5rem; color: #f59e0b;"></i>
+                        What This Means
+                    </h5>
+                    <p style="margin: 0; color: #475569; line-height: 1.6;">
+                        ${this.getObjectivityMeaning(objectivityScore, politicalLabel)}
+                    </p>
+                </div>
+            `;
+            
+            // Insert after chart container
+            chartContainer.parentElement.insertBefore(explanation, chartContainer.nextSibling);
+        }
+    },
+    
+    // Helper function for sensationalism explanation
+    getSensationalismExplanation: function(level) {
+        const explanations = {
+            'High': 'Significant use of sensational language that may exaggerate issues',
+            'Moderate': 'Some sensational language present but not overwhelming',
+            'Low': 'Minimal sensational language detected',
+            'Minimal': 'Very little or no sensational language used'
+        };
+        return explanations[level] || 'Article uses measured, factual language';
+    },
+    
+    // Helper function for objectivity meaning
+    getObjectivityMeaning: function(score, politicalLabel) {
+        if (score >= 85) {
+            return 'This article maintains excellent journalistic standards with balanced, neutral reporting. You can trust the information presented is factual and fair.';
+        } else if (score >= 70) {
+            return 'This article maintains good journalistic standards with mostly balanced reporting. While some bias elements exist, they don\'t significantly impact the overall reliability.';
+        } else if (score >= 50) {
+            if (politicalLabel && politicalLabel !== 'Center') {
+                return `This article shows a ${politicalLabel.toLowerCase()} perspective that may influence how information is presented. Consider reading coverage from other sources for a complete picture.`;
+            }
+            return 'This article contains noticeable bias elements that may affect how information is presented. Consider seeking additional sources for a balanced view.';
+        } else {
+            return 'This article shows significant bias that likely affects the reliability and balance of information. We strongly recommend verifying claims with multiple independent sources.';
         }
     },
 
@@ -1157,13 +1307,13 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.9.0 CLEANED');
+console.log('ServiceTemplates loaded successfully - v4.10.0 BIAS DETECTOR FIXED');
 
 // Chart Integration
 const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.9.0] displayAllAnalyses called');
+    console.log('[ServiceTemplates v4.10.0] displayAllAnalyses called');
     originalDisplayAllAnalyses.call(this, data, analyzer);
     setTimeout(() => {
         integrateChartsIntoServices(data);
@@ -1180,8 +1330,38 @@ function integrateChartsIntoServices(data) {
     
     const detailed = data.detailed_analysis || {};
     
+    // Special handling for Bias Detector - build chart data from details
+    const biasData = detailed['bias_detector'];
+    if (biasData && biasData.details) {
+        console.log('[Charts] Building bias detector chart from details:', biasData.details);
+        
+        // Convert bias amounts to objectivity scores (invert them)
+        // Lower bias scores = higher objectivity for the chart
+        const details = biasData.details;
+        const biasChartData = {
+            type: 'radar',
+            labels: ['Political', 'Sensationalism', 'Corporate', 'Loaded Language', 'Framing'],
+            datasets: [{
+                label: 'Objectivity Score',
+                data: [
+                    100 - (details.political_score || 0),           // Invert: low political bias = high objectivity
+                    100 - (details.sensationalism_score || 0),      // Invert: low sensationalism = high objectivity
+                    100 - (details.corporate_score || 0),           // Invert: low corporate bias = high objectivity
+                    100 - Math.min(100, (details.loaded_language_count || 0) * 10), // Invert and scale
+                    100 - Math.min(100, (details.framing_issues || 0) * 20)  // Invert and scale
+                ]
+            }]
+        };
+        
+        console.log('[Charts] Bias chart data prepared:', biasChartData);
+        
+        setTimeout(() => {
+            window.ChartRenderer.renderChart('biasDetectorChart', biasChartData);
+        }, 400);
+    }
+    
+    // Handle other charts normally
     const serviceCharts = [
-        {id: 'biasDetector', key: 'bias_detector', delay: 400},
         {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
         {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
     ];
