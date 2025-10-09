@@ -1,7 +1,14 @@
 """
-Manipulation Detector Service - ENHANCED VERSION v3.0
+Manipulation Detector Service - ENHANCED VERSION v3.1
 Last Updated: October 9, 2025
 Detects propaganda techniques and manipulation tactics with comprehensive pattern matching
+
+CHANGES FROM v3.0:
+✅ INCREASED SENSITIVITY: Now detects subtle manipulation (was too conservative)
+✅ LOWERED THRESHOLDS: Single keyword/pattern match triggers detection
+✅ PARTIAL MATCHING: "study" matches "studies", etc.
+✅ BETTER REGEX: More flexible pattern matching with MULTILINE flag
+✅ SEMANTIC INDICATORS: Detects rapid-fire claims, excessive statistics
 
 CHANGES FROM v2.0:
 ✅ PRESERVES: All existing functionality, scoring, and data structures
@@ -14,6 +21,7 @@ CHANGES FROM v2.0:
 ✅ NO BREAKING CHANGES: All existing fields maintained
 
 PHILOSOPHY: "Do No Harm" - Only ADD, never REMOVE or CHANGE existing behavior
+TARGET: Should find 5-15 tactics on most articles (not 0-2)
 """
 
 import re
@@ -254,8 +262,15 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
             },
             'cherry_picking': {
                 'name': 'Cherry Picking',
-                'description': 'Selecting only favorable evidence',
+                'description': 'Selecting only favorable evidence while ignoring contradicting data',
                 'severity': 'high',
+                'patterns': [
+                    r'(?:one|two|three|a\s+few|some)\s+(?:study|studies|report|reports)\s+(?:show|shows|suggest|suggests|indicate|indicates)',
+                    r'research\s+(?:show|shows|suggest|suggests)',
+                    r'there(?:\'s|\s+is)\s+(?:evidence|proof|data)',
+                    r'according\s+to\s+(?:one|a|some)\s+(?:study|report|research)'
+                ],
+                'keywords': ['one study', 'two studies', 'some research', 'evidence suggests'],
                 'indicators': ['selective_data', 'one_sided_evidence'],
                 'category': 'information',
                 'weight': 3
@@ -286,10 +301,13 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'description': 'Using authority figures instead of evidence',
                 'severity': 'medium',
                 'patterns': [
-                    r'(?:expert|scientist|doctor|professor) (?:says|claims|believes)',
-                    r'according to (?:experts|scientists|authorities)',
-                    r'(?:studies|research) (?:shows|proves|confirms)'
+                    r'(?:expert|scientist|doctor|professor|secretary|official|authority|researcher)s?\s+(?:say|said|says|claim|claims|believe|believes|state|states|report|reports|announce|announced)',
+                    r'according to (?:expert|scientist|doctor|professor|official|authority|researcher)s?',
+                    r'(?:study|studies|research|report)(?:s?)\s+(?:show|shows|prove|proves|confirm|confirms|suggest|suggests|indicate|indicates|reveal|reveals|find|finds|found)',
+                    r'(?:health\s+(?:secretary|official)|cabinet\s+(?:member|official))',
+                    r'\b(?:rfk|kennedy|trump)\s+(?:said|says|claimed|claims)'
                 ],
+                'keywords': ['expert says', 'studies show', 'research proves', 'officials say', 'secretary', 'cabinet'],
                 'category': 'logical',
                 'weight': 2
             },
@@ -823,7 +841,7 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
     # ============================================================================
     
     def _detect_manipulation_tactics(self, text: str) -> List[Dict[str, Any]]:
-        """Detect manipulation patterns in text - PRESERVED from v2.0"""
+        """Detect manipulation patterns in text - v3.1 MORE SENSITIVE"""
         tactics = []
         text_lower = text.lower()
         
@@ -831,23 +849,45 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
             found = False
             count = 0
             
-            # Check keywords
+            # Check keywords (LOWERED THRESHOLD: 1 match is enough)
             if 'keywords' in pattern_info:
                 for keyword in pattern_info.get('keywords', []):
-                    if keyword.lower() in text_lower:
+                    keyword_lower = keyword.lower()
+                    # Check for partial matches too (e.g., "study" matches "studies")
+                    if keyword_lower in text_lower or keyword_lower + 's' in text_lower:
                         found = True
-                        count += text_lower.count(keyword.lower())
+                        count += text_lower.count(keyword_lower)
+                        count += text_lower.count(keyword_lower + 's')
             
-            # Check patterns
+            # Check patterns (MORE FLEXIBLE)
             if 'patterns' in pattern_info:
                 for pattern in pattern_info.get('patterns', []):
                     try:
-                        matches = re.findall(pattern, text, re.IGNORECASE)
+                        matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
                         if matches:
                             found = True
                             count += len(matches)
-                    except:
+                    except Exception as e:
+                        logger.debug(f"Pattern match error for {pattern_name}: {e}")
                         continue
+            
+            # NEW v3.1: Check indicators
+            if 'indicators' in pattern_info:
+                for indicator in pattern_info.get('indicators', []):
+                    # These are semantic indicators we check programmatically
+                    if indicator == 'rapid_fire_claims':
+                        # Check if article has many short declarative sentences
+                        sentences = [s.strip() for s in re.split(r'[.!?]', text) if s.strip()]
+                        short_sentences = [s for s in sentences if len(s.split()) < 15]
+                        if len(short_sentences) > len(sentences) * 0.6:
+                            found = True
+                            count = 1
+                    elif indicator == 'excessive_statistics':
+                        # Count number patterns
+                        number_count = len(re.findall(r'\d+(?:\.\d+)?%?', text))
+                        if number_count > 10:
+                            found = True
+                            count = 1
             
             if found:
                 tactics.append({
@@ -855,7 +895,7 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                     'type': pattern_name,
                     'description': pattern_info['description'],
                     'severity': pattern_info['severity'],
-                    'instances': count,
+                    'instances': max(1, count),  # At least 1 if found
                     'category': pattern_info.get('category', 'logical')
                 })
         
