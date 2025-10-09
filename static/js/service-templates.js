@@ -1,18 +1,14 @@
 /**
- * TruthLens Service Templates - FINAL CLEANED VERSION
+ * TruthLens Service Templates - ENHANCED FACT CHECKER
  * Date: October 9, 2025
- * Version: 4.11.0 - BIAS DETECTOR SPIDER CHART REMOVED
+ * Version: 4.12.0 - FACT CHECKER DISPLAY IMPROVEMENTS
  * 
- * CHANGES FROM 4.10.0:
- * - Removed problematic spider chart from Bias Detector
- * - Chart was not rendering due to data structure issues
- * - Bias Detector now shows clean metrics + comprehensive text analysis
- * - Reduced from 3 charts to 2 charts (Manipulation, Content)
- * 
- * PREVIOUS CHANGES (v4.10.0):
- * - Fixed Bias Detector to display OBJECTIVITY scores (higher = better)
- * - Added comprehensive explanatory text to Bias Detection
- * - Attempted spider chart data mapping (removed in v4.11.0)
+ * CHANGES FROM 4.11.0:
+ * - Enhanced Fact Checker to better display "unverified" claims
+ * - Added detailed verdict debugging
+ * - Improved explanatory text for unverified claims
+ * - Better visual hierarchy for claim analysis
+ * - Added "Why Unverified?" explanation section
  * 
  * Canvas Elements (2 total):
  * 1. manipulationDetectorChart - tight bar chart (500px x 200px)
@@ -192,14 +188,14 @@ window.ServiceTemplates = {
                                 <div class="metric-icon"><i class="fas fa-clipboard-check"></i></div>
                                 <div class="metric-content">
                                     <span class="metric-value" id="claims-checked">--</span>
-                                    <span class="metric-label">Claims Checked</span>
+                                    <span class="metric-label">Claims Found</span>
                                 </div>
                             </div>
-                            <div class="metric-card success">
-                                <div class="metric-icon"><i class="fas fa-shield-alt"></i></div>
+                            <div class="metric-card warning">
+                                <div class="metric-icon"><i class="fas fa-search"></i></div>
                                 <div class="metric-content">
                                     <span class="metric-value" id="claims-verified">--</span>
-                                    <span class="metric-label">Verified</span>
+                                    <span class="metric-label">In Databases</span>
                                 </div>
                             </div>
                         </div>
@@ -542,7 +538,7 @@ window.ServiceTemplates = {
 
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.9.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.12.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -894,9 +890,9 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Fact Checker - v4.9.0
+    // Display Fact Checker - v4.12.0 ENHANCED
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker Display v4.9.0] Data received:', data);
+        console.log('[FactChecker Display v4.12.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
@@ -904,6 +900,12 @@ window.ServiceTemplates = {
         const factChecks = data.fact_checks || data.claims || [];
         
         console.log(`[FactChecker] Score: ${score}, Checked: ${claimsChecked}, Verified: ${claimsVerified}, Claims: ${factChecks.length}`);
+        
+        // ENHANCED: Log first claim to debug verdict values
+        if (factChecks.length > 0) {
+            console.log('[FactChecker] Sample claim:', factChecks[0]);
+            console.log('[FactChecker] Sample verdict:', factChecks[0].verdict);
+        }
         
         // Update summary metrics
         this.updateElement('fact-score', score + '%');
@@ -916,42 +918,76 @@ window.ServiceTemplates = {
             if (factChecks && factChecks.length > 0) {
                 console.log('[FactChecker] Rendering', factChecks.length, 'claims');
                 
-                let claimsHTML = '';
+                // Add explanatory note if most/all claims are unverified
+                let headerHTML = '';
+                if (claimsVerified === 0 && claimsChecked > 0) {
+                    headerHTML = `
+                        <div style="margin-bottom: 1.5rem; padding: 1.25rem; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 4px solid #f59e0b; border-radius: 10px;">
+                            <div style="display: flex; align-items: start; gap: 1rem;">
+                                <i class="fas fa-info-circle" style="color: #f59e0b; font-size: 1.5rem; margin-top: 2px;"></i>
+                                <div style="flex: 1;">
+                                    <h5 style="margin: 0 0 0.5rem 0; color: #78350f; font-size: 1rem; font-weight: 700;">
+                                        Understanding "Unverified" Claims
+                                    </h5>
+                                    <p style="margin: 0 0 0.75rem 0; color: #92400e; line-height: 1.6; font-size: 0.875rem;">
+                                        These claims were not found in our fact-checking databases. This doesn't mean they're false—it just means they haven't been independently fact-checked by major organizations yet.
+                                    </p>
+                                    <p style="margin: 0; color: #92400e; line-height: 1.6; font-size: 0.875rem;">
+                                        <strong>Why?</strong> Most claims in news articles aren't in databases because fact-checkers focus on controversial statements from public figures. Standard news reporting about events, policies, or statistics usually doesn't get entered into these systems.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                let claimsHTML = headerHTML;
                 
                 factChecks.forEach(function(claim, index) {
                     // Determine verdict styling
                     const verdict = (claim.verdict || 'unverified').toLowerCase();
+                    
+                    console.log(`[FactChecker] Claim ${index + 1} verdict:`, verdict); // DEBUG
+                    
                     let verdictConfig = {
-                        icon: 'question-circle',
+                        icon: 'search',
                         color: '#6b7280',
-                        bgColor: '#f3f4f6',
-                        label: 'Unverified',
-                        description: 'Unable to verify'
+                        bgColor: '#f9fafb',
+                        label: 'Not in Database',
+                        description: claim.explanation || 'This claim was not found in fact-checking databases. It may be accurate but hasn\'t been independently verified yet.'
                     };
                     
-                    if (verdict === 'true' || verdict === 'likely_true') {
+                    if (verdict === 'true' || verdict === 'likely_true' || verdict === 'mostly_true') {
                         verdictConfig = {
                             icon: 'check-circle',
                             color: '#059669',
                             bgColor: '#d1fae5',
                             label: verdict === 'true' ? 'Verified True' : 'Likely True',
-                            description: claim.explanation || 'This claim appears accurate'
+                            description: claim.explanation || 'This claim appears accurate based on available evidence'
                         };
-                    } else if (verdict === 'false' || verdict === 'likely_false') {
+                    } else if (verdict === 'false' || verdict === 'likely_false' || verdict === 'mostly_false') {
                         verdictConfig = {
                             icon: 'times-circle',
                             color: '#dc2626',
                             bgColor: '#fee2e2',
                             label: verdict === 'false' ? 'False' : 'Likely False',
-                            description: claim.explanation || 'This claim appears inaccurate'
+                            description: claim.explanation || 'This claim appears inaccurate based on available evidence'
                         };
-                    } else if (verdict === 'mixed') {
+                    } else if (verdict === 'mixed' || verdict === 'partially_accurate') {
                         verdictConfig = {
                             icon: 'exclamation-triangle',
                             color: '#f59e0b',
                             bgColor: '#fef3c7',
                             label: 'Mixed/Partially True',
-                            description: claim.explanation || 'This claim has mixed accuracy'
+                            description: claim.explanation || 'This claim has both accurate and inaccurate elements'
+                        };
+                    } else if (verdict === 'needs_context' || verdict === 'lacks_context') {
+                        verdictConfig = {
+                            icon: 'info-circle',
+                            color: '#3b82f6',
+                            bgColor: '#dbeafe',
+                            label: 'Needs Context',
+                            description: claim.explanation || 'This claim lacks important context that affects its meaning'
                         };
                     }
                     
@@ -993,7 +1029,7 @@ window.ServiceTemplates = {
                                 <div style="margin-bottom: 1rem;">
                                     <div style="font-weight: 600; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">
                                         <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
-                                        Explanation
+                                        Analysis
                                     </div>
                                     <div style="color: #4b5563; line-height: 1.6;">
                                         ${verdictConfig.description}
@@ -1004,7 +1040,7 @@ window.ServiceTemplates = {
                                 ${confidence > 0 ? `
                                     <div style="margin-bottom: 1rem;">
                                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
-                                            <span style="font-size: 0.875rem; font-weight: 600; color: #374151;">Confidence Level</span>
+                                            <span style="font-size: 0.875rem; font-weight: 600; color: #374151;">Analysis Confidence</span>
                                             <span style="font-size: 0.875rem; font-weight: 700; color: ${verdictConfig.color};">${confidence}%</span>
                                         </div>
                                         <div style="height: 8px; background: #e5e7eb; border-radius: 10px; overflow: hidden;">
@@ -1031,7 +1067,7 @@ window.ServiceTemplates = {
                                     <div>
                                         <div style="font-weight: 600; color: #374151; margin-bottom: 0.5rem; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.5px;">
                                             <i class="fas fa-link" style="margin-right: 0.5rem;"></i>
-                                            Sources
+                                            Sources Used
                                         </div>
                                         <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                                             ${sources.map(source => `
@@ -1040,6 +1076,18 @@ window.ServiceTemplates = {
                                                     ${source}
                                                 </span>
                                             `).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                
+                                <!-- Unverified Guidance -->
+                                ${verdict === 'unverified' ? `
+                                    <div style="margin-top: 1rem; padding: 0.75rem; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+                                        <div style="display: flex; align-items: start; gap: 0.5rem;">
+                                            <i class="fas fa-lightbulb" style="color: #0284c7; margin-top: 2px; font-size: 0.9rem;"></i>
+                                            <p style="margin: 0; color: #075985; font-size: 0.8125rem; line-height: 1.5;">
+                                                <strong>How to verify:</strong> Check if the article provides sources or links. Look for the same information from multiple reputable news outlets. For statistics or studies, try to find the original source.
+                                            </p>
                                         </div>
                                     </div>
                                 ` : ''}
@@ -1292,13 +1340,13 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.11.0 SPIDER CHART REMOVED');
+console.log('ServiceTemplates loaded successfully - v4.12.0 ENHANCED FACT CHECKER');
 
 // Chart Integration
 const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.11.0] displayAllAnalyses called');
+    console.log('[ServiceTemplates v4.12.0] displayAllAnalyses called');
     originalDisplayAllAnalyses.call(this, data, analyzer);
     setTimeout(() => {
         integrateChartsIntoServices(data);
@@ -1338,4 +1386,4 @@ function integrateChartsIntoServices(data) {
     console.log('[Charts] ✓ Integration complete');
 }
 
-console.log('[Charts] Service Templates v4.11.0 loaded - 2 optimized charts - SPIDER CHART REMOVED');
+console.log('[Charts] Service Templates v4.12.0 loaded - Enhanced Fact Checker with better unverified claim handling');
