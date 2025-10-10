@@ -7,13 +7,12 @@ CHANGES FROM 2.6:
 - CRITICAL FIX: _transform_author_analyzer now preserves all_authors field
 - ADDED: Preserves primary_author field
 - ADDED: Preserves authors list/array if present
+- FIXED: Method name corrected to get_response_template()
 - All chart preservation from v2.6 maintained
 
 THE FIX:
 Backend sends all_authors = "Stephen Fowler, Andrea Hsu, Selena Simmons-Duffin, Sam Gringlas, Deepa Shivaram"
 DataTransformer now PRESERVES this field so frontend can display all authors.
-
-LOCATION OF FIX: Line ~150 in _transform_author_analyzer() method
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -169,13 +168,6 @@ class DataTransformer:
     def _preserve_chart_data(result: Dict[str, Any], raw_data: Dict[str, Any]) -> None:
         """
         CRITICAL v2.6: Preserve chart_data field if present in raw data
-        
-        This helper is called by ALL service transformation methods to ensure
-        chart_data is not lost during transformation.
-        
-        Args:
-            result: The transformed service data dict (modified in place)
-            raw_data: The original raw service data
         """
         if 'chart_data' in raw_data and raw_data['chart_data']:
             result['chart_data'] = raw_data['chart_data']
@@ -185,18 +177,15 @@ class DataTransformer:
     def _get_source_name(raw_data: Dict[str, Any], article: Dict[str, Any]) -> str:
         """Get the proper source name"""
         
-        # Try multiple fields
         source = (
             raw_data.get('source') or 
             article.get('source') or 
             article.get('domain', '')
         )
         
-        # Convert domain to proper name
         if '.' in source:
             source = DataTransformer.SOURCE_NAMES.get(source.replace('www.', ''), source)
         
-        # Ensure we have NPR not 'npr.org'
         if source.lower() == 'npr' or 'npr.org' in source.lower():
             source = 'NPR'
             
@@ -214,7 +203,6 @@ class DataTransformer:
             'Unknown'
         )
         
-        # Clean up author
         if author.lower() in ['unknown', 'none', '']:
             author = 'Unknown Author'
             
@@ -229,7 +217,6 @@ class DataTransformer:
     ) -> Dict[str, Any]:
         """Transform a single service's data to match contract"""
         
-        # Start with the contract template for this service
         template = DataContract.get_service_template(service_name)
         
         if service_name == 'source_credibility':
@@ -260,7 +247,6 @@ class DataTransformer:
         
         result = template.copy()
         
-        # Get score - check multiple fields
         score = (
             raw_data.get('score') or
             raw_data.get('article_score') or
@@ -270,7 +256,6 @@ class DataTransformer:
         
         logger.info(f"[Transform SourceCred] Using score: {score} from raw_data")
         
-        # Get source metadata
         metadata = DataTransformer.SOURCE_METADATA.get(source, {})
         
         source_name = raw_data.get('source_name', source)
@@ -285,7 +270,6 @@ class DataTransformer:
         
         logger.info(f"[Transform SourceCred] Final: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
         
-        # Set reputation levels
         if result['score'] >= 80:
             result['reputation'] = 'Excellent'
             result['credibility'] = 'High'
@@ -299,14 +283,11 @@ class DataTransformer:
             result['reputation'] = 'Low'
             result['credibility'] = 'Low'
         
-        # Set bias
         result['bias'] = raw_data.get('bias', 'Moderate')
         
-        # Copy analysis if present
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        # CRITICAL v2.6: Preserve chart_data
         DataTransformer._preserve_chart_data(result, raw_data)
         
         return result
@@ -322,10 +303,8 @@ class DataTransformer:
         result = template.copy()
         
         try:
-            # Show ALL keys for debugging
             logger.info(f"[Transform Author v2.7] Raw data keys: {list(raw_data.keys())[:20]}")
             
-            # Get author name (primary/first author)
             author = (
                 raw_data.get('name') or
                 raw_data.get('author_name') or
@@ -334,7 +313,6 @@ class DataTransformer:
                 'Unknown Author'
             )
             
-            # Get credibility score
             cred_score = (
                 raw_data.get('credibility_score') or
                 raw_data.get('score') or
@@ -348,7 +326,6 @@ class DataTransformer:
             # NEW v2.7: PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
             # ============================================================================
             
-            # Preserve all_authors field (comma-separated string or array)
             if 'all_authors' in raw_data and raw_data.get('all_authors'):
                 result['all_authors'] = raw_data['all_authors']
                 logger.info(f"[Transform Author v2.7] ✓ Preserved all_authors: {raw_data['all_authors']}")
@@ -356,11 +333,9 @@ class DataTransformer:
                 result['all_authors'] = raw_data['authors']
                 logger.info(f"[Transform Author v2.7] ✓ Preserved authors as all_authors: {raw_data['authors']}")
             elif article.get('author') and ',' in str(article.get('author', '')):
-                # Fallback: if article author has commas, preserve it
                 result['all_authors'] = article.get('author')
                 logger.info(f"[Transform Author v2.7] ✓ Preserved from article.author: {article.get('author')}")
             
-            # Preserve primary_author field
             if 'primary_author' in raw_data and raw_data.get('primary_author'):
                 result['primary_author'] = raw_data['primary_author']
                 logger.info(f"[Transform Author v2.7] ✓ Preserved primary_author: {raw_data['primary_author']}")
@@ -370,34 +345,28 @@ class DataTransformer:
             
             # ============================================================================
             
-            # Set all the duplicate fields the frontend expects
             result['name'] = author
             result['author_name'] = author
             result['score'] = cred_score
             result['credibility_score'] = cred_score
             result['credibility'] = cred_score
             
-            # Get domain/organization - use .get() with defaults
             result['domain'] = raw_data.get('domain', article.get('domain', 'Unknown'))
             result['organization'] = raw_data.get('organization', article.get('source', 'Unknown'))
             result['position'] = raw_data.get('position', 'Journalist')
             
-            # Get expertise
             expertise = raw_data.get('expertise_areas', raw_data.get('expertise', []))
             if isinstance(expertise, list) and expertise:
                 result['expertise'] = ', '.join(str(e) for e in expertise[:3])
             else:
                 result['expertise'] = str(expertise) if expertise else 'General reporting'
             
-            # Set other fields with safe defaults
             result['track_record'] = raw_data.get('trust_explanation', raw_data.get('track_record', 'Unknown'))
             result['years_experience'] = str(raw_data.get('years_experience', 'Unknown'))
             result['outlet'] = raw_data.get('organization', raw_data.get('outlet', article.get('source', 'Unknown')))
             
-            # Bio
             result['bio'] = raw_data.get('bio', raw_data.get('biography', ''))
             
-            # Handle awards
             awards = raw_data.get('awards', [])
             if isinstance(awards, list):
                 result['awards'] = awards
@@ -406,21 +375,17 @@ class DataTransformer:
                 result['awards'] = []
                 result['awards_count'] = str(raw_data.get('awards_count', 0))
             
-            # Articles count
             result['articles_count'] = str(raw_data.get('articles_found', raw_data.get('article_count', 0)))
             result['articles_found'] = result['articles_count']
             
-            # Social media - safe handling
             social_data = raw_data.get('social_media', raw_data.get('social_profiles', {}))
             if not isinstance(social_data, dict):
                 social_data = {}
             result['social_media'] = social_data
             result['social_links'] = social_data
             
-            # Verification
             result['verified'] = raw_data.get('verified', False)
             
-            # Trust indicators and red flags - safe handling
             trust_ind = raw_data.get('trust_indicators', [])
             if not isinstance(trust_ind, list):
                 trust_ind = []
@@ -431,7 +396,6 @@ class DataTransformer:
                 red_flags_data = []
             result['red_flags'] = red_flags_data
             
-            # Set analysis section
             if 'analysis' in raw_data and isinstance(raw_data.get('analysis'), dict):
                 result['analysis'] = raw_data['analysis']
             else:
@@ -441,7 +405,6 @@ class DataTransformer:
                     'what_it_means': DataTransformer._get_author_meaning(cred_score)
                 }
             
-            # CRITICAL v2.6: Preserve chart_data
             DataTransformer._preserve_chart_data(result, raw_data)
             
             logger.info(f"[Transform Author v2.7] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
@@ -450,119 +413,12 @@ class DataTransformer:
             
         except Exception as e:
             logger.error(f"[Transform Author v2.7] ERROR: {e}", exc_info=True)
-            # Return safe defaults on error
             result['name'] = 'Unknown Author'
             result['author_name'] = 'Unknown Author'
             result['score'] = 50
             result['credibility_score'] = 50
             logger.error(f"[Transform Author v2.7] Returning safe defaults due to error")
-            return resultkeys())[:20]}")
-        
-        # Get author name (primary/first author)
-        author = (
-            raw_data.get('name') or
-            raw_data.get('author_name') or
-            raw_data.get('primary_author') or
-            article.get('author') or
-            'Unknown Author'
-        )
-        
-        # Get credibility score
-        cred_score = (
-            raw_data.get('credibility_score') or
-            raw_data.get('score') or
-            raw_data.get('credibility') or
-            70
-        )
-        
-        logger.info(f"[Transform Author v2.7] Primary: {author}, Score: {cred_score}")
-        
-        # ============================================================================
-        # NEW v2.7: PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
-        # ============================================================================
-        
-        # Preserve all_authors field (comma-separated string or array)
-        if 'all_authors' in raw_data:
-            result['all_authors'] = raw_data['all_authors']
-            logger.info(f"[Transform Author v2.7] ✓ Preserved all_authors: {raw_data['all_authors']}")
-        elif 'authors' in raw_data:
-            result['all_authors'] = raw_data['authors']
-            logger.info(f"[Transform Author v2.7] ✓ Preserved authors: {raw_data['authors']}")
-        
-        # Preserve primary_author field
-        if 'primary_author' in raw_data:
-            result['primary_author'] = raw_data['primary_author']
-            logger.info(f"[Transform Author v2.7] ✓ Preserved primary_author: {raw_data['primary_author']}")
-        else:
-            result['primary_author'] = author
-        
-        # ============================================================================
-        
-        # Set all the duplicate fields the frontend expects
-        result['name'] = author
-        result['author_name'] = author
-        result['score'] = cred_score
-        result['credibility_score'] = cred_score
-        result['credibility'] = cred_score
-        
-        # Get domain/organization
-        result['domain'] = raw_data.get('domain', article.get('domain', 'Unknown'))
-        result['organization'] = raw_data.get('organization', article.get('source', 'Unknown'))
-        result['position'] = raw_data.get('position', 'Journalist')
-        
-        # Get expertise
-        expertise = raw_data.get('expertise_areas', raw_data.get('expertise', []))
-        if isinstance(expertise, list) and expertise:
-            result['expertise'] = ', '.join(str(e) for e in expertise[:3])
-        else:
-            result['expertise'] = str(expertise) if expertise else 'General reporting'
-        
-        # Set other fields
-        result['track_record'] = raw_data.get('trust_explanation', raw_data.get('track_record', 'Unknown'))
-        result['years_experience'] = str(raw_data.get('years_experience', 'Unknown'))
-        result['outlet'] = raw_data.get('organization', raw_data.get('outlet', article.get('source', 'Unknown')))
-        
-        # Bio
-        result['bio'] = raw_data.get('bio', raw_data.get('biography', ''))
-        
-        # Handle awards
-        awards = raw_data.get('awards', [])
-        if isinstance(awards, list):
-            result['awards'] = awards
-            result['awards_count'] = str(len(awards))
-        else:
-            result['awards'] = []
-            result['awards_count'] = str(raw_data.get('awards_count', 0))
-        
-        # Articles count
-        result['articles_count'] = str(raw_data.get('articles_found', raw_data.get('article_count', 0)))
-        result['articles_found'] = result['articles_count']
-        
-        # Social media
-        result['verified'] = raw_data.get('verified', False)
-        result['social_media'] = raw_data.get('social_media', raw_data.get('social_profiles', {}))
-        result['social_links'] = result['social_media']  # Duplicate field
-        
-        # Trust indicators and red flags
-        result['trust_indicators'] = raw_data.get('trust_indicators', [])
-        result['red_flags'] = raw_data.get('red_flags', [])
-        
-        # Set analysis section
-        if 'analysis' in raw_data:
-            result['analysis'] = raw_data['analysis']
-        else:
-            result['analysis'] = {
-                'what_we_looked': 'We examined the author\'s credentials, experience, track record, and publication history.',
-                'what_we_found': f'Author {author} has a credibility score of {cred_score}/100 with expertise in {result["expertise"]}.',
-                'what_it_means': DataTransformer._get_author_meaning(cred_score)
-            }
-        
-        # CRITICAL v2.6: Preserve chart_data
-        DataTransformer._preserve_chart_data(result, raw_data)
-        
-        logger.info(f"[Transform Author v2.7] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
-        
-        return result
+            return result
     
     @staticmethod
     def _get_author_meaning(score: int) -> str:
@@ -582,7 +438,6 @@ class DataTransformer:
         
         result = template.copy()
         
-        # Get objectivity score (higher is better)
         objectivity = raw_data.get('objectivity_score', raw_data.get('score', 50))
         
         logger.info(f"[Transform Bias] NEW FORMAT - Objectivity: {objectivity}/100")
@@ -594,7 +449,6 @@ class DataTransformer:
         result['political_label'] = raw_data.get('political_label', 'Center')
         result['sensationalism_level'] = raw_data.get('sensationalism_level', 'Low')
         
-        # Get details
         details = raw_data.get('details', {})
         result['details'] = details
         result['loaded_language_count'] = details.get('loaded_language_count', 0)
@@ -603,7 +457,6 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        # CRITICAL v2.6: Preserve chart_data
         DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform Bias] Final score: {result['score']}")
@@ -616,7 +469,6 @@ class DataTransformer:
         
         result = template.copy()
         
-        # Get score from various possible fields
         score = (
             raw_data.get('score') or
             raw_data.get('accuracy_score') or 
@@ -634,12 +486,10 @@ class DataTransformer:
         result['claims_verified'] = verified
         result['claims_found'] = checked
         
-        # CRITICAL FIX: Check 'fact_checks' FIRST, then 'claims'
         claims_array = raw_data.get('fact_checks', raw_data.get('claims', []))
         result['claims'] = claims_array
         result['fact_checks'] = claims_array
         
-        # Log for debugging
         logger.info(f"[Transform FactCheck] Found {len(claims_array)} claims in array")
         if claims_array and len(claims_array) > 0:
             logger.info(f"[Transform FactCheck] First claim keys: {list(claims_array[0].keys())[:5]}")
@@ -647,7 +497,6 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        # CRITICAL v2.6: Preserve chart_data
         DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform FactCheck] Final score: {result['score']}, Claims: {len(claims_array)}")
@@ -680,7 +529,6 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        # CRITICAL v2.6: Preserve chart_data
         DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform Transparency] Final score: {result['score']}")
@@ -693,7 +541,6 @@ class DataTransformer:
         
         result = template.copy()
         
-        # Higher score means better integrity
         score = (
             raw_data.get('score') or
             raw_data.get('integrity_score') or
@@ -711,7 +558,6 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        # CRITICAL v2.6: Preserve chart_data
         DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform Manipulation] Final score: {result['score']}")
@@ -739,7 +585,6 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        # CRITICAL v2.6: Preserve chart_data
         DataTransformer._preserve_chart_data(result, raw_data)
         
         logger.info(f"[Transform Content] Final score: {result['score']}")
