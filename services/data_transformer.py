@@ -1,18 +1,22 @@
 """
 Data Transformer - WITH ALL_AUTHORS PRESERVATION
 Date: October 10, 2025
-Version: 2.7 - PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
+Version: 2.8 - FIX ARTICLE PARAMETER TYPE ERROR
 
-CHANGES FROM 2.6:
-- CRITICAL FIX: _transform_author_analyzer now preserves all_authors field
-- ADDED: Preserves primary_author field
-- ADDED: Preserves authors list/array if present
-- FIXED: Method name corrected to get_response_template()
-- All chart preservation from v2.6 maintained
+CHANGES FROM 2.7:
+- CRITICAL FIX: Handle case where article parameter is a string instead of dict
+- FIXED: Line 354 error - article.get() when article is a string
+- Added defensive type checking for article parameter
+- All chart preservation and all_authors functionality maintained
+
+THE BUG:
+Line 354: result['domain'] = raw_data.get('domain', article.get('domain', 'Unknown'))
+Error: 'str' object has no attribute 'get'
+Cause: article was a string "NPR" instead of a dictionary
 
 THE FIX:
-Backend sends all_authors = "Stephen Fowler, Andrea Hsu, Selena Simmons-Duffin, Sam Gringlas, Deepa Shivaram"
-DataTransformer now PRESERVES this field so frontend can display all authors.
+Added type checking to ensure article is always treated as a dict
+If article is a string, treat it as an empty dict for .get() calls
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -118,7 +122,12 @@ class DataTransformer:
             response['charts'] = raw_data['charts']
         
         # Get source and author from article_summary or top level
+        # FIXED v2.8: Ensure article is always a dict for safe .get() calls
         article = raw_data.get('article_summary', {})
+        if not isinstance(article, dict):
+            logger.warning(f"[DataTransformer v2.8] article_summary is not a dict (type: {type(article)}), using empty dict")
+            article = {}
+        
         source = DataTransformer._get_source_name(raw_data, article)
         author = DataTransformer._get_author(raw_data, article)
         
@@ -177,6 +186,10 @@ class DataTransformer:
     def _get_source_name(raw_data: Dict[str, Any], article: Dict[str, Any]) -> str:
         """Get the proper source name"""
         
+        # FIXED v2.8: Defensive check - ensure article is a dict
+        if not isinstance(article, dict):
+            article = {}
+        
         source = (
             raw_data.get('source') or 
             article.get('source') or 
@@ -197,6 +210,10 @@ class DataTransformer:
     def _get_author(raw_data: Dict[str, Any], article: Dict[str, Any]) -> str:
         """Get the author name"""
         
+        # FIXED v2.8: Defensive check - ensure article is a dict
+        if not isinstance(article, dict):
+            article = {}
+        
         author = (
             raw_data.get('author') or 
             article.get('author') or
@@ -213,9 +230,14 @@ class DataTransformer:
         service_name: str, 
         raw_data: Dict[str, Any],
         source: str,
-        article: Dict[str, Any]
+        article: Any  # FIXED v2.8: Changed from Dict[str, Any] to Any for flexibility
     ) -> Dict[str, Any]:
         """Transform a single service's data to match contract"""
+        
+        # FIXED v2.8: Ensure article is always a dict before passing to transformers
+        if not isinstance(article, dict):
+            logger.warning(f"[DataTransformer v2.8] article parameter is type {type(article)}, converting to empty dict")
+            article = {}
         
         template = DataContract.get_service_template(service_name)
         
@@ -298,12 +320,17 @@ class DataTransformer:
         raw_data: Dict[str, Any],
         article: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Transform author analyzer data - v2.7 WITH ALL_AUTHORS PRESERVATION"""
+        """Transform author analyzer data - v2.8 WITH ALL_AUTHORS PRESERVATION AND TYPE SAFETY"""
         
         result = template.copy()
         
         try:
-            logger.info(f"[Transform Author v2.7] Raw data keys: {list(raw_data.keys())[:20]}")
+            # FIXED v2.8: Ensure article is a dict at the start of this function
+            if not isinstance(article, dict):
+                logger.warning(f"[Transform Author v2.8] article is type {type(article)}, using empty dict")
+                article = {}
+            
+            logger.info(f"[Transform Author v2.8] Raw data keys: {list(raw_data.keys())[:20]}")
             
             author = (
                 raw_data.get('name') or
@@ -320,28 +347,28 @@ class DataTransformer:
                 70
             )
             
-            logger.info(f"[Transform Author v2.7] Primary: {author}, Score: {cred_score}")
+            logger.info(f"[Transform Author v2.8] Primary: {author}, Score: {cred_score}")
             
             # ============================================================================
-            # NEW v2.7: PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
+            # v2.7: PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
             # ============================================================================
             
             if 'all_authors' in raw_data and raw_data.get('all_authors'):
                 result['all_authors'] = raw_data['all_authors']
-                logger.info(f"[Transform Author v2.7] ✓ Preserved all_authors: {raw_data['all_authors']}")
+                logger.info(f"[Transform Author v2.8] ✓ Preserved all_authors: {raw_data['all_authors']}")
             elif 'authors' in raw_data and raw_data.get('authors'):
                 result['all_authors'] = raw_data['authors']
-                logger.info(f"[Transform Author v2.7] ✓ Preserved authors as all_authors: {raw_data['authors']}")
+                logger.info(f"[Transform Author v2.8] ✓ Preserved authors as all_authors: {raw_data['authors']}")
             elif article.get('author') and ',' in str(article.get('author', '')):
                 result['all_authors'] = article.get('author')
-                logger.info(f"[Transform Author v2.7] ✓ Preserved from article.author: {article.get('author')}")
+                logger.info(f"[Transform Author v2.8] ✓ Preserved from article.author: {article.get('author')}")
             
             if 'primary_author' in raw_data and raw_data.get('primary_author'):
                 result['primary_author'] = raw_data['primary_author']
-                logger.info(f"[Transform Author v2.7] ✓ Preserved primary_author: {raw_data['primary_author']}")
+                logger.info(f"[Transform Author v2.8] ✓ Preserved primary_author: {raw_data['primary_author']}")
             else:
                 result['primary_author'] = author
-                logger.info(f"[Transform Author v2.7] ✓ Set primary_author from name: {author}")
+                logger.info(f"[Transform Author v2.8] ✓ Set primary_author from name: {author}")
             
             # ============================================================================
             
@@ -351,6 +378,7 @@ class DataTransformer:
             result['credibility_score'] = cred_score
             result['credibility'] = cred_score
             
+            # FIXED v2.8: Safe dictionary access with fallback
             result['domain'] = raw_data.get('domain', article.get('domain', 'Unknown'))
             result['organization'] = raw_data.get('organization', article.get('source', 'Unknown'))
             result['position'] = raw_data.get('position', 'Journalist')
@@ -407,17 +435,17 @@ class DataTransformer:
             
             DataTransformer._preserve_chart_data(result, raw_data)
             
-            logger.info(f"[Transform Author v2.7] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
+            logger.info(f"[Transform Author v2.8] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
             
             return result
             
         except Exception as e:
-            logger.error(f"[Transform Author v2.7] ERROR: {e}", exc_info=True)
+            logger.error(f"[Transform Author v2.8] ERROR: {e}", exc_info=True)
             result['name'] = 'Unknown Author'
             result['author_name'] = 'Unknown Author'
             result['score'] = 50
             result['credibility_score'] = 50
-            logger.error(f"[Transform Author v2.7] Returning safe defaults due to error")
+            logger.error(f"[Transform Author v2.8] Returning safe defaults due to error")
             return result
     
     @staticmethod
