@@ -96,8 +96,8 @@ class DataTransformer:
         if 'charts' in raw_data:
             logger.info(f"[DataTransformer] ✓ Charts included: {len(raw_data['charts'])} charts")
         
-        # Start with base template
-        response = DataContract.get_base_template()
+        # Start with base template - FIXED: use correct method name
+        response = DataContract.get_response_template()
         
         # Map top-level fields
         response['success'] = raw_data.get('success', False)
@@ -321,8 +321,142 @@ class DataTransformer:
         
         result = template.copy()
         
-        # Show ALL keys for debugging
-        logger.info(f"[Transform Author v2.7] Raw data keys: {list(raw_data.keys())[:20]}")
+        try:
+            # Show ALL keys for debugging
+            logger.info(f"[Transform Author v2.7] Raw data keys: {list(raw_data.keys())[:20]}")
+            
+            # Get author name (primary/first author)
+            author = (
+                raw_data.get('name') or
+                raw_data.get('author_name') or
+                raw_data.get('primary_author') or
+                article.get('author') or
+                'Unknown Author'
+            )
+            
+            # Get credibility score
+            cred_score = (
+                raw_data.get('credibility_score') or
+                raw_data.get('score') or
+                raw_data.get('credibility') or
+                70
+            )
+            
+            logger.info(f"[Transform Author v2.7] Primary: {author}, Score: {cred_score}")
+            
+            # ============================================================================
+            # NEW v2.7: PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
+            # ============================================================================
+            
+            # Preserve all_authors field (comma-separated string or array)
+            if 'all_authors' in raw_data and raw_data.get('all_authors'):
+                result['all_authors'] = raw_data['all_authors']
+                logger.info(f"[Transform Author v2.7] ✓ Preserved all_authors: {raw_data['all_authors']}")
+            elif 'authors' in raw_data and raw_data.get('authors'):
+                result['all_authors'] = raw_data['authors']
+                logger.info(f"[Transform Author v2.7] ✓ Preserved authors as all_authors: {raw_data['authors']}")
+            elif article.get('author') and ',' in str(article.get('author', '')):
+                # Fallback: if article author has commas, preserve it
+                result['all_authors'] = article.get('author')
+                logger.info(f"[Transform Author v2.7] ✓ Preserved from article.author: {article.get('author')}")
+            
+            # Preserve primary_author field
+            if 'primary_author' in raw_data and raw_data.get('primary_author'):
+                result['primary_author'] = raw_data['primary_author']
+                logger.info(f"[Transform Author v2.7] ✓ Preserved primary_author: {raw_data['primary_author']}")
+            else:
+                result['primary_author'] = author
+                logger.info(f"[Transform Author v2.7] ✓ Set primary_author from name: {author}")
+            
+            # ============================================================================
+            
+            # Set all the duplicate fields the frontend expects
+            result['name'] = author
+            result['author_name'] = author
+            result['score'] = cred_score
+            result['credibility_score'] = cred_score
+            result['credibility'] = cred_score
+            
+            # Get domain/organization - use .get() with defaults
+            result['domain'] = raw_data.get('domain', article.get('domain', 'Unknown'))
+            result['organization'] = raw_data.get('organization', article.get('source', 'Unknown'))
+            result['position'] = raw_data.get('position', 'Journalist')
+            
+            # Get expertise
+            expertise = raw_data.get('expertise_areas', raw_data.get('expertise', []))
+            if isinstance(expertise, list) and expertise:
+                result['expertise'] = ', '.join(str(e) for e in expertise[:3])
+            else:
+                result['expertise'] = str(expertise) if expertise else 'General reporting'
+            
+            # Set other fields with safe defaults
+            result['track_record'] = raw_data.get('trust_explanation', raw_data.get('track_record', 'Unknown'))
+            result['years_experience'] = str(raw_data.get('years_experience', 'Unknown'))
+            result['outlet'] = raw_data.get('organization', raw_data.get('outlet', article.get('source', 'Unknown')))
+            
+            # Bio
+            result['bio'] = raw_data.get('bio', raw_data.get('biography', ''))
+            
+            # Handle awards
+            awards = raw_data.get('awards', [])
+            if isinstance(awards, list):
+                result['awards'] = awards
+                result['awards_count'] = str(len(awards))
+            else:
+                result['awards'] = []
+                result['awards_count'] = str(raw_data.get('awards_count', 0))
+            
+            # Articles count
+            result['articles_count'] = str(raw_data.get('articles_found', raw_data.get('article_count', 0)))
+            result['articles_found'] = result['articles_count']
+            
+            # Social media - safe handling
+            social_data = raw_data.get('social_media', raw_data.get('social_profiles', {}))
+            if not isinstance(social_data, dict):
+                social_data = {}
+            result['social_media'] = social_data
+            result['social_links'] = social_data
+            
+            # Verification
+            result['verified'] = raw_data.get('verified', False)
+            
+            # Trust indicators and red flags - safe handling
+            trust_ind = raw_data.get('trust_indicators', [])
+            if not isinstance(trust_ind, list):
+                trust_ind = []
+            result['trust_indicators'] = trust_ind
+            
+            red_flags_data = raw_data.get('red_flags', [])
+            if not isinstance(red_flags_data, list):
+                red_flags_data = []
+            result['red_flags'] = red_flags_data
+            
+            # Set analysis section
+            if 'analysis' in raw_data and isinstance(raw_data.get('analysis'), dict):
+                result['analysis'] = raw_data['analysis']
+            else:
+                result['analysis'] = {
+                    'what_we_looked': 'We examined the author\'s credentials, experience, track record, and publication history.',
+                    'what_we_found': f'Author {author} has a credibility score of {cred_score}/100 with expertise in {result["expertise"]}.',
+                    'what_it_means': DataTransformer._get_author_meaning(cred_score)
+                }
+            
+            # CRITICAL v2.6: Preserve chart_data
+            DataTransformer._preserve_chart_data(result, raw_data)
+            
+            logger.info(f"[Transform Author v2.7] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"[Transform Author v2.7] ERROR: {e}", exc_info=True)
+            # Return safe defaults on error
+            result['name'] = 'Unknown Author'
+            result['author_name'] = 'Unknown Author'
+            result['score'] = 50
+            result['credibility_score'] = 50
+            logger.error(f"[Transform Author v2.7] Returning safe defaults due to error")
+            return resultkeys())[:20]}")
         
         # Get author name (primary/first author)
         author = (
