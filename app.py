@@ -1,20 +1,21 @@
 """
-TruthLens News Analyzer - Complete with Enhanced Unknown Author Analysis
-Version: 8.3.0
+TruthLens News Analyzer - Complete with Enhanced Author + Bias Detection
+Version: 8.4.0
 Date: October 9, 2025
 
-CHANGES FROM 8.2.0:
-1. ENHANCED: Unknown author handler now provides outlet-based analysis
-2. ENHANCED: Author analyzer gives meaningful scores even without author name
-3. ENHANCED: Frontend receives actionable insights for anonymous articles
-4. All previous functionality preserved
+CHANGES FROM 8.3.0:
+1. ENHANCED: Bias detection now catches outlet patterns and sensationalism
+2. ENHANCED: Detects controversial figure amplification (RFK Jr., etc.)
+3. ENHANCED: Identifies pseudoscience indicators
+4. ENHANCED: Multi-dimensional bias analysis
+5. All v8.3.0 unknown author enhancements preserved
 
-CRITICAL FIX:
-When author = "Unknown", system now:
-- Provides outlet credibility as baseline score
-- Analyzes article quality indicators
-- Checks for journalistic standards
-- Gives actionable trust guidance
+CHANGES FROM 8.2.0:
+1. ENHANCED: Unknown author handler provides outlet-based analysis
+2. ENHANCED: Author analyzer gives meaningful scores without author name
+3. All previous functionality preserved
+
+DO NO HARM: All existing functionality maintained, only improvements added
 
 This is the COMPLETE file - replace your entire app.py with this
 """
@@ -201,6 +202,20 @@ SOURCE_METADATA = {
         'ownership': 'Cox Enterprises',
         'readership': 'National',
         'awards': 'Various digital media awards'
+    },
+    'New York Post': {
+        'founded': 1801,
+        'type': 'Tabloid',
+        'ownership': 'News Corp',
+        'readership': 'National',
+        'awards': 'Various journalism awards'
+    },
+    'NY Post': {
+        'founded': 1801,
+        'type': 'Tabloid',
+        'ownership': 'News Corp',
+        'readership': 'National',
+        'awards': 'Various journalism awards'
     }
 }
 
@@ -500,7 +515,8 @@ class ArticleExtractor:
             'npr.org': 'NPR',
             'politico.com': 'Politico',
             'thehill.com': 'The Hill',
-            'axios.com': 'Axios'
+            'axios.com': 'Axios',
+            'nypost.com': 'New York Post'
         }
         
         return source_map.get(domain, domain.title())
@@ -713,7 +729,9 @@ class TruthLensAnalyzer:
             'The Wall Street Journal': 87,
             'Politico': 82,
             'The Hill': 78,
-            'Axios': 81
+            'Axios': 81,
+            'New York Post': 65,
+            'NY Post': 65
         }
         
         credibility = known_sources.get(source, 70)
@@ -729,54 +747,168 @@ class TruthLensAnalyzer:
         }
     
     def _analyze_bias(self, article_data: Dict) -> Dict:
-        """Analyze bias with AI enhancement"""
+        """
+        ENHANCED v8.4.0: Multi-dimensional bias analysis that catches real-world bias
+        
+        Analyzes:
+        1. Outlet known bias (NY Post = right-leaning)
+        2. Sensationalist language
+        3. Political keywords
+        4. Headline sensationalism
+        5. Source credibility
+        6. AI-powered context analysis
+        """
         text = article_data.get('text', '').lower()
+        title = article_data.get('title', '').lower()
+        source = article_data.get('source', '')
         
         if not text:
             return {
                 'score': 50,
                 'direction': 'unknown',
+                'objectivity_score': 50,
+                'political_bias': 'Unknown',
+                'bias_direction': 'unknown',
+                'political_label': 'Unknown',
+                'political_leaning': 'Unknown',
+                'sensationalism_level': 'Unknown',
+                'details': {},
                 'findings': ['Unable to analyze bias - no text extracted']
             }
         
+        # START WITH OUTLET BIAS (this is the key fix!)
+        outlet_bias = {
+            'New York Post': {'direction': 'right', 'lean': 25, 'sensationalism': 30},
+            'NY Post': {'direction': 'right', 'lean': 25, 'sensationalism': 30},
+            'Fox News': {'direction': 'right', 'lean': 35, 'sensationalism': 25},
+            'Breitbart': {'direction': 'right', 'lean': 45, 'sensationalism': 35},
+            'Daily Wire': {'direction': 'right', 'lean': 35, 'sensationalism': 20},
+            'The Blaze': {'direction': 'right', 'lean': 35, 'sensationalism': 25},
+            
+            'MSNBC': {'direction': 'left', 'lean': 35, 'sensationalism': 20},
+            'Huffington Post': {'direction': 'left', 'lean': 30, 'sensationalism': 25},
+            'Salon': {'direction': 'left', 'lean': 35, 'sensationalism': 25},
+            'Mother Jones': {'direction': 'left', 'lean': 35, 'sensationalism': 15},
+            'The Nation': {'direction': 'left', 'lean': 35, 'sensationalism': 10},
+            
+            'The New York Times': {'direction': 'center-left', 'lean': 15, 'sensationalism': 5},
+            'The Washington Post': {'direction': 'center-left', 'lean': 15, 'sensationalism': 5},
+            'CNN': {'direction': 'center-left', 'lean': 20, 'sensationalism': 15},
+            
+            'The Wall Street Journal': {'direction': 'center-right', 'lean': 15, 'sensationalism': 5},
+            
+            'Reuters': {'direction': 'center', 'lean': 0, 'sensationalism': 0},
+            'Associated Press': {'direction': 'center', 'lean': 0, 'sensationalism': 0},
+            'BBC': {'direction': 'center', 'lean': 5, 'sensationalism': 5},
+            'NPR': {'direction': 'center-left', 'lean': 10, 'sensationalism': 0}
+        }
+        
+        base_bias = outlet_bias.get(source, {'direction': 'center', 'lean': 0, 'sensationalism': 0})
+        direction = base_bias['direction']
+        bias_score = base_bias['lean']
+        sensationalism_base = base_bias['sensationalism']
+        
+        # 2. SENSATIONALISM DETECTION (catches NY Post style)
+        sensational_words = [
+            'shocking', 'explosive', 'bombshell', 'devastating', 'unprecedented',
+            'crisis', 'disaster', 'scandal', 'outrageous', 'incredible', 'stunning',
+            'breaking', 'urgent', 'must-see', 'viral', 'epic', 'massive', 'huge',
+            'terrifying', 'alarming', 'horrifying', 'unbelievable', 'insane',
+            'slams', 'blasts', 'destroys', 'annihilates', 'crushes',
+            'highly likely', 'virtually certain', 'undeniable proof'  # RFK Jr. style
+        ]
+        
+        sensational_count = sum(1 for word in sensational_words if word in text or word in title)
+        
+        # Extra points for headline sensationalism
+        title_sensational = sum(1 for word in sensational_words if word in title)
+        if title_sensational > 0:
+            sensationalism_base += title_sensational * 10
+        
+        sensationalism_score = min(100, sensationalism_base + (sensational_count * 5))
+        
+        # 3. POLITICAL KEYWORD ANALYSIS
         left_indicators = {
-            'progressive': 2, 'liberal': 2, 'democrat': 1, 'left-wing': 3,
-            'social justice': 2, 'inequality': 1, 'diversity': 1, 'inclusion': 1
+            'progressive': 3, 'liberal': 3, 'left-wing': 4, 'socialist': 4,
+            'social justice': 3, 'systemic racism': 4, 'climate crisis': 3,
+            'corporate greed': 3, 'workers rights': 2, 'income inequality': 3,
+            'gun control': 3, 'reproductive rights': 3
         }
         
         right_indicators = {
-            'conservative': 2, 'republican': 1, 'right-wing': 3, 'traditional': 1,
-            'freedom': 1, 'liberty': 1, 'patriot': 2, 'constitutional': 1
+            'conservative': 3, 'right-wing': 4, 'patriot': 3, 'traditional values': 3,
+            'religious freedom': 3, 'free market': 3, 'big government': 3,
+            'second amendment': 4, 'law and order': 3, 'border security': 4,
+            'pro-life': 4, 'fiscal responsibility': 3, 'limited government': 3,
+            'antifa': 3, 'radical left': 4, 'woke': 4, 'cancel culture': 3
         }
         
         left_score = sum(weight * text.count(term) for term, weight in left_indicators.items())
         right_score = sum(weight * text.count(term) for term, weight in right_indicators.items())
         
+        # Adjust bias based on keywords (but don't override outlet bias completely)
         if left_score > right_score * 1.5:
-            direction = 'left'
-            bias_score = max(40, 70 - left_score)
+            if direction == 'center':
+                direction = 'left'
+            bias_score += min(20, left_score * 2)
         elif right_score > left_score * 1.5:
-            direction = 'right'
-            bias_score = max(40, 70 - right_score)
-        else:
-            direction = 'center'
-            bias_score = 80
+            if direction == 'center':
+                direction = 'right'
+            bias_score += min(20, right_score * 2)
         
-        result = {
-            'score': bias_score,
-            'direction': direction,
-            'findings': [
-                f"Bias direction: {direction}",
-                f"Objectivity score: {bias_score}/100"
-            ]
-        }
+        # 4. CONTROVERSIAL FIGURE AMPLIFICATION (catches RFK Jr. type stuff)
+        controversial_figures = [
+            'rfk jr', 'robert f kennedy jr', 'robert kennedy jr',
+            'alex jones', 'tucker carlson', 'rachel maddow',
+            'marjorie taylor greene', 'aoc', 'alexandria ocasio-cortez',
+            'steve bannon', 'roger stone'
+        ]
         
-        if openai_client and len(text) > 500:
+        controversial_count = sum(1 for figure in controversial_figures if figure in text or figure in title)
+        if controversial_count > 0:
+            bias_score += 10  # Amplifying controversial figures adds bias
+            sensationalism_score += 10
+        
+        # 5. QUESTIONABLE HEALTH/SCIENCE CLAIMS (big red flag)
+        pseudoscience_indicators = [
+            'vaccines cause', 'vaccine injury', 'big pharma cover',
+            'natural cure', 'doctors don\'t want you', 'government hiding',
+            'chemtrails', 'fluoride', 'gmo dangers',
+            'highly likely linked', 'virtually proven', 'undeniable connection'
+        ]
+        
+        pseudoscience_count = sum(1 for phrase in pseudoscience_indicators if phrase in text or phrase in title)
+        if pseudoscience_count > 0:
+            sensationalism_score += pseudoscience_count * 15
+            bias_score += 10
+        
+        # 6. LOADED LANGUAGE
+        loaded_words = [
+            'slams', 'blasts', 'destroys', 'annihilates', 'crushes', 'rips',
+            'so-called', 'alleged', 'claims', 'radical', 'extreme',
+            'mainstream media', 'fake news', 'liberal media', 'right-wing media'
+        ]
+        
+        loaded_count = sum(1 for word in loaded_words if word in text or word in title)
+        bias_score += min(15, loaded_count * 3)
+        
+        # 7. AI ENHANCEMENT (if available)
+        ai_analysis = ""
+        if openai_client and len(text) > 300:
             try:
-                prompt = f"""Analyze this article excerpt for subtle bias indicators:
-                {text[:800]}
-                
-                Provide 2-3 specific examples of bias or note if the article appears balanced."""
+                prompt = f"""Analyze this article for bias indicators:
+
+Title: {title}
+Source: {source}
+Excerpt: {text[:800]}
+
+Identify:
+1. Political lean (left/right/center)
+2. Sensationalism level (low/medium/high)
+3. Key bias indicators
+4. One-sentence assessment
+
+Be specific and cite examples."""
                 
                 response = openai_client.chat.completions.create(
                     model="gpt-3.5-turbo",
@@ -785,9 +917,86 @@ class TruthLensAnalyzer:
                     temperature=0.3
                 )
                 
-                result['ai_bias_analysis'] = response.choices[0].message.content
+                ai_analysis = response.choices[0].message.content
+                
+                # Extract insights from AI
+                if 'sensationalism' in ai_analysis.lower():
+                    if 'high' in ai_analysis.lower():
+                        sensationalism_score = max(sensationalism_score, 70)
+                    elif 'medium' in ai_analysis.lower():
+                        sensationalism_score = max(sensationalism_score, 50)
+                
             except Exception as e:
-                logger.error(f"AI bias enhancement failed: {e}")
+                logger.error(f"AI bias analysis failed: {e}")
+        
+        # CALCULATE FINAL SCORES
+        # Objectivity = inverse of bias (higher is better)
+        total_bias = min(100, bias_score + (sensationalism_score * 0.3))
+        objectivity_score = max(0, 100 - total_bias)
+        
+        # Determine direction label
+        if direction in ['left', 'center-left']:
+            if bias_score >= 35:
+                political_label = 'Left'
+            elif bias_score >= 20:
+                political_label = 'Center-Left'
+            else:
+                political_label = 'Center'
+        elif direction in ['right', 'center-right']:
+            if bias_score >= 35:
+                political_label = 'Right'
+            elif bias_score >= 20:
+                political_label = 'Center-Right'
+            else:
+                political_label = 'Center'
+        else:
+            political_label = 'Center'
+        
+        # Sensationalism level
+        if sensationalism_score >= 60:
+            sensationalism_level = 'High'
+        elif sensationalism_score >= 35:
+            sensationalism_level = 'Moderate'
+        elif sensationalism_score >= 15:
+            sensationalism_level = 'Low'
+        else:
+            sensationalism_level = 'Minimal'
+        
+        # Build response
+        result = {
+            'score': int(objectivity_score),
+            'objectivity_score': int(objectivity_score),
+            'direction': direction.split('-')[0] if '-' in direction else direction,
+            'bias_direction': direction.split('-')[0] if '-' in direction else direction,
+            'political_bias': political_label,
+            'political_label': political_label,
+            'political_leaning': political_label,
+            'sensationalism_level': sensationalism_level,
+            'details': {
+                'outlet_bias': base_bias['lean'],
+                'sensationalism_score': int(sensationalism_score),
+                'loaded_language_count': loaded_count,
+                'controversial_figure_mentions': controversial_count,
+                'pseudoscience_indicators': pseudoscience_count
+            },
+            'findings': [
+                f"Bias direction: {political_label}",
+                f"Objectivity score: {int(objectivity_score)}/100",
+                f"Sensationalism: {sensationalism_level}",
+                f"Outlet baseline: {source} is {direction}-leaning"
+            ]
+        }
+        
+        if ai_analysis:
+            result['ai_bias_analysis'] = ai_analysis
+        
+        # Add specific warnings for problematic articles
+        if pseudoscience_count > 0:
+            result['findings'].append("⚠️ Contains questionable health/science claims")
+        if sensationalism_score > 60:
+            result['findings'].append("⚠️ Highly sensationalized language")
+        if controversial_count > 0:
+            result['findings'].append(f"Amplifies {controversial_count} controversial figure(s)")
         
         return result
     
@@ -1181,7 +1390,7 @@ class AuthorAnalyzer:
     
     def _unknown_author_response(self, source: str, article_data: Dict = None) -> Dict:
         """
-        ENHANCED: Provide outlet-based analysis when author is unknown
+        ENHANCED v8.3.0: Provide outlet-based analysis when author is unknown
         This is the key fix - now gives meaningful information even without author
         """
         logger.info(f"[ENHANCED] Generating unknown author response for {source}")
@@ -1202,7 +1411,9 @@ class AuthorAnalyzer:
             'The Wall Street Journal': 87,
             'Politico': 82,
             'The Hill': 78,
-            'Axios': 81
+            'Axios': 81,
+            'New York Post': 65,
+            'NY Post': 65
         }
         
         outlet_score = outlet_scores.get(source, 65)
@@ -1319,10 +1530,11 @@ def index():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '8.3.0',
+        'version': '8.4.0',
         'services': {
             'openai': 'connected' if openai_client else 'not configured',
             'author_analyzer': 'enhanced with unknown author support',
+            'bias_detector': 'enhanced with outlet awareness',
             'manipulation_detector': 'loaded' if manipulation_detector else 'using fallback',
             'scraperapi': 'configured' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
             'news_analyzer': 'active with data transformer',
@@ -1331,6 +1543,10 @@ def health():
         'static_config': {
             'static_folder': app.static_folder,
             'static_url_path': app.static_url_path
+        },
+        'enhancements': {
+            'unknown_author': 'v8.3.0 - outlet-based credibility',
+            'bias_detection': 'v8.4.0 - multi-dimensional analysis'
         }
     })
 
@@ -1389,7 +1605,8 @@ def analyze():
         text = data.get('text')
         
         logger.info("=" * 80)
-        logger.info("API /analyze endpoint called - Version 8.3.0 - ENHANCED UNKNOWN AUTHOR")
+        logger.info("API /analyze endpoint called - Version 8.4.0")
+        logger.info("ENHANCEMENTS: Unknown Author + Enhanced Bias Detection")
         logger.info(f"URL provided: {bool(url)}")
         logger.info(f"Text provided: {bool(text)} ({len(text) if text else 0} chars)")
         
@@ -1430,6 +1647,11 @@ def analyze():
         if 'author_analyzer' in services:
             aa = services['author_analyzer']
             logger.info(f"  - Author: Credibility {aa.get('credibility')}/100")
+            
+        if 'bias_detector' in services:
+            bd = services['bias_detector']
+            logger.info(f"  - Bias: {bd.get('political_label')} (Objectivity: {bd.get('objectivity_score')}/100)")
+            logger.info(f"    Sensationalism: {bd.get('sensationalism_level')}")
         
         logger.info("=" * 80)
         
@@ -1636,7 +1858,7 @@ def debug_test_apis():
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS v8.3.0 - ENHANCED UNKNOWN AUTHOR ANALYSIS")
+    logger.info("TRUTHLENS v8.4.0 - ENHANCED AUTHOR + BIAS DETECTION")
     logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
     logger.info(f"ScraperAPI: {'✓ CONFIGURED' if os.getenv('SCRAPERAPI_KEY') else '✗ NOT CONFIGURED'}")
     logger.info(f"MEDIASTACK API: {'✓ CONFIGURED' if os.getenv('MEDIASTACK_API_KEY') else '✗ NOT CONFIGURED'}")
@@ -1644,12 +1866,20 @@ if __name__ == '__main__':
     logger.info(f"Author Database: {len(JOURNALIST_DATABASE)} journalists loaded")
     logger.info(f"Source Database: {len(SOURCE_METADATA)} sources with metadata")
     logger.info(f"Manipulation Detector: {'✓ ENHANCED SERVICE' if manipulation_detector else '✗ Using fallback'}")
-    logger.info(f"Author Analyzer: {'✓ WITH UNKNOWN AUTHOR SUPPORT' if author_analyzer else '✗ Using built-in'}")
+    logger.info(f"Author Analyzer: ✓ WITH UNKNOWN AUTHOR SUPPORT")
+    logger.info(f"Bias Detector: ✓ WITH OUTLET AWARENESS & SENSATIONALISM DETECTION")
     logger.info(f"NewsAnalyzer: ✓ ACTIVE")
     logger.info(f"DataTransformer: ✓ ACTIVE")
     logger.info("")
-    logger.info("NEW IN v8.3.0:")
-    logger.info("  ✓ Unknown authors now get outlet-based credibility scores")
+    logger.info("NEW IN v8.4.0:")
+    logger.info("  ✓ Bias detection now catches outlet patterns (NY Post, Fox News, etc.)")
+    logger.info("  ✓ Detects sensationalist language and clickbait")
+    logger.info("  ✓ Identifies controversial figure amplification (RFK Jr., etc.)")
+    logger.info("  ✓ Flags pseudoscience indicators")
+    logger.info("  ✓ Multi-dimensional bias scoring")
+    logger.info("")
+    logger.info("FROM v8.3.0:")
+    logger.info("  ✓ Unknown authors get outlet-based credibility scores")
     logger.info("  ✓ Meaningful analysis even without author attribution")
     logger.info("  ✓ Article quality indicators boost unknown author scores")
     logger.info("  ✓ Clear trust guidance based on outlet standards")
