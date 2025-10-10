@@ -1,13 +1,21 @@
 """
-Bias Detector Service - OBJECTIVITY SCORING VERSION
-Date: October 6, 2025
-Version: 5.0.0 - INVERTED TO OBJECTIVITY SCORING
+Bias Detector Service - OBJECTIVITY SCORING WITH OUTLET AWARENESS
+Date: October 9, 2025
+Version: 6.0.0 - OUTLET-AWARE BIAS DETECTION
 
-CRITICAL CHANGE:
-- Now calculates OBJECTIVITY score (higher = more objective)
-- Changed from "bias amount" to "objectivity level"
-- 98/100 = Very objective (previously 2/100 bias)
-- All scores inverted: higher scores = better journalism
+CRITICAL CHANGES FROM v5.0.0:
+- ADDED: Outlet baseline bias scoring (NY Post = right-leaning + sensationalist)
+- ADDED: Controversial figure detection (RFK Jr., Alex Jones, etc.)
+- ADDED: Pseudoscience indicator detection
+- ADDED: Domain/source parameter acceptance
+- ENHANCED: Sensationalism detection with outlet-specific baselines
+- ENHANCED: Political bias detection with outlet context
+- All existing objectivity scoring preserved (HIGHER = MORE OBJECTIVE)
+
+THE FIX:
+Now accepts 'domain' or 'source' in data to establish outlet baseline.
+NY Post articles start with right-leaning + sensationalist baseline, then adjust based on content.
+Reuters articles start with center + objective baseline.
 
 This makes scoring intuitive: HIGHER IS ALWAYS BETTER
 """
@@ -36,8 +44,9 @@ except ImportError:
 
 class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
     """
-    OBJECTIVITY-FOCUSED BIAS DETECTION
-    Now returns OBJECTIVITY scores where HIGHER = MORE OBJECTIVE
+    OUTLET-AWARE OBJECTIVITY-FOCUSED BIAS DETECTION
+    Now considers outlet baseline bias before analyzing article content
+    Returns OBJECTIVITY scores where HIGHER = MORE OBJECTIVE
     """
     
     def __init__(self):
@@ -51,8 +60,10 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
         
         # Initialize all bias patterns and indicators
         self._initialize_bias_patterns()
+        self._initialize_outlet_baselines()
+        self._initialize_controversial_figures()
         
-        logger.info(f"BiasDetector initialized (OBJECTIVITY SCORING) with AI enhancement: {self._ai_available}")
+        logger.info(f"BiasDetector v6.0.0 initialized (OUTLET-AWARE) with AI enhancement: {self._ai_available}")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -60,7 +71,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Perform comprehensive bias analysis with OBJECTIVITY scoring
+        Perform comprehensive bias analysis with OUTLET-AWARE OBJECTIVITY scoring
         HIGHER SCORES = MORE OBJECTIVE = BETTER
         """
         try:
@@ -73,23 +84,43 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             title = data.get('title', '')
             full_text = f"{title}\n\n{text}" if title else text
             
-            logger.info(f"Analyzing objectivity in {len(full_text)} characters of text")
+            # NEW v6.0: Extract outlet/domain information
+            domain = data.get('domain', data.get('source', '')).lower().replace('www.', '')
+            outlet_name = self._get_outlet_name(domain)
+            
+            logger.info(f"Analyzing objectivity in {len(full_text)} characters from {outlet_name or 'Unknown outlet'}")
+            
+            # NEW v6.0: Get outlet baseline bias
+            outlet_baseline = self._get_outlet_baseline(domain, outlet_name)
+            logger.info(f"Outlet baseline: {outlet_baseline['bias_direction']}, "
+                       f"bias_score: {outlet_baseline['bias_amount']}, "
+                       f"sensationalism: {outlet_baseline['sensationalism_baseline']}")
             
             # Core bias analysis with timeout protection
             try:
-                political_bias = self._analyze_political_bias(full_text)
-                sensationalism = self._analyze_sensationalism(full_text)
+                political_bias = self._analyze_political_bias(full_text, outlet_baseline)
+                sensationalism = self._analyze_sensationalism(full_text, title, outlet_baseline)
                 corporate_bias = self._analyze_corporate_bias(full_text)
                 loaded_language = self._detect_loaded_language(full_text)
                 framing_analysis = self._analyze_framing(full_text)
+                
+                # NEW v6.0: Controversial figure detection
+                controversial_figures = self._detect_controversial_figures(full_text)
+                
+                # NEW v6.0: Pseudoscience detection
+                pseudoscience = self._detect_pseudoscience(full_text)
+                
             except Exception as analysis_error:
                 logger.warning(f"Bias analysis components failed: {analysis_error}")
                 # Provide minimal analysis if detailed analysis fails
-                political_bias = {'label': 'Center', 'score': 0}
-                sensationalism = {'level': 'Low', 'score': 0}
+                political_bias = {'label': outlet_baseline['bias_direction'].title(), 
+                                'score': outlet_baseline['bias_amount']}
+                sensationalism = {'level': 'Low', 'score': outlet_baseline['sensationalism_baseline']}
                 corporate_bias = {'bias': 'Neutral', 'score': 0}
                 loaded_language = {'phrases': [], 'count': 0}
                 framing_analysis = {'issues': []}
+                controversial_figures = {'found': [], 'count': 0}
+                pseudoscience = {'indicators': [], 'score': 0}
             
             # Calculate overall bias metrics
             bias_dimensions = {
@@ -97,7 +128,10 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 'sensationalism': sensationalism,
                 'corporate': corporate_bias,
                 'loaded_language': loaded_language,
-                'framing': framing_analysis
+                'framing': framing_analysis,
+                'controversial_figures': controversial_figures,
+                'pseudoscience': pseudoscience,
+                'outlet_baseline': outlet_baseline
             }
             
             # Calculate BIAS amount (for internal use)
@@ -109,11 +143,12 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             objectivity_level = self._get_objectivity_level(objectivity_score)
             bias_direction = self._get_bias_direction(political_bias)
             
-            # Generate findings (with objectivity focus)
-            findings = self._generate_objectivity_findings(bias_dimensions, objectivity_score)
+            # Generate findings (with objectivity focus and outlet context)
+            findings = self._generate_objectivity_findings(bias_dimensions, objectivity_score, outlet_name)
             
-            # Generate summary (with objectivity focus)
-            summary = self._generate_objectivity_summary(bias_dimensions, objectivity_score, objectivity_level)
+            # Generate summary (with objectivity focus and outlet context)
+            summary = self._generate_objectivity_summary(bias_dimensions, objectivity_score, 
+                                                        objectivity_level, outlet_name)
             
             # Build response with OBJECTIVITY scoring
             result = {
@@ -144,12 +179,23 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     'bias_direction': bias_direction,
                     'political_leaning': political_bias.get('label', 'Center'),
                     'patterns': self._get_bias_patterns_summary(bias_dimensions),
+                    
+                    # NEW v6.0: Outlet context
+                    'outlet_name': outlet_name,
+                    'outlet_baseline': outlet_baseline,
+                    
+                    # NEW v6.0: Enhanced detection
+                    'controversial_figures': controversial_figures.get('found', []),
+                    'pseudoscience_detected': pseudoscience.get('score', 0) > 20,
+                    
                     'details': {
                         'political_score': political_bias.get('score', 0),
                         'sensationalism_score': sensationalism.get('score', 0),
                         'corporate_score': corporate_bias.get('score', 0),
                         'loaded_language_count': len(loaded_language.get('phrases', [])),
-                        'framing_issues': len(framing_analysis.get('issues', []))
+                        'framing_issues': len(framing_analysis.get('issues', [])),
+                        'controversial_figures_count': controversial_figures.get('count', 0),
+                        'pseudoscience_score': pseudoscience.get('score', 0)
                     }
                 },
                 'metadata': {
@@ -157,7 +203,9 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     'text_length': len(full_text),
                     'analyzed_with_title': bool(title),
                     'ai_enhancement_attempted': self._ai_available,
-                    'scoring_type': 'objectivity'  # NEW: Indicates scoring type
+                    'scoring_type': 'objectivity',
+                    'outlet_aware': bool(outlet_name),
+                    'version': '6.0.0'
                 }
             }
             
@@ -178,7 +226,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     logger.warning(f"AI enhancement failed safely: {ai_error}")
                     result['metadata']['ai_enhancement_failed'] = str(ai_error)
             
-            logger.info(f"Objectivity analysis complete: {objectivity_score}/100 ({objectivity_level})")
+            logger.info(f"Objectivity analysis complete: {objectivity_score}/100 ({objectivity_level}) for {outlet_name}")
             return result
             
         except Exception as e:
@@ -193,16 +241,19 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             'left_indicators': [
                 'progressive', 'liberal', 'social justice', 'inequality', 'climate crisis',
                 'systemic racism', 'corporate greed', 'wealth gap', 'social programs',
-                'reproductive rights', 'gun control', 'universal healthcare', 'living wage'
+                'reproductive rights', 'gun control', 'universal healthcare', 'living wage',
+                'social safety net', 'workers rights', 'income inequality', 'marginalized communities'
             ],
             'right_indicators': [
                 'conservative', 'traditional values', 'free market', 'personal responsibility',
                 'law and order', 'strong defense', 'fiscal responsibility', 'family values',
-                'second amendment', 'limited government', 'individual liberty', 'tax cuts'
+                'second amendment', 'limited government', 'individual liberty', 'tax cuts',
+                'border security', 'religious freedom', 'constitutional rights', 'fiscal conservative'
             ],
             'extremist_indicators': [
                 'radical', 'extremist', 'deep state', 'mainstream media', 'establishment',
-                'wake up', 'sheeple', 'crisis actor', 'false flag', 'globalist', 'marxist'
+                'wake up', 'sheeple', 'crisis actor', 'false flag', 'globalist', 'marxist',
+                'communist threat', 'radical left', 'far-right', 'antifa', 'woke mob'
             ]
         }
         
@@ -210,32 +261,220 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
         self.sensationalism_patterns = [
             'shocking', 'explosive', 'bombshell', 'devastating', 'unprecedented',
             'crisis', 'disaster', 'scandal', 'outrageous', 'incredible', 'stunning',
-            'breaking', 'urgent', 'must-see', 'viral', 'epic', 'massive', 'huge'
+            'breaking', 'urgent', 'must-see', 'viral', 'epic', 'massive', 'huge',
+            'terrifying', 'alarming', 'horrifying', 'unbelievable', 'insane',
+            'slams', 'blasts', 'destroys', 'annihilates', 'crushes', 'eviscerates'
         ]
         
         # Corporate bias indicators
         self.corporate_patterns = {
             'pro_business': [
                 'innovation', 'job creation', 'economic growth', 'efficiency',
-                'competitive advantage', 'market leader', 'shareholder value'
+                'competitive advantage', 'market leader', 'shareholder value',
+                'entrepreneurship', 'free enterprise', 'business friendly'
             ],
             'anti_business': [
                 'corporate greed', 'exploitation', 'price gouging', 'monopoly',
-                'tax avoidance', 'worker exploitation', 'environmental destruction'
+                'tax avoidance', 'worker exploitation', 'environmental destruction',
+                'predatory practices', 'wage theft', 'corporate welfare'
             ]
         }
         
         # Loaded language patterns
         self.loaded_patterns = [
             'alleged', 'claimed', 'so-called', 'notorious', 'infamous',
-            'controversial', 'divisive', 'polarizing', 'radical', 'extreme'
+            'controversial', 'divisive', 'polarizing', 'radical', 'extreme',
+            'supposedly', 'purportedly', 'apparently'
         ]
     
-    def _analyze_political_bias(self, text: str) -> Dict[str, Any]:
-        """Analyze political bias in the text"""
+    def _initialize_outlet_baselines(self):
+        """NEW v6.0: Initialize outlet bias baselines"""
+        
+        self.outlet_baselines = {
+            # High objectivity outlets
+            'reuters.com': {'bias_direction': 'center', 'bias_amount': 5, 'sensationalism': 0},
+            'apnews.com': {'bias_direction': 'center', 'bias_amount': 5, 'sensationalism': 0},
+            'bbc.com': {'bias_direction': 'center', 'bias_amount': 10, 'sensationalism': 5},
+            'bbc.co.uk': {'bias_direction': 'center', 'bias_amount': 10, 'sensationalism': 5},
+            
+            # Center-left outlets
+            'npr.org': {'bias_direction': 'center-left', 'bias_amount': 15, 'sensationalism': 0},
+            'nytimes.com': {'bias_direction': 'left', 'bias_amount': 20, 'sensationalism': 10},
+            'washingtonpost.com': {'bias_direction': 'left', 'bias_amount': 20, 'sensationalism': 10},
+            'theguardian.com': {'bias_direction': 'left', 'bias_amount': 22, 'sensationalism': 12},
+            'cnn.com': {'bias_direction': 'left', 'bias_amount': 25, 'sensationalism': 20},
+            'msnbc.com': {'bias_direction': 'left', 'bias_amount': 35, 'sensationalism': 25},
+            'vox.com': {'bias_direction': 'left', 'bias_amount': 30, 'sensationalism': 15},
+            'huffpost.com': {'bias_direction': 'left', 'bias_amount': 32, 'sensationalism': 28},
+            'salon.com': {'bias_direction': 'left', 'bias_amount': 35, 'sensationalism': 30},
+            'motherjones.com': {'bias_direction': 'left', 'bias_amount': 33, 'sensationalism': 20},
+            
+            # Center-right outlets
+            'wsj.com': {'bias_direction': 'center-right', 'bias_amount': 20, 'sensationalism': 8},
+            'economist.com': {'bias_direction': 'center-right', 'bias_amount': 18, 'sensationalism': 5},
+            
+            # Right-leaning outlets
+            'foxnews.com': {'bias_direction': 'right', 'bias_amount': 35, 'sensationalism': 30},
+            'nypost.com': {'bias_direction': 'right', 'bias_amount': 30, 'sensationalism': 40},  # KEY FIX
+            'dailywire.com': {'bias_direction': 'right', 'bias_amount': 38, 'sensationalism': 25},
+            'theblaze.com': {'bias_direction': 'right', 'bias_amount': 36, 'sensationalism': 28},
+            'newsmax.com': {'bias_direction': 'right', 'bias_amount': 42, 'sensationalism': 35},
+            
+            # Far-right outlets
+            'breitbart.com': {'bias_direction': 'far-right', 'bias_amount': 50, 'sensationalism': 45},
+            'oann.com': {'bias_direction': 'far-right', 'bias_amount': 55, 'sensationalism': 40},
+            
+            # Tabloids
+            'dailymail.co.uk': {'bias_direction': 'right', 'bias_amount': 35, 'sensationalism': 50},
+            
+            # Mainstream broadcast
+            'abcnews.go.com': {'bias_direction': 'center-left', 'bias_amount': 15, 'sensationalism': 12},
+            'nbcnews.com': {'bias_direction': 'center-left', 'bias_amount': 18, 'sensationalism': 15},
+            'cbsnews.com': {'bias_direction': 'center-left', 'bias_amount': 16, 'sensationalism': 13},
+            
+            # Digital news
+            'politico.com': {'bias_direction': 'center-left', 'bias_amount': 18, 'sensationalism': 10},
+            'axios.com': {'bias_direction': 'center', 'bias_amount': 12, 'sensationalism': 8},
+            'thehill.com': {'bias_direction': 'center-left', 'bias_amount': 15, 'sensationalism': 12}
+        }
+    
+    def _initialize_controversial_figures(self):
+        """NEW v6.0: Initialize controversial figure detection"""
+        
+        self.controversial_figures = {
+            # Pseudoscience promoters
+            'rfk jr': {'category': 'vaccine skeptic', 'weight': 15},
+            'robert f. kennedy jr': {'category': 'vaccine skeptic', 'weight': 15},
+            'robert kennedy': {'category': 'vaccine skeptic', 'weight': 10},
+            'alex jones': {'category': 'conspiracy theorist', 'weight': 20},
+            'joe mercola': {'category': 'pseudoscience', 'weight': 18},
+            'dr. mercola': {'category': 'pseudoscience', 'weight': 18},
+            'dr. oz': {'category': 'pseudoscience', 'weight': 12},
+            'mehmet oz': {'category': 'pseudoscience', 'weight': 12},
+            'gwyneth paltrow': {'category': 'pseudoscience', 'weight': 10},
+            
+            # Political extremists
+            'steve bannon': {'category': 'far-right', 'weight': 15},
+            'tucker carlson': {'category': 'controversial commentator', 'weight': 12},
+            'marjorie taylor greene': {'category': 'conspiracy theorist', 'weight': 18},
+            'lauren boebert': {'category': 'conspiracy theorist', 'weight': 15},
+            
+            # Note: This is NOT a political statement - these are figures frequently
+            # associated with misinformation by fact-checkers
+        }
+        
+        # Pseudoscience indicators
+        self.pseudoscience_indicators = [
+            'big pharma conspiracy', 'mainstream medicine', 'natural immunity', 
+            'vaccine injury', 'toxins', 'detox', 'chemtrails', 'fluoride conspiracy',
+            'suppressed cure', 'they don\'t want you to know', 'hidden truth',
+            'miracle cure', 'ancient remedy', 'pharmaceutical industry cover-up',
+            'natural healing', 'alternative facts', 'do your own research'
+        ]
+    
+    def _get_outlet_name(self, domain: str) -> Optional[str]:
+        """Convert domain to readable outlet name"""
+        if not domain:
+            return None
+            
+        name_mapping = {
+            'reuters.com': 'Reuters',
+            'apnews.com': 'Associated Press',
+            'bbc.com': 'BBC',
+            'bbc.co.uk': 'BBC',
+            'nytimes.com': 'The New York Times',
+            'washingtonpost.com': 'The Washington Post',
+            'wsj.com': 'The Wall Street Journal',
+            'cnn.com': 'CNN',
+            'foxnews.com': 'Fox News',
+            'msnbc.com': 'MSNBC',
+            'npr.org': 'NPR',
+            'nypost.com': 'New York Post',
+            'dailymail.co.uk': 'Daily Mail',
+            'breitbart.com': 'Breitbart',
+            'politico.com': 'Politico',
+            'thehill.com': 'The Hill',
+            'axios.com': 'Axios',
+            'vox.com': 'Vox',
+            'theguardian.com': 'The Guardian'
+        }
+        
+        return name_mapping.get(domain)
+    
+    def _get_outlet_baseline(self, domain: str, outlet_name: Optional[str]) -> Dict[str, Any]:
+        """NEW v6.0: Get outlet baseline bias"""
+        
+        if domain in self.outlet_baselines:
+            baseline = self.outlet_baselines[domain].copy()
+            baseline['source'] = 'database'
+            return {
+                'bias_direction': baseline['bias_direction'],
+                'bias_amount': baseline['bias_amount'],
+                'sensationalism_baseline': baseline['sensationalism'],
+                'known_outlet': True,
+                'outlet_name': outlet_name or domain
+            }
+        
+        # Default baseline for unknown outlets
+        return {
+            'bias_direction': 'center',
+            'bias_amount': 15,  # Assume moderate baseline
+            'sensationalism_baseline': 10,
+            'known_outlet': False,
+            'outlet_name': outlet_name or 'Unknown'
+        }
+    
+    def _detect_controversial_figures(self, text: str) -> Dict[str, Any]:
+        """NEW v6.0: Detect mentions of controversial figures"""
+        
+        text_lower = text.lower()
+        found_figures = []
+        total_weight = 0
+        
+        for figure, info in self.controversial_figures.items():
+            if figure in text_lower:
+                found_figures.append({
+                    'name': figure.title(),
+                    'category': info['category'],
+                    'weight': info['weight']
+                })
+                total_weight += info['weight']
+        
+        return {
+            'found': found_figures,
+            'count': len(found_figures),
+            'bias_impact': min(25, total_weight)  # Cap at 25 points
+        }
+    
+    def _detect_pseudoscience(self, text: str) -> Dict[str, Any]:
+        """NEW v6.0: Detect pseudoscience indicators"""
+        
+        text_lower = text.lower()
+        found_indicators = []
+        
+        for indicator in self.pseudoscience_indicators:
+            if indicator in text_lower:
+                found_indicators.append(indicator)
+        
+        # Calculate pseudoscience score
+        score = min(30, len(found_indicators) * 8)
+        
+        return {
+            'indicators': found_indicators,
+            'count': len(found_indicators),
+            'score': score
+        }
+    
+    def _analyze_political_bias(self, text: str, outlet_baseline: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze political bias with outlet baseline context"""
         try:
             text_lower = text.lower()
             
+            # Start with outlet baseline
+            base_bias = outlet_baseline['bias_amount']
+            base_direction = outlet_baseline['bias_direction']
+            
+            # Count indicators in text
             left_score = sum(1 for indicator in self.political_patterns['left_indicators'] 
                             if indicator in text_lower)
             right_score = sum(1 for indicator in self.political_patterns['right_indicators'] 
@@ -243,67 +482,115 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             extremist_score = sum(1 for indicator in self.political_patterns['extremist_indicators'] 
                                  if indicator in text_lower)
             
-            # Calculate political lean
+            # Calculate article-specific lean
             total_political = left_score + right_score
-            if total_political == 0:
-                political_lean = 'Center'
-                lean_intensity = 0
-            elif left_score > right_score:
-                lean_intensity = min(100, (left_score / total_political) * 100)
-                political_lean = 'Left' if lean_intensity > 60 else 'Center-Left'
+            article_lean = 0
+            article_direction = base_direction
+            
+            if total_political > 0:
+                if left_score > right_score * 1.5:
+                    article_lean = min(25, (left_score / total_political) * 40)
+                    article_direction = 'left' if article_lean > 15 else 'center-left'
+                elif right_score > left_score * 1.5:
+                    article_lean = min(25, (right_score / total_political) * 40)
+                    article_direction = 'right' if article_lean > 15 else 'center-right'
+            
+            # Combine outlet baseline with article lean
+            if 'left' in base_direction and 'right' in article_direction:
+                # Article goes against outlet bias - reduce bias
+                final_score = max(5, base_bias - article_lean)
+                final_direction = 'center'
+            elif 'right' in base_direction and 'left' in article_direction:
+                # Article goes against outlet bias - reduce bias
+                final_score = max(5, base_bias - article_lean)
+                final_direction = 'center'
             else:
-                lean_intensity = min(100, (right_score / total_political) * 100)
-                political_lean = 'Right' if lean_intensity > 60 else 'Center-Right'
+                # Article reinforces outlet bias - increase bias
+                final_score = min(60, base_bias + article_lean)
+                final_direction = article_direction if article_direction != 'center' else base_direction
             
             # Add extremist adjustment
-            extremist_adjustment = min(30, extremist_score * 10)
+            extremist_adjustment = min(20, extremist_score * 10)
+            final_score = min(60, final_score + extremist_adjustment)
+            
+            # Determine label
+            if final_score >= 45:
+                political_lean = 'Far-' + final_direction.title() if final_direction != 'center' else 'Extreme'
+            elif final_score >= 30:
+                political_lean = final_direction.title()
+            elif final_score >= 18:
+                political_lean = 'Center-' + final_direction.split('-')[-1].title() if '-' in final_direction else final_direction.title()
+            else:
+                political_lean = 'Center'
             
             return {
                 'label': political_lean,
-                'score': min(100, int(lean_intensity + extremist_adjustment)),
+                'score': int(final_score),
                 'left_indicators': left_score,
                 'right_indicators': right_score,
                 'extremist_indicators': extremist_score,
-                'lean_intensity': lean_intensity
+                'outlet_baseline': base_bias,
+                'article_adjustment': int(article_lean)
             }
         except Exception as e:
             logger.warning(f"Political bias analysis failed: {e}")
-            return {'label': 'Center', 'score': 0}
+            return {'label': 'Center', 'score': 15}
     
-    def _analyze_sensationalism(self, text: str) -> Dict[str, Any]:
-        """Analyze sensationalism in the text"""
+    def _analyze_sensationalism(self, text: str, title: str, outlet_baseline: Dict[str, Any]) -> Dict[str, Any]:
+        """Analyze sensationalism with outlet baseline"""
         try:
             text_lower = text.lower()
+            title_lower = title.lower() if title else ''
             
+            # Start with outlet baseline
+            base_sensationalism = outlet_baseline['sensationalism_baseline']
+            
+            # Count sensational words
             sensational_count = sum(1 for pattern in self.sensationalism_patterns 
                                    if pattern in text_lower)
+            
+            # Extra weight for headline sensationalism (2x impact)
+            title_sensational = sum(1 for pattern in self.sensationalism_patterns 
+                                   if pattern in title_lower)
             
             # Calculate sensationalism score based on density
             word_count = len(text.split())
             if word_count == 0:
-                return {'score': 0, 'level': 'Minimal'}
+                return {'score': base_sensationalism, 'level': 'Minimal'}
             
             sensational_density = (sensational_count / word_count) * 1000
-            sensationalism_score = min(100, sensational_density * 10)
+            article_sensationalism = int(sensational_density * 10)
             
-            if sensationalism_score >= 70:
+            # Title sensationalism gets extra weight
+            if title_sensational > 0:
+                article_sensationalism += title_sensational * 15
+            
+            # Combine with outlet baseline
+            final_score = min(100, base_sensationalism + article_sensationalism)
+            
+            if final_score >= 70:
+                level = 'Very High'
+            elif final_score >= 50:
                 level = 'High'
-            elif sensationalism_score >= 40:
+            elif final_score >= 30:
                 level = 'Moderate'
-            elif sensationalism_score >= 15:
+            elif final_score >= 15:
                 level = 'Low'
             else:
                 level = 'Minimal'
             
             return {
-                'score': int(sensationalism_score),
+                'score': int(final_score),
                 'level': level,
                 'sensational_phrases': sensational_count,
-                'density': sensational_density
+                'title_sensationalism': title_sensational,
+                'density': sensational_density,
+                'outlet_baseline': base_sensationalism,
+                'article_contribution': article_sensationalism
             }
         except Exception as e:
             logger.warning(f"Sensationalism analysis failed: {e}")
-            return {'score': 0, 'level': 'Minimal'}
+            return {'score': 15, 'level': 'Low'}
     
     def _analyze_corporate_bias(self, text: str) -> Dict[str, Any]:
         """Analyze corporate/business bias"""
@@ -413,13 +700,19 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             loaded_count = dimensions['loaded_language'].get('count', 0)
             framing_issues = len(dimensions['framing'].get('issues', []))
             
+            # NEW v6.0: Add controversial figures and pseudoscience
+            controversial_impact = dimensions.get('controversial_figures', {}).get('bias_impact', 0)
+            pseudoscience_score = dimensions.get('pseudoscience', {}).get('score', 0)
+            
             # Weight different types of bias
             weighted_score = (
-                political_score * 0.3 +
+                political_score * 0.25 +
                 sensationalism_score * 0.25 +
-                corporate_score * 0.2 +
-                min(100, loaded_count * 5) * 0.15 +
-                min(100, framing_issues * 15) * 0.1
+                corporate_score * 0.15 +
+                min(100, loaded_count * 5) * 0.10 +
+                min(100, framing_issues * 15) * 0.08 +
+                controversial_impact * 0.10 +
+                pseudoscience_score * 0.07
             )
             
             return min(100, int(weighted_score))
@@ -462,6 +755,10 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                 'Corporate': dimensions['corporate'].get('score', 0),
                 'Loaded Language': min(100, dimensions['loaded_language'].get('count', 0) * 10)
             }
+            
+            # NEW v6.0: Add controversial figures if significant
+            if dimensions.get('controversial_figures', {}).get('bias_impact', 0) > 15:
+                scores['Controversial Figures'] = dimensions['controversial_figures']['bias_impact']
             
             if max(scores.values()) < 20:
                 return 'None'
@@ -513,49 +810,80 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     'strength': min(100, loaded.get('count', 0) * 10)
                 })
             
+            # NEW v6.0: Controversial figures
+            controversial = dimensions.get('controversial_figures', {})
+            if controversial.get('count', 0) > 0:
+                patterns.append({
+                    'type': 'controversial_figures',
+                    'description': f"Controversial figures: {controversial.get('count', 0)} mentioned",
+                    'strength': controversial.get('bias_impact', 0)
+                })
+            
+            # NEW v6.0: Pseudoscience
+            pseudoscience = dimensions.get('pseudoscience', {})
+            if pseudoscience.get('score', 0) > 20:
+                patterns.append({
+                    'type': 'pseudoscience',
+                    'description': f"Pseudoscience indicators: {pseudoscience.get('count', 0)} found",
+                    'strength': pseudoscience.get('score', 0)
+                })
+            
             return patterns
         except Exception as e:
             logger.warning(f"Pattern summary failed: {e}")
             return []
     
-    def _generate_objectivity_findings(self, dimensions: Dict[str, Any], objectivity_score: int) -> List[Dict[str, Any]]:
-        """Generate findings based on OBJECTIVITY analysis"""
+    def _generate_objectivity_findings(self, dimensions: Dict[str, Any], objectivity_score: int, 
+                                      outlet_name: Optional[str]) -> List[Dict[str, Any]]:
+        """Generate findings based on OBJECTIVITY analysis with outlet context"""
         findings = []
         
         try:
-            # Overall objectivity assessment
+            # Overall objectivity assessment with outlet context
+            outlet_context = f" from {outlet_name}" if outlet_name else ""
+            baseline = dimensions.get('outlet_baseline', {})
+            
             if objectivity_score >= 85:
                 findings.append({
                     'type': 'positive',
                     'severity': 'positive',
-                    'text': f'High objectivity detected ({objectivity_score}/100)',
+                    'text': f'High objectivity detected ({objectivity_score}/100){outlet_context}',
                     'explanation': 'Article maintains excellent objectivity with minimal bias'
                 })
             elif objectivity_score >= 70:
                 findings.append({
                     'type': 'positive',
                     'severity': 'positive',
-                    'text': f'Good objectivity ({objectivity_score}/100)',
+                    'text': f'Good objectivity ({objectivity_score}/100){outlet_context}',
                     'explanation': 'Article shows good objectivity with minor bias elements'
                 })
             elif objectivity_score >= 50:
                 findings.append({
                     'type': 'warning',
                     'severity': 'medium',
-                    'text': f'Moderate objectivity ({objectivity_score}/100)',
+                    'text': f'Moderate objectivity ({objectivity_score}/100){outlet_context}',
                     'explanation': 'Article shows some bias that readers should be aware of'
                 })
             else:
                 findings.append({
                     'type': 'warning',
                     'severity': 'high',
-                    'text': f'Low objectivity ({objectivity_score}/100)',
+                    'text': f'Low objectivity ({objectivity_score}/100){outlet_context}',
                     'explanation': 'Article shows significant bias that may affect interpretation'
+                })
+            
+            # Outlet baseline context
+            if baseline.get('known_outlet') and baseline.get('bias_amount', 0) > 20:
+                findings.append({
+                    'type': 'info',
+                    'severity': 'low',
+                    'text': f'{outlet_name} typically has {baseline["bias_direction"]} bias',
+                    'explanation': f'This outlet is known for {baseline["bias_direction"]} political perspective'
                 })
             
             # Political bias
             political = dimensions.get('political', {})
-            if political.get('score', 0) > 50:
+            if political.get('score', 0) > 30:
                 findings.append({
                     'type': 'info',
                     'severity': 'medium',
@@ -565,7 +893,7 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
             
             # Sensationalism
             sensationalism = dimensions.get('sensationalism', {})
-            if sensationalism.get('score', 0) > 60:
+            if sensationalism.get('score', 0) > 50:
                 findings.append({
                     'type': 'warning',
                     'severity': 'medium',
@@ -582,6 +910,27 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
                     'text': f'Loaded language detected ({loaded.get("count", 0)} instances)',
                     'explanation': 'Article uses biased or emotionally charged language'
                 })
+            
+            # NEW v6.0: Controversial figures
+            controversial = dimensions.get('controversial_figures', {})
+            if controversial.get('count', 0) > 0:
+                figures_list = ', '.join([f['name'] for f in controversial.get('found', [])[:3]])
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'high',
+                    'text': f'Controversial figures mentioned: {figures_list}',
+                    'explanation': 'Article references figures associated with misinformation'
+                })
+            
+            # NEW v6.0: Pseudoscience
+            pseudoscience = dimensions.get('pseudoscience', {})
+            if pseudoscience.get('score', 0) > 20:
+                findings.append({
+                    'type': 'warning',
+                    'severity': 'high',
+                    'text': f'Pseudoscience indicators detected ({pseudoscience.get("count", 0)})',
+                    'explanation': 'Article contains unscientific claims or conspiracy theories'
+                })
         
         except Exception as e:
             logger.warning(f"Findings generation failed: {e}")
@@ -594,22 +943,30 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
         
         return findings
     
-    def _generate_objectivity_summary(self, dimensions: Dict[str, Any], objectivity_score: int, level: str) -> str:
-        """Generate summary of OBJECTIVITY analysis"""
+    def _generate_objectivity_summary(self, dimensions: Dict[str, Any], objectivity_score: int, 
+                                     level: str, outlet_name: Optional[str]) -> str:
+        """Generate summary of OBJECTIVITY analysis with outlet context"""
         try:
+            outlet_context = f" from {outlet_name}" if outlet_name else ""
+            
             if objectivity_score >= 85:
-                base = "This article maintains excellent objectivity with minimal bias."
+                base = f"This article{outlet_context} maintains excellent objectivity with minimal bias."
             elif objectivity_score >= 70:
-                base = "This article shows good objectivity with only minor bias elements."
+                base = f"This article{outlet_context} shows good objectivity with only minor bias elements."
             elif objectivity_score >= 50:
-                base = "This article shows moderate objectivity with some bias present."
+                base = f"This article{outlet_context} shows moderate objectivity with some bias present."
             else:
-                base = "This article shows limited objectivity with significant bias elements."
+                base = f"This article{outlet_context} shows limited objectivity with significant bias elements."
             
             # Add specific findings
             dominant = self._get_dominant_bias(dimensions)
             if dominant != 'None' and dominant != 'Unknown':
                 base += f" Primary concern: {dominant}."
+            
+            # Add outlet context if known
+            baseline = dimensions.get('outlet_baseline', {})
+            if baseline.get('known_outlet'):
+                base += f" {outlet_name} typically shows {baseline['bias_direction']} bias."
             
             base += f" Objectivity score: {objectivity_score}%."
             
@@ -624,22 +981,28 @@ class BiasDetector(BaseAnalyzer, AIEnhancementMixin):
         info = super().get_service_info()
         info.update({
             'capabilities': [
+                'Outlet-aware bias detection',
                 'Multi-dimensional objectivity analysis',
                 'Political spectrum detection',
                 'Sensationalism measurement',
                 'Corporate bias detection',
                 'Loaded language extraction',
                 'Framing analysis',
+                'Controversial figure detection',
+                'Pseudoscience indicator detection',
                 'Source diversity assessment',
                 'AI-enhanced bias detection' if self._ai_available else 'Pattern-based bias detection',
                 'Timeout-protected analysis',
                 'Objectivity scoring (higher is better)'
             ],
-            'dimensions_analyzed': 5,
+            'dimensions_analyzed': 7,
+            'outlets_tracked': len(self.outlet_baselines),
+            'controversial_figures_tracked': len(self.controversial_figures),
             'patterns_detected': len(self.loaded_patterns),
             'visualization_ready': True,
             'ai_enhanced': self._ai_available,
             'timeout_protected': True,
-            'scoring_type': 'objectivity'
+            'scoring_type': 'objectivity',
+            'version': '6.0.0'
         })
         return info
