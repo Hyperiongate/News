@@ -1,18 +1,20 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
  * Date: October 10, 2025
- * Version: 4.16.0 - CLICKABLE AUTHOR CARDS WITH LINKS
+ * Version: 4.15.0 - MULTI-AUTHOR DISPLAY FIX
  * 
- * LATEST CHANGE (October 10, 2025 - 11:30 PM):
- * - ADDED: Author cards now link to author profile pages (author_page_url)
- * - ADDED: Clickable "View Profile" buttons for each author
- * - ADDED: Social media links (Twitter, LinkedIn) displayed for each author
- * - ENHANCED: Visual indication that cards are clickable
- * - PRESERVED: All multi-author display functionality from v4.15.0
+ * LATEST CHANGE (October 10, 2025):
+ * - FIXED: displayAuthor now shows ALL authors, not just primary
+ * - ADDED: Co-authors section with visual cards for each author
+ * - ADDED: "Article by X Authors" header when multiple authors
+ * - ENHANCED: Primary author highlighted, co-authors shown clearly
+ * 
+ * All other services remain unchanged from 4.14.0
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
  * FILE IS COMPLETE - NO TRUNCATION - READY TO DEPLOY
+ * Total Lines: ~1500
  */
 
 // Create global ServiceTemplates object
@@ -212,6 +214,9 @@ window.ServiceTemplates = {
                 </div>
             `,
             
+            // ============================================================================
+            // TRANSPARENCY ANALYZER - REDESIGNED v2.0.0
+            // ============================================================================
             transparencyAnalyzer: `
                 <div class="service-analysis-section">
                     <div class="transparency-enhanced">
@@ -589,78 +594,9 @@ window.ServiceTemplates = {
         return templates[serviceId] || '<div class="error">Template not found</div>';
     },
 
-    // Helper function to update elements
-    updateElement: function(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
-        }
-    },
-
-    getBiasPosition: function(direction, score) {
-        const positions = {
-            'far-left': 10,
-            'left': 25,
-            'center-left': 40,
-            'center': 50,
-            'center-right': 60,
-            'right': 75,
-            'far-right': 90
-        };
-        return positions[direction.toLowerCase()] || 50;
-    }
-};
-
-console.log('ServiceTemplates loaded successfully - v4.16.0 CLICKABLE AUTHOR CARDS');
-
-// Chart Integration
-const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
-
-window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.16.0] displayAllAnalyses called');
-    originalDisplayAllAnalyses.call(this, data, analyzer);
-    setTimeout(() => {
-        integrateChartsIntoServices(data);
-    }, 500);
-};
-
-function integrateChartsIntoServices(data) {
-    console.log('[Charts] Integrating into service cards...');
-    
-    if (!window.ChartRenderer || !window.ChartRenderer.isReady()) {
-        console.warn('[Charts] ChartRenderer not available');
-        return;
-    }
-    
-    const detailed = data.detailed_analysis || {};
-    
-    const serviceCharts = [
-        {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
-        {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
-    ];
-    
-    serviceCharts.forEach(service => {
-        const serviceData = detailed[service.key];
-        
-        if (serviceData && serviceData.chart_data) {
-            console.log(`[Charts] Rendering ${service.id} chart`);
-            setTimeout(() => {
-                const canvasId = service.id + 'Chart';
-                window.ChartRenderer.renderChart(canvasId, serviceData.chart_data);
-            }, service.delay);
-        } else {
-            console.log(`[Charts] No chart data for ${service.id}`);
-        }
-    });
-    
-    console.log('[Charts] ✓ Integration complete');
-}
-
-console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS WITH LINKS');
-
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.16.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.15.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -999,7 +935,7 @@ console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS 
 
     // Display Fact Checker
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker Display v4.16.0] Data received:', data);
+        console.log('[FactChecker Display v4.15.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
@@ -1065,16 +1001,14 @@ console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS 
     },
 
     // ============================================================================
-    // AUTHOR DISPLAY - v4.16.0 CLICKABLE AUTHOR CARDS
+    // AUTHOR DISPLAY - v4.15.0 MULTI-AUTHOR FIX
     // ============================================================================
     displayAuthor: function(data, analyzer) {
-        console.log('[Author Display v4.16.0 CLICKABLE CARDS] Received data:', data);
+        console.log('[Author Display v4.15.0 MULTI-AUTHOR] Received data:', data);
         
-        // Get all authors
+        // NEW: Get all authors
         const allAuthors = data.all_authors || data.authors || [];
         const primaryAuthor = data.primary_author || data.name || data.author_name || 'Unknown Author';
-        const authorPageUrl = data.author_page_url || null;
-        const socialMedia = data.social_media || data.social_links || {};
         
         // If all_authors is a string (comma-separated), split it
         let authorList = [];
@@ -1083,14 +1017,14 @@ console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS 
         } else if (Array.isArray(allAuthors) && allAuthors.length > 0) {
             authorList = allAuthors;
         } else if (primaryAuthor.includes(',')) {
+            // Fallback: parse from primary_author if it contains commas
             authorList = primaryAuthor.split(',').map(name => name.trim());
         } else {
+            // Single author
             authorList = [primaryAuthor];
         }
         
         console.log('[Author Display] Authors:', authorList);
-        console.log('[Author Display] Author page URL:', authorPageUrl);
-        console.log('[Author Display] Social media:', socialMedia);
         
         const credibility = data.credibility_score || data.score || data.credibility || 70;
         const position = data.position || 'Journalist';
@@ -1117,14 +1051,14 @@ console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS 
         this.updateElement('author-track-record', data.track_record || 'Good');
         
         // ============================================================================
-        // v4.16.0: MULTI-AUTHOR DISPLAY WITH CLICKABLE CARDS
+        // NEW v4.15.0: MULTI-AUTHOR DISPLAY
         // ============================================================================
         if (authorList.length > 1) {
             console.log('[Author Display] Multiple authors detected:', authorList.length);
             
             const authorHeader = document.querySelector('.author-profile-header');
             if (authorHeader) {
-                // Multi-author header
+                // Check if multi-author header already exists
                 let multiAuthorHeader = authorHeader.querySelector('.multi-author-header');
                 if (!multiAuthorHeader) {
                     multiAuthorHeader = document.createElement('div');
@@ -1137,7 +1071,7 @@ console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS 
                     authorHeader.insertBefore(multiAuthorHeader, authorHeader.firstChild);
                 }
                 
-                // Co-authors section with clickable cards
+                // Check if co-authors section already exists
                 let coAuthorsSection = document.querySelector('.co-authors-section');
                 if (!coAuthorsSection) {
                     coAuthorsSection = document.createElement('div');
@@ -1152,12 +1086,43 @@ console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS 
                         <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
                     `;
                     
-                    // Show primary author first with links
-                    coAuthorsHTML += this.createAuthorCard(authorList[0], position, organization, authorPageUrl, socialMedia, true);
+                    // Show primary author first
+                    coAuthorsHTML += `
+                        <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem;">
+                                    ${authorList[0].split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                </div>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 700; color: #1e40af; font-size: 0.95rem;">${authorList[0]}</div>
+                                    <div style="font-size: 0.75rem; color: #3b82f6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Primary Author</div>
+                                </div>
+                            </div>
+                            <div style="font-size: 0.875rem; color: #64748b;">
+                                ${position} at ${organization}
+                            </div>
+                        </div>
+                    `;
                     
                     // Show co-authors
                     for (let i = 1; i < authorList.length; i++) {
-                        coAuthorsHTML += this.createAuthorCard(authorList[i], position, organization, authorPageUrl, socialMedia, false);
+                        const coAuthor = authorList[i];
+                        coAuthorsHTML += `
+                            <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #06b6d4; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem;">
+                                        ${coAuthor.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 700; color: #0e7490; font-size: 0.95rem;">${coAuthor}</div>
+                                        <div style="font-size: 0.75rem; color: #06b6d4; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Co-Author</div>
+                                    </div>
+                                </div>
+                                <div style="font-size: 0.875rem; color: #64748b;">
+                                    ${position} at ${organization}
+                                </div>
+                            </div>
+                        `;
                     }
                     
                     coAuthorsHTML += '</div>';
@@ -1172,81 +1137,74 @@ console.log('[Charts] Service Templates v4.16.0 loaded - CLICKABLE AUTHOR CARDS 
             }
         }
         
-        console.log('[Author Display v4.16.0] Complete - Clickable author cards enabled');
+        console.log('[Author Display v4.15.0] Complete - Multi-author support enabled');
     },
 
-    // ============================================================================
-    // NEW v4.16.0: CREATE CLICKABLE AUTHOR CARD
-    // ============================================================================
-    createAuthorCard: function(authorName, position, organization, authorPageUrl, socialMedia, isPrimary) {
-        const initials = authorName.split(' ').map(n => n[0]).join('').substring(0, 2);
-        const bgColor = isPrimary ? 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)';
-        const borderColor = isPrimary ? '#3b82f6' : '#06b6d4';
-        const labelColor = isPrimary ? '#3b82f6' : '#06b6d4';
-        const nameColor = isPrimary ? '#1e40af' : '#0e7490';
-        const label = isPrimary ? 'Primary Author' : 'Co-Author';
-        
-        // Build links section
-        let linksHTML = '';
-        
-        // Author profile link
-        if (authorPageUrl) {
-            linksHTML += `
-                <a href="${authorPageUrl}" target="_blank" rel="noopener noreferrer" 
-                   style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; background: ${bgColor}; color: white; text-decoration: none; border-radius: 6px; font-size: 0.875rem; font-weight: 600; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-                   onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.2)';"
-                   onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
-                    <i class="fas fa-user-circle"></i>
-                    View Profile
-                </a>
-            `;
+    // Helper function to update elements
+    updateElement: function(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
         }
+    },
+
+    getBiasPosition: function(direction, score) {
+        const positions = {
+            'far-left': 10,
+            'left': 25,
+            'center-left': 40,
+            'center': 50,
+            'center-right': 60,
+            'right': 75,
+            'far-right': 90
+        };
+        return positions[direction.toLowerCase()] || 50;
+    }
+};
+
+console.log('ServiceTemplates loaded successfully - v4.15.0 MULTI-AUTHOR FIX');
+
+// Chart Integration
+const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
+
+window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
+    console.log('[ServiceTemplates v4.15.0] displayAllAnalyses called');
+    originalDisplayAllAnalyses.call(this, data, analyzer);
+    setTimeout(() => {
+        integrateChartsIntoServices(data);
+    }, 500);
+};
+
+function integrateChartsIntoServices(data) {
+    console.log('[Charts] Integrating into service cards...');
+    
+    if (!window.ChartRenderer || !window.ChartRenderer.isReady()) {
+        console.warn('[Charts] ChartRenderer not available');
+        return;
+    }
+    
+    const detailed = data.detailed_analysis || {};
+    
+    const serviceCharts = [
+        {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
+        {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
+    ];
+    
+    serviceCharts.forEach(service => {
+        const serviceData = detailed[service.key];
         
-        // Social media links
-        if (socialMedia.twitter) {
-            linksHTML += `
-                <a href="${socialMedia.twitter}" target="_blank" rel="noopener noreferrer" 
-                   style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #1DA1F2; color: white; border-radius: 6px; text-decoration: none; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-                   onmouseover="this.style.transform='translateY(-2px)';"
-                   onmouseout="this.style.transform='translateY(0)';"
-                   title="Twitter">
-                    <i class="fab fa-twitter"></i>
-                </a>
-            `;
+        if (serviceData && serviceData.chart_data) {
+            console.log(`[Charts] Rendering ${service.id} chart`);
+            setTimeout(() => {
+                const canvasId = service.id + 'Chart';
+                window.ChartRenderer.renderChart(canvasId, serviceData.chart_data);
+            }, service.delay);
+        } else {
+            console.log(`[Charts] No chart data for ${service.id}`);
         }
-        
-        if (socialMedia.linkedin) {
-            linksHTML += `
-                <a href="${socialMedia.linkedin}" target="_blank" rel="noopener noreferrer" 
-                   style="display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; background: #0A66C2; color: white; border-radius: 6px; text-decoration: none; transition: transform 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"
-                   onmouseover="this.style.transform='translateY(-2px)';"
-                   onmouseout="this.style.transform='translateY(0)';"
-                   title="LinkedIn">
-                    <i class="fab fa-linkedin-in"></i>
-                </a>
-            `;
-        }
-        
-        return `
-            <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.3s;"
-                 onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)';"
-                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                    <div style="width: 40px; height: 40px; background: ${bgColor}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem;">
-                        ${initials}
-                    </div>
-                    <div style="flex: 1;">
-                        <div style="font-weight: 700; color: ${nameColor}; font-size: 0.95rem;">${authorName}</div>
-                        <div style="font-size: 0.75rem; color: ${labelColor}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${label}</div>
-                    </div>
-                </div>
-                <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem;">
-                    ${position} at ${organization}
-                </div>
-                ${linksHTML ? `
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
-                        ${linksHTML}
-                    </div>
-                ` : ''}
-            </div>
-        `;
+    });
+    
+    console.log('[Charts] ✓ Integration complete');
+}
+
+console.log('[Charts] Service Templates v4.15.0 loaded - COMPLETE FILE - Multi-Author Display Fixed');
