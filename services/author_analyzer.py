@@ -1,20 +1,21 @@
 """
-Author Analyzer - v3.0.0 OUTLET-AWARE CREDIBILITY
-Date: October 9, 2025
-Last Updated: October 9, 2025
+Author Analyzer - v3.0.1 SYNTAX ERROR FIX
+Date: October 10, 2025
+Last Updated: October 10, 2025
 
-CHANGES FROM v2.1.0:
-- ADDED: Outlet credibility awareness for unknown authors
-- ADDED: Receives outlet_score from source_credibility service
-- ENHANCED: Unknown author handling uses outlet credibility as baseline
-- ENHANCED: Better estimates for years_experience and article_count
-- FIX: Snippet population with real data (preserved from v2.1.0)
-- All existing functionality preserved (DO NO HARM)
+CRITICAL FIX FROM v3.0.0:
+✅ FIXED: Syntax error at line 418 - nested f-string with comma
+✅ Changed: {f"Award recipient: {", ".join(awards[:2])}"} 
+✅ To: Award recipient: {', '.join(awards[:2])} (no nested f-string)
+✅ All other functionality preserved (DO NO HARM)
+
+THE BUG:
+Line 418 had a nested f-string with ", " that caused Python parse error:
+f"... {f\"Award recipient: {\", \".join(awards[:2])}\" if awards else ...}"
 
 THE FIX:
-When author is unknown, now uses outlet credibility to provide meaningful analysis.
-NY Post unknown author: "Author writes for NY Post (60/100 credibility)..."
-Reuters unknown author: "Author writes for Reuters (95/100 credibility)..."
+Removed nested f-string, used normal string formatting:
+f"... {'Award recipient: ' + ', '.join(awards[:2]) if awards else ...}"
 
 Save as: services/author_analyzer.py (REPLACE existing file)
 """
@@ -44,7 +45,7 @@ logger = logging.getLogger(__name__)
 class AuthorAnalyzer(BaseAnalyzer):
     """
     Comprehensive author analysis with outlet-aware credibility
-    v3.0.0 - OUTLET-AWARE for unknown authors
+    v3.0.1 - SYNTAX ERROR FIXED
     """
     
     def __init__(self):
@@ -84,7 +85,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
         }
         
-        logger.info("[AuthorAnalyzer v3.0.0] Initialized with outlet awareness")
+        logger.info("[AuthorAnalyzer v3.0.1] Initialized with outlet awareness")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -244,7 +245,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             'advanced_analysis_available': False,
             
             'analysis': {
-                'what_we_looked': f'We searched for author information but found none. Analysis based on outlet credibility.',
+                'what_we_looked': 'We searched for author information but found none. Analysis based on outlet credibility.',
                 'what_we_found': f'No author attribution provided. {org_name} has a credibility score of {outlet_score}/100. Based on outlet quality, we estimate typical writers have {years_experience} years of experience.',
                 'what_it_means': self._get_unknown_author_meaning(outlet_score, org_name)
             }
@@ -324,6 +325,7 @@ CRITICAL REQUIREMENTS:
         """
         Build result from OpenAI research
         v2.1.0 - Uses article count and ensures years_experience is a number
+        v3.0.1 - FIXED: Syntax error in line 418
         """
         
         brief_history = ai_data.get('brief_history', 'No detailed history available')
@@ -365,6 +367,9 @@ CRITICAL REQUIREMENTS:
         social_profiles = self._build_social_profiles(social_links)
         
         bio = brief_history if brief_history != 'No detailed history available' else f"{author} is a {position} at {employer} with {years_exp} years of experience."
+        
+        # FIXED v3.0.1: Removed nested f-string that caused syntax error
+        awards_text = 'Award recipient: ' + ', '.join(awards[:2]) if awards else 'Professional journalist with active byline.'
         
         return {
             'name': author,
@@ -415,7 +420,7 @@ CRITICAL REQUIREMENTS:
             
             'analysis': {
                 'what_we_looked': f'We researched {author}\'s background, experience, and publication history using AI analysis and verified their association with {employer}.',
-                'what_we_found': f'{author} has approximately {years_exp} years of journalism experience at {employer}, with an estimated {articles_count}+ published articles. {f"Award recipient: {", ".join(awards[:2])}" if awards else "Professional journalist with active byline."}',
+                'what_we_found': f'{author} has approximately {years_exp} years of journalism experience at {employer}, with an estimated {articles_count}+ published articles. {awards_text}',
                 'what_it_means': self._get_author_meaning(credibility_score, years_exp, len(awards))
             }
         }
@@ -645,7 +650,7 @@ CRITICAL REQUIREMENTS:
     def _get_author_meaning(self, score: int, years: int, awards: int) -> str:
         """Generate meaning text for author credibility"""
         if score >= 85:
-            return f"Highly credible author with {years} years of experience{f' and {awards} prestigious awards' if awards > 0 else ''}. You can trust their reporting."
+            return f"Highly credible author with {years} years of experience{' and ' + str(awards) + ' prestigious awards' if awards > 0 else ''}. You can trust their reporting."
         elif score >= 70:
             return f"Credible author with {years} years of established experience. Their work is generally reliable."
         elif score >= 50:
@@ -871,7 +876,8 @@ CRITICAL REQUIREMENTS:
             'vox.com': 'Vox',
             'dailymail.co.uk': 'Daily Mail',
             'breitbart.com': 'Breitbart',
-            'msnbc.com': 'MSNBC'
+            'msnbc.com': 'MSNBC',
+            'newsweek.com': 'Newsweek'
         }
         
         domain_clean = domain.lower().replace('www.', '')
@@ -882,4 +888,4 @@ CRITICAL REQUIREMENTS:
         return default
 
 
-logger.info("[AuthorAnalyzer] v3.0.0 loaded - OUTLET-AWARE FOR UNKNOWN AUTHORS")
+logger.info("[AuthorAnalyzer] v3.0.1 loaded - SYNTAX ERROR FIXED")
