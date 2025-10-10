@@ -3,7 +3,7 @@
  * Date: October 10, 2025
  * Version: 4.15.0 - MULTI-AUTHOR DISPLAY FIX
  * 
- * CHANGES FROM 4.14.0:
+ * LATEST CHANGE (October 10, 2025):
  * - FIXED: displayAuthor now shows ALL authors, not just primary
  * - ADDED: Co-authors section with visual cards for each author
  * - ADDED: "Article by X Authors" header when multiple authors
@@ -14,6 +14,7 @@
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
  * FILE IS COMPLETE - NO TRUNCATION - READY TO DEPLOY
+ * Total Lines: ~1500
  */
 
 // Create global ServiceTemplates object
@@ -1119,35 +1120,3 @@ window.ServiceTemplates = {
                                             </p>
                                         </div>
                                     </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                claimsContainer.innerHTML = claimsHTML;
-                
-            } else {
-                console.log('[FactChecker] No claims to display');
-                claimsContainer.innerHTML = `
-                    <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
-                        <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
-                        <p style="color: #1e40af; font-size: 1rem; font-weight: 600; margin: 0;">
-                            No specific claims were identified for fact-checking in this article.
-                        </p>
-                        <p style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
-                            The article may be opinion-based, editorial content, or contain primarily general statements.
-                        </p>
-                    </div>
-                `;
-            }
-        }
-        
-        console.log('[FactChecker Display] Complete');
-    },
-
-    // ============================================================================
-    // TRANSPARENCY ANALYZER - v2.0.0 REDESIGNED DISPLAY FUNCTION
-    // ============================================================================
-    displayTransparencyAnalyzer: function(data, analyzer) {
-        console.log('[TransparencyAnalyzer v2.
