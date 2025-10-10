@@ -1,23 +1,25 @@
 """
-Analysis Pipeline - v12.2 CRITICAL FIX FOR AUTHOR DATA PASSING
+Analysis Pipeline - v12.3 CRITICAL FIX FOR SERVICE TIMEOUTS
 Date: October 10, 2025
-Version: 12.2 - FIXED AUTHOR DATA FLOW
+Version: 12.3 - FIXED SERVICE TIMEOUTS & MISSING SERVICES
 
-CRITICAL CHANGES FROM 12.1:
-✅ FIX: article_data now properly includes ALL extracted fields before passing to services
-✅ FIX: Ensured author, domain, source are in article_data dict
-✅ ADDED: Comprehensive logging to verify data flow
-✅ PRESERVED: All existing functionality (DO NO HARM)
+CRITICAL CHANGES FROM 12.2:
+✅ FIX: Increased timeouts for services (author_analyzer: 45s, fact_checker: 60s)
+✅ FIX: Better error logging shows EXACTLY why services fail
+✅ FIX: Separated TimeoutError from generic exceptions
+✅ ADDED: Per-service timeout configuration
+✅ PRESERVED: All data passing fixes from v12.2
 
 THE BUG:
-- article_extractor found author = "Jesus Mesa"
-- But article_data passed to author_analyzer was missing this field
-- Result: author_analyzer received empty data
+- author_analyzer was timing out after 10 seconds
+- It never completed, so no author data reached the frontend
+- Logs showed only 4 services completing instead of 7
 
 THE FIX:
-- Line 127-143: Explicitly add all article fields to article_data
-- Line 148: Log exactly what author_analyzer receives
-- Now author_analyzer gets: {author: "Jesus Mesa", domain: "newsweek.com", ...}
+- Line 169-190: Individual timeouts per service
+- author_analyzer: 45s (needs time for Wikipedia + AI research)
+- fact_checker: 60s (makes multiple AI calls)
+- Better logging shows timeout vs error vs empty result
 
 Save as: services/analysis_pipeline.py (REPLACE existing file)
 """
@@ -245,16 +247,32 @@ class AnalysisPipeline:
                     future = executor.submit(self._run_service, service_name, service, article_data)
                     futures[future] = service_name
             
-            # Collect results
+            # Collect results with appropriate timeouts
             for future in as_completed(futures):
                 service_name = futures[future]
+                
+                # Different timeouts for different services
+                timeout = 30  # Default 30 seconds
+                if service_name == 'author_analyzer':
+                    timeout = 45  # Author analysis can take longer (Wikipedia + AI)
+                elif service_name == 'fact_checker':
+                    timeout = 60  # Fact checking takes longest (multiple AI calls)
+                
                 try:
-                    result = future.result(timeout=10)
+                    logger.info(f"[PIPELINE] Waiting for {service_name} (timeout: {timeout}s)...")
+                    result = future.result(timeout=timeout)
                     if result:
                         service_results[service_name] = result
                         logger.info(f"✓ {service_name}: completed")
+                    else:
+                        logger.warning(f"✗ {service_name}: returned empty result")
+                        service_results[service_name] = self._get_default_service_data(service_name)
+                except TimeoutError as e:
+                    logger.error(f"✗ {service_name}: TIMEOUT after {timeout}s")
+                    service_results[service_name] = self._get_default_service_data(service_name)
                 except Exception as e:
-                    logger.warning(f"✗ {service_name}: {e}")
+                    logger.error(f"✗ {service_name}: ERROR: {e}")
+                    logger.error(f"✗ {service_name}: Traceback: {traceback.format_exc()}")
                     service_results[service_name] = self._get_default_service_data(service_name)
         
         # STAGE 3: Calculate Trust Score
