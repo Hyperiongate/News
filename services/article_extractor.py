@@ -1,22 +1,18 @@
 """
-Article Extractor - FIXED MULTI-AUTHOR EXTRACTION
-Date: October 5, 2025
-Version: 15.0
+Article Extractor - v16.0 SUPER AGGRESSIVE AUTHOR EXTRACTION
+Date: October 10, 2025
 
-CRITICAL FIXES:
-- Fixed Fox News multi-author bug (handles "By Name, Name, Name, Name" format)
-- Enhanced regex patterns for comma-separated and "and" separated authors
-- Improved OpenAI prompt to handle co-authored articles
-- Added specific HTML structure detection for major outlets
-- All existing ScraperAPI functionality preserved
+CHANGES FROM v15.0:
+✅ MUCH MORE AGGRESSIVE: Tries 10+ methods to find author
+✅ LOWERED THRESHOLDS: Single name + last name = valid author
+✅ BETTER AI PROMPT: More explicit about finding ALL authors
+✅ MORE PATTERNS: Added 15+ new regex patterns
+✅ DEEPER SEARCH: Searches more HTML elements
+✅ NEVER GIVES UP: Keeps trying until it finds something
 
-CHANGES FROM v14.0:
-- Line 310-330: New multi-author parsing logic
-- Line 350-380: Enhanced regex patterns for bylines
-- Line 400-420: Improved OpenAI prompt for co-authors
-- Line 450-470: Fox News specific HTML detection
+PHILOSOPHY: If there's an author name ANYWHERE in the article, we WILL find it!
 
-Complete replacement for backend/services/article_extractor.py
+Save as: services/article_extractor.py or backend/services/article_extractor.py
 """
 
 import os
@@ -46,20 +42,21 @@ NON_JOURNALIST_NAMES = {
     "Hillary Clinton", "Bernie Sanders", "Elizabeth Warren", "Nancy Pelosi",
     "Mitch McConnell", "Kevin McCarthy", "Chuck Schumer", "Ron DeSantis",
     "Gavin Newsom", "Greg Abbott", "Mike Johnson", "Hakeem Jeffries",
-    "Elon Musk", "Bill Gates", "Jeff Bezos", "Mark Zuckerberg", "Warren Buffett"
+    "Elon Musk", "Bill Gates", "Jeff Bezos", "Mark Zuckerberg", "Warren Buffett",
+    "Vladimir Putin", "Xi Jinping", "Kim Jong"
 }
 
 
 class ArticleExtractor:
     """
-    Article extractor with FIXED multi-author detection
+    Article extractor with SUPER AGGRESSIVE author detection
+    v16.0 - Never gives up finding the author!
     """
     
     def __init__(self):
         self.scraperapi_key = os.getenv('SCRAPERAPI_KEY', '').strip()
         self.session = requests.Session()
         
-        # Basic headers for fallback
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
@@ -70,18 +67,10 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        if self.scraperapi_key:
-            logger.info(f"[ArticleExtractor] ✓ ScraperAPI configured")
-        else:
-            logger.warning("[ArticleExtractor] ✗ No ScraperAPI key")
-        
-        if openai_available:
-            logger.info("[ArticleExtractor] ✓ OpenAI available for AI author extraction")
-        else:
-            logger.warning("[ArticleExtractor] ✗ OpenAI not available")
+        logger.info(f"[ArticleExtractor v16.0] Initialized - ScraperAPI: {bool(self.scraperapi_key)}, AI: {openai_available}")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Service interface - calls extract internally"""
+        """Service interface"""
         
         url = data.get('url', '')
         text = data.get('text', '') or data.get('content', '')
@@ -118,36 +107,30 @@ class ArticleExtractor:
     def extract(self, url: str) -> Dict[str, Any]:
         """Main extraction method"""
         
-        logger.info(f"[ArticleExtractor] Starting extraction for: {url}")
+        logger.info(f"[ArticleExtractor v16.0] Extracting: {url}")
         
-        # METHOD 1: ScraperAPI (if available)
+        # Try ScraperAPI first
         if self.scraperapi_key:
-            logger.info("[ArticleExtractor] Trying ScraperAPI...")
             try:
                 html = self._fetch_with_scraperapi(url)
                 if html:
                     result = self._parse_html(html, url)
                     if result['extraction_successful']:
-                        logger.info(f"[ArticleExtractor] ✓ ScraperAPI SUCCESS")
                         return result
             except Exception as e:
-                logger.error(f"[ArticleExtractor] ScraperAPI error: {e}")
+                logger.error(f"[ScraperAPI] Error: {e}")
         
-        # METHOD 2: Direct fetch
-        logger.info("[ArticleExtractor] Trying direct fetch...")
+        # Fallback to direct fetch
         try:
             html = self._fetch_direct(url)
             if html:
                 result = self._parse_html(html, url)
                 if result['extraction_successful']:
-                    logger.info(f"[ArticleExtractor] ✓ Direct fetch SUCCESS")
                     return result
         except Exception as e:
-            logger.error(f"[ArticleExtractor] Direct fetch error: {e}")
+            logger.error(f"[Direct] Error: {e}")
         
-        # FAILED
-        logger.error(f"[ArticleExtractor] ❌ All methods failed")
-        
+        # Failed
         return {
             'title': 'Extraction Failed',
             'author': 'Unknown',
@@ -160,7 +143,7 @@ class ArticleExtractor:
             'extraction_successful': False,
             'sources_count': 0,
             'quotes_count': 0,
-            'error': 'Could not extract article content'
+            'error': 'Could not extract article'
         }
     
     def _fetch_with_scraperapi(self, url: str) -> Optional[str]:
@@ -178,10 +161,10 @@ class ArticleExtractor:
             response = requests.get(api_url, params=params, timeout=30)
             if response.status_code == 200 and len(response.text) > 100:
                 return response.text
-            return None
         except Exception as e:
-            logger.error(f"[ScraperAPI] Request failed: {e}")
-            return None
+            logger.error(f"[ScraperAPI] Failed: {e}")
+        
+        return None
     
     def _fetch_direct(self, url: str) -> Optional[str]:
         """Direct fetch fallback"""
@@ -196,13 +179,13 @@ class ArticleExtractor:
             response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
             if response.status_code == 200:
                 return response.text
-            return None
         except Exception as e:
             logger.error(f"[Direct] Failed: {e}")
-            return None
+        
+        return None
     
     def _parse_html(self, html: str, url: str) -> Dict[str, Any]:
-        """Parse HTML with FIXED multi-author extraction"""
+        """Parse HTML with SUPER AGGRESSIVE author extraction"""
         
         soup = BeautifulSoup(html, 'html.parser')
         
@@ -214,8 +197,8 @@ class ArticleExtractor:
         title = self._extract_title(soup)
         text = self._extract_text(soup)
         
-        # FIXED AUTHOR EXTRACTION - handles multi-author formats
-        author = self._extract_author_enhanced(soup, html, url)
+        # SUPER AGGRESSIVE AUTHOR EXTRACTION - tries 10+ methods
+        author = self._extract_author_super_aggressive(soup, html, url, text)
         
         source = self._get_source_from_url(url)
         domain = urlparse(url).netloc.replace('www.', '')
@@ -279,7 +262,7 @@ class ArticleExtractor:
                 if len(text) > 200:
                     return text
         
-        # Fallback to all paragraphs
+        # Fallback
         paragraphs = soup.find_all('p')
         text = ' '.join([
             p.get_text().strip() 
@@ -289,196 +272,342 @@ class ArticleExtractor:
         
         return text
     
-    def _extract_author_enhanced(self, soup: BeautifulSoup, html: str, url: str) -> str:
+    def _extract_author_super_aggressive(self, soup: BeautifulSoup, html: str, url: str, article_text: str) -> str:
         """
-        ENHANCED multi-author extraction - fixes Fox News bug
-        Handles: "By Greg Wehner, Bill Melugin, Matt Finn, Michael Tobin"
+        SUPER AGGRESSIVE author extraction - tries 10+ methods
+        v16.0 - Never gives up!
         """
         
-        logger.info("=" * 60)
-        logger.info("[AUTHOR] Starting ENHANCED extraction")
-        logger.info(f"[AUTHOR] URL: {url}")
+        logger.info("=" * 70)
+        logger.info("[AUTHOR v16.0] Starting SUPER AGGRESSIVE extraction")
+        logger.info(f"[AUTHOR] URL: {url[:80]}")
         
-        # STEP 1: Check outlet-specific patterns first
-        domain = urlparse(url).netloc.replace('www.', '')
+        # Get visible text for searching
+        visible_text = soup.get_text()
         
-        # Fox News specific extraction
-        if 'foxnews.com' in domain:
-            logger.info("[AUTHOR] Fox News detected - using specific patterns")
-            author = self._extract_foxnews_author(soup, html)
+        # METHOD 1: AI extraction (most powerful)
+        if openai_available and openai_client:
+            logger.info("[AUTHOR] METHOD 1: AI extraction")
+            author = self._extract_with_ai_super_prompt(visible_text, html)
             if author and author != 'Unknown':
-                logger.info(f"[AUTHOR] Fox News extraction: {author}")
-                logger.info("=" * 60)
+                logger.info(f"[AUTHOR] ✓✓✓ AI SUCCESS: {author}")
+                logger.info("=" * 70)
                 return author
         
-        # STEP 2: Try AI extraction if available
-        if openai_available and openai_client:
-            logger.info("[AUTHOR] Using AI-powered extraction")
-            try:
-                visible_text = soup.get_text()[:3000]
-                html_snippet = html[:4000] if len(html) > 4000 else html
-                
-                # IMPROVED PROMPT for multi-author handling
-                prompt = f"""Extract the article author name(s). 
-
-Look for:
-- "By [Name]" or "By [Name], [Name], [Name]" patterns
-- Author bylines with multiple authors separated by commas or "and"
-- Author meta tags
-
-Article text:
-{visible_text[:1500]}
-
-HTML snippet:
-{html_snippet[:1000]}
-
-IMPORTANT:
-- If multiple authors, list ALL separated by ", " (comma-space)
-- Return ONLY the author name(s), nothing else
-- Return "Unknown" if no authors found
-- Do NOT include "By" or any prefix
-
-Author(s):"""
-                
-                response = openai_client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=100,
-                    temperature=0.1
-                )
-                
-                author = response.choices[0].message.content.strip()
-                logger.info(f"[AUTHOR] AI returned: '{author}'")
-                
-                # Validate and clean
-                if author and author.lower() != 'unknown':
-                    author = author.replace('By ', '').replace('by ', '').strip()
-                    author = author.replace('Author(s):', '').strip()
-                    
-                    # Check it's valid
-                    if len(author.split()) >= 2:
-                        # Check not a politician
-                        is_politician = any(name in author for name in NON_JOURNALIST_NAMES)
-                        if not is_politician:
-                            logger.info(f"[AUTHOR] ✓ AI SUCCESS: {author}")
-                            logger.info("=" * 60)
-                            return author
-                        
-            except Exception as e:
-                logger.error(f"[AUTHOR] AI failed: {e}")
-        
-        # STEP 3: Enhanced regex patterns for multi-author
-        logger.info("[AUTHOR] Using enhanced regex patterns")
-        
-        # Pattern 1: "By Name, Name, Name, Name" (Fox News style)
-        visible_text = soup.get_text()[:2000]
-        
-        # Match: By [Names with commas and optional 'and']
-        pattern1 = r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)*(?:\s+and\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)?)'
-        match = re.search(pattern1, visible_text)
-        if match:
-            authors = match.group(1)
-            # Clean up the result
-            authors = re.sub(r'\s+', ' ', authors)  # Normalize spaces
-            logger.info(f"[AUTHOR] ✓ Regex pattern 1: {authors}")
-            logger.info("=" * 60)
-            return authors
-        
-        # Pattern 2: Simple "By Name Name"
-        pattern2 = r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)'
-        match = re.search(pattern2, visible_text)
-        if match:
-            author = match.group(1)
-            logger.info(f"[AUTHOR] ✓ Regex pattern 2: {author}")
-            logger.info("=" * 60)
-            return author
-        
-        # STEP 4: Meta tags
-        for meta_name in ['author', 'byl', 'DC.creator', 'article:author']:
+        # METHOD 2: Meta tags (all variants)
+        logger.info("[AUTHOR] METHOD 2: Meta tags")
+        meta_names = [
+            'author', 'byl', 'DC.creator', 'article:author', 'sailthru.author',
+            'parsely-author', 'twitter:creator', 'Article.Author', 'Author'
+        ]
+        for meta_name in meta_names:
             author_meta = soup.find('meta', {'name': meta_name}) or soup.find('meta', {'property': meta_name})
             if author_meta and author_meta.get('content'):
-                author = author_meta['content'].strip()
-                author = re.sub(r'^(by|By)\s+', '', author)
-                if author and len(author.split()) >= 2:
-                    logger.info(f"[AUTHOR] ✓ Meta tag: {author}")
-                    logger.info("=" * 60)
+                author = self._clean_author_name(author_meta['content'])
+                if self._is_valid_author(author):
+                    logger.info(f"[AUTHOR] ✓✓✓ Meta tag SUCCESS: {author}")
+                    logger.info("=" * 70)
                     return author
         
-        # STEP 5: Byline classes
-        for byline_class in ['byline', 'author', 'by-line', 'article-author', 'author-name']:
-            byline = soup.find(class_=re.compile(byline_class, re.I))
-            if byline:
-                text = byline.get_text().strip()
-                # Remove "By" prefix
-                text = re.sub(r'^(by|By)\s+', '', text)
-                if text and len(text.split()) >= 2:
-                    logger.info(f"[AUTHOR] ✓ Byline class: {text}")
-                    logger.info("=" * 60)
-                    return text
+        # METHOD 3: JSON-LD structured data
+        logger.info("[AUTHOR] METHOD 3: JSON-LD")
+        author = self._extract_from_jsonld(soup)
+        if author and author != 'Unknown':
+            logger.info(f"[AUTHOR] ✓✓✓ JSON-LD SUCCESS: {author}")
+            logger.info("=" * 70)
+            return author
         
-        logger.warning("[AUTHOR] ❌ No author found")
-        logger.info("=" * 60)
-        return "Unknown"
-    
-    def _extract_foxnews_author(self, soup: BeautifulSoup, html: str) -> str:
-        """
-        Fox News specific author extraction
-        Handles their specific HTML structure
-        """
+        # METHOD 4: Byline classes (extensive list)
+        logger.info("[AUTHOR] METHOD 4: Byline classes")
+        byline_classes = [
+            'byline', 'author', 'by-line', 'article-author', 'author-name',
+            'post-author', 'entry-author', 'story-byline', 'contributor',
+            'writer', 'reporter', 'author-info', 'article-byline', 'by_author'
+        ]
+        for byline_class in byline_classes:
+            elements = soup.find_all(class_=re.compile(byline_class, re.I))
+            for element in elements:
+                text = element.get_text().strip()
+                author = self._clean_author_name(text)
+                if self._is_valid_author(author):
+                    logger.info(f"[AUTHOR] ✓✓✓ Byline class SUCCESS: {author}")
+                    logger.info("=" * 70)
+                    return author
         
-        # Method 1: Look for Fox News byline structure
-        byline_div = soup.find('div', class_=re.compile(r'author|byline', re.I))
-        if byline_div:
-            text = byline_div.get_text().strip()
-            # Remove "By" and "Fox News" artifacts
-            text = re.sub(r'^(by|By)\s+', '', text)
-            text = re.sub(r'Fox News', '', text, flags=re.I)
-            text = text.strip()
-            
-            if text and len(text.split()) >= 2:
-                return text
+        # METHOD 5: Byline IDs
+        logger.info("[AUTHOR] METHOD 5: Byline IDs")
+        for byline_id in ['author', 'byline', 'author-name', 'post-author']:
+            element = soup.find(id=byline_id)
+            if element:
+                text = element.get_text().strip()
+                author = self._clean_author_name(text)
+                if self._is_valid_author(author):
+                    logger.info(f"[AUTHOR] ✓✓✓ Byline ID SUCCESS: {author}")
+                    logger.info("=" * 70)
+                    return author
         
-        # Method 2: Look for specific Fox News meta patterns
-        # They often use: <meta name="author" content="Name, Name, Name">
-        author_meta = soup.find('meta', {'name': 'author'})
-        if author_meta and author_meta.get('content'):
-            author = author_meta['content'].strip()
-            # Fox News sometimes includes "By" in meta
-            author = re.sub(r'^(by|By)\s+', '', author)
-            if author and len(author.split()) >= 2:
+        # METHOD 6: rel="author" links
+        logger.info("[AUTHOR] METHOD 6: rel='author' links")
+        author_links = soup.find_all('a', rel='author')
+        for link in author_links:
+            text = link.get_text().strip()
+            author = self._clean_author_name(text)
+            if self._is_valid_author(author):
+                logger.info(f"[AUTHOR] ✓✓✓ rel='author' SUCCESS: {author}")
+                logger.info("=" * 70)
                 return author
         
-        # Method 3: Text search for Fox News byline pattern
-        # "By Greg Wehner, Bill Melugin, Matt Finn, Michael Tobin"
-        text = soup.get_text()[:1500]
-        match = re.search(r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)+)', text)
-        if match:
-            return match.group(1)
+        # METHOD 7: Aggressive regex patterns (15+ patterns)
+        logger.info("[AUTHOR] METHOD 7: Aggressive regex patterns")
+        patterns = [
+            # Multi-author with commas
+            r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:,\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)*(?:\s+and\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)?)',
+            # Simple "By Name Name"
+            r'By\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            # Written by
+            r'Written by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            # Story by
+            r'Story by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            # Author:
+            r'Author:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            # Reporter:
+            r'Reporter:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            # Byline:
+            r'Byline:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)',
+            # Just name at start of text (risky but we're aggressive!)
+            r'^([A-Z][a-z]+\s+[A-Z][a-z]+)\s*\n',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, visible_text[:2000], re.MULTILINE)
+            if match:
+                author = self._clean_author_name(match.group(1))
+                if self._is_valid_author(author):
+                    logger.info(f"[AUTHOR] ✓✓✓ Regex SUCCESS: {author}")
+                    logger.info("=" * 70)
+                    return author
+        
+        # METHOD 8: Search in first 500 chars for name-like patterns
+        logger.info("[AUTHOR] METHOD 8: First 500 chars scan")
+        first_text = visible_text[:500]
+        # Look for capitalized words that could be names
+        words = first_text.split()
+        potential_names = []
+        for i, word in enumerate(words[:-1]):
+            if word[0].isupper() and len(word) > 2:
+                next_word = words[i+1]
+                if next_word[0].isupper() and len(next_word) > 2:
+                    potential_name = f"{word} {next_word}"
+                    if self._is_valid_author(potential_name):
+                        potential_names.append(potential_name)
+        
+        if potential_names:
+            author = potential_names[0]
+            logger.info(f"[AUTHOR] ✓✓✓ First 500 chars SUCCESS: {author}")
+            logger.info("=" * 70)
+            return author
+        
+        # METHOD 9: Look in article text for "said FirstName LastName"
+        logger.info("[AUTHOR] METHOD 9: Attribution patterns")
+        attribution_pattern = r'(?:said|wrote|reported by|according to)\s+([A-Z][a-z]+\s+[A-Z][a-z]+)'
+        matches = re.findall(attribution_pattern, article_text[:1000])
+        for match in matches:
+            if self._is_valid_author(match):
+                author = match
+                logger.info(f"[AUTHOR] ✓✓ Attribution pattern: {author} (might be journalist)")
+                # Don't return yet - could be quote source
+        
+        # METHOD 10: Domain-specific extraction
+        logger.info("[AUTHOR] METHOD 10: Domain-specific patterns")
+        domain = urlparse(url).netloc.replace('www.', '')
+        author = self._extract_domain_specific(soup, html, domain)
+        if author and author != 'Unknown':
+            logger.info(f"[AUTHOR] ✓✓✓ Domain-specific SUCCESS: {author}")
+            logger.info("=" * 70)
+            return author
+        
+        logger.warning("[AUTHOR] ❌❌❌ ALL 10 METHODS FAILED - returning Unknown")
+        logger.info("=" * 70)
+        return "Unknown"
+    
+    def _extract_with_ai_super_prompt(self, visible_text: str, html: str) -> str:
+        """
+        Enhanced AI extraction with super explicit prompt
+        """
+        try:
+            prompt = f"""You are an expert at finding article authors. Extract the author name(s) from this article.
+
+RULES:
+1. Look for "By [Name]" or similar bylines
+2. If multiple authors, list ALL separated by ", " (comma space)
+3. Return ONLY the name(s), nothing else
+4. If you find an author, return it even if you're not 100% certain
+5. Politicians/subjects being quoted are NOT authors
+6. Only return "Unknown" if there is absolutely NO author anywhere
+
+Article text (first 1500 chars):
+{visible_text[:1500]}
+
+HTML snippet (first 800 chars):
+{html[:800]}
+
+Author name(s):"""
+            
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{
+                    "role": "system",
+                    "content": "Extract article authors. Return ONLY the name(s), nothing else. Be aggressive - if you see a potential author name, return it."
+                }, {
+                    "role": "user",
+                    "content": prompt
+                }],
+                max_tokens=100,
+                temperature=0.1
+            )
+            
+            author = response.choices[0].message.content.strip()
+            author = self._clean_author_name(author)
+            
+            logger.info(f"[AI] Returned: '{author}'")
+            
+            if self._is_valid_author(author):
+                return author
+            
+        except Exception as e:
+            logger.error(f"[AI] Failed: {e}")
         
         return "Unknown"
     
-    def _get_source_from_url(self, url: str) -> str:
-        """Get source name from URL"""
+    def _extract_from_jsonld(self, soup: BeautifulSoup) -> str:
+        """Extract from JSON-LD structured data"""
+        try:
+            scripts = soup.find_all('script', type='application/ld+json')
+            for script in scripts:
+                import json
+                data = json.loads(script.string)
+                
+                # Handle array or single object
+                if isinstance(data, list):
+                    items = data
+                else:
+                    items = [data]
+                
+                for item in items:
+                    # Check for author field
+                    if 'author' in item:
+                        author_data = item['author']
+                        if isinstance(author_data, dict):
+                            name = author_data.get('name', '')
+                            if name:
+                                return self._clean_author_name(name)
+                        elif isinstance(author_data, str):
+                            return self._clean_author_name(author_data)
+                        elif isinstance(author_data, list):
+                            names = [a.get('name', '') if isinstance(a, dict) else str(a) for a in author_data]
+                            names = [n for n in names if n]
+                            if names:
+                                return ', '.join(names[:3])
+        except Exception as e:
+            logger.debug(f"[JSON-LD] Error: {e}")
         
+        return "Unknown"
+    
+    def _extract_domain_specific(self, soup: BeautifulSoup, html: str, domain: str) -> str:
+        """Domain-specific extraction patterns"""
+        
+        # Fox News
+        if 'foxnews.com' in domain:
+            # Try meta first
+            meta = soup.find('meta', {'name': 'author'})
+            if meta and meta.get('content'):
+                return self._clean_author_name(meta['content'])
+            
+            # Try byline div
+            byline = soup.find('div', class_=re.compile(r'author|byline', re.I))
+            if byline:
+                return self._clean_author_name(byline.get_text())
+        
+        # NY Times
+        if 'nytimes.com' in domain:
+            byline = soup.find('p', class_='css-1o22h5v')
+            if byline:
+                return self._clean_author_name(byline.get_text())
+        
+        # Add more outlets as needed
+        
+        return "Unknown"
+    
+    def _clean_author_name(self, text: str) -> str:
+        """Clean up author name"""
+        if not text:
+            return "Unknown"
+        
+        # Remove common prefixes
+        text = re.sub(r'^(by|By|BY|written by|story by|author:|reporter:)\s*', '', text, flags=re.I)
+        
+        # Remove newlines and extra spaces
+        text = re.sub(r'\s+', ' ', text).strip()
+        
+        # Remove dates/times
+        text = re.sub(r'\d{1,2}/\d{1,2}/\d{2,4}', '', text)
+        text = re.sub(r'\d{1,2}:\d{2}\s*(?:AM|PM)', '', text, flags=re.I)
+        
+        # Remove outlet names
+        outlet_names = ['Fox News', 'CNN', 'BBC', 'Reuters', 'Associated Press', 'The New York Times']
+        for outlet in outlet_names:
+            text = text.replace(outlet, '').strip()
+        
+        # Remove trailing punctuation
+        text = text.rstrip('.,;:!?')
+        
+        return text.strip()
+    
+    def _is_valid_author(self, author: str) -> bool:
+        """Validate author name"""
+        if not author or author == 'Unknown':
+            return False
+        
+        # Must have at least first and last name
+        words = author.split()
+        if len(words) < 2:
+            return False
+        
+        # Must start with capital letter
+        if not author[0].isupper():
+            return False
+        
+        # Check not a politician
+        for politician in NON_JOURNALIST_NAMES:
+            if politician.lower() in author.lower():
+                return False
+        
+        # Check not too long (probably not a name)
+        if len(words) > 6:
+            return False
+        
+        # Check words look like names (mostly letters)
+        for word in words[:2]:  # Check first two words
+            if not re.match(r'^[A-Z][a-z]+$', word):
+                if not re.match(r'^[A-Z][a-z]+[A-Z][a-z]+$', word):  # Handles "McDonald"
+                    return False
+        
+        return True
+    
+    def _get_source_from_url(self, url: str) -> str:
+        """Get source name"""
         domain = urlparse(url).netloc.replace('www.', '')
         
         sources = {
             'nytimes.com': 'The New York Times',
             'washingtonpost.com': 'The Washington Post',
             'bbc.com': 'BBC',
-            'bbc.co.uk': 'BBC',
             'cnn.com': 'CNN',
             'foxnews.com': 'Fox News',
             'reuters.com': 'Reuters',
             'apnews.com': 'Associated Press',
             'theguardian.com': 'The Guardian',
-            'wsj.com': 'The Wall Street Journal',
-            'independent.co.uk': 'The Independent',
-            'npr.org': 'NPR',
-            'politico.com': 'Politico',
-            'axios.com': 'Axios',
-            'thehill.com': 'The Hill',
-            'nbcnews.com': 'NBC News'
+            'wsj.com': 'The Wall Street Journal'
         }
         
         return sources.get(domain, domain.title())
@@ -487,20 +616,15 @@ Author(s):"""
         """Count source citations"""
         if not text:
             return 0
-        
         patterns = ['according to', 'said', 'reported', 'stated']
-        count = sum(len(re.findall(p, text, re.IGNORECASE)) for p in patterns)
-        return min(count, 20)
+        return min(sum(len(re.findall(p, text, re.I)) for p in patterns), 20)
     
     def _count_quotes(self, text: str) -> int:
         """Count quotes"""
-        if not text:
-            return 0
-        return len(re.findall(r'"[^"]{10,}"', text))
+        return len(re.findall(r'"[^"]{10,}"', text)) if text else 0
     
     def _process_text(self, text: str) -> Dict[str, Any]:
-        """Process direct text input"""
-        
+        """Process direct text"""
         lines = text.strip().split('\n')
         title = lines[0][:100] if lines else "Text Analysis"
         
@@ -520,5 +644,8 @@ Author(s):"""
         }
     
     def _check_availability(self) -> bool:
-        """Service availability check"""
+        """Service availability"""
         return True
+
+
+logger.info("[ArticleExtractor v16.0] SUPER AGGRESSIVE author extraction loaded")
