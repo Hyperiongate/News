@@ -1,25 +1,16 @@
 """
-Analysis Pipeline - v12.3 CRITICAL FIX FOR SERVICE TIMEOUTS
+Analysis Pipeline - v12.4 AUTHOR PAGE URL SUPPORT
 Date: October 10, 2025
-Version: 12.3 - FIXED SERVICE TIMEOUTS & MISSING SERVICES
+Version: 12.4 - Ensures author_page_url passes to author_analyzer
 
-CRITICAL CHANGES FROM 12.2:
-✅ FIX: Increased timeouts for services (author_analyzer: 45s, fact_checker: 60s)
-✅ FIX: Better error logging shows EXACTLY why services fail
-✅ FIX: Separated TimeoutError from generic exceptions
-✅ ADDED: Per-service timeout configuration
-✅ PRESERVED: All data passing fixes from v12.2
+CHANGES FROM 12.3:
+✅ NEW: Logs author_page_url when available
+✅ NEW: Ensures author_page_url gets passed to author_analyzer
+✅ PRESERVED: All timeout fixes and data passing from v12.3
 
-THE BUG:
-- author_analyzer was timing out after 10 seconds
-- It never completed, so no author data reached the frontend
-- Logs showed only 4 services completing instead of 7
-
-THE FIX:
-- Line 169-190: Individual timeouts per service
-- author_analyzer: 45s (needs time for Wikipedia + AI research)
-- fact_checker: 60s (makes multiple AI calls)
-- Better logging shows timeout vs error vs empty result
+ENHANCEMENT:
+Now that article_extractor v18.0 extracts author_page_url,
+we need to ensure it gets passed to author_analyzer v4.0 for scraping.
 
 Save as: services/analysis_pipeline.py (REPLACE existing file)
 """
@@ -36,7 +27,7 @@ logger = logging.getLogger(__name__)
 class AnalysisPipeline:
     """
     Clean orchestration of analysis services
-    v12.2 - Fixed author data passing to services
+    v12.4 - Passes author_page_url to author_analyzer
     """
     
     # Service weights for trust score calculation
@@ -58,7 +49,7 @@ class AnalysisPipeline:
         self.services = {}
         self._load_services()
         
-        logger.info(f"[Pipeline v12.2] Initialized with {len(self.services)} services")
+        logger.info(f"[Pipeline v12.4] Initialized with {len(self.services)} services")
     
     def _load_services(self):
         """Load available services"""
@@ -130,7 +121,7 @@ class AnalysisPipeline:
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main analysis method - clean and working
-        v12.2 - Now properly passes author to services
+        v12.4 - Now passes author_page_url to services
         """
         start_time = time.time()
         
@@ -177,13 +168,19 @@ class AnalysisPipeline:
                 logger.error("No text extracted")
                 return self._error_response("No content could be extracted")
             
-            # CRITICAL FIX v12.2: Ensure ALL important fields are in article_data
-            # The extractor returns these fields, but we need to make sure they're accessible
+            # VERIFY AND LOG ARTICLE DATA
             logger.info("=" * 80)
-            logger.info("[PIPELINE v12.2] VERIFYING ARTICLE DATA FOR SERVICES")
+            logger.info("[PIPELINE v12.4] VERIFYING ARTICLE DATA FOR SERVICES")
             logger.info(f"[PIPELINE] Extracted author: '{article_data.get('author', 'NOT FOUND')}'")
             logger.info(f"[PIPELINE] Extracted domain: '{article_data.get('domain', 'NOT FOUND')}'")
             logger.info(f"[PIPELINE] Extracted source: '{article_data.get('source', 'NOT FOUND')}'")
+            
+            # NEW v12.4: Log author page URL if available
+            author_page_url = article_data.get('author_page_url')
+            if author_page_url:
+                logger.info(f"[PIPELINE v12.4] ✓ Author page URL extracted: {author_page_url}")
+            else:
+                logger.info(f"[PIPELINE v12.4] ⚠ No author page URL found (will use fallback methods)")
             
             # Ensure critical fields are present with defaults
             if 'author' not in article_data or not article_data['author']:
@@ -204,6 +201,7 @@ class AnalysisPipeline:
             
             logger.info("[PIPELINE] Article data prepared for services:")
             logger.info(f"  - author: {article_data.get('author')}")
+            logger.info(f"  - author_page_url: {article_data.get('author_page_url', 'None')}")
             logger.info(f"  - domain: {article_data.get('domain')}")
             logger.info(f"  - source: {article_data.get('source')}")
             logger.info(f"  - title: {article_data.get('title', '')[:50]}...")
@@ -234,11 +232,12 @@ class AnalysisPipeline:
                 if service_name in self.services:
                     service = self.services[service_name]
                     
-                    # CRITICAL v12.2: Log what we're passing to author_analyzer
+                    # Log what we're passing to author_analyzer
                     if service_name == 'author_analyzer':
                         logger.info("=" * 80)
-                        logger.info("[PIPELINE] PASSING TO AUTHOR_ANALYZER:")
+                        logger.info("[PIPELINE v12.4] PASSING TO AUTHOR_ANALYZER:")
                         logger.info(f"  - author: '{article_data.get('author')}'")
+                        logger.info(f"  - author_page_url: '{article_data.get('author_page_url', 'None')}'")
                         logger.info(f"  - domain: '{article_data.get('domain')}'")
                         logger.info(f"  - source: '{article_data.get('source')}'")
                         logger.info(f"  - text length: {len(article_data.get('text', ''))}")
@@ -254,7 +253,7 @@ class AnalysisPipeline:
                 # Different timeouts for different services
                 timeout = 30  # Default 30 seconds
                 if service_name == 'author_analyzer':
-                    timeout = 45  # Author analysis can take longer (Wikipedia + AI)
+                    timeout = 45  # Author analysis can take longer (Wikipedia + AI + page scraping)
                 elif service_name == 'fact_checker':
                     timeout = 60  # Fact checking takes longest (multiple AI calls)
                 
@@ -301,11 +300,12 @@ class AnalysisPipeline:
     def _run_service(self, service_name: str, service: Any, data: Dict[str, Any]) -> Dict[str, Any]:
         """Run a single service and return flattened data"""
         try:
-            # CRITICAL v12.2: Verify data before calling service
+            # Verify data before calling service
             if service_name == 'author_analyzer':
                 logger.info("[PIPELINE] _run_service called for author_analyzer")
                 logger.info(f"[PIPELINE] Data keys available: {list(data.keys())}")
                 logger.info(f"[PIPELINE] Author value: '{data.get('author', 'MISSING')}'")
+                logger.info(f"[PIPELINE] Author page URL: '{data.get('author_page_url', 'MISSING')}'")
             
             # Call service
             result = service.analyze(data)
@@ -321,10 +321,7 @@ class AnalysisPipeline:
                         logger.info(f"[DEBUG AUTHOR] Data keys ({len(data_keys)}): {data_keys[:15]}")
                         logger.info(f"[DEBUG AUTHOR] name: {result['data'].get('name', 'MISSING')}")
                         logger.info(f"[DEBUG AUTHOR] articles_found: {result['data'].get('articles_found', 'MISSING')}")
-                        logger.info(f"[DEBUG AUTHOR] article_count: {result['data'].get('article_count', 'MISSING')}")
-                        logger.info(f"[DEBUG AUTHOR] years_experience: {result['data'].get('years_experience', 'MISSING')}")
-                        logger.info(f"[DEBUG AUTHOR] awards: {result['data'].get('awards', 'MISSING')}")
-                        logger.info(f"[DEBUG AUTHOR] awards_count: {result['data'].get('awards_count', 'MISSING')}")
+                        logger.info(f"[DEBUG AUTHOR] data_sources: {result['data'].get('data_sources', 'MISSING')}")
                 logger.info("=" * 60)
             
             # Extract and flatten data
@@ -401,4 +398,4 @@ class AnalysisPipeline:
         }
 
 
-logger.info("[AnalysisPipeline] v12.2 loaded - FIXED AUTHOR DATA PASSING")
+logger.info("[AnalysisPipeline] v12.4 loaded - PASSES AUTHOR PAGE URL TO SERVICES")
