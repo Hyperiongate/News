@@ -1,14 +1,15 @@
 """
 Enhanced Source Credibility Analyzer with AI Score Comparison
-Date Modified: October 2, 2025
-Last Updated: October 2, 2025
+Date Modified: October 9, 2025
+Last Updated: October 9, 2025
 
-ENHANCEMENTS:
-1. Added automatic detection of score discrepancies
-2. AI-powered explanations for why article scores differ from outlet averages
-3. Intelligent anomaly detection for unusual scoring patterns
-4. Enhanced analysis output with variance explanations
-5. All AI methods are bulletproof (never crash)
+CHANGES FROM October 2, 2025:
+- ADDED: NY Post (nypost.com) with 60/100 score, Right-Leaning bias, Tabloid type
+- ADDED: Daily Mail UK (dailymail.co.uk) - already existed but updated
+- ADDED: 10+ additional tabloid/sensationalist outlets for comprehensive coverage
+- ADDED: Breitbart, Daily Wire, Huffington Post, Salon, Mother Jones, The Blaze
+- ENHANCED: Outlet averages list expanded to 25+ sources
+- All existing functionality preserved (DO NO HARM)
 
 This version inherits from both BaseAnalyzer and AIEnhancementMixin to provide
 intelligent score comparison and explanation capabilities.
@@ -52,23 +53,61 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
     Enhanced Source Credibility Analyzer with AI-powered score comparison
     """
     
-    # Define outlet averages for comparison
+    # Define outlet averages for comparison - EXPANDED v10/9/2025
     OUTLET_AVERAGES = {
+        # Top Tier - Wire Services & International News
         'reuters.com': 95,
         'apnews.com': 94,
         'bbc.com': 92,
+        'bbc.co.uk': 92,
+        
+        # High Credibility - Major Papers
         'nytimes.com': 88,
         'washingtonpost.com': 87,
         'npr.org': 86,
         'wsj.com': 85,
-        'abcnews.go.com': 83,  # ABC News average
+        'theguardian.com': 84,
+        'economist.com': 86,
+        
+        # Mainstream Broadcast
+        'abcnews.go.com': 83,
         'nbcnews.com': 82,
         'cbsnews.com': 81,
         'cnn.com': 80,
+        
+        # Cable News - Right
         'foxnews.com': 75,
+        
+        # Cable News - Left  
         'msnbc.com': 73,
+        
+        # Digital News
+        'politico.com': 82,
+        'axios.com': 81,
+        'thehill.com': 78,
+        
+        # Tabloid/Sensationalist - NEW ADDITIONS
+        'nypost.com': 60,  # NEW - NY Post
         'dailymail.co.uk': 45,
-        'breitbart.com': 30
+        
+        # Right-Leaning/Conservative - NEW ADDITIONS
+        'breitbart.com': 30,
+        'dailywire.com': 55,
+        'theblaze.com': 52,
+        'newsmax.com': 45,
+        'oann.com': 35,
+        
+        # Left-Leaning/Progressive - NEW ADDITIONS
+        'huffpost.com': 65,
+        'salon.com': 58,
+        'motherjones.com': 62,
+        'thenation.com': 60,
+        'vox.com': 70,
+        
+        # Fact-Checking/Investigative
+        'propublica.org': 90,
+        'factcheck.org': 92,
+        'snopes.com': 85
     }
     
     def __init__(self):
@@ -491,18 +530,12 @@ Keep response under 100 words."""
         
         return summary
     
-    # Include all the original methods from the base class
     def _check_availability(self) -> bool:
         """Service is always available since we have fallback methods"""
         return True
     
-    # [Include all other methods from the original SourceCredibility class here]
-    # Note: I'm not duplicating all methods to save space, but they should all be included
-    # from the original implementation (all the _init_* methods, _extract_domain, etc.)
-    
-    # Copy all initialization methods from original
     def _init_credibility_database(self):
-        """Initialize credibility database"""
+        """Initialize credibility database - UPDATED 10/9/2025"""
         self.source_database = {
             # Very high credibility sources
             'reuters.com': {
@@ -520,6 +553,13 @@ Keep response under 100 words."""
                 'ownership': 'Non-profit cooperative'
             },
             'bbc.com': {
+                'credibility': 'Very High', 
+                'bias': 'Minimal', 
+                'type': 'International News',
+                'founded': 1922,
+                'ownership': 'UK Government (public corporation)'
+            },
+            'bbc.co.uk': {
                 'credibility': 'Very High', 
                 'bias': 'Minimal', 
                 'type': 'International News',
@@ -563,6 +603,22 @@ Keep response under 100 words."""
                 'founded': 1889,
                 'ownership': 'News Corp (Murdoch family)'
             },
+            'theguardian.com': {
+                'credibility': 'High',
+                'bias': 'Left-Leaning',
+                'type': 'Newspaper',
+                'founded': 1821,
+                'ownership': 'Guardian Media Group'
+            },
+            'economist.com': {
+                'credibility': 'High',
+                'bias': 'Center-Right',
+                'type': 'Magazine',
+                'founded': 1843,
+                'ownership': 'The Economist Group'
+            },
+            
+            # Mainstream broadcast
             'abcnews.go.com': {
                 'credibility': 'High', 
                 'bias': 'Minimal-Left', 
@@ -584,23 +640,195 @@ Keep response under 100 words."""
                 'founded': 1927,
                 'ownership': 'Paramount Global'
             },
-            # ... include all other sources from original
+            'cnn.com': {
+                'credibility': 'Medium-High',
+                'bias': 'Left-Leaning',
+                'type': 'Cable News',
+                'founded': 1980,
+                'ownership': 'Warner Bros. Discovery'
+            },
+            
+            # Cable news - right
+            'foxnews.com': {
+                'credibility': 'Medium',
+                'bias': 'Right-Leaning',
+                'type': 'Cable News',
+                'founded': 1996,
+                'ownership': 'Fox Corporation'
+            },
+            
+            # Cable news - left
+            'msnbc.com': {
+                'credibility': 'Medium',
+                'bias': 'Left',
+                'type': 'Cable News',
+                'founded': 1996,
+                'ownership': 'NBCUniversal'
+            },
+            
+            # Digital news
+            'politico.com': {
+                'credibility': 'High',
+                'bias': 'Minimal-Left',
+                'type': 'Digital News',
+                'founded': 2007,
+                'ownership': 'Axel Springer SE'
+            },
+            'axios.com': {
+                'credibility': 'High',
+                'bias': 'Minimal',
+                'type': 'Digital News',
+                'founded': 2016,
+                'ownership': 'Cox Enterprises'
+            },
+            'thehill.com': {
+                'credibility': 'Medium-High',
+                'bias': 'Minimal-Left',
+                'type': 'Digital News',
+                'founded': 1994,
+                'ownership': 'Nexstar Media Group'
+            },
+            'vox.com': {
+                'credibility': 'Medium-High',
+                'bias': 'Left',
+                'type': 'Digital News',
+                'founded': 2014,
+                'ownership': 'Vox Media'
+            },
+            
+            # NEW ADDITIONS - Tabloid/Sensationalist
+            'nypost.com': {
+                'credibility': 'Medium-Low',
+                'bias': 'Right-Leaning',
+                'type': 'Tabloid',
+                'founded': 1801,
+                'ownership': 'News Corp (Murdoch family)'
+            },
+            'dailymail.co.uk': {
+                'credibility': 'Low',
+                'bias': 'Right',
+                'type': 'Tabloid',
+                'founded': 1896,
+                'ownership': 'Daily Mail and General Trust'
+            },
+            
+            # NEW ADDITIONS - Right-leaning
+            'breitbart.com': {
+                'credibility': 'Very Low',
+                'bias': 'Far-Right',
+                'type': 'Opinion/News',
+                'founded': 2007,
+                'ownership': 'Privately held'
+            },
+            'dailywire.com': {
+                'credibility': 'Medium-Low',
+                'bias': 'Right',
+                'type': 'Opinion/News',
+                'founded': 2015,
+                'ownership': 'The Daily Wire LLC'
+            },
+            'theblaze.com': {
+                'credibility': 'Medium-Low',
+                'bias': 'Right',
+                'type': 'Opinion/News',
+                'founded': 2011,
+                'ownership': 'Blaze Media'
+            },
+            'newsmax.com': {
+                'credibility': 'Low',
+                'bias': 'Right',
+                'type': 'Cable News/Digital',
+                'founded': 1998,
+                'ownership': 'Newsmax Media'
+            },
+            'oann.com': {
+                'credibility': 'Very Low',
+                'bias': 'Far-Right',
+                'type': 'Cable News',
+                'founded': 2013,
+                'ownership': 'Herring Networks'
+            },
+            
+            # NEW ADDITIONS - Left-leaning
+            'huffpost.com': {
+                'credibility': 'Medium',
+                'bias': 'Left',
+                'type': 'Digital News/Opinion',
+                'founded': 2005,
+                'ownership': 'BuzzFeed Inc'
+            },
+            'salon.com': {
+                'credibility': 'Medium-Low',
+                'bias': 'Left',
+                'type': 'Digital Magazine',
+                'founded': 1995,
+                'ownership': 'Salon Media Group'
+            },
+            'motherjones.com': {
+                'credibility': 'Medium',
+                'bias': 'Left',
+                'type': 'Magazine',
+                'founded': 1976,
+                'ownership': 'Foundation for National Progress'
+            },
+            'thenation.com': {
+                'credibility': 'Medium',
+                'bias': 'Left',
+                'type': 'Magazine',
+                'founded': 1865,
+                'ownership': 'The Nation Company'
+            },
+            
+            # Fact-checking
+            'factcheck.org': {
+                'credibility': 'Very High',
+                'bias': 'Minimal',
+                'type': 'Fact-Checking',
+                'founded': 2003,
+                'ownership': 'Annenberg Public Policy Center'
+            },
+            'snopes.com': {
+                'credibility': 'High',
+                'bias': 'Minimal',
+                'type': 'Fact-Checking',
+                'founded': 1994,
+                'ownership': 'Snopes Media Group'
+            },
+            
+            # International
+            'aljazeera.com': {
+                'credibility': 'Medium-High',
+                'bias': 'Minimal',
+                'type': 'International News',
+                'founded': 1996,
+                'ownership': 'Qatar Media Corporation'
+            },
+            'independent.co.uk': {
+                'credibility': 'Medium-High',
+                'bias': 'Left-Leaning',
+                'type': 'Newspaper',
+                'founded': 1986,
+                'ownership': 'Sultan Muhammad Abuljadayel'
+            }
         }
     
     def _init_fact_check_database(self):
         """Initialize fact-checking history database"""
         self.fact_check_db = {
             'high_accuracy': [
-                'reuters.com', 'apnews.com', 'bbc.com', 'npr.org',
-                'nytimes.com', 'washingtonpost.com', 'propublica.org'
+                'reuters.com', 'apnews.com', 'bbc.com', 'bbc.co.uk', 'npr.org',
+                'nytimes.com', 'washingtonpost.com', 'propublica.org', 'factcheck.org',
+                'theguardian.com', 'economist.com', 'wsj.com'
             ],
             'moderate_accuracy': [
-                'cnn.com', 'foxnews.com', 'msnbc.com', 'wsj.com',
-                'usatoday.com', 'cbsnews.com', 'abcnews.go.com'
+                'cnn.com', 'foxnews.com', 'msnbc.com', 'usatoday.com',
+                'cbsnews.com', 'abcnews.go.com', 'nbcnews.com', 'politico.com',
+                'axios.com', 'thehill.com', 'vox.com', 'huffpost.com'
             ],
             'low_accuracy': [
-                'dailymail.co.uk', 'breitbart.com', 'infowars.com',
-                'buzzfeed.com'
+                'nypost.com', 'dailymail.co.uk', 'breitbart.com', 'infowars.com',
+                'buzzfeed.com', 'newsmax.com', 'oann.com', 'dailywire.com',
+                'theblaze.com', 'salon.com'
             ],
             'correction_rates': {
                 'reuters.com': 'Low',
@@ -612,9 +840,11 @@ Keep response under 100 words."""
                 'cnn.com': 'Moderate',
                 'foxnews.com': 'Moderate',
                 'msnbc.com': 'Moderate',
+                'nypost.com': 'High',  # NEW
                 'dailymail.co.uk': 'High',
                 'breitbart.com': 'Very High',
-                'infowars.com': 'Very High'
+                'infowars.com': 'Very High',
+                'oann.com': 'Very High'  # NEW
             }
         }
     
@@ -665,6 +895,12 @@ Keep response under 100 words."""
                     'funding': ['Subscriptions', 'Advertising'],
                     'transparency_level': 'Moderate',
                     'transparency_score': 60
+                },
+                'nypost.com': {  # NEW
+                    'owner': 'News Corp (Murdoch family)',
+                    'funding': ['Advertising', 'Subscriptions'],
+                    'transparency_level': 'Moderate',
+                    'transparency_score': 50
                 }
             },
             'opaque': {
@@ -679,6 +915,12 @@ Keep response under 100 words."""
                     'funding': ['Product sales', 'Unknown sources'],
                     'transparency_level': 'Very Low',
                     'transparency_score': 10
+                },
+                'oann.com': {  # NEW
+                    'owner': 'Herring Networks',
+                    'funding': ['Unknown/Undisclosed'],
+                    'transparency_level': 'Low',
+                    'transparency_score': 15
                 }
             }
         }
@@ -693,8 +935,9 @@ Keep response under 100 words."""
                 'nytimes.com': {'bias': 'Lean Left', 'reliability': 'High'},
                 'washingtonpost.com': {'bias': 'Lean Left', 'reliability': 'High'},
                 'wsj.com': {'bias': 'Lean Right', 'reliability': 'High'},
-                'foxnews.com': {'bias': 'Lean Right', 'reliability': 'Mixed'},
+                'foxnews.com': {'bias': 'Right', 'reliability': 'Mixed'},
                 'cnn.com': {'bias': 'Lean Left', 'reliability': 'Mixed'},
+                'nypost.com': {'bias': 'Right', 'reliability': 'Mixed'},  # NEW
                 'breitbart.com': {'bias': 'Right', 'reliability': 'Low'}
             },
             'mediabiasfactcheck': {
@@ -705,7 +948,9 @@ Keep response under 100 words."""
                 'wsj.com': {'bias': 'Right-Center', 'factual': 'High'},
                 'foxnews.com': {'bias': 'Right', 'factual': 'Mixed'},
                 'cnn.com': {'bias': 'Left', 'factual': 'Mixed'},
+                'nypost.com': {'bias': 'Right', 'factual': 'Mixed'},  # NEW
                 'dailymail.co.uk': {'bias': 'Right', 'factual': 'Low'},
+                'breitbart.com': {'bias': 'Extreme Right', 'factual': 'Low'},  # NEW
                 'infowars.com': {'bias': 'Extreme Right', 'factual': 'Very Low'}
             },
             'newsguard': {
@@ -717,6 +962,7 @@ Keep response under 100 words."""
                 'wsj.com': {'score': 95, 'rating': 'Green'},
                 'foxnews.com': {'score': 69.5, 'rating': 'Yellow'},
                 'cnn.com': {'score': 74, 'rating': 'Yellow'},
+                'nypost.com': {'score': 64, 'rating': 'Yellow'},  # NEW
                 'dailymail.co.uk': {'score': 39.5, 'rating': 'Red'},
                 'infowars.com': {'score': 25, 'rating': 'Red'}
             }
@@ -903,7 +1149,15 @@ Keep response under 100 words."""
             'huffpost': 'HuffPost',
             'buzzfeed': 'BuzzFeed',
             'breitbart': 'Breitbart',
-            'propublica': 'ProPublica'
+            'propublica': 'ProPublica',
+            'dailywire': 'The Daily Wire',
+            'theblaze': 'The Blaze',
+            'newsmax': 'Newsmax',
+            'oann': 'One America News',
+            'salon': 'Salon',
+            'motherjones': 'Mother Jones',
+            'thenation': 'The Nation',
+            'vox': 'Vox'
         }
         
         for key, value in name_mapping.items():
@@ -1006,7 +1260,8 @@ Keep response under 100 words."""
         
         moderate_standards = [
             'cnn.com', 'foxnews.com', 'msnbc.com', 'usatoday.com',
-            'cbsnews.com', 'abcnews.go.com', 'nbcnews.com'
+            'cbsnews.com', 'abcnews.go.com', 'nbcnews.com', 'politico.com',
+            'axios.com', 'thehill.com', 'vox.com'
         ]
         
         if domain in high_standards:
@@ -1037,7 +1292,8 @@ Keep response under 100 words."""
             'foxnews.com': ['Dominion lawsuit settlement (2023)'],
             'cnn.com': ['Retracted Scaramucci story (2017)'],
             'dailymail.co.uk': ['Multiple privacy violations'],
-            'infowars.com': ['Sandy Hook defamation case']
+            'infowars.com': ['Sandy Hook defamation case'],
+            'nypost.com': ['Hunter Biden laptop story controversy']  # NEW
         }
         
         awards_db = {
@@ -1058,13 +1314,12 @@ Keep response under 100 words."""
     
     def _analyze_technical_factors(self, domain: str) -> Dict[str, Any]:
         """Analyze technical factors (stub implementation)"""
-        # This is a simplified version - you can expand with actual technical checks
         return {
             'age_days': None,
             'age_credibility': 'unknown',
             'age_years': None,
             'ssl': {
-                'valid': True,  # Assume HTTPS is used
+                'valid': True,
                 'days_remaining': None,
                 'issuer': None
             },
@@ -1082,7 +1337,6 @@ Keep response under 100 words."""
         indicators = []
         missing_elements = []
         
-        # Check known transparent sources
         transparent_sources = ['reuters.com', 'apnews.com', 'bbc.com', 'npr.org', 'propublica.org']
         if domain in transparent_sources:
             indicators.extend(['Clear ownership', 'Editorial standards', 'Corrections policy'])
@@ -1281,42 +1535,6 @@ Keep response under 100 words."""
         
         return findings
     
-    def _generate_enhanced_summary(self, analysis: Dict[str, Any], score: int) -> str:
-        """Generate enhanced summary"""
-        source_name = analysis.get('source_name', 'This source')
-        credibility_level = self._get_credibility_level(score)
-        
-        summary = f"{source_name} has {credibility_level.lower()} credibility (score: {score}/100). "
-        
-        db_info = analysis.get('database_info', {})
-        if analysis.get('in_database'):
-            summary += f"It is classified as having {db_info['credibility'].lower()} credibility"
-            if db_info.get('bias') and db_info['bias'] != 'Unknown':
-                summary += f" with {db_info['bias'].lower()} bias"
-            summary += ". "
-        
-        third_party = analysis.get('third_party_ratings', {})
-        if third_party:
-            ratings_count = len(third_party)
-            summary += f"Verified by {ratings_count} third-party rating service{'s' if ratings_count > 1 else ''}. "
-        
-        ownership = analysis.get('ownership', {})
-        if ownership.get('transparency_level') and ownership['transparency_level'] != 'Unknown':
-            summary += f"Ownership transparency: {ownership['transparency_level'].lower()}. "
-        
-        if score >= 80:
-            summary += "This is a highly reliable source with strong journalistic standards."
-        elif score >= 65:
-            summary += "This source generally maintains good journalistic standards."
-        elif score >= 50:
-            summary += "Exercise moderate caution - verify important claims with additional sources."
-        elif score >= 35:
-            summary += "Exercise significant caution - this source has notable credibility concerns."
-        else:
-            summary += "This source has serious credibility issues - verify all claims with reliable sources."
-        
-        return summary
-    
     def _get_factual_reporting_level(self, analysis: Dict[str, Any]) -> str:
         """Get factual reporting level"""
         fact_history = analysis.get('fact_check_history', {})
@@ -1375,3 +1593,27 @@ Keep response under 100 words."""
                 indicators.append('Secure website')
         
         return indicators
+    
+    def get_service_info(self) -> Dict[str, Any]:
+        """Get service information"""
+        info = super().get_service_info()
+        info.update({
+            'capabilities': [
+                'Multi-factor credibility analysis',
+                'Article-specific scoring',
+                'Score variance detection',
+                'Outlet baseline comparison',
+                'Third-party rating integration',
+                'Fact-check history analysis',
+                'Ownership transparency assessment',
+                'AI-enhanced insights' if self._is_ai_available() else 'Pattern-based analysis',
+                'Historical context analysis',
+                'Editorial standards evaluation'
+            ],
+            'sources_in_database': len(self.source_database),
+            'outlet_averages_tracked': len(self.OUTLET_AVERAGES),
+            'third_party_sources': len(self.third_party_ratings),
+            'visualization_ready': True,
+            'ai_enhanced': self._is_ai_available()
+        })
+        return info
