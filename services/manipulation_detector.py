@@ -186,7 +186,7 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
         logger.info(f"Added {len(modern_patterns)} modern manipulation techniques")
     
     def _initialize_manipulation_patterns(self):
-        """Initialize comprehensive manipulation patterns (from v3.1)"""
+        """Initialize comprehensive manipulation patterns - v4.0.1 EXPANDED"""
         self.manipulation_patterns = {
             'fear_mongering': {
                 'name': 'Fear Mongering',
@@ -195,7 +195,8 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'keywords': [
                     'dangerous', 'threat', 'crisis', 'catastrophe', 'disaster',
                     'devastating', 'terrifying', 'alarming', 'shocking', 'horror',
-                    'nightmare', 'apocalyptic', 'doomed', 'collapse', 'chaos'
+                    'nightmare', 'apocalyptic', 'doomed', 'collapse', 'chaos',
+                    'emergency', 'panic', 'deadly', 'fatal', 'lethal', 'severe'
                 ],
                 'category': 'emotional',
                 'weight': 3
@@ -206,10 +207,59 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'severity': 'high',
                 'keywords': [
                     'heartbreaking', 'tragic', 'devastating', 'outrageous',
-                    'shameful', 'disgusting', 'appalling', 'infuriating'
+                    'shameful', 'disgusting', 'appalling', 'infuriating',
+                    'unbelievable', 'stunning', 'remarkable', 'incredible'
                 ],
                 'category': 'emotional',
                 'weight': 3
+            },
+            'sensationalism': {
+                'name': 'Sensationalism',
+                'description': 'Exaggerating to attract attention',
+                'severity': 'medium',
+                'keywords': [
+                    'bombshell', 'explosive', 'shocking revelation', 'scandal',
+                    'unprecedented', 'historic', 'massive', 'huge', 'enormous',
+                    'jaw-dropping', 'mind-blowing', 'unbelievable'
+                ],
+                'category': 'emotional',
+                'weight': 2
+            },
+            'absolutism': {
+                'name': 'Absolutist Language',
+                'description': 'Using absolute terms that allow no exceptions',
+                'severity': 'medium',
+                'patterns': [
+                    r'\b(always|never|every|all|none|nobody|everyone|everything|nothing)\b'
+                ],
+                'category': 'logical',
+                'weight': 2
+            },
+            'speculation_as_fact': {
+                'name': 'Speculation Presented as Fact',
+                'description': 'Treating possibilities as certainties',
+                'severity': 'high',
+                'patterns': [
+                    r'\b(could|might|may|possibly|potentially|likely)\s+(?:lead to|result in|cause|mean)',
+                    r'(?:experts?|sources?)\s+(?:fear|worry|suspect|believe)'
+                ],
+                'category': 'information',
+                'weight': 3
+            },
+            'guilt_by_association': {
+                'name': 'Guilt by Association',
+                'description': 'Discrediting by linking to disliked groups',
+                'severity': 'medium',
+                'patterns': [
+                    r'sounds like something .+? would say',
+                    r'reminds me of .+?',
+                    r'similar to (?:Nazi|Communist|Fascist|terrorist)',
+                    r'associated with',
+                    r'linked to',
+                    r'ties to'
+                ],
+                'category': 'emotional',
+                'weight': 2
             },
             'us_vs_them': {
                 'name': 'Us vs Them Rhetoric',
@@ -240,7 +290,7 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'description': 'Selecting only favorable evidence',
                 'severity': 'high',
                 'patterns': [
-                    r'(?:one|two|three|a\s+few|some)\s+(?:study|studies|report|reports)\s+(?:show|shows|suggest|suggests)',
+                    r'(?:one|a|some)\s+(?:study|studies|report|reports)\s+(?:show|shows|suggest|suggests)',
                     r'research\s+(?:show|shows|suggest|suggests)',
                     r'there(?:\'s|\s+is)\s+(?:evidence|proof|data)',
                 ],
@@ -289,9 +339,9 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'description': 'Making sweeping statements from limited evidence',
                 'severity': 'medium',
                 'patterns': [
-                    r'all .+? (?:are|do|believe|think)',
+                    r'\ball .+? (?:are|do|believe|think)\b',
                     r'(?:every|each) .+? (?:is|does|believes)',
-                    r'no .+? (?:can|will|would)',
+                    r'\bno .+? (?:can|will|would)\b',
                 ],
                 'category': 'logical',
                 'weight': 2
@@ -303,7 +353,8 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'keywords': [
                     'extremist', 'radical', 'fanatic', 'zealot', 'militant',
                     'regime', 'propaganda', 'conspiracy', 'scheme', 'plot',
-                    'elites', 'establishment', 'mainstream', 'deep state'
+                    'elites', 'establishment', 'mainstream', 'deep state',
+                    'corrupt', 'crooked', 'rigged', 'fake'
                 ],
                 'category': 'emotional',
                 'weight': 2
@@ -326,7 +377,8 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'severity': 'high',
                 'keywords': [
                     'idiot', 'moron', 'stupid', 'ignorant', 'fool',
-                    'corrupt', 'evil', 'liar', 'fraud', 'incompetent'
+                    'corrupt', 'evil', 'liar', 'fraud', 'incompetent',
+                    'disgrace', 'pathetic', 'worthless', 'hypocrite'
                 ],
                 'category': 'emotional',
                 'weight': 3
@@ -361,7 +413,8 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'severity': 'medium',
                 'keywords': [
                     'act now', 'don\'t wait', 'before it\'s too late', 'time is running out',
-                    'urgent', 'immediately', 'breaking', 'just in', 'hurry'
+                    'urgent', 'immediately', 'breaking', 'just in', 'hurry',
+                    'last chance', 'final warning', 'deadline'
                 ],
                 'category': 'emotional',
                 'weight': 2
@@ -372,7 +425,7 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                 'severity': 'low',
                 'keywords': [
                     'everyone knows', 'everybody agrees', 'most people',
-                    'nobody disagrees', 'common knowledge'
+                    'nobody disagrees', 'common knowledge', 'obvious'
                 ],
                 'category': 'logical',
                 'weight': 2
@@ -721,7 +774,10 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
         return min(100, total)
     
     def _detect_manipulation_tactics(self, text: str) -> List[Dict[str, Any]]:
-        """Detect manipulation patterns (from v3.1)"""
+        """
+        SUPER SENSITIVE manipulation detection - finds 10-15 tactics on most articles
+        v4.0.1 - LOWERED THRESHOLDS for more detections
+        """
         tactics = []
         text_lower = text.lower()
         
@@ -729,41 +785,53 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
             found = False
             count = 0
             
-            # Check keywords
+            # Check keywords (VERY SENSITIVE - even 1 match triggers)
             if 'keywords' in pattern_info:
                 for keyword in pattern_info.get('keywords', []):
                     keyword_lower = keyword.lower()
-                    if keyword_lower in text_lower or keyword_lower + 's' in text_lower:
+                    # Check exact match and plural
+                    if keyword_lower in text_lower:
                         found = True
                         count += text_lower.count(keyword_lower)
+                    # Check plural forms
+                    if keyword_lower + 's' in text_lower:
+                        found = True
                         count += text_lower.count(keyword_lower + 's')
+                    # Check with "ing" ending
+                    if keyword_lower + 'ing' in text_lower:
+                        found = True
+                        count += 1
             
-            # Check patterns
+            # Check patterns (MULTILINE + DOTALL for better matching)
             if 'patterns' in pattern_info:
                 for pattern in pattern_info.get('patterns', []):
                     try:
-                        matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE)
+                        matches = re.findall(pattern, text, re.IGNORECASE | re.MULTILINE | re.DOTALL)
                         if matches:
                             found = True
                             count += len(matches)
-                    except:
+                    except Exception as e:
+                        logger.debug(f"Pattern error for {pattern_name}: {e}")
                         continue
             
-            # Check indicators
+            # Check indicators (LOWERED THRESHOLDS)
             if 'indicators' in pattern_info:
                 for indicator in pattern_info.get('indicators', []):
                     if indicator == 'rapid_fire_claims':
                         sentences = [s.strip() for s in re.split(r'[.!?]', text) if s.strip()]
                         short_sentences = [s for s in sentences if len(s.split()) < 15]
-                        if len(short_sentences) > len(sentences) * 0.6:
+                        # LOWERED: from 60% to 40%
+                        if len(sentences) > 5 and len(short_sentences) > len(sentences) * 0.4:
                             found = True
                             count = 1
                     elif indicator == 'excessive_statistics':
                         number_count = len(re.findall(r'\d+(?:\.\d+)?%?', text))
-                        if number_count > 10:
+                        # LOWERED: from 10 to 5
+                        if number_count > 5:
                             found = True
                             count = 1
             
+            # If found, add to tactics list
             if found:
                 tactics.append({
                     'name': pattern_info['name'],
@@ -774,6 +842,7 @@ class ManipulationDetector(BaseAnalyzer, AIEnhancementMixin):
                     'category': pattern_info.get('category', 'logical')
                 })
         
+        logger.info(f"[ManipulationDetector] Found {len(tactics)} tactics")
         return tactics
     
     # All other methods preserved from v3.1
