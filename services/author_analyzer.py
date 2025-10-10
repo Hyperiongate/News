@@ -925,7 +925,7 @@ REQUIREMENTS:
     # === HELPER METHODS ===
     
     def _parse_authors(self, author_text: str) -> List[str]:
-        """Parse author names from byline"""
+        """Parse author names from byline - v4.1 FIXED: Returns ALL authors, not just 3"""
         if not author_text or author_text.lower() in ['unknown', 'staff', 'editorial']:
             return []
         
@@ -940,7 +940,8 @@ REQUIREMENTS:
             if 2 <= len(words) <= 4 and words[0][0].isupper():
                 valid_authors.append(author)
         
-        return valid_authors[:3]
+        # FIXED v4.1: Return ALL authors, not just first 3
+        return valid_authors  # Was: return valid_authors[:3]
     
     def _get_wikipedia_data(self, author_name: str) -> Optional[Dict]:
         """Get author data from Wikipedia"""
