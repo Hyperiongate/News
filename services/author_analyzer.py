@@ -1,27 +1,21 @@
 """
-Author Analyzer - v4.0 AUTHOR PAGE SCRAPING
+Author Analyzer - v4.1 MULTI-AUTHOR FIX
 Date: October 10, 2025
-Last Updated: October 10, 2025
+Last Updated: October 10, 2025 - 11:10 PM
 
-MAJOR ENHANCEMENT FROM v3.0.1:
-✅ NEW: Scrapes author profile pages for rich, accurate data
-✅ NEW: _scrape_author_page() - extracts bio, articles, social links
-✅ NEW: Priority: Author page > Wikipedia > AI > Basic
-✅ PRESERVED: All v3.0.1 fixes (syntax error fixed, outlet awareness)
+CRITICAL FIX FROM v4.0:
+❌ BUG: v4.0 parsed all authors but only returned primary_author
+✅ FIX: Now preserves ALL authors in all_authors field
 
-THE ENHANCEMENT:
-User observation: "The author's name is a link to his page. This is very common."
-Solution: Scrape author profile pages (like /authors/jesus-mesa) for:
-- Full bio
-- Complete article list (accurate count!)
-- Social media links
-- Expertise areas
-- Years of experience
+THE BUG:
+Line 150: authors = self._parse_authors(author_text)  # Got 5 authors ✓
+Line 154: primary_author = authors[0]                 # Took first ✓
+Line 428: 'all_authors': [author]                     # Lost 4 authors ❌
 
-NEW FLOW:
-1. Check if author_page_url exists in data
-2. If yes, scrape it for REAL author data
-3. Fallback to Wikipedia/AI/Basic if no author page
+THE FIX:
+- Pass all_authors list to ALL _build_result_from_* functions
+- Store complete list in 'all_authors' field
+- Frontend can now display all 5 authors
 
 Save as: services/author_analyzer.py (REPLACE existing file)
 """
@@ -52,7 +46,7 @@ logger = logging.getLogger(__name__)
 class AuthorAnalyzer(BaseAnalyzer):
     """
     Comprehensive author analysis with author page scraping
-    v4.0 - Scrapes author profile pages for accurate data
+    v4.1 - FIXED: Preserves all authors, not just primary
     """
     
     def __init__(self):
@@ -92,7 +86,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
         }
         
-        logger.info("[AuthorAnalyzer v4.0] Initialized with author page scraping")
+        logger.info("[AuthorAnalyzer v4.1] Initialized - MULTI-AUTHOR SUPPORT")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -101,11 +95,11 @@ class AuthorAnalyzer(BaseAnalyzer):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main analysis method with author page scraping priority
-        v4.0 - Now checks for author_page_url first!
+        v4.1 - FIXED: Now preserves ALL authors
         """
         try:
             logger.info("=" * 60)
-            logger.info("[AuthorAnalyzer v4.0] Starting comprehensive analysis")
+            logger.info("[AuthorAnalyzer v4.1] Starting comprehensive analysis")
             
             # Extract author and domain
             author_text = data.get('author', '') or data.get('authors', '')
@@ -123,7 +117,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             if author_page_url:
                 logger.info(f"[AuthorAnalyzer] Author page URL available: {author_page_url}")
             
-            # Parse author name(s)
+            # Parse author name(s) - GETS ALL AUTHORS
             authors = self._parse_authors(author_text)
             
             if not authors:
@@ -132,11 +126,12 @@ class AuthorAnalyzer(BaseAnalyzer):
                     self._build_unknown_author_result(domain, outlet_score, text)
                 )
             
-            # Use primary author for analysis
+            # FIXED v4.1: Keep ALL authors, use first as primary
             primary_author = authors[0]
-            all_authors = authors
+            all_authors = authors  # Keep the full list!
             
             logger.info(f"[AuthorAnalyzer] Primary author: {primary_author}")
+            logger.info(f"[AuthorAnalyzer v4.1] ALL AUTHORS: {all_authors}")
             
             # Get source credibility as baseline
             outlet_info = self._get_source_credibility(domain.replace('www.', ''), {'score': outlet_score})
@@ -150,7 +145,7 @@ class AuthorAnalyzer(BaseAnalyzer):
                 if author_page_data and author_page_data.get('found'):
                     logger.info(f"[AuthorAnalyzer] ✓✓✓ Author page scrape SUCCESS!")
                     return self.get_success_result(
-                        self._build_result_from_author_page(primary_author, domain, author_page_data, outlet_score)
+                        self._build_result_from_author_page(primary_author, all_authors, domain, author_page_data, outlet_score)
                     )
                 else:
                     logger.warning("[AuthorAnalyzer] Author page scrape failed, trying fallbacks")
@@ -160,7 +155,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             if author_key in self.known_journalists:
                 logger.info(f"[AuthorAnalyzer] Found '{primary_author}' in local database")
                 return self.get_success_result(
-                    self._build_result_from_database(primary_author, domain, self.known_journalists[author_key])
+                    self._build_result_from_database(primary_author, all_authors, domain, self.known_journalists[author_key])
                 )
             
             # STEP 2: Try Wikipedia
@@ -170,7 +165,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             if wiki_data and wiki_data.get('found'):
                 logger.info(f"[AuthorAnalyzer] ✓ Found Wikipedia page for {primary_author}")
                 return self.get_success_result(
-                    self._build_result_from_wikipedia(primary_author, domain, wiki_data, outlet_score)
+                    self._build_result_from_wikipedia(primary_author, all_authors, domain, wiki_data, outlet_score)
                 )
             
             # STEP 3: Use OpenAI to research
@@ -181,13 +176,13 @@ class AuthorAnalyzer(BaseAnalyzer):
                 if ai_data:
                     logger.info(f"[AuthorAnalyzer] ✓ OpenAI research completed for {primary_author}")
                     return self.get_success_result(
-                        self._build_result_from_ai(primary_author, domain, ai_data, outlet_score)
+                        self._build_result_from_ai(primary_author, all_authors, domain, ai_data, outlet_score)
                     )
             
             # STEP 4: Fallback to basic analysis
             logger.info(f"[AuthorAnalyzer] Using outlet-aware basic analysis for '{primary_author}'")
             return self.get_success_result(
-                self._build_basic_result(primary_author, domain, outlet_score, text)
+                self._build_basic_result(primary_author, all_authors, domain, outlet_score, text)
             )
             
         except Exception as e:
@@ -275,7 +270,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         
         return "Journalist and writer."
     
-    def _extract_author_articles(self, soup: BeautifulSoup, base_url: str) -> tuple[List[Dict], int]:
+    def _extract_author_articles(self, soup: BeautifulSoup, base_url: str) -> tuple:
         """
         Extract articles from author page
         Returns: (list of article dicts, total count)
@@ -410,10 +405,10 @@ class AuthorAnalyzer(BaseAnalyzer):
         else:
             return 3
     
-    def _build_result_from_author_page(self, author: str, domain: str, page_data: Dict, outlet_score: int) -> Dict:
+    def _build_result_from_author_page(self, author: str, all_authors: List[str], domain: str, page_data: Dict, outlet_score: int) -> Dict:
         """
-        NEW v4.0: Build result from scraped author page data
-        This gives us REAL, ACCURATE data!
+        v4.1 FIXED: Build result from scraped author page data
+        Now accepts all_authors list!
         """
         
         bio = page_data.get('bio', '')
@@ -453,11 +448,13 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'type': 'LinkedIn', 'url': social_links['linkedin'], 'label': 'LinkedIn Profile'
             })
         
+        logger.info(f"[AuthorAnalyzer v4.1] Building result with ALL AUTHORS: {all_authors}")
+        
         return {
             'name': author,
             'author_name': author,
             'primary_author': author,
-            'all_authors': [author],
+            'all_authors': all_authors,  # ✅ FIXED: Use complete list!
             'credibility_score': credibility_score,
             'score': credibility_score,
             'outlet_score': outlet_score,
@@ -470,14 +467,14 @@ class AuthorAnalyzer(BaseAnalyzer):
             'years_experience': years_exp,
             'expertise': expertise,
             'expertise_areas': expertise,
-            'awards': [],  # Author pages usually don't list awards
+            'awards': [],
             'awards_count': 0,
             'wikipedia_url': None,
             'author_page_url': author_page_url,
             'social_profiles': social_profiles,
             'social_media': social_links,
             'professional_links': professional_links,
-            'verified': True,  # Author page = verified identity
+            'verified': True,
             'verification_status': 'Verified via author profile page',
             'can_trust': 'YES' if credibility_score >= 75 else 'MAYBE',
             'trust_explanation': f'Verified {org_name} journalist with author profile page. {article_count} published articles.',
@@ -492,7 +489,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             
             'articles_found': article_count,
             'article_count': article_count,
-            'recent_articles': articles[:5],  # Return top 5 recent articles
+            'recent_articles': articles[:5],
             'track_record': 'Excellent' if article_count >= 150 else 'Established' if article_count >= 50 else 'Developing',
             'analysis_timestamp': time.time(),
             'data_sources': ['Author profile page', 'Article metadata'],
@@ -521,13 +518,12 @@ class AuthorAnalyzer(BaseAnalyzer):
                 profiles.append({
                     'platform': platform_map[platform],
                     'url': url,
-                    'verified': True  # From author page = verified
+                    'verified': True
                 })
         
         return profiles
     
-    # === ALL OTHER METHODS FROM v3.0.1 ===
-    # (Preserved for backwards compatibility)
+    # === ALL OTHER METHODS - UPDATED TO ACCEPT all_authors ===
     
     def _build_unknown_author_result(self, domain: str, outlet_score: int, text: str) -> Dict:
         """Build result when no author is identified"""
@@ -654,8 +650,8 @@ REQUIREMENTS:
             logger.error(f"[OpenAI] Research error: {e}")
             return None
     
-    def _build_result_from_ai(self, author: str, domain: str, ai_data: Dict, outlet_score: int) -> Dict:
-        """Build result from OpenAI research"""
+    def _build_result_from_ai(self, author: str, all_authors: List[str], domain: str, ai_data: Dict, outlet_score: int) -> Dict:
+        """v4.1 FIXED: Build result from OpenAI research"""
         
         brief_history = ai_data.get('brief_history', 'No detailed history available')
         awards = ai_data.get('awards', [])
@@ -691,7 +687,7 @@ REQUIREMENTS:
             'name': author,
             'author_name': author,
             'primary_author': author,
-            'all_authors': [author],
+            'all_authors': all_authors,  # ✅ FIXED!
             'credibility_score': credibility_score,
             'score': credibility_score,
             'outlet_score': outlet_score,
@@ -736,8 +732,8 @@ REQUIREMENTS:
             }
         }
     
-    def _build_result_from_wikipedia(self, author: str, domain: str, wiki_data: Dict, outlet_score: int) -> Dict:
-        """Build result from Wikipedia data"""
+    def _build_result_from_wikipedia(self, author: str, all_authors: List[str], domain: str, wiki_data: Dict, outlet_score: int) -> Dict:
+        """v4.1 FIXED: Build result from Wikipedia data"""
         
         brief_history = wiki_data.get('extract', '')[:300]
         awards = wiki_data.get('awards', [])
@@ -757,7 +753,7 @@ REQUIREMENTS:
             'name': author,
             'author_name': author,
             'primary_author': author,
-            'all_authors': [author],
+            'all_authors': all_authors,  # ✅ FIXED!
             'credibility_score': credibility_score,
             'score': credibility_score,
             'outlet_score': outlet_score,
@@ -802,8 +798,8 @@ REQUIREMENTS:
             }
         }
     
-    def _build_result_from_database(self, author: str, domain: str, db_data: Dict) -> Dict:
-        """Build result from local journalist database"""
+    def _build_result_from_database(self, author: str, all_authors: List[str], domain: str, db_data: Dict) -> Dict:
+        """v4.1 FIXED: Build result from local journalist database"""
         
         credibility = db_data.get('credibility', 75)
         awards = db_data.get('awards', [])
@@ -820,7 +816,7 @@ REQUIREMENTS:
             'name': author,
             'author_name': author,
             'primary_author': author,
-            'all_authors': [author],
+            'all_authors': all_authors,  # ✅ FIXED!
             'credibility_score': credibility,
             'score': credibility,
             'domain': domain,
@@ -853,8 +849,8 @@ REQUIREMENTS:
             }
         }
     
-    def _build_basic_result(self, author: str, domain: str, outlet_score: int, text: str) -> Dict:
-        """Build basic result when no external data available"""
+    def _build_basic_result(self, author: str, all_authors: List[str], domain: str, outlet_score: int, text: str) -> Dict:
+        """v4.1 FIXED: Build basic result when no external data available"""
         
         credibility_score = self._calculate_credibility(author, outlet_score, text)
         
@@ -873,7 +869,7 @@ REQUIREMENTS:
             'name': author,
             'author_name': author,
             'primary_author': author,
-            'all_authors': [author],
+            'all_authors': all_authors,  # ✅ FIXED!
             'credibility_score': credibility_score,
             'score': credibility_score,
             'outlet_score': outlet_score,
@@ -1114,4 +1110,4 @@ REQUIREMENTS:
         return default
 
 
-logger.info("[AuthorAnalyzer] v4.0 loaded - WITH AUTHOR PAGE SCRAPING!")
+logger.info("[AuthorAnalyzer] v4.1 loaded - MULTI-AUTHOR FIX COMPLETE!")
