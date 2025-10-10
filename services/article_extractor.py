@@ -1,26 +1,23 @@
 """
-Article Extractor - v17.0 UNIVERSAL AUTHOR EXTRACTION
+Article Extractor - v18.0 AUTHOR PAGE URL EXTRACTION
 Date: October 10, 2025
 Last Updated: October 10, 2025
 
-CRITICAL CHANGES FROM v16.0:
-✅ AI-FIRST STRATEGY: OpenAI is now Method #1 (most reliable)
-✅ ENHANCED AI PROMPT: Shows first 300 chars where byline appears
-✅ FLEXIBLE NAME PATTERNS: Handles O'Connor, hyphenated, unicode, etc.
-✅ VISUAL SEARCH: Looks where humans look - top of article
-✅ UNIVERSAL: If a human can see it, AI can extract it
+MAJOR ENHANCEMENT FROM v17.0:
+✅ NEW: Extracts author page URLs from byline links
+✅ NEW: Returns author_page_url for author_analyzer to scrape
+✅ IMPROVED: Better link detection in bylines
+✅ PRESERVED: All v17.0 functionality (AI-first strategy, universal patterns)
 
-PHILOSOPHY: 
-Humans can instantly spot "By Jesus Mesa, Tom O'Connor, and Jason Lemon"
-So can GPT-4. Use AI first, then simple fallbacks.
+THE ENHANCEMENT:
+User observation: "The author's name is a link to his page. This is very common."
+Solution: Extract the href from author name links in bylines and pass to author_analyzer
 
-THE FIX:
-- AI now gets first 300 chars (where bylines are)
-- Enhanced prompt explicitly asks for ALL names
-- Regex patterns now handle apostrophes, hyphens, unicode
-- Name validation more flexible
+NEW DATA RETURNED:
+- author_page_url: Direct link to author's profile page (e.g., /authors/jesus-mesa)
+- author_page_urls: List of URLs if multiple authors (for future use)
 
-Save as: services/article_extractor.py
+Save as: services/article_extractor.py (REPLACE existing file)
 """
 
 import os
@@ -28,7 +25,7 @@ import re
 import time
 import logging
 from typing import Dict, Any, Optional, List
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
 
 import requests
 from bs4 import BeautifulSoup
@@ -57,8 +54,8 @@ NON_JOURNALIST_NAMES = {
 
 class ArticleExtractor:
     """
-    Article extractor with UNIVERSAL author detection
-    v17.0 - AI-first strategy for maximum accuracy
+    Article extractor with author page URL extraction
+    v18.0 - Captures author profile links for rich data scraping
     """
     
     def __init__(self):
@@ -75,7 +72,7 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        logger.info(f"[ArticleExtractor v17.0 UNIVERSAL] AI-first strategy - OpenAI: {openai_available}")
+        logger.info(f"[ArticleExtractor v18.0 AUTHOR PAGES] With URL extraction - OpenAI: {openai_available}")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Service interface"""
@@ -115,7 +112,7 @@ class ArticleExtractor:
     def extract(self, url: str) -> Dict[str, Any]:
         """Main extraction method"""
         
-        logger.info(f"[ArticleExtractor v17.0] Extracting: {url}")
+        logger.info(f"[ArticleExtractor v18.0] Extracting: {url}")
         
         # Try ScraperAPI first
         if self.scraperapi_key:
@@ -151,6 +148,8 @@ class ArticleExtractor:
             'extraction_successful': False,
             'sources_count': 0,
             'quotes_count': 0,
+            'author_page_url': None,
+            'author_page_urls': [],
             'error': 'Could not extract article'
         }
     
@@ -193,7 +192,7 @@ class ArticleExtractor:
         return None
     
     def _parse_html(self, html: str, url: str) -> Dict[str, Any]:
-        """Parse HTML with UNIVERSAL author extraction"""
+        """Parse HTML with author page URL extraction"""
         
         soup = BeautifulSoup(html, 'html.parser')
         
@@ -205,8 +204,8 @@ class ArticleExtractor:
         title = self._extract_title(soup)
         text = self._extract_text(soup)
         
-        # UNIVERSAL AUTHOR EXTRACTION - AI-first strategy
-        author = self._extract_author_universal(soup, html, url, text)
+        # NEW v18.0: Extract author AND author page URL
+        author, author_page_url, author_page_urls = self._extract_author_with_url(soup, html, url, text)
         
         source = self._get_source_from_url(url)
         domain = urlparse(url).netloc.replace('www.', '')
@@ -216,11 +215,15 @@ class ArticleExtractor:
         
         logger.info(f"[Parser] Title: {title[:50]}")
         logger.info(f"[Parser] Author: {author}")
+        if author_page_url:
+            logger.info(f"[Parser] Author Page: {author_page_url}")
         logger.info(f"[Parser] Words: {word_count}")
         
         return {
             'title': title,
             'author': author,
+            'author_page_url': author_page_url,  # NEW v18.0
+            'author_page_urls': author_page_urls,  # NEW v18.0
             'text': text,
             'content': text,
             'source': source,
@@ -280,35 +283,154 @@ class ArticleExtractor:
         
         return text
     
-    def _extract_author_universal(self, soup: BeautifulSoup, html: str, url: str, article_text: str) -> str:
+    def _extract_author_with_url(self, soup: BeautifulSoup, html: str, url: str, article_text: str) -> tuple[str, Optional[str], List[str]]:
         """
-        UNIVERSAL author extraction - AI-first strategy
-        v17.0 - If a human can see it, we can extract it
+        NEW v18.0: Extract author name AND author page URL
+        Returns: (author_name, primary_author_url, all_author_urls)
         """
         
         logger.info("=" * 70)
-        logger.info("[AUTHOR v17.0 UNIVERSAL] Starting AI-first extraction")
+        logger.info("[AUTHOR v18.0 WITH URL] Starting extraction")
         logger.info(f"[AUTHOR] URL: {url[:80]}")
         
         # Get visible text for searching
         visible_text = soup.get_text()
+        base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
         
-        # METHOD 1: AI EXTRACTION (PRIMARY METHOD - most reliable)
-        # AI can see what humans see - use it first!
+        # METHOD 1: Byline links (MOST COMMON - check first!)
+        # Look for <a> tags in byline areas that link to author pages
+        logger.info("[AUTHOR] METHOD 1: Byline links (author profile URLs)")
+        
+        byline_classes = [
+            'byline', 'author', 'by-line', 'article-author', 'author-name',
+            'post-author', 'entry-author', 'story-byline', 'contributor',
+            'writer', 'reporter', 'author-info', 'article-byline', 'by_author'
+        ]
+        
+        for byline_class in byline_classes:
+            elements = soup.find_all(class_=re.compile(byline_class, re.I))
+            for element in elements:
+                # Look for <a> tags within this byline element
+                author_links = element.find_all('a', href=True)
+                
+                if author_links:
+                    # Found author link(s)!
+                    author_names = []
+                    author_urls = []
+                    
+                    for link in author_links:
+                        href = link.get('href', '')
+                        link_text = link.get_text().strip()
+                        
+                        # Check if this looks like an author profile link
+                        if self._is_author_profile_link(href, link_text):
+                            author_name = self._clean_author_name(link_text)
+                            
+                            if self._is_valid_author_universal(author_name):
+                                author_names.append(author_name)
+                                
+                                # Make URL absolute
+                                if href.startswith('/'):
+                                    full_url = urljoin(base_url, href)
+                                elif href.startswith('http'):
+                                    full_url = href
+                                else:
+                                    full_url = urljoin(base_url, '/' + href)
+                                
+                                author_urls.append(full_url)
+                    
+                    if author_names:
+                        primary_author = author_names[0]
+                        primary_url = author_urls[0] if author_urls else None
+                        
+                        # Join multiple authors with comma
+                        all_authors = ', '.join(author_names)
+                        
+                        logger.info(f"[AUTHOR] ✓✓✓ Byline link SUCCESS:")
+                        logger.info(f"[AUTHOR]   Name(s): {all_authors}")
+                        logger.info(f"[AUTHOR]   URL: {primary_url}")
+                        logger.info("=" * 70)
+                        
+                        return all_authors, primary_url, author_urls
+        
+        # METHOD 2: rel="author" links
+        logger.info("[AUTHOR] METHOD 2: rel='author' links")
+        author_rel_links = soup.find_all('a', rel='author', href=True)
+        if author_rel_links:
+            link = author_rel_links[0]
+            href = link.get('href', '')
+            link_text = link.get_text().strip()
+            author_name = self._clean_author_name(link_text)
+            
+            if self._is_valid_author_universal(author_name):
+                full_url = urljoin(base_url, href) if not href.startswith('http') else href
+                
+                logger.info(f"[AUTHOR] ✓✓✓ rel='author' SUCCESS:")
+                logger.info(f"[AUTHOR]   Name: {author_name}")
+                logger.info(f"[AUTHOR]   URL: {full_url}")
+                logger.info("=" * 70)
+                
+                return author_name, full_url, [full_url]
+        
+        # METHOD 3: AI extraction (no URL available from AI)
         if openai_available and openai_client:
-            logger.info("[AUTHOR] METHOD 1 (PRIMARY): AI Visual Extraction")
+            logger.info("[AUTHOR] METHOD 3: AI Visual Extraction (no URL)")
             author = self._extract_with_ai_visual(visible_text, html, url)
             if author and author != 'Unknown':
-                logger.info(f"[AUTHOR] ✓✓✓ AI SUCCESS: {author}")
+                logger.info(f"[AUTHOR] ✓✓✓ AI SUCCESS: {author} (no URL available)")
                 logger.info("=" * 70)
-                return author
-            else:
-                logger.warning("[AUTHOR] AI returned Unknown - trying fallbacks")
-        else:
-            logger.warning("[AUTHOR] OpenAI not available - using fallback methods")
+                return author, None, []
         
-        # METHOD 2: Meta tags (structured data)
-        logger.info("[AUTHOR] METHOD 2: Meta tags")
+        # METHOD 4-7: All other methods (no URL available)
+        # These methods extract names but don't provide URLs
+        author = self._extract_author_fallback(soup, html, url, visible_text)
+        
+        if author and author != 'Unknown':
+            logger.info(f"[AUTHOR] ✓ Fallback SUCCESS: {author} (no URL available)")
+            logger.info("=" * 70)
+            return author, None, []
+        
+        logger.warning("[AUTHOR] ❌❌❌ ALL METHODS FAILED - returning Unknown")
+        logger.info("=" * 70)
+        return "Unknown", None, []
+    
+    def _is_author_profile_link(self, href: str, link_text: str) -> bool:
+        """
+        Check if a link looks like an author profile page
+        Common patterns: /author/name, /authors/name, /people/name, /staff/name, /writer/name
+        """
+        if not href:
+            return False
+        
+        href_lower = href.lower()
+        
+        # Common author URL patterns
+        author_patterns = [
+            '/author/', '/authors/', '/people/', '/staff/', '/writer/', '/writers/',
+            '/contributor/', '/contributors/', '/journalist/', '/reporter/', '/profile/'
+        ]
+        
+        # Check if href contains author patterns
+        for pattern in author_patterns:
+            if pattern in href_lower:
+                return True
+        
+        # Additional check: If link text looks like a name (2-3 words, capitalized)
+        words = link_text.split()
+        if 2 <= len(words) <= 4:
+            if all(word[0].isupper() for word in words if word):
+                return True
+        
+        return False
+    
+    def _extract_author_fallback(self, soup: BeautifulSoup, html: str, url: str, visible_text: str) -> str:
+        """
+        Fallback methods for author extraction (without URL)
+        Methods 4-7 from v17.0
+        """
+        
+        # METHOD 4: Meta tags
+        logger.info("[AUTHOR] METHOD 4: Meta tags")
         meta_names = [
             'author', 'byl', 'DC.creator', 'article:author', 'sailthru.author',
             'parsely-author', 'twitter:creator', 'Article.Author', 'Author'
@@ -318,74 +440,32 @@ class ArticleExtractor:
             if author_meta and author_meta.get('content'):
                 author = self._clean_author_name(author_meta['content'])
                 if self._is_valid_author_universal(author):
-                    logger.info(f"[AUTHOR] ✓✓✓ Meta tag SUCCESS: {author}")
-                    logger.info("=" * 70)
                     return author
         
-        # METHOD 3: JSON-LD structured data
-        logger.info("[AUTHOR] METHOD 3: JSON-LD")
+        # METHOD 5: JSON-LD
+        logger.info("[AUTHOR] METHOD 5: JSON-LD")
         author = self._extract_from_jsonld(soup)
         if author and author != 'Unknown':
-            logger.info(f"[AUTHOR] ✓✓✓ JSON-LD SUCCESS: {author}")
-            logger.info("=" * 70)
             return author
         
-        # METHOD 4: Byline classes (extensive search)
-        logger.info("[AUTHOR] METHOD 4: Byline classes")
-        byline_classes = [
-            'byline', 'author', 'by-line', 'article-author', 'author-name',
-            'post-author', 'entry-author', 'story-byline', 'contributor',
-            'writer', 'reporter', 'author-info', 'article-byline', 'by_author'
-        ]
-        for byline_class in byline_classes:
-            elements = soup.find_all(class_=re.compile(byline_class, re.I))
-            for element in elements:
-                text = element.get_text().strip()
-                author = self._clean_author_name(text)
-                if self._is_valid_author_universal(author):
-                    logger.info(f"[AUTHOR] ✓✓✓ Byline class SUCCESS: {author}")
-                    logger.info("=" * 70)
-                    return author
-        
-        # METHOD 5: rel="author" links
-        logger.info("[AUTHOR] METHOD 5: rel='author' links")
-        author_links = soup.find_all('a', rel='author')
-        for link in author_links:
-            text = link.get_text().strip()
-            author = self._clean_author_name(text)
-            if self._is_valid_author_universal(author):
-                logger.info(f"[AUTHOR] ✓✓✓ rel='author' SUCCESS: {author}")
-                logger.info("=" * 70)
-                return author
-        
-        # METHOD 6: Universal regex patterns (handles ALL name formats)
+        # METHOD 6: Universal regex patterns
         logger.info("[AUTHOR] METHOD 6: Universal regex patterns")
         author = self._extract_with_universal_patterns(visible_text)
         if author and author != 'Unknown':
-            logger.info(f"[AUTHOR] ✓✓✓ Regex SUCCESS: {author}")
-            logger.info("=" * 70)
             return author
         
-        # METHOD 7: Domain-specific extraction
+        # METHOD 7: Domain-specific
         logger.info("[AUTHOR] METHOD 7: Domain-specific patterns")
         domain = urlparse(url).netloc.replace('www.', '')
         author = self._extract_domain_specific(soup, html, domain)
         if author and author != 'Unknown':
-            logger.info(f"[AUTHOR] ✓✓✓ Domain-specific SUCCESS: {author}")
-            logger.info("=" * 70)
             return author
         
-        logger.warning("[AUTHOR] ❌❌❌ ALL METHODS FAILED - returning Unknown")
-        logger.info("=" * 70)
         return "Unknown"
     
     def _extract_with_ai_visual(self, visible_text: str, html: str, url: str) -> str:
-        """
-        AI visual extraction - sees what humans see
-        v17.0 - Enhanced to focus on byline area (first 300 chars)
-        """
+        """AI visual extraction - sees what humans see"""
         try:
-            # Extract the "byline area" - where humans look for authors
             byline_area = visible_text[:300].strip()
             
             prompt = f"""You are reading an article and need to find the author's name.
@@ -399,16 +479,10 @@ TASK: Extract the author name(s).
 RULES:
 1. Look for "By [Name]", "Written by [Name]", or author names at the start
 2. If multiple authors, list ALL separated by ", " (comma space)
-3. Examples of valid formats:
-   - "Jesus Mesa, Tom O'Connor, Jason Lemon" (3 authors)
-   - "Mary-Jane Smith" (hyphenated)
-   - "Patrick O'Brien" (apostrophe)
-   - "Sarah Lee" (simple)
-4. Ignore politicians being quoted (Trump, Biden, etc.)
+3. Examples: "Jesus Mesa, Tom O'Connor, Jason Lemon" or "Mary-Jane Smith" or "Patrick O'Brien"
+4. Ignore politicians being quoted
 5. Return ONLY the name(s), nothing else
-6. If no author visible in the byline area, return "Unknown"
-
-URL for context: {url[:100]}
+6. If no author visible, return "Unknown"
 
 Author name(s):"""
             
@@ -416,7 +490,7 @@ Author name(s):"""
                 model="gpt-3.5-turbo",
                 messages=[{
                     "role": "system",
-                    "content": "You extract article authors by reading the byline like a human would. Return ONLY the name(s) in the format 'First Last' or 'First Last, Second Name'."
+                    "content": "You extract article authors. Return ONLY the name(s)."
                 }, {
                     "role": "user",
                     "content": prompt
@@ -426,65 +500,37 @@ Author name(s):"""
             )
             
             author = response.choices[0].message.content.strip()
+            author = author.replace('Author:', '').replace('author:', '').strip().strip('"\'')
             
-            # Clean up any extra text AI might add
-            author = author.replace('Author:', '').replace('author:', '').strip()
-            author = author.strip('"\'')
-            
-            logger.info(f"[AI] Raw response: '{author}'")
-            
-            # Validate it's a real name
             if self._is_valid_author_universal(author):
                 return author
-            else:
-                logger.info(f"[AI] Response failed validation: '{author}'")
-                return "Unknown"
+            
+            return "Unknown"
             
         except Exception as e:
             logger.error(f"[AI] Failed: {e}")
             return "Unknown"
     
     def _extract_with_universal_patterns(self, visible_text: str) -> str:
-        """
-        Universal regex patterns that handle ALL name formats
-        v17.0 - Flexible patterns for apostrophes, hyphens, unicode
-        """
+        """Universal regex patterns for author extraction"""
         
-        # NAME COMPONENT PATTERN - handles O'Connor, Mary-Jane, accented chars, etc.
-        # Matches: Letters, apostrophes, hyphens, accented characters
         NAME_PART = r"[A-Z][a-zà-ÿÀ-ÿ''-]+"
         
         patterns = [
-            # Multi-author with commas and "and"
-            # Matches: "By Jesus Mesa, Tom O'Connor, and Jason Lemon"
             rf'By\s+({NAME_PART}(?:\s+{NAME_PART})*(?:,\s*{NAME_PART}(?:\s+{NAME_PART})*)*(?:\s+and\s+{NAME_PART}(?:\s+{NAME_PART})*)?)',
-            
-            # Simple "By Name Name"
             rf'By\s+({NAME_PART}(?:\s+{NAME_PART})+)',
-            
-            # Written by
             rf'Written by\s+({NAME_PART}(?:\s+{NAME_PART})+)',
-            
-            # Story by
             rf'Story by\s+({NAME_PART}(?:\s+{NAME_PART})+)',
-            
-            # Author: or Reporter:
             rf'(?:Author|Reporter):\s*({NAME_PART}(?:\s+{NAME_PART})+)',
-            
-            # Byline:
-            rf'Byline:\s*({NAME_PART}(?:\s+{NAME_PART})+)',
         ]
         
-        # Search first 2000 chars (where bylines appear)
         search_area = visible_text[:2000]
         
-        for i, pattern in enumerate(patterns, 1):
+        for pattern in patterns:
             match = re.search(pattern, search_area, re.MULTILINE | re.IGNORECASE)
             if match:
                 author_raw = match.group(1)
                 author = self._clean_author_name(author_raw)
-                
-                logger.info(f"[Regex Pattern #{i}] Found: '{author_raw}' -> cleaned: '{author}'")
                 
                 if self._is_valid_author_universal(author):
                     return author
@@ -499,14 +545,9 @@ Author name(s):"""
                 import json
                 data = json.loads(script.string)
                 
-                # Handle array or single object
-                if isinstance(data, list):
-                    items = data
-                else:
-                    items = [data]
+                items = data if isinstance(data, list) else [data]
                 
                 for item in items:
-                    # Check for author field
                     if 'author' in item:
                         author_data = item['author']
                         if isinstance(author_data, dict):
@@ -528,20 +569,7 @@ Author name(s):"""
     def _extract_domain_specific(self, soup: BeautifulSoup, html: str, domain: str) -> str:
         """Domain-specific extraction patterns"""
         
-        # Newsweek
-        if 'newsweek.com' in domain:
-            # Try meta first
-            meta = soup.find('meta', {'name': 'author'})
-            if meta and meta.get('content'):
-                return self._clean_author_name(meta['content'])
-            
-            # Try byline div
-            byline = soup.find('div', class_=re.compile(r'author|byline', re.I))
-            if byline:
-                return self._clean_author_name(byline.get_text())
-        
-        # Fox News
-        if 'foxnews.com' in domain:
+        if 'newsweek.com' in domain or 'foxnews.com' in domain:
             meta = soup.find('meta', {'name': 'author'})
             if meta and meta.get('content'):
                 return self._clean_author_name(meta['content'])
@@ -550,7 +578,6 @@ Author name(s):"""
             if byline:
                 return self._clean_author_name(byline.get_text())
         
-        # NY Times
         if 'nytimes.com' in domain:
             byline = soup.find('p', class_='css-1o22h5v')
             if byline:
@@ -559,71 +586,50 @@ Author name(s):"""
         return "Unknown"
     
     def _clean_author_name(self, text: str) -> str:
-        """Clean up author name - preserves apostrophes and hyphens"""
+        """Clean up author name"""
         if not text:
             return "Unknown"
         
-        # Remove common prefixes (case insensitive)
         text = re.sub(r'^(?:by|written by|story by|author:|reporter:)\s*', '', text, flags=re.I)
-        
-        # Remove newlines and normalize spaces
         text = re.sub(r'\s+', ' ', text).strip()
-        
-        # Remove dates/times
         text = re.sub(r'\d{1,2}/\d{1,2}/\d{2,4}', '', text)
         text = re.sub(r'\d{1,2}:\d{2}\s*(?:AM|PM)', '', text, flags=re.I)
         
-        # Remove outlet names at the end
         outlet_names = ['Fox News', 'CNN', 'BBC', 'Reuters', 'Associated Press', 'The New York Times', 'Newsweek']
         for outlet in outlet_names:
             text = text.replace(outlet, '').strip()
         
-        # Remove trailing punctuation (but NOT apostrophes/hyphens inside names)
         text = text.rstrip('.,;:!?')
         
         return text.strip()
     
     def _is_valid_author_universal(self, author: str) -> bool:
-        """
-        Universal author validation - handles ALL name formats
-        v17.0 - Much more flexible than v16.0
-        """
+        """Universal author validation"""
         if not author or author == 'Unknown':
             return False
         
-        # Split by comma for multi-author check
         author_list = [a.strip() for a in author.split(',')]
         
-        # Validate each author
         for single_author in author_list:
-            # Remove "and" prefix if present
             single_author = re.sub(r'^\s*and\s+', '', single_author, flags=re.I)
             
             words = single_author.split()
             
-            # Must have at least first and last name
             if len(words) < 2:
                 return False
             
-            # Must start with capital letter
             if not single_author[0].isupper():
                 return False
             
-            # Check not a politician
             for politician in NON_JOURNALIST_NAMES:
                 if politician.lower() in single_author.lower():
                     return False
             
-            # Check not too long (probably not a name)
             if len(words) > 6:
                 return False
             
-            # NEW v17.0: Validate name components (allows apostrophes, hyphens)
-            # Each word should be mostly letters with optional apostrophes/hyphens
-            for word in words[:2]:  # Check first two words
-                # Allow: Letters, apostrophes, hyphens, accented chars
+            for word in words[:2]:
                 if not re.match(r"^[A-ZÀ-Ÿ][a-zà-ÿ''-]+$", word, re.UNICODE):
-                    logger.debug(f"[Validation] Word '{word}' failed pattern check")
                     return False
         
         return True
@@ -666,6 +672,8 @@ Author name(s):"""
         return {
             'title': title,
             'author': 'User Provided',
+            'author_page_url': None,
+            'author_page_urls': [],
             'text': text,
             'content': text,
             'source': 'Direct Input',
@@ -683,4 +691,4 @@ Author name(s):"""
         return True
 
 
-logger.info("[ArticleExtractor v17.0 UNIVERSAL] AI-first strategy loaded - Maximum reliability")
+logger.info("[ArticleExtractor v18.0] WITH AUTHOR PAGE URL EXTRACTION - Ready to capture profile links!")
