@@ -925,9 +925,9 @@ window.ServiceTemplates = {
         }
         
         // Display expertise tags
+        let expertiseArray = []; // DECLARE OUTSIDE IF BLOCK
         const expertiseTags = document.getElementById('expertise-tags');
         if (expertiseTags && expertise) {
-            let expertiseArray = [];
             if (typeof expertise === 'string') {
                 expertiseArray = expertise.split(',').map(e => e.trim());
             } else if (Array.isArray(expertise)) {
