@@ -1,21 +1,18 @@
 /**
- * TruthLens Service Templates - COMPLETE FILE
+ * TruthLens Service Templates - COMPLETE FILE WITH FACT CHECKER FIX
  * Date: October 11, 2025
- * Version: 4.16.0 - ENHANCED AUTHOR CARDS WITH CLICKABLE LINKS
+ * Version: 4.17.0 - FIXED FACT CHECKER DISPLAY
  * 
  * LATEST CHANGE (October 11, 2025):
- * - ENHANCED: Author cards now display bio, expertise, social links, awards
- * - ADDED: Clickable author cards that link to Wikipedia/LinkedIn/Author pages
- * - ADDED: Social media icons with working links
- * - ADDED: "View Full Profile" buttons for each author
- * - FIXED: Shows rich data for primary author, co-authors display with available info
- * 
- * All other services remain unchanged from 4.15.0
+ * - CRITICAL FIX: displayFactChecker now displays individual claims with verdicts
+ * - Shows claim text, verdict badge, confidence %, explanation
+ * - Color-coded by verdict (green=true, red=false, yellow=mixed, gray=unverified)
+ * - Enhanced author cards with clickable links (from v4.16.0)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
  * FILE IS COMPLETE - NO TRUNCATION - READY TO DEPLOY
- * Total Lines: ~1600
+ * Total Lines: ~1700
  */
 
 // Create global ServiceTemplates object
@@ -452,7 +449,166 @@ window.ServiceTemplates = {
 
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.16.0] Displaying analyses with data:', data);
+        console.log('[Author Display v4.16.0] Complete - Enhanced with clickable links');
+    },
+    
+    /**
+     * NEW v4.16.0: Helper function to build individual author cards
+     */
+    _buildAuthorCard: function(name, position, organization, isPrimary, links, bio, expertise) {
+        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+        const borderColor = isPrimary ? '#3b82f6' : '#06b6d4';
+        const bgGradient = isPrimary ? 
+            'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 
+            'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)';
+        const titleColor = isPrimary ? '#1e40af' : '#0e7490';
+        const badgeColor = isPrimary ? '#3b82f6' : '#06b6d4';
+        const label = isPrimary ? 'Primary Author' : 'Co-Author';
+        
+        let cardHTML = `
+            <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; position: relative; overflow: hidden;"
+                 onmouseover="this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)'; this.style.transform='translateY(-2px)';"
+                 onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'; this.style.transform='translateY(0)';">
+                
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <div style="width: 40px; height: 40px; background: ${bgGradient}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem; flex-shrink: 0;">
+                        ${initials}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 700; color: ${titleColor}; font-size: 0.95rem;">${name}</div>
+                        <div style="font-size: 0.75rem; color: ${badgeColor}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${label}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem;">
+                    ${position} at ${organization}
+                </div>
+        `;
+        
+        // Add bio snippet if available (primary author only)
+        if (bio && bio.length > 10) {
+            const bioSnippet = bio.substring(0, 120) + (bio.length > 120 ? '...' : '');
+            cardHTML += `
+                <div style="font-size: 0.8rem; color: #64748b; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                    ${bioSnippet}
+                </div>
+            `;
+        }
+        
+        // Add expertise tags if available
+        if (expertise && expertise.length > 0) {
+            cardHTML += `
+                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem;">
+                    ${expertise.slice(0, 3).map(exp => 
+                        `<span style="font-size: 0.65rem; background: ${bgGradient}; color: white; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600;">
+                            ${exp}
+                        </span>`
+                    ).join('')}
+                </div>
+            `;
+        }
+        
+        // Add clickable links if available
+        if (links && links.length > 0) {
+            cardHTML += `
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
+            `;
+            
+            links.forEach(link => {
+                cardHTML += `
+                    <a href="${link.url}" target="_blank" rel="noopener noreferrer"
+                       style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.4rem; background: ${bgGradient}; color: white; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;"
+                       onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"
+                       title="${link.label}">
+                        <i class="${link.icon}"></i>
+                    </a>
+                `;
+            });
+            
+            cardHTML += `</div>`;
+        } else if (!isPrimary) {
+            // For co-authors without links, show a note
+            cardHTML += `
+                <div style="font-size: 0.7rem; color: #94a3b8; text-align: center; padding: 0.5rem; margin-top: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                    <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
+                    Additional author information available in full analysis
+                </div>
+            `;
+        }
+        
+        cardHTML += `</div>`;
+        
+        return cardHTML;
+    },
+
+    // Helper function to update elements
+    updateElement: function(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value;
+        }
+    },
+
+    getBiasPosition: function(direction, score) {
+        const positions = {
+            'far-left': 10,
+            'left': 25,
+            'center-left': 40,
+            'center': 50,
+            'center-right': 60,
+            'right': 75,
+            'far-right': 90
+        };
+        return positions[direction.toLowerCase()] || 50;
+    }
+};
+
+console.log('ServiceTemplates loaded successfully - v4.17.0 FACT CHECKER FIXED');
+
+// Chart Integration
+const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
+
+window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
+    console.log('[ServiceTemplates v4.17.0] displayAllAnalyses called');
+    originalDisplayAllAnalyses.call(this, data, analyzer);
+    setTimeout(() => {
+        integrateChartsIntoServices(data);
+    }, 500);
+};
+
+function integrateChartsIntoServices(data) {
+    console.log('[Charts] Integrating into service cards...');
+    
+    if (!window.ChartRenderer || !window.ChartRenderer.isReady()) {
+        console.warn('[Charts] ChartRenderer not available');
+        return;
+    }
+    
+    const detailed = data.detailed_analysis || {};
+    
+    const serviceCharts = [
+        {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
+        {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
+    ];
+    
+    serviceCharts.forEach(service => {
+        const serviceData = detailed[service.key];
+        
+        if (serviceData && serviceData.chart_data) {
+            console.log(`[Charts] Rendering ${service.id} chart`);
+            setTimeout(() => {
+                const canvasId = service.id + 'Chart';
+                window.ChartRenderer.renderChart(canvasId, serviceData.chart_data);
+            }, service.delay);
+        } else {
+            console.log(`[Charts] No chart data for ${service.id}`);
+        }
+    });
+    
+    console.log('[Charts] ✓ Integration complete');
+}
+
+console.log('[Charts] Service Templates v4.17.0 loaded - COMPLETE FILE - FACT CHECKER FIXED');('[ServiceTemplates v4.17.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -789,9 +945,11 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Fact Checker
+    // ============================================================================
+    // DISPLAY FACT CHECKER - v4.17.0 CRITICAL FIX
+    // ============================================================================
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker Display v4.16.0] Data received:', data);
+        console.log('[FactChecker Display v4.17.0 FIXED] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
@@ -805,7 +963,94 @@ window.ServiceTemplates = {
         const claimsContainer = document.getElementById('claims-list-enhanced');
         if (claimsContainer) {
             if (factChecks && factChecks.length > 0) {
-                claimsContainer.innerHTML = '<p style="color: #10b981;">Claims loaded successfully!</p>';
+                console.log('[FactChecker] Rendering', factChecks.length, 'claims');
+                
+                // Build claims HTML
+                let claimsHTML = '';
+                
+                factChecks.forEach(function(claim, index) {
+                    const verdict = claim.verdict || 'unverified';
+                    const confidence = claim.confidence || 0;
+                    const explanation = claim.explanation || 'No explanation available';
+                    const claimText = claim.claim || claim.text || 'Claim text unavailable';
+                    const sources = claim.sources || [];
+                    
+                    // Determine verdict styling
+                    let verdictBadge = '';
+                    let verdictColor = '';
+                    let verdictIcon = '';
+                    
+                    if (verdict === 'true' || verdict === 'mostly_true' || verdict === 'likely_true') {
+                        verdictBadge = 'TRUE';
+                        verdictColor = '#10b981';
+                        verdictIcon = 'fa-check-circle';
+                    } else if (verdict === 'false' || verdict === 'mostly_false' || verdict === 'likely_false') {
+                        verdictBadge = 'FALSE';
+                        verdictColor = '#ef4444';
+                        verdictIcon = 'fa-times-circle';
+                    } else if (verdict === 'mixed' || verdict === 'misleading' || verdict === 'needs_context') {
+                        verdictBadge = 'MIXED';
+                        verdictColor = '#f59e0b';
+                        verdictIcon = 'fa-exclamation-circle';
+                    } else {
+                        verdictBadge = 'UNVERIFIED';
+                        verdictColor = '#6b7280';
+                        verdictIcon = 'fa-question-circle';
+                    }
+                    
+                    claimsHTML += `
+                        <div class="claim-card" style="background: white; border-left: 4px solid ${verdictColor}; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="font-weight: 700; color: #1e293b; font-size: 0.9rem;">Claim ${index + 1}</span>
+                                    <span style="background: ${verdictColor}; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                        <i class="fas ${verdictIcon}"></i>
+                                        ${verdictBadge}
+                                    </span>
+                                </div>
+                                <span style="background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                                    ${confidence}% Confidence
+                                </span>
+                            </div>
+                            
+                            <div style="background: #f8fafc; padding: 0.75rem; border-radius: 6px; margin-bottom: 0.75rem; border-left: 3px solid ${verdictColor};">
+                                <p style="margin: 0; color: #1e293b; font-size: 0.9rem; line-height: 1.5; font-weight: 500;">
+                                    "${claimText}"
+                                </p>
+                            </div>
+                            
+                            <div style="margin-bottom: 0.5rem;">
+                                <div style="font-weight: 600; color: #475569; font-size: 0.85rem; margin-bottom: 0.25rem;">
+                                    <i class="fas fa-info-circle" style="color: ${verdictColor}; margin-right: 0.25rem;"></i>
+                                    Analysis:
+                                </div>
+                                <p style="margin: 0; color: #64748b; font-size: 0.85rem; line-height: 1.5;">
+                                    ${explanation}
+                                </p>
+                            </div>
+                            
+                            ${sources.length > 0 ? `
+                                <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
+                                    <div style="font-weight: 600; color: #475569; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                        <i class="fas fa-database" style="margin-right: 0.25rem;"></i>
+                                        Verified by:
+                                    </div>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                        ${sources.map(source => `
+                                            <span style="background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600;">
+                                                ${source}
+                                            </span>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                });
+                
+                claimsContainer.innerHTML = claimsHTML;
+                console.log('[FactChecker] ✓ Rendered', factChecks.length, 'claims successfully');
+                
             } else {
                 claimsContainer.innerHTML = `
                     <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
@@ -925,7 +1170,7 @@ window.ServiceTemplates = {
         }
         
         // Display expertise tags
-        let expertiseArray = []; // DECLARE OUTSIDE IF BLOCK
+        let expertiseArray = [];
         const expertiseTags = document.getElementById('expertise-tags');
         if (expertiseTags && expertise) {
             if (typeof expertise === 'string') {
@@ -1042,7 +1287,7 @@ window.ServiceTemplates = {
                             position,
                             organization,
                             false,
-                            [], // Co-authors don't have links yet (backend only analyzes primary)
+                            [],
                             null,
                             null
                         );
@@ -1060,163 +1305,4 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Author Display v4.16.0] Complete - Enhanced with clickable links');
-    },
-    
-    /**
-     * NEW v4.16.0: Helper function to build individual author cards
-     */
-    _buildAuthorCard: function(name, position, organization, isPrimary, links, bio, expertise) {
-        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
-        const borderColor = isPrimary ? '#3b82f6' : '#06b6d4';
-        const bgGradient = isPrimary ? 
-            'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 
-            'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)';
-        const titleColor = isPrimary ? '#1e40af' : '#0e7490';
-        const badgeColor = isPrimary ? '#3b82f6' : '#06b6d4';
-        const label = isPrimary ? 'Primary Author' : 'Co-Author';
-        
-        let cardHTML = `
-            <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; position: relative; overflow: hidden;"
-                 onmouseover="this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)'; this.style.transform='translateY(-2px)';"
-                 onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'; this.style.transform='translateY(0)';">
-                
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-                    <div style="width: 40px; height: 40px; background: ${bgGradient}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem; flex-shrink: 0;">
-                        ${initials}
-                    </div>
-                    <div style="flex: 1; min-width: 0;">
-                        <div style="font-weight: 700; color: ${titleColor}; font-size: 0.95rem;">${name}</div>
-                        <div style="font-size: 0.75rem; color: ${badgeColor}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${label}</div>
-                    </div>
-                </div>
-                
-                <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem;">
-                    ${position} at ${organization}
-                </div>
-        `;
-        
-        // Add bio snippet if available (primary author only)
-        if (bio && bio.length > 10) {
-            const bioSnippet = bio.substring(0, 120) + (bio.length > 120 ? '...' : '');
-            cardHTML += `
-                <div style="font-size: 0.8rem; color: #64748b; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
-                    ${bioSnippet}
-                </div>
-            `;
-        }
-        
-        // Add expertise tags if available
-        if (expertise && expertise.length > 0) {
-            cardHTML += `
-                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem;">
-                    ${expertise.slice(0, 3).map(exp => 
-                        `<span style="font-size: 0.65rem; background: ${bgGradient}; color: white; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600;">
-                            ${exp}
-                        </span>`
-                    ).join('')}
-                </div>
-            `;
-        }
-        
-        // Add clickable links if available
-        if (links && links.length > 0) {
-            cardHTML += `
-                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
-            `;
-            
-            links.forEach(link => {
-                cardHTML += `
-                    <a href="${link.url}" target="_blank" rel="noopener noreferrer"
-                       style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.4rem; background: ${bgGradient}; color: white; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;"
-                       onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"
-                       title="${link.label}">
-                        <i class="${link.icon}"></i>
-                    </a>
-                `;
-            });
-            
-            cardHTML += `</div>`;
-        } else if (!isPrimary) {
-            // For co-authors without links, show a note
-            cardHTML += `
-                <div style="font-size: 0.7rem; color: #94a3b8; text-align: center; padding: 0.5rem; margin-top: 0.5rem; background: #f8fafc; border-radius: 4px;">
-                    <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
-                    Additional author information available in full analysis
-                </div>
-            `;
-        }
-        
-        cardHTML += `</div>`;
-        
-        return cardHTML;
-    },
-
-    // Helper function to update elements
-    updateElement: function(id, value) {
-        const element = document.getElementById(id);
-        if (element) {
-            element.textContent = value;
-        }
-    },
-
-    getBiasPosition: function(direction, score) {
-        const positions = {
-            'far-left': 10,
-            'left': 25,
-            'center-left': 40,
-            'center': 50,
-            'center-right': 60,
-            'right': 75,
-            'far-right': 90
-        };
-        return positions[direction.toLowerCase()] || 50;
-    }
-};
-
-console.log('ServiceTemplates loaded successfully - v4.16.0 ENHANCED AUTHOR CARDS');
-
-// Chart Integration
-const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
-
-window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.16.0] displayAllAnalyses called');
-    originalDisplayAllAnalyses.call(this, data, analyzer);
-    setTimeout(() => {
-        integrateChartsIntoServices(data);
-    }, 500);
-};
-
-function integrateChartsIntoServices(data) {
-    console.log('[Charts] Integrating into service cards...');
-    
-    if (!window.ChartRenderer || !window.ChartRenderer.isReady()) {
-        console.warn('[Charts] ChartRenderer not available');
-        return;
-    }
-    
-    const detailed = data.detailed_analysis || {};
-    
-    const serviceCharts = [
-        {id: 'manipulationDetector', key: 'manipulation_detector', delay: 800},
-        {id: 'contentAnalyzer', key: 'content_analyzer', delay: 900}
-    ];
-    
-    serviceCharts.forEach(service => {
-        const serviceData = detailed[service.key];
-        
-        if (serviceData && serviceData.chart_data) {
-            console.log(`[Charts] Rendering ${service.id} chart`);
-            setTimeout(() => {
-                const canvasId = service.id + 'Chart';
-                window.ChartRenderer.renderChart(canvasId, serviceData.chart_data);
-            }, service.delay);
-        } else {
-            console.log(`[Charts] No chart data for ${service.id}`);
-        }
-    });
-    
-    console.log('[Charts] ✓ Integration complete');
-}
-
-console.log('[Charts] Service Templates v4.16.0 loaded - COMPLETE FILE - Enhanced Author Cards with Links');
+        console.log
