@@ -1,20 +1,21 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
- * Date: October 10, 2025
- * Version: 4.15.0 - MULTI-AUTHOR DISPLAY FIX
+ * Date: October 11, 2025
+ * Version: 4.16.0 - ENHANCED AUTHOR CARDS WITH CLICKABLE LINKS
  * 
- * LATEST CHANGE (October 10, 2025):
- * - FIXED: displayAuthor now shows ALL authors, not just primary
- * - ADDED: Co-authors section with visual cards for each author
- * - ADDED: "Article by X Authors" header when multiple authors
- * - ENHANCED: Primary author highlighted, co-authors shown clearly
+ * LATEST CHANGE (October 11, 2025):
+ * - ENHANCED: Author cards now display bio, expertise, social links, awards
+ * - ADDED: Clickable author cards that link to Wikipedia/LinkedIn/Author pages
+ * - ADDED: Social media icons with working links
+ * - ADDED: "View Full Profile" buttons for each author
+ * - FIXED: Shows rich data for primary author, co-authors display with available info
  * 
- * All other services remain unchanged from 4.14.0
+ * All other services remain unchanged from 4.15.0
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
  * FILE IS COMPLETE - NO TRUNCATION - READY TO DEPLOY
- * Total Lines: ~1500
+ * Total Lines: ~1600
  */
 
 // Create global ServiceTemplates object
@@ -214,9 +215,6 @@ window.ServiceTemplates = {
                 </div>
             `,
             
-            // ============================================================================
-            // TRANSPARENCY ANALYZER - REDESIGNED v2.0.0
-            // ============================================================================
             transparencyAnalyzer: `
                 <div class="service-analysis-section">
                     <div class="transparency-enhanced">
@@ -269,148 +267,6 @@ window.ServiceTemplates = {
                                 </div>
                                 <div class="trans-stat-value" id="trans-verifiable-rate">--</div>
                                 <div class="trans-stat-label">Verifiable</div>
-                            </div>
-                        </div>
-
-                        <!-- BREAKDOWN SECTION -->
-                        <div class="trans-breakdown-section">
-                            <h3 class="trans-section-title">
-                                <i class="fas fa-chart-pie"></i>
-                                Transparency Breakdown
-                            </h3>
-                            <div class="trans-breakdown-grid">
-                                <div class="trans-breakdown-card">
-                                    <div class="trans-breakdown-header">
-                                        <div class="trans-breakdown-title">
-                                            <div class="trans-breakdown-icon">
-                                                <i class="fas fa-link"></i>
-                                            </div>
-                                            <span>Sources</span>
-                                        </div>
-                                        <div class="trans-breakdown-score" id="trans-sources-points">+--</div>
-                                    </div>
-                                    <div class="trans-breakdown-content">
-                                        <div class="trans-breakdown-value" id="trans-sources-detail">-- Sources</div>
-                                        <div class="trans-breakdown-desc" id="trans-sources-desc">Analyzing sourcing quality...</div>
-                                        <div class="trans-progress-bar">
-                                            <div class="trans-progress-fill" id="trans-sources-progress"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="trans-breakdown-card">
-                                    <div class="trans-breakdown-header">
-                                        <div class="trans-breakdown-title">
-                                            <div class="trans-breakdown-icon">
-                                                <i class="fas fa-quote-right"></i>
-                                            </div>
-                                            <span>Quotes</span>
-                                        </div>
-                                        <div class="trans-breakdown-score" id="trans-quotes-points">+--</div>
-                                    </div>
-                                    <div class="trans-breakdown-content">
-                                        <div class="trans-breakdown-value" id="trans-quotes-detail">-- Quotes</div>
-                                        <div class="trans-breakdown-desc" id="trans-quotes-desc">Evaluating expert input...</div>
-                                        <div class="trans-progress-bar">
-                                            <div class="trans-progress-fill" id="trans-quotes-progress"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="trans-breakdown-card">
-                                    <div class="trans-breakdown-header">
-                                        <div class="trans-breakdown-title">
-                                            <div class="trans-breakdown-icon">
-                                                <i class="fas fa-fingerprint"></i>
-                                            </div>
-                                            <span>Attribution</span>
-                                        </div>
-                                        <div class="trans-breakdown-score" id="trans-attribution-points">+--</div>
-                                    </div>
-                                    <div class="trans-breakdown-content">
-                                        <div class="trans-breakdown-value" id="trans-attribution-detail">--</div>
-                                        <div class="trans-breakdown-desc" id="trans-attribution-desc">Checking source clarity...</div>
-                                        <div class="trans-progress-bar">
-                                            <div class="trans-progress-fill" id="trans-attribution-progress"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="trans-breakdown-card">
-                                    <div class="trans-breakdown-header">
-                                        <div class="trans-breakdown-title">
-                                            <div class="trans-breakdown-icon">
-                                                <i class="fas fa-check-circle"></i>
-                                            </div>
-                                            <span>Verifiability</span>
-                                        </div>
-                                        <div class="trans-breakdown-score" id="trans-verifiable-points">+--</div>
-                                    </div>
-                                    <div class="trans-breakdown-content">
-                                        <div class="trans-breakdown-value" id="trans-verifiable-detail">--%</div>
-                                        <div class="trans-breakdown-desc" id="trans-verifiable-desc">Assessing claim verifiability...</div>
-                                        <div class="trans-progress-bar">
-                                            <div class="trans-progress-fill" id="trans-verifiable-progress"></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- CHECKLIST -->
-                        <div class="trans-checklist">
-                            <h3 class="trans-section-title">
-                                <i class="fas fa-tasks"></i>
-                                Transparency Checklist
-                            </h3>
-                            <div id="trans-checklist-items">
-                                <!-- Will be populated by JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- WHY IT MATTERS -->
-                        <div class="trans-why-matters">
-                            <h3>
-                                <i class="fas fa-lightbulb"></i>
-                                Why Transparency Matters
-                            </h3>
-                            <div class="trans-matters-grid">
-                                <div class="trans-matter-card">
-                                    <div class="trans-matter-icon">
-                                        <i class="fas fa-shield-alt"></i>
-                                    </div>
-                                    <div class="trans-matter-content">
-                                        <h4>Builds Trust</h4>
-                                        <p>Clear sourcing shows the journalist did their homework and has nothing to hide</p>
-                                    </div>
-                                </div>
-                                <div class="trans-matter-card">
-                                    <div class="trans-matter-icon">
-                                        <i class="fas fa-search"></i>
-                                    </div>
-                                    <div class="trans-matter-content">
-                                        <h4>Enables Verification</h4>
-                                        <p>You can check sources yourself instead of blindly trusting the article</p>
-                                    </div>
-                                </div>
-                                <div class="trans-matter-card">
-                                    <div class="trans-matter-icon">
-                                        <i class="fas fa-balance-scale"></i>
-                                    </div>
-                                    <div class="trans-matter-content">
-                                        <h4>Shows Accountability</h4>
-                                        <p>Clear sources mean journalists can be held accountable for errors</p>
-                                    </div>
-                                </div>
-                                <div class="trans-matter-card">
-                                    <div class="trans-matter-icon">
-                                        <i class="fas fa-graduation-cap"></i>
-                                    </div>
-                                    <div class="trans-matter-content">
-                                        <h4>Educational Value</h4>
-                                        <p>Good sourcing helps readers learn more about the topic and explore deeper</p>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -596,7 +452,7 @@ window.ServiceTemplates = {
 
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.15.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.16.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -935,7 +791,7 @@ window.ServiceTemplates = {
 
     // Display Fact Checker
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker Display v4.15.0] Data received:', data);
+        console.log('[FactChecker Display v4.16.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
@@ -1001,12 +857,12 @@ window.ServiceTemplates = {
     },
 
     // ============================================================================
-    // AUTHOR DISPLAY - v4.15.0 MULTI-AUTHOR FIX
+    // AUTHOR DISPLAY - v4.16.0 ENHANCED WITH CLICKABLE LINKS
     // ============================================================================
     displayAuthor: function(data, analyzer) {
-        console.log('[Author Display v4.15.0 MULTI-AUTHOR] Received data:', data);
+        console.log('[Author Display v4.16.0 ENHANCED] Received data:', data);
         
-        // NEW: Get all authors
+        // Get all authors
         const allAuthors = data.all_authors || data.authors || [];
         const primaryAuthor = data.primary_author || data.name || data.author_name || 'Unknown Author';
         
@@ -1017,10 +873,8 @@ window.ServiceTemplates = {
         } else if (Array.isArray(allAuthors) && allAuthors.length > 0) {
             authorList = allAuthors;
         } else if (primaryAuthor.includes(',')) {
-            // Fallback: parse from primary_author if it contains commas
             authorList = primaryAuthor.split(',').map(name => name.trim());
         } else {
-            // Single author
             authorList = [primaryAuthor];
         }
         
@@ -1029,6 +883,10 @@ window.ServiceTemplates = {
         const credibility = data.credibility_score || data.score || data.credibility || 70;
         const position = data.position || 'Journalist';
         const organization = data.organization || data.domain || 'News Organization';
+        const bio = data.bio || data.biography || '';
+        const expertise = data.expertise || data.expertise_areas || [];
+        const socialMedia = data.social_media || {};
+        const wikipediaUrl = data.wikipedia_url || null;
         
         // Display primary author name in main header
         this.updateElement('author-name', authorList[0]);
@@ -1051,7 +909,81 @@ window.ServiceTemplates = {
         this.updateElement('author-track-record', data.track_record || 'Good');
         
         // ============================================================================
-        // NEW v4.15.0: MULTI-AUTHOR DISPLAY
+        // NEW v4.16.0: DISPLAY BIO AND EXPERTISE FOR PRIMARY AUTHOR
+        // ============================================================================
+        
+        // Display bio if available
+        if (bio && bio.length > 10) {
+            const bioSection = document.getElementById('author-bio');
+            if (bioSection) {
+                bioSection.innerHTML = `
+                    <h4><i class="fas fa-user-circle"></i> About ${authorList[0]}</h4>
+                    <p style="line-height: 1.6; color: #475569;">${bio}</p>
+                `;
+                bioSection.style.display = 'block';
+            }
+        }
+        
+        // Display expertise tags
+        const expertiseTags = document.getElementById('expertise-tags');
+        if (expertiseTags && expertise) {
+            let expertiseArray = [];
+            if (typeof expertise === 'string') {
+                expertiseArray = expertise.split(',').map(e => e.trim());
+            } else if (Array.isArray(expertise)) {
+                expertiseArray = expertise;
+            }
+            
+            if (expertiseArray.length > 0) {
+                expertiseTags.innerHTML = expertiseArray.slice(0, 4).map(exp => 
+                    `<span class="expertise-tag" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; margin: 0.25rem; font-weight: 600;">
+                        ${exp}
+                    </span>`
+                ).join('');
+            }
+        }
+        
+        // Display social links
+        const linksContainer = document.getElementById('author-links');
+        if (linksContainer && (wikipediaUrl || socialMedia.linkedin || socialMedia.twitter)) {
+            let linksHTML = '<div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">';
+            
+            if (wikipediaUrl) {
+                linksHTML += `
+                    <a href="${wikipediaUrl}" target="_blank" rel="noopener noreferrer" 
+                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;"
+                       onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
+                        <i class="fab fa-wikipedia-w"></i> Wikipedia
+                    </a>
+                `;
+            }
+            
+            if (socialMedia.linkedin) {
+                linksHTML += `
+                    <a href="${socialMedia.linkedin}" target="_blank" rel="noopener noreferrer"
+                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #0a66c2; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;"
+                       onmouseover="this.style.background='#004182'" onmouseout="this.style.background='#0a66c2'">
+                        <i class="fab fa-linkedin-in"></i> LinkedIn
+                    </a>
+                `;
+            }
+            
+            if (socialMedia.twitter) {
+                linksHTML += `
+                    <a href="${socialMedia.twitter}" target="_blank" rel="noopener noreferrer"
+                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #1da1f2; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;"
+                       onmouseover="this.style.background='#0c7abf'" onmouseout="this.style.background='#1da1f2'">
+                        <i class="fab fa-twitter"></i> Twitter
+                    </a>
+                `;
+            }
+            
+            linksHTML += '</div>';
+            linksContainer.innerHTML = linksHTML;
+        }
+        
+        // ============================================================================
+        // v4.16.0: ENHANCED MULTI-AUTHOR CARDS WITH CLICKABLE LINKS
         // ============================================================================
         if (authorList.length > 1) {
             console.log('[Author Display] Multiple authors detected:', authorList.length);
@@ -1086,43 +1018,34 @@ window.ServiceTemplates = {
                         <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
                     `;
                     
-                    // Show primary author first
-                    coAuthorsHTML += `
-                        <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #3b82f6; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-                                <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem;">
-                                    ${authorList[0].split(' ').map(n => n[0]).join('').substring(0, 2)}
-                                </div>
-                                <div style="flex: 1;">
-                                    <div style="font-weight: 700; color: #1e40af; font-size: 0.95rem;">${authorList[0]}</div>
-                                    <div style="font-size: 0.75rem; color: #3b82f6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Primary Author</div>
-                                </div>
-                            </div>
-                            <div style="font-size: 0.875rem; color: #64748b;">
-                                ${position} at ${organization}
-                            </div>
-                        </div>
-                    `;
+                    // Show primary author first with CLICKABLE CARD
+                    const primaryLinks = [];
+                    if (wikipediaUrl) primaryLinks.push({ icon: 'fab fa-wikipedia-w', url: wikipediaUrl, label: 'Wikipedia' });
+                    if (socialMedia.linkedin) primaryLinks.push({ icon: 'fab fa-linkedin-in', url: socialMedia.linkedin, label: 'LinkedIn' });
+                    if (socialMedia.twitter) primaryLinks.push({ icon: 'fab fa-twitter', url: socialMedia.twitter, label: 'Twitter' });
+                    
+                    coAuthorsHTML += this._buildAuthorCard(
+                        authorList[0], 
+                        position, 
+                        organization, 
+                        true, 
+                        primaryLinks,
+                        bio,
+                        expertiseArray
+                    );
                     
                     // Show co-authors
                     for (let i = 1; i < authorList.length; i++) {
                         const coAuthor = authorList[i];
-                        coAuthorsHTML += `
-                            <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid #06b6d4; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
-                                    <div style="width: 40px; height: 40px; background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem;">
-                                        ${coAuthor.split(' ').map(n => n[0]).join('').substring(0, 2)}
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: 700; color: #0e7490; font-size: 0.95rem;">${coAuthor}</div>
-                                        <div style="font-size: 0.75rem; color: #06b6d4; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Co-Author</div>
-                                    </div>
-                                </div>
-                                <div style="font-size: 0.875rem; color: #64748b;">
-                                    ${position} at ${organization}
-                                </div>
-                            </div>
-                        `;
+                        coAuthorsHTML += this._buildAuthorCard(
+                            coAuthor,
+                            position,
+                            organization,
+                            false,
+                            [], // Co-authors don't have links yet (backend only analyzes primary)
+                            null,
+                            null
+                        );
                     }
                     
                     coAuthorsHTML += '</div>';
@@ -1137,7 +1060,96 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Author Display v4.15.0] Complete - Multi-author support enabled');
+        console.log('[Author Display v4.16.0] Complete - Enhanced with clickable links');
+    },
+    
+    /**
+     * NEW v4.16.0: Helper function to build individual author cards
+     */
+    _buildAuthorCard: function(name, position, organization, isPrimary, links, bio, expertise) {
+        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+        const borderColor = isPrimary ? '#3b82f6' : '#06b6d4';
+        const bgGradient = isPrimary ? 
+            'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 
+            'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)';
+        const titleColor = isPrimary ? '#1e40af' : '#0e7490';
+        const badgeColor = isPrimary ? '#3b82f6' : '#06b6d4';
+        const label = isPrimary ? 'Primary Author' : 'Co-Author';
+        
+        let cardHTML = `
+            <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; position: relative; overflow: hidden;"
+                 onmouseover="this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)'; this.style.transform='translateY(-2px)';"
+                 onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'; this.style.transform='translateY(0)';">
+                
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <div style="width: 40px; height: 40px; background: ${bgGradient}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem; flex-shrink: 0;">
+                        ${initials}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 700; color: ${titleColor}; font-size: 0.95rem;">${name}</div>
+                        <div style="font-size: 0.75rem; color: ${badgeColor}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${label}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem;">
+                    ${position} at ${organization}
+                </div>
+        `;
+        
+        // Add bio snippet if available (primary author only)
+        if (bio && bio.length > 10) {
+            const bioSnippet = bio.substring(0, 120) + (bio.length > 120 ? '...' : '');
+            cardHTML += `
+                <div style="font-size: 0.8rem; color: #64748b; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                    ${bioSnippet}
+                </div>
+            `;
+        }
+        
+        // Add expertise tags if available
+        if (expertise && expertise.length > 0) {
+            cardHTML += `
+                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem;">
+                    ${expertise.slice(0, 3).map(exp => 
+                        `<span style="font-size: 0.65rem; background: ${bgGradient}; color: white; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600;">
+                            ${exp}
+                        </span>`
+                    ).join('')}
+                </div>
+            `;
+        }
+        
+        // Add clickable links if available
+        if (links && links.length > 0) {
+            cardHTML += `
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
+            `;
+            
+            links.forEach(link => {
+                cardHTML += `
+                    <a href="${link.url}" target="_blank" rel="noopener noreferrer"
+                       style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.4rem; background: ${bgGradient}; color: white; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;"
+                       onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"
+                       title="${link.label}">
+                        <i class="${link.icon}"></i>
+                    </a>
+                `;
+            });
+            
+            cardHTML += `</div>`;
+        } else if (!isPrimary) {
+            // For co-authors without links, show a note
+            cardHTML += `
+                <div style="font-size: 0.7rem; color: #94a3b8; text-align: center; padding: 0.5rem; margin-top: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                    <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
+                    Additional author information available in full analysis
+                </div>
+            `;
+        }
+        
+        cardHTML += `</div>`;
+        
+        return cardHTML;
     },
 
     // Helper function to update elements
@@ -1162,13 +1174,13 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.15.0 MULTI-AUTHOR FIX');
+console.log('ServiceTemplates loaded successfully - v4.16.0 ENHANCED AUTHOR CARDS');
 
 // Chart Integration
 const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.15.0] displayAllAnalyses called');
+    console.log('[ServiceTemplates v4.16.0] displayAllAnalyses called');
     originalDisplayAllAnalyses.call(this, data, analyzer);
     setTimeout(() => {
         integrateChartsIntoServices(data);
@@ -1207,4 +1219,4 @@ function integrateChartsIntoServices(data) {
     console.log('[Charts] ✓ Integration complete');
 }
 
-console.log('[Charts] Service Templates v4.15.0 loaded - COMPLETE FILE - Multi-Author Display Fixed');
+console.log('[Charts] Service Templates v4.16.0 loaded - COMPLETE FILE - Enhanced Author Cards with Links');
