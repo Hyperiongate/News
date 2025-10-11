@@ -1,18 +1,20 @@
 """
-Fact Checker Service - v9.0.0 COMPLETE OVERHAUL
-Last Updated: October 10, 2025
+Fact Checker Service - v9.1.0 ENHANCED CLAIM DETECTION
+Last Updated: October 11, 2025
 
-CHANGES FROM v8.0.2:
-✅ ENHANCED: Detailed "what_we_looked/found/means" analysis
-✅ ENHANCED: Specific claim-by-claim breakdown with verdicts
-✅ ENHANCED: Clear explanations for each verification result
-✅ ENHANCED: Distinguishes between verified, disputed, and unverified
-✅ ENHANCED: Shows verification methods used for each claim
-✅ PRESERVES: All existing AI verification functionality
-✅ NO BREAKING CHANGES: All existing fields maintained
+CHANGES FROM v9.0.0:
+✅ FIXED: Improved claim detection - finds claims in news articles
+✅ FIXED: Lowered scoring threshold (was too strict)
+✅ ENHANCED: Better pattern matching for news content
+✅ ENHANCED: Detects direct quotes, statements, announcements
+✅ ENHANCED: Handles political/government news better
+✅ NO BREAKING CHANGES: All v9.0.0 functionality preserved
 
-PHILOSOPHY: Show users EXACTLY what claims we checked and what we found
-TARGET: Users should understand article accuracy without being experts
+CRITICAL FIX: v9.0 was finding 0 claims in rich news articles
+CAUSE: Scoring threshold too high (15 points minimum)
+SOLUTION: Lower threshold (8 points) + better patterns
+
+Save as: services/fact_checker.py (REPLACE existing file)
 """
 
 import re
@@ -40,8 +42,8 @@ logger = logging.getLogger(__name__)
 
 class FactChecker(BaseAnalyzer):
     """
-    Enhanced fact-checker with detailed explanations
-    v9.0.0 - Returns meaningful analysis instead of vague scores
+    Enhanced fact-checker with improved claim detection
+    v9.1.0 - Better at finding claims in news articles
     """
     
     def __init__(self):
@@ -52,9 +54,9 @@ class FactChecker(BaseAnalyzer):
         if OPENAI_AVAILABLE and Config.OPENAI_API_KEY:
             try:
                 self.openai_client = OpenAI(api_key=Config.OPENAI_API_KEY)
-                logger.info("[FactChecker v9.0] OpenAI client initialized successfully")
+                logger.info("[FactChecker v9.1] OpenAI client initialized successfully")
             except Exception as e:
-                logger.warning(f"[FactChecker v9.0] Failed to initialize OpenAI: {e}")
+                logger.warning(f"[FactChecker v9.1] Failed to initialize OpenAI: {e}")
                 self.openai_client = None
         
         # Cache for fact check results
@@ -68,7 +70,7 @@ class FactChecker(BaseAnalyzer):
         self.claim_patterns = self._initialize_claim_patterns()
         self.exclusion_patterns = self._initialize_exclusion_patterns()
         
-        logger.info(f"[FactChecker v9.0] Initialized - Google API: {bool(self.google_api_key)}, OpenAI: {bool(self.openai_client)}")
+        logger.info(f"[FactChecker v9.1] Initialized - Google API: {bool(self.google_api_key)}, OpenAI: {bool(self.openai_client)}")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -76,8 +78,8 @@ class FactChecker(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze article with detailed claim-by-claim verification
-        v9.0.0: Returns specific findings with clear explanations
+        Analyze article with enhanced claim detection
+        v9.1.0: Finds claims in news articles
         """
         try:
             start_time = time.time()
@@ -95,11 +97,11 @@ class FactChecker(BaseAnalyzer):
             quotes_count = data.get('quotes_count', 0)
             author = data.get('author', '')
             
-            logger.info(f"[FactChecker v9.0] Analyzing: {len(content)} chars, {sources_count} sources")
+            logger.info(f"[FactChecker v9.1] Analyzing: {len(content)} chars, {sources_count} sources")
             
-            # 1. Extract claims from content
-            extracted_claims = self._extract_claims(content)
-            logger.info(f"[FactChecker v9.0] Extracted {len(extracted_claims)} claims")
+            # 1. Extract claims from content (ENHANCED v9.1)
+            extracted_claims = self._extract_claims_enhanced(content)
+            logger.info(f"[FactChecker v9.1] Extracted {len(extracted_claims)} claims")
             
             # 2. Check each claim with enhanced verification
             fact_checks = self._check_claims_enhanced(extracted_claims, article_url, article_title)
@@ -137,73 +139,234 @@ class FactChecker(BaseAnalyzer):
                 'success': True,
                 'available': True,
                 'timestamp': time.time(),
-                'data': {
-                    # Core scores
-                    'score': verification_score,
-                    'level': verification_level,
-                    'verification_score': verification_score,
-                    'verification_level': verification_level,
-                    'accuracy_score': verification_score,
-                    
-                    # NEW v9.0: Detailed findings
-                    'findings': findings,
-                    
-                    # NEW v9.0: Comprehensive analysis
-                    'analysis': analysis,
-                    
-                    # Conversational summary
-                    'summary': summary,
-                    
-                    # Claim statistics
-                    'claims_found': len(extracted_claims),
-                    'claims_checked': len(fact_checks),
-                    'claims_verified_true': verified_true,
-                    'claims_verified_false': verified_false,
-                    'claims_mixed': mixed,
-                    'claims_unverified': unverified,
-                    
-                    # Detailed fact checks (for display)
-                    'fact_checks': fact_checks[:10],
-                    
-                    # Sources used
-                    'sources_used': sources_used,
-                    'sources_cited_in_article': sources_count,
-                    
-                    # Verification methods
-                    'google_api_used': bool(self.google_api_key),
-                    'ai_verification_used': bool(self.openai_client),
-                    
-                    # Chart data
-                    'details': {
-                        'total_claims': len(extracted_claims),
-                        'verified_true': verified_true,
-                        'verified_false': verified_false,
-                        'mixed_verdicts': mixed,
-                        'unverified': unverified,
-                        'verification_rate': round((verified_true + verified_false + mixed) / max(len(fact_checks), 1) * 100, 1),
-                        'accuracy_rate': round(verified_true / max(verified_true + verified_false, 1) * 100, 1) if (verified_true + verified_false) > 0 else 0,
-                        'average_confidence': round(sum(fc.get('confidence', 0) for fc in fact_checks) / max(len(fact_checks), 1), 1),
-                        'sources_cited': sources_count,
-                        'quotes_included': quotes_count,
-                        'has_author': bool(author)
+                'analysis_complete': True,
+                
+                # Core scores
+                'score': verification_score,
+                'level': verification_level,
+                'verification_score': verification_score,
+                'verification_level': verification_level,
+                'accuracy_score': verification_score,
+                
+                # NEW v9.0: Detailed findings
+                'findings': findings,
+                
+                # NEW v9.0: Comprehensive analysis
+                'analysis': analysis,
+                
+                # Conversational summary
+                'summary': summary,
+                
+                # Claim statistics
+                'claims_found': len(extracted_claims),
+                'claims_checked': len(fact_checks),
+                'claims_verified': verified_true + verified_false + mixed,
+                'claims_verified_true': verified_true,
+                'claims_verified_false': verified_false,
+                'claims_mixed': mixed,
+                'claims_unverified': unverified,
+                
+                # Detailed fact checks (for display)
+                'fact_checks': fact_checks[:10],
+                'claims': fact_checks[:10],  # Alias for frontend
+                
+                # Sources used
+                'sources_used': sources_used,
+                'sources_cited_in_article': sources_count,
+                
+                # Verification methods
+                'google_api_used': bool(self.google_api_key),
+                'ai_verification_used': bool(self.openai_client),
+                
+                # Chart data
+                'chart_data': {
+                    'type': 'doughnut',
+                    'data': {
+                        'labels': ['Verified True', 'Verified False', 'Mixed', 'Unverified'],
+                        'datasets': [{
+                            'data': [verified_true, verified_false, mixed, unverified],
+                            'backgroundColor': ['#10b981', '#ef4444', '#f59e0b', '#94a3b8']
+                        }]
                     }
                 },
+                
+                # Details
+                'details': {
+                    'total_claims': len(extracted_claims),
+                    'verified_true': verified_true,
+                    'verified_false': verified_false,
+                    'mixed_verdicts': mixed,
+                    'unverified': unverified,
+                    'verification_rate': round((verified_true + verified_false + mixed) / max(len(fact_checks), 1) * 100, 1),
+                    'accuracy_rate': round(verified_true / max(verified_true + verified_false, 1) * 100, 1) if (verified_true + verified_false) > 0 else 0,
+                    'average_confidence': round(sum(fc.get('confidence', 0) for fc in fact_checks) / max(len(fact_checks), 1), 1),
+                    'sources_cited': sources_count,
+                    'quotes_included': quotes_count,
+                    'has_author': bool(author)
+                },
+                
                 'metadata': {
                     'analysis_time': time.time() - start_time,
                     'text_length': len(content),
                     'article_url': article_url,
                     'article_title': article_title,
-                    'version': '9.0.0',
+                    'version': '9.1.0',
                     'ai_enhanced': bool(self.openai_client)
                 }
             }
             
-            logger.info(f"[FactChecker v9.0] Complete: {verification_score}/100 ({verification_level}) - {verified_true} verified, {verified_false} disputed")
-            return result
+            logger.info(f"[FactChecker v9.1] Complete: {verification_score}/100 ({verification_level}) - {verified_true} verified, {verified_false} disputed")
+            return self.get_success_result(result)
             
         except Exception as e:
-            logger.error(f"[FactChecker v9.0] Error: {e}", exc_info=True)
+            logger.error(f"[FactChecker v9.1] Error: {e}", exc_info=True)
             return self.get_error_result(f"Fact checking error: {str(e)}")
+    
+    def _extract_claims_enhanced(self, content: str) -> List[str]:
+        """
+        ENHANCED v9.1: Better claim extraction for news articles
+        
+        FIXES:
+        - Lower threshold from 15 to 8 points
+        - Better patterns for government/political news
+        - Detect statements, announcements, declarations
+        - Handle direct quotes as claims
+        """
+        sentences = self._split_sentences(content)
+        claims = []
+        
+        logger.info(f"[FactChecker v9.1] Evaluating {len(sentences)} sentences...")
+        
+        for i, sentence in enumerate(sentences):
+            # Skip excluded patterns
+            if self._matches_exclusion_patterns(sentence):
+                continue
+            
+            # Score claim likelihood (ENHANCED)
+            score = self._score_claim_likelihood_enhanced(sentence)
+            
+            # CRITICAL FIX: Lower threshold from 15 to 8
+            if score >= 8:
+                claim = sentence.strip()
+                if 20 < len(claim) < 500:  # Slightly longer minimum (was 15)
+                    claims.append(claim)
+                    logger.debug(f"[FactChecker v9.1] Claim (score={score}): {claim[:100]}...")
+        
+        logger.info(f"[FactChecker v9.1] Found {len(claims)} potential claims")
+        return claims[:15]  # Increased from 10 to 15
+    
+    def _score_claim_likelihood_enhanced(self, sentence: str) -> int:
+        """
+        ENHANCED v9.1: Better scoring for news content
+        
+        NEW: Detects government announcements, statements, declarations
+        NEW: Recognizes direct quotes as factual claims
+        NEW: Better handling of political news
+        """
+        score = 0
+        sentence_lower = sentence.lower()
+        
+        # ===== STRONG INDICATORS (25-30 points) =====
+        
+        # Research/studies (highest confidence)
+        if re.search(r'\b(?:study|research|report|survey|poll|analysis)\s+(?:shows?|finds?|found|indicates?|suggests?|reveals?)\b', sentence_lower):
+            score += 30
+            logger.debug(f"[Claim Score] +30 research/study")
+        
+        # Statistics and numbers
+        if re.search(r'\b\d+\s*(?:percent|%)\b', sentence):
+            score += 25
+            logger.debug(f"[Claim Score] +25 percentage")
+        
+        if re.search(r'\b\d+(?:,\d{3})*\s+(?:people|workers|employees|individuals|Americans|voters)\b', sentence):
+            score += 25
+            logger.debug(f"[Claim Score] +25 specific count")
+        
+        # ===== NEW v9.1: GOVERNMENT/OFFICIAL STATEMENTS (20-25 points) =====
+        
+        # Official announcements
+        if re.search(r'\b(?:announced?|declared?|stated?|confirmed?|revealed?|disclosed?)\s+(?:that|today|yesterday|this week)\b', sentence_lower):
+            score += 20
+            logger.debug(f"[Claim Score] +20 official statement")
+        
+        # Government/administration actions
+        if re.search(r'\b(?:administration|government|agency|department|officials?)\s+(?:says?|said|announced?|confirmed?|reported?)\b', sentence_lower):
+            score += 20
+            logger.debug(f"[Claim Score] +20 government statement")
+        
+        # Policy/action statements
+        if re.search(r'\b(?:will|plans to|intends to|expects to|is expected to)\s+\w+\s+(?:employees?|workers?|people|programs?|funding)\b', sentence_lower):
+            score += 18
+            logger.debug(f"[Claim Score] +18 policy action")
+        
+        # ===== NEW v9.1: DIRECT QUOTES (15-20 points) =====
+        
+        # Quoted statements (often factual)
+        if '"' in sentence and len(re.findall(r'"[^"]{20,}"', sentence)) > 0:
+            score += 15
+            logger.debug(f"[Claim Score] +15 direct quote")
+        
+        # Attribution phrases
+        if re.search(r'\b(?:according to|as reported by|as stated by|officials? said|sources? (?:say|said|told))\b', sentence_lower):
+            score += 18
+            logger.debug(f"[Claim Score] +18 attribution")
+        
+        # ===== MODERATE INDICATORS (10-15 points) =====
+        
+        # Numeric changes
+        if re.search(r'\b(?:increased?|decreased?|rose|fell|grew|declined?|dropped?)\s+(?:by|to|from)\s+\d+', sentence_lower):
+            score += 12
+            logger.debug(f"[Claim Score] +12 numeric change")
+        
+        # Dates and timeframes
+        if re.search(r'\b(?:in|by|since|from|during)\s+\d{4}\b', sentence):
+            score += 10
+            logger.debug(f"[Claim Score] +10 date reference")
+        
+        # Named entities making statements
+        if re.search(r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\s+(?:said|told|announced|confirmed|stated)\b', sentence):
+            score += 10
+            logger.debug(f"[Claim Score] +10 named person statement")
+        
+        # ===== NEW v9.1: SPECIFIC FACTUAL PATTERNS (8-12 points) =====
+        
+        # Specific locations/organizations
+        if re.search(r'\b(?:in|at|from)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', sentence):
+            score += 8
+            logger.debug(f"[Claim Score] +8 location/org")
+        
+        # Time-specific claims
+        if re.search(r'\b(?:this year|last year|in 20\d{2}|by 20\d{2})\b', sentence_lower):
+            score += 8
+            logger.debug(f"[Claim Score] +8 time-specific")
+        
+        # Comparative statements
+        if re.search(r'\b(?:more|less|higher|lower|greater|fewer)\s+than\b', sentence_lower):
+            score += 8
+            logger.debug(f"[Claim Score] +8 comparative")
+        
+        # ===== NEGATIVE INDICATORS =====
+        
+        # Uncertainty (reduce score)
+        if re.search(r'\b(?:may|might|could|possibly|perhaps|allegedly|reportedly)\b', sentence_lower):
+            score -= 5
+            logger.debug(f"[Claim Score] -5 uncertain")
+        
+        # Questions (strong negative)
+        if sentence.strip().endswith('?'):
+            score -= 15
+            logger.debug(f"[Claim Score] -15 question")
+        
+        # Opinion words
+        if re.search(r'\b(?:I think|I believe|in my opinion|seems like|appears to)\b', sentence_lower):
+            score -= 10
+            logger.debug(f"[Claim Score] -10 opinion")
+        
+        final_score = max(0, score)
+        if final_score >= 8:
+            logger.debug(f"[Claim Score] FINAL: {final_score} - INCLUDED")
+        
+        return final_score
     
     def _check_claims_enhanced(self, claims: List[str], article_url: Optional[str] = None,
                                article_title: Optional[str] = None) -> List[Dict[str, Any]]:
@@ -218,7 +381,7 @@ class FactChecker(BaseAnalyzer):
             if cached_result:
                 cached_result['from_cache'] = True
                 fact_checks.append(cached_result)
-                logger.info(f"[FactChecker v9.0] Claim {i+1}: Using cached result")
+                logger.info(f"[FactChecker v9.1] Claim {i+1}: Using cached result")
                 continue
             
             # Enhanced verification
@@ -226,7 +389,7 @@ class FactChecker(BaseAnalyzer):
             fact_checks.append(result)
             self._cache_result(cache_key, result)
             
-            logger.info(f"[FactChecker v9.0] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
+            logger.info(f"[FactChecker v9.1] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
             
             # Rate limiting
             if i < len(claims) - 1:
@@ -254,33 +417,33 @@ class FactChecker(BaseAnalyzer):
             
             # METHOD 1: AI Analysis (BEST)
             if self.openai_client:
-                logger.info(f"[FactChecker v9.0] Trying AI analysis")
+                logger.info(f"[FactChecker v9.1] Trying AI analysis")
                 ai_result = self._ai_verify_claim(claim, article_title)
                 if ai_result and ai_result.get('verdict') != 'needs_context':
                     ai_result['method_used'] = 'AI Verification'
-                    logger.info(f"[FactChecker v9.0] ✓ AI verified: {ai_result.get('verdict')}")
+                    logger.info(f"[FactChecker v9.1] ✓ AI verified: {ai_result.get('verdict')}")
                     return ai_result
             
             # METHOD 2: Google Fact Check API
             if self.google_api_key:
-                logger.info(f"[FactChecker v9.0] Trying Google Fact Check API")
+                logger.info(f"[FactChecker v9.1] Trying Google Fact Check API")
                 google_result = self._check_google_api(claim)
                 if google_result.get('found'):
                     result = google_result['data']
                     result['claim'] = claim
                     result['method_used'] = 'Google Fact Check Database'
-                    logger.info(f"[FactChecker v9.0] ✓ Google found: {result.get('verdict')}")
+                    logger.info(f"[FactChecker v9.1] ✓ Google found: {result.get('verdict')}")
                     return result
             
             # METHOD 3: Pattern Analysis (fallback)
-            logger.info(f"[FactChecker v9.0] Using pattern analysis")
+            logger.info(f"[FactChecker v9.1] Using pattern analysis")
             pattern_result = self._analyze_claim_patterns(claim)
             pattern_result['claim'] = claim
             pattern_result['method_used'] = 'Pattern Analysis'
             return pattern_result
             
         except Exception as e:
-            logger.error(f"[FactChecker v9.0] Error verifying claim: {e}")
+            logger.error(f"[FactChecker v9.1] Error verifying claim: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -290,6 +453,9 @@ class FactChecker(BaseAnalyzer):
                 'evidence': [],
                 'method_used': 'error'
             }
+    
+    # ===== All other methods remain EXACTLY THE SAME as v9.0 =====
+    # (Copying them below to maintain complete file)
     
     def _ai_verify_claim(self, claim: str, article_context: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Use AI to verify a claim"""
@@ -319,7 +485,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.warning(f"[FactChecker v9.0] AI verification failed: {e}")
+            logger.warning(f"[FactChecker v9.1] AI verification failed: {e}")
             return None
     
     def _build_verification_prompt(self, claim: str, context: Optional[str] = None) -> str:
@@ -403,7 +569,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v9.0] Failed to parse AI response: {e}")
+            logger.error(f"[FactChecker v9.1] Failed to parse AI response: {e}")
             return None
     
     def _check_google_api(self, claim: str) -> Dict[str, Any]:
@@ -459,7 +625,7 @@ class FactChecker(BaseAnalyzer):
             return {'found': False}
             
         except Exception as e:
-            logger.error(f"[FactChecker v9.0] Google API error: {e}")
+            logger.error(f"[FactChecker v9.1] Google API error: {e}")
             return {'found': False}
     
     def _analyze_claim_patterns(self, claim: str) -> Dict[str, Any]:
@@ -491,27 +657,6 @@ class FactChecker(BaseAnalyzer):
             result['evidence'] = ['Contains absolute language that suggests exaggeration']
         
         return result
-    
-    def _extract_claims(self, content: str) -> List[str]:
-        """Extract factual claims from content"""
-        sentences = self._split_sentences(content)
-        claims = []
-        
-        logger.info(f"[FactChecker v9.0] Evaluating {len(sentences)} sentences...")
-        
-        for i, sentence in enumerate(sentences):
-            if self._matches_exclusion_patterns(sentence):
-                continue
-            
-            score = self._score_claim_likelihood(sentence)
-            
-            if score >= 15:
-                claim = sentence.strip()
-                if 15 < len(claim) < 500:
-                    claims.append(claim)
-        
-        logger.info(f"[FactChecker v9.0] Found {len(claims)} potential claims")
-        return claims[:10]
     
     def _split_sentences(self, text: str) -> List[str]:
         """Split text into sentences"""
@@ -548,37 +693,6 @@ class FactChecker(BaseAnalyzer):
                 return True
         
         return False
-    
-    def _score_claim_likelihood(self, sentence: str) -> int:
-        """Score how likely a sentence contains a verifiable claim"""
-        score = 0
-        sentence_lower = sentence.lower()
-        
-        # Strong indicators
-        if re.search(r'\b(?:study|research|report|survey|poll)\s+(?:shows?|finds?|found|indicates?|suggests?)\b', sentence_lower):
-            score += 30
-        
-        if re.search(r'\b\d+\s*(?:percent|%)\b', sentence):
-            score += 25
-        
-        if re.search(r'\b(?:according to|as reported by|sources? (?:say|said))\b', sentence_lower):
-            score += 20
-        
-        # Moderate indicators
-        if re.search(r'\b(?:announced?|declared?|confirmed?|stated?|revealed?)\b', sentence_lower):
-            score += 15
-        
-        if re.search(r'\b(?:increased?|decreased?|rose|fell|grew|declined?)\s+(?:by|to|from)\s+\d+', sentence_lower):
-            score += 15
-        
-        # Negative indicators
-        if re.search(r'\b(?:may|might|could|possibly|perhaps)\b', sentence_lower):
-            score -= 5
-        
-        if sentence.strip().endswith('?'):
-            score -= 15
-        
-        return max(0, score)
     
     def _calculate_enhanced_score(self, fact_checks: List[Dict], sources_count: int,
                                   quotes_count: int, total_claims: int, has_author: bool) -> int:
@@ -875,8 +989,9 @@ class FactChecker(BaseAnalyzer):
         """Get service information"""
         info = super().get_service_info()
         info.update({
-            'version': '9.0.0',
+            'version': '9.1.0',
             'capabilities': [
+                'Enhanced claim detection for news articles',
                 'AI-powered claim verification',
                 'Google Fact Check database integration',
                 'Multi-method verification (AI → API → Pattern)',
@@ -893,3 +1008,6 @@ class FactChecker(BaseAnalyzer):
             'ai_enhanced': bool(self.openai_client)
         })
         return info
+
+
+logger.info("[FactChecker v9.1] Module loaded - Enhanced claim detection enabled")
