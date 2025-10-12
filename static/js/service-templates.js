@@ -1,21 +1,24 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
- * Date: October 11, 2025
- * Version: 4.16.0 - ENHANCED AUTHOR CARDS WITH CLICKABLE LINKS
+ * Date: October 12, 2025
+ * Version: 4.17.0 - FACT CHECKER CLAIMS DISPLAY FIXED
  * 
- * LATEST CHANGE (October 11, 2025):
- * - ENHANCED: Author cards now display bio, expertise, social links, awards
- * - ADDED: Clickable author cards that link to Wikipedia/LinkedIn/Author pages
- * - ADDED: Social media icons with working links
- * - ADDED: "View Full Profile" buttons for each author
- * - FIXED: Shows rich data for primary author, co-authors display with available info
+ * CRITICAL FIX (October 12, 2025):
+ * - FIXED: Fact Checker now ACTUALLY displays all claims with verdicts
+ * - ADDED: Beautiful claim cards with color-coded verdicts
+ * - ADDED: Confidence scores, explanations, and sources for each claim
+ * - REMOVED: Broken "Claims loaded successfully!" placeholder
+ * - TESTED: Works with backend v10.0.0 data structure
  * 
- * All other services remain unchanged from 4.15.0
+ * Previous features from v4.16.0 preserved:
+ * - Enhanced author cards with clickable links
+ * - Source credibility bar chart (with CSS fix)
+ * - All other services unchanged
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
  * FILE IS COMPLETE - NO TRUNCATION - READY TO DEPLOY
- * Total Lines: ~1600
+ * Total Lines: ~1700
  */
 
 // Create global ServiceTemplates object
@@ -452,7 +455,7 @@ window.ServiceTemplates = {
 
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.16.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.17.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -789,36 +792,135 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Fact Checker
+    // ============================================================================
+    // CRITICAL FIX v4.17.0: Fact Checker Claims Display
+    // ============================================================================
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker Display v4.16.0] Data received:', data);
+        console.log('[FactChecker Display v4.17.0 FIXED] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
         const claimsVerified = data.claims_verified || 0;
         const factChecks = data.fact_checks || data.claims || [];
         
+        // Update summary metrics
         this.updateElement('fact-score', score + '%');
         this.updateElement('claims-checked', claimsChecked);
         this.updateElement('claims-verified', claimsVerified);
         
         const claimsContainer = document.getElementById('claims-list-enhanced');
-        if (claimsContainer) {
-            if (factChecks && factChecks.length > 0) {
-                claimsContainer.innerHTML = '<p style="color: #10b981;">Claims loaded successfully!</p>';
-            } else {
-                claimsContainer.innerHTML = `
-                    <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
-                        <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
-                        <p style="color: #1e40af; font-size: 1rem; font-weight: 600; margin: 0;">
-                            No specific claims were identified for fact-checking in this article.
-                        </p>
-                        <p style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
-                            The article may be opinion-based, editorial content, or contain primarily general statements.
-                        </p>
+        if (!claimsContainer) {
+            console.error('[FactChecker] Claims container not found');
+            return;
+        }
+        
+        // FIXED v4.17.0: Actually render the claims!
+        if (factChecks && factChecks.length > 0) {
+            console.log('[FactChecker v4.17.0] Rendering', factChecks.length, 'claims...');
+            
+            let claimsHTML = '';
+            
+            factChecks.forEach((check, index) => {
+                const claim = check.claim || check.text || 'No claim text';
+                const verdict = check.verdict || 'unverified';
+                const confidence = check.confidence || 0;
+                const explanation = check.explanation || 'No explanation available';
+                const sources = check.sources || check.method_used || [];
+                const sourcesList = Array.isArray(sources) ? sources : [sources];
+                
+                // Verdict styling
+                const verdictStyles = {
+                    'true': { color: '#10b981', icon: 'fa-check-circle', label: 'TRUE', badge: '#059669' },
+                    'mostly_true': { color: '#3b82f6', icon: 'fa-check-circle', label: 'MOSTLY TRUE', badge: '#2563eb' },
+                    'likely_true': { color: '#3b82f6', icon: 'fa-check-circle', label: 'LIKELY TRUE', badge: '#2563eb' },
+                    'mixed': { color: '#f59e0b', icon: 'fa-exclamation-circle', label: 'MIXED', badge: '#d97706' },
+                    'misleading': { color: '#f59e0b', icon: 'fa-exclamation-triangle', label: 'MISLEADING', badge: '#d97706' },
+                    'mostly_false': { color: '#ef4444', icon: 'fa-times-circle', label: 'MOSTLY FALSE', badge: '#dc2626' },
+                    'false': { color: '#ef4444', icon: 'fa-times-circle', label: 'FALSE', badge: '#dc2626' },
+                    'unverified': { color: '#94a3b8', icon: 'fa-question-circle', label: 'UNVERIFIED', badge: '#64748b' },
+                    'needs_context': { color: '#f59e0b', icon: 'fa-info-circle', label: 'NEEDS CONTEXT', badge: '#d97706' }
+                };
+                
+                const style = verdictStyles[verdict] || verdictStyles['unverified'];
+                
+                claimsHTML += `
+                    <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid ${style.color}; transition: all 0.3s;"
+                         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
+                         onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
+                        
+                        <!-- Claim Header -->
+                        <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <div style="font-weight: 700; color: #1e293b; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-quote-left" style="color: ${style.color}; font-size: 0.75rem; margin-right: 0.5rem;"></i>
+                                    Claim ${index + 1}
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                <span style="padding: 0.375rem 0.875rem; background: ${style.badge}; color: white; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <i class="fas ${style.icon}"></i>
+                                    ${style.label}
+                                </span>
+                                <span style="background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                                    ${confidence}% Confidence
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Claim Text -->
+                        <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 3px solid ${style.color};">
+                            <p style="margin: 0; color: #1e293b; font-size: 0.95rem; line-height: 1.6; font-style: italic;">
+                                "${claim}"
+                            </p>
+                        </div>
+                        
+                        <!-- Explanation -->
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #475569; font-size: 0.85rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-lightbulb" style="color: ${style.color};"></i>
+                                Analysis:
+                            </div>
+                            <p style="margin: 0; color: #64748b; font-size: 0.875rem; line-height: 1.6;">
+                                ${explanation}
+                            </p>
+                        </div>
+                        
+                        <!-- Sources -->
+                        ${sourcesList.length > 0 ? `
+                            <div style="padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
+                                <div style="font-weight: 600; color: #475569; font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                    <i class="fas fa-check-double" style="color: ${style.color}; margin-right: 0.5rem;"></i>
+                                    Verified Using:
+                                </div>
+                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                                    ${sourcesList.map(source => `
+                                        <span style="display: inline-block; padding: 0.25rem 0.625rem; background: linear-gradient(135deg, ${style.color}15 0%, ${style.color}08 100%); border: 1px solid ${style.color}40; color: ${style.badge}; border-radius: 12px; font-size: 0.7rem; font-weight: 600;">
+                                            ${source}
+                                        </span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
                     </div>
                 `;
-            }
+            });
+            
+            claimsContainer.innerHTML = claimsHTML;
+            console.log('[FactChecker v4.17.0] ✓ Successfully rendered', factChecks.length, 'claims');
+            
+        } else {
+            console.log('[FactChecker v4.17.0] No claims to display');
+            claimsContainer.innerHTML = `
+                <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
+                    <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
+                    <p style="color: #1e40af; font-size: 1rem; font-weight: 600; margin: 0;">
+                        No specific claims were identified for fact-checking in this article.
+                    </p>
+                    <p style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
+                        The article may be opinion-based, editorial content, or contain primarily general statements.
+                    </p>
+                </div>
+            `;
         }
     },
 
@@ -908,10 +1010,6 @@ window.ServiceTemplates = {
         this.updateElement('author-expertise', data.expertise_level || 'Verified');
         this.updateElement('author-track-record', data.track_record || 'Good');
         
-        // ============================================================================
-        // NEW v4.16.0: DISPLAY BIO AND EXPERTISE FOR PRIMARY AUTHOR
-        // ============================================================================
-        
         // Display bio if available
         if (bio && bio.length > 10) {
             const bioSection = document.getElementById('author-bio');
@@ -925,7 +1023,7 @@ window.ServiceTemplates = {
         }
         
         // Display expertise tags
-        let expertiseArray = []; // DECLARE OUTSIDE IF BLOCK
+        let expertiseArray = [];
         const expertiseTags = document.getElementById('expertise-tags');
         if (expertiseTags && expertise) {
             if (typeof expertise === 'string') {
@@ -982,15 +1080,12 @@ window.ServiceTemplates = {
             linksContainer.innerHTML = linksHTML;
         }
         
-        // ============================================================================
-        // v4.16.0: ENHANCED MULTI-AUTHOR CARDS WITH CLICKABLE LINKS
-        // ============================================================================
+        // Multi-author handling
         if (authorList.length > 1) {
             console.log('[Author Display] Multiple authors detected:', authorList.length);
             
             const authorHeader = document.querySelector('.author-profile-header');
             if (authorHeader) {
-                // Check if multi-author header already exists
                 let multiAuthorHeader = authorHeader.querySelector('.multi-author-header');
                 if (!multiAuthorHeader) {
                     multiAuthorHeader = document.createElement('div');
@@ -1003,7 +1098,6 @@ window.ServiceTemplates = {
                     authorHeader.insertBefore(multiAuthorHeader, authorHeader.firstChild);
                 }
                 
-                // Check if co-authors section already exists
                 let coAuthorsSection = document.querySelector('.co-authors-section');
                 if (!coAuthorsSection) {
                     coAuthorsSection = document.createElement('div');
@@ -1018,7 +1112,6 @@ window.ServiceTemplates = {
                         <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
                     `;
                     
-                    // Show primary author first with CLICKABLE CARD
                     const primaryLinks = [];
                     if (wikipediaUrl) primaryLinks.push({ icon: 'fab fa-wikipedia-w', url: wikipediaUrl, label: 'Wikipedia' });
                     if (socialMedia.linkedin) primaryLinks.push({ icon: 'fab fa-linkedin-in', url: socialMedia.linkedin, label: 'LinkedIn' });
@@ -1034,7 +1127,6 @@ window.ServiceTemplates = {
                         expertiseArray
                     );
                     
-                    // Show co-authors
                     for (let i = 1; i < authorList.length; i++) {
                         const coAuthor = authorList[i];
                         coAuthorsHTML += this._buildAuthorCard(
@@ -1042,7 +1134,7 @@ window.ServiceTemplates = {
                             position,
                             organization,
                             false,
-                            [], // Co-authors don't have links yet (backend only analyzes primary)
+                            [],
                             null,
                             null
                         );
@@ -1051,7 +1143,6 @@ window.ServiceTemplates = {
                     coAuthorsHTML += '</div>';
                     coAuthorsSection.innerHTML = coAuthorsHTML;
                     
-                    // Insert after author-detail-sections
                     const detailSections = document.querySelector('.author-detail-sections');
                     if (detailSections) {
                         detailSections.appendChild(coAuthorsSection);
@@ -1063,9 +1154,6 @@ window.ServiceTemplates = {
         console.log('[Author Display v4.16.0] Complete - Enhanced with clickable links');
     },
     
-    /**
-     * NEW v4.16.0: Helper function to build individual author cards
-     */
     _buildAuthorCard: function(name, position, organization, isPrimary, links, bio, expertise) {
         const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
         const borderColor = isPrimary ? '#3b82f6' : '#06b6d4';
@@ -1096,7 +1184,6 @@ window.ServiceTemplates = {
                 </div>
         `;
         
-        // Add bio snippet if available (primary author only)
         if (bio && bio.length > 10) {
             const bioSnippet = bio.substring(0, 120) + (bio.length > 120 ? '...' : '');
             cardHTML += `
@@ -1106,7 +1193,6 @@ window.ServiceTemplates = {
             `;
         }
         
-        // Add expertise tags if available
         if (expertise && expertise.length > 0) {
             cardHTML += `
                 <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem;">
@@ -1119,7 +1205,6 @@ window.ServiceTemplates = {
             `;
         }
         
-        // Add clickable links if available
         if (links && links.length > 0) {
             cardHTML += `
                 <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
@@ -1138,7 +1223,6 @@ window.ServiceTemplates = {
             
             cardHTML += `</div>`;
         } else if (!isPrimary) {
-            // For co-authors without links, show a note
             cardHTML += `
                 <div style="font-size: 0.7rem; color: #94a3b8; text-align: center; padding: 0.5rem; margin-top: 0.5rem; background: #f8fafc; border-radius: 4px;">
                     <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
@@ -1152,7 +1236,6 @@ window.ServiceTemplates = {
         return cardHTML;
     },
 
-    // Helper function to update elements
     updateElement: function(id, value) {
         const element = document.getElementById(id);
         if (element) {
@@ -1174,13 +1257,13 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.16.0 ENHANCED AUTHOR CARDS');
+console.log('ServiceTemplates loaded successfully - v4.17.0 FACT CHECKER FIXED');
 
 // Chart Integration
 const originalDisplayAllAnalyses = window.ServiceTemplates.displayAllAnalyses;
 
 window.ServiceTemplates.displayAllAnalyses = function(data, analyzer) {
-    console.log('[ServiceTemplates v4.16.0] displayAllAnalyses called');
+    console.log('[ServiceTemplates v4.17.0] displayAllAnalyses called');
     originalDisplayAllAnalyses.call(this, data, analyzer);
     setTimeout(() => {
         integrateChartsIntoServices(data);
@@ -1219,4 +1302,4 @@ function integrateChartsIntoServices(data) {
     console.log('[Charts] ✓ Integration complete');
 }
 
-console.log('[Charts] Service Templates v4.16.0 loaded - COMPLETE FILE - Enhanced Author Cards with Links');
+console.log('[Charts] Service Templates v4.17.0 loaded - FACT CHECKER CLAIMS DISPLAY FIXED')
