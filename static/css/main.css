@@ -1,19 +1,16 @@
 /**
  * TruthLens Main CSS - Enhanced Professional Layout
- * Date: October 11, 2025
- * Version: 4.0.0 - COMPACT PROFESSIONAL DESIGN
+ * Date: October 12, 2025
+ * Version: 4.0.1 - ADDED SOURCE CREDIBILITY BAR CHART STYLES
  * 
- * CHANGES FROM 3.1:
- * - NEW: Compact hero section (.section-header-compact) - saves ~60px
- * - NEW: Compact mode descriptions - saves ~30px
- * - NEW: Capabilities showcase badges
- * - NEW: "What We Analyze" section (boasting!)
- * - NEW: Data sources badges
- * - IMPROVED: Better color gradients
- * - IMPROVED: Micro-animations for engagement
- * - IMPROVED: Professional typography hierarchy
- * - FIXED: Progress bar positioning (always visible)
- * - All existing functionality preserved (DO NO HARM ✓)
+ * LATEST CHANGE (October 12, 2025):
+ * - ADDED: Complete CSS for source credibility comparison bar chart
+ * - ADDED: .source-comparison-section, .source-ranking-chart, .source-bar styles
+ * - ADDED: Animated bar fills with color coding (excellent/good/moderate/low)
+ * - ADDED: Score explanation box styling
+ * - FIXED: Bar chart now displays correctly with proper animations
+ * 
+ * All other styles remain unchanged from v4.0.0
  */
 
 /* ===== BASE RESET ===== */
@@ -120,22 +117,22 @@ body {
 .analysis-section {
     background: white;
     border-radius: 16px;
-    padding: 2rem; /* Reduced from 3rem - saves 40px */
+    padding: 2rem;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
 }
 
 /* ===== NEW: COMPACT HERO SECTION ===== */
 .section-header-compact {
     text-align: center;
-    margin-bottom: 1.5rem; /* Reduced from 3rem - saves 60px */
+    margin-bottom: 1.5rem;
 }
 
 .main-title-compact {
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 2rem; /* Slightly smaller than 2.5rem */
+    font-size: 2rem;
     font-weight: 800;
     color: #1e293b;
-    margin-bottom: 0.5rem; /* Reduced from 1rem */
+    margin-bottom: 0.5rem;
     line-height: 1.2;
 }
 
@@ -153,10 +150,10 @@ body {
 }
 
 .subtitle-compact {
-    font-size: 1rem; /* Reduced from 1.125rem */
+    font-size: 1rem;
     color: #64748b;
-    max-width: 600px; /* Reduced from 700px */
-    margin: 0 auto 1rem; /* Reduced bottom margin */
+    max-width: 600px;
+    margin: 0 auto 1rem;
 }
 
 /* ===== NEW: CAPABILITIES SHOWCASE ===== */
@@ -203,7 +200,7 @@ body {
     background: #f1f5f9;
     border-radius: 12px;
     padding: 0.5rem;
-    margin-bottom: 1.5rem; /* Reduced from 2rem */
+    margin-bottom: 1.5rem;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
@@ -250,8 +247,8 @@ body {
 /* ===== NEW: COMPACT MODE DESCRIPTION ===== */
 .mode-description-compact {
     text-align: center;
-    margin-bottom: 1.5rem; /* Reduced from 2rem */
-    padding: 0.75rem 1rem; /* Reduced padding */
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
     background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
     border-radius: 8px;
     border: 1px solid rgba(99, 102, 241, 0.1);
@@ -259,7 +256,7 @@ body {
 
 .mode-description-compact p {
     color: #64748b;
-    font-size: 0.9rem; /* Slightly smaller */
+    font-size: 0.9rem;
     margin: 0;
     display: flex;
     align-items: center;
@@ -314,13 +311,13 @@ body {
 }
 
 .textarea-field {
-    min-height: 100px; /* Reduced from 120px */
+    min-height: 100px;
     resize: vertical;
     font-family: inherit;
 }
 
 .transcript-textarea {
-    min-height: 150px; /* Reduced from 200px */
+    min-height: 150px;
     font-family: 'Inter', monospace;
     font-size: 0.9rem;
     line-height: 1.6;
@@ -505,9 +502,9 @@ body {
 /* ===== PROGRESS CONTAINER - COMPACT & ALWAYS VISIBLE ===== */
 .progress-container {
     display: none;
-    margin: 1.5rem auto; /* Reduced from 2rem */
+    margin: 1.5rem auto;
     max-width: 700px;
-    padding: 1.5rem; /* Reduced from 2rem */
+    padding: 1.5rem;
     background: white;
     border-radius: 12px;
     border: 2px solid #e5e7eb;
@@ -520,11 +517,11 @@ body {
 
 .progress-header {
     text-align: center;
-    margin-bottom: 1rem; /* Reduced from 1.5rem */
+    margin-bottom: 1rem;
 }
 
 .progress-title {
-    font-size: 1.125rem; /* Reduced from 1.25rem */
+    font-size: 1.125rem;
     font-weight: 700;
     color: #1e293b;
     margin-bottom: 0.25rem;
@@ -532,15 +529,15 @@ body {
 
 .progress-subtitle {
     color: #64748b;
-    font-size: 0.875rem; /* Reduced from 0.9rem */
+    font-size: 0.875rem;
     font-weight: 500;
 }
 
 .progress-percentage {
-    font-size: 1.75rem; /* Reduced from 2rem */
+    font-size: 1.75rem;
     font-weight: 700;
     color: #6366f1;
-    margin: 0.75rem 0; /* Reduced from 1rem */
+    margin: 0.75rem 0;
     text-align: center;
 }
 
@@ -549,7 +546,7 @@ body {
     height: 12px;
     border-radius: 8px;
     overflow: hidden;
-    margin: 1rem 0; /* Reduced from 1.5rem */
+    margin: 1rem 0;
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
@@ -565,7 +562,7 @@ body {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 0.75rem;
-    margin-top: 1rem; /* Reduced from 1.5rem */
+    margin-top: 1rem;
 }
 
 .progress-step {
@@ -582,7 +579,7 @@ body {
 }
 
 .step-icon {
-    width: 32px; /* Reduced from 36px */
+    width: 32px;
     height: 32px;
     background: #e5e7eb;
     border-radius: 50%;
@@ -590,7 +587,7 @@ body {
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    font-size: 0.8rem; /* Reduced from 0.875rem */
+    font-size: 0.8rem;
     color: #6b7280;
     transition: all 0.3s ease;
 }
@@ -937,6 +934,287 @@ body {
     line-height: 1;
     margin-bottom: 0.5rem;
 }
+
+/* ============================================================================
+   NEW SECTION v4.0.1: SOURCE CREDIBILITY BAR CHART STYLES
+   ============================================================================ */
+
+/* Container for the source comparison section */
+.source-comparison-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Title for the comparison chart */
+.comparison-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comparison-title i {
+    color: #6366f1;
+    font-size: 1.125rem;
+}
+
+/* Score explanation box */
+.score-explanation {
+    background: #f0f9ff;
+    border-left: 3px solid #3b82f6;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+}
+
+.score-explanation p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #1e40af;
+    line-height: 1.5;
+}
+
+.score-explanation i {
+    margin-right: 0.5rem;
+}
+
+/* Container for the bar chart */
+.source-ranking-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Individual source bar row */
+.source-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.source-bar:hover {
+    background: #f1f5f9;
+    transform: translateX(4px);
+}
+
+/* Highlight current source */
+.source-bar.current {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border: 2px solid #6366f1;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+/* Source name label */
+.source-name {
+    flex: 0 0 180px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.source-bar.current .source-name {
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+/* Bar track (background) */
+.source-bar-track {
+    flex: 1;
+    height: 32px;
+    background: #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Bar fill (colored bar) */
+.source-bar-fill {
+    height: 100%;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.75rem;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated shimmer effect on bars */
+.source-bar-fill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Score label inside the bar */
+.score-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+/* Color tiers for different score ranges */
+.source-bar-fill.excellent {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.source-bar-fill.good {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.source-bar-fill.moderate {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.source-bar-fill.low {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* Current source bar gets extra emphasis */
+.source-bar.current .source-bar-fill {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Trust Level Meter Section */
+.trust-meter-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.trust-meter-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.trust-meter {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(90deg, 
+        #ef4444 0%, 
+        #f59e0b 25%, 
+        #eab308 50%, 
+        #84cc16 75%, 
+        #10b981 100%
+    );
+    border-radius: 20px;
+    margin-bottom: 0.5rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.trust-indicator {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 56px;
+    background: white;
+    border: 4px solid #1e293b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.125rem;
+    color: #1e293b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trust-scale {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.scale-marker {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+/* Source Details Grid */
+.source-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.source-detail-item {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.detail-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.detail-content {
+    flex: 1;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.detail-value {
+    font-size: 0.95rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* End of Source Credibility Bar Chart Styles */
 
 /* ===== METRICS GRID (GENERAL) ===== */
 .service-metrics-grid {
@@ -1552,6 +1830,21 @@ body {
     .source-badge {
         font-size: 0.75rem;
         padding: 0.375rem 0.75rem;
+    }
+    
+    /* Responsive bar chart */
+    .source-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .source-name {
+        flex: 0 0 auto;
+        margin-bottom: 0.5rem;
+    }
+    
+    .source-details-grid {
+        grid-template-columns: 1fr;
     }
 }
 
