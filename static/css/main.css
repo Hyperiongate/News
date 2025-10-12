@@ -1867,3 +1867,334 @@ body {
         font-size: 0.65rem;
     }
 }
+/* ============================================================================
+   TRANSPARENCY ANALYZER v3.0.0 STYLES - ADD TO END OF main.css
+   Date: October 12, 2025
+   
+   ADD THESE STYLES TO THE BOTTOM OF YOUR main.css FILE
+   ============================================================================ */
+
+/* Transparency Enhanced v3 Container */
+.transparency-enhanced-v3 {
+    padding: 1rem;
+}
+
+/* Hero Section with Score */
+.trans-hero-v3 {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    color: white;
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+}
+
+.trans-score-display-v3 {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.trans-score-circle-v3 {
+    width: 140px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
+
+.trans-score-number-v3 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+}
+
+.trans-score-label-v3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
+
+.trans-score-text-v3 {
+    flex: 1;
+    min-width: 250px;
+}
+
+.trans-score-text-v3 h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: white;
+}
+
+.trans-score-text-v3 p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+    opacity: 0.95;
+}
+
+/* Section Styling */
+.trans-section-v3 {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+}
+
+.trans-section-v3.meaning {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-left: 4px solid #f59e0b;
+}
+
+.trans-section-header-v3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.trans-section-header-v3 i {
+    font-size: 1.25rem;
+    color: #8b5cf6;
+}
+
+.trans-section-header-v3 h4 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.trans-section-content-v3 {
+    color: #475569;
+    line-height: 1.7;
+}
+
+/* Quick Stats Grid */
+.trans-stats-grid-v3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.trans-stat-card-v3 {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    transition: all 0.3s ease;
+    border-top: 4px solid #cbd5e1;
+}
+
+.trans-stat-card-v3:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.trans-stat-card-v3.sources {
+    border-top-color: #3b82f6;
+}
+
+.trans-stat-card-v3.quotes {
+    border-top-color: #10b981;
+}
+
+.trans-stat-card-v3.verifiable {
+    border-top-color: #8b5cf6;
+}
+
+.trans-stat-card-v3.links {
+    border-top-color: #f59e0b;
+}
+
+.trans-stat-icon-v3 {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 0.75rem;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.trans-stat-card-v3.sources .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.trans-stat-card-v3.quotes .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.trans-stat-card-v3.verifiable .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.trans-stat-card-v3.links .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.trans-stat-value-v3 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.trans-stat-label-v3 {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.trans-stat-detail-v3 {
+    font-size: 0.75rem;
+    color: #8b5cf6;
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+/* Findings Container */
+#trans-findings-container-v3 {
+    margin-top: 1rem;
+}
+
+/* Education Section */
+.trans-education-v3 {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    border: 2px solid #3b82f6;
+}
+
+.trans-edu-header-v3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.trans-edu-header-v3 i {
+    font-size: 1.5rem;
+    color: #3b82f6;
+}
+
+.trans-edu-header-v3 h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+.trans-edu-grid-v3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.trans-edu-item-v3 {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.trans-edu-item-v3:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.trans-edu-item-v3 > i {
+    font-size: 1.75rem;
+    color: #3b82f6;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.trans-edu-item-v3 strong {
+    display: block;
+    color: #1e40af;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.trans-edu-item-v3 p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Responsive Design for Transparency v3 */
+@media (max-width: 768px) {
+    .trans-hero-v3 {
+        padding: 1.5rem;
+    }
+    
+    .trans-score-display-v3 {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .trans-score-circle-v3 {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .trans-score-number-v3 {
+        font-size: 2.75rem;
+    }
+    
+    .trans-score-text-v3 {
+        min-width: 0;
+    }
+    
+    .trans-score-text-v3 h3 {
+        font-size: 1.5rem;
+    }
+    
+    .trans-stats-grid-v3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .trans-edu-grid-v3 {
+        grid-template-columns: 1fr;
+    }
+    
+    .trans-section-v3 {
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .trans-stats-grid-v3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* End of Transparency v3.0.0 Styles */
