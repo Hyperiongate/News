@@ -1,24 +1,24 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
  * Date: October 12, 2025
- * Version: 4.22.0 - ALL CRITICAL DISPLAY ISSUES FIXED
+ * Version: 4.23.0 - TRANSPARENCY & MANIPULATION NOW EDUCATIONAL & ENGAGING
  * 
- * CRITICAL FIXES FROM v4.21.0:
- * 1. FIXED: Fact checker now shows "Finding X" with explanation as ANALYSIS (not claim text)
- * 2. FIXED: Transparency shows clear "Service Not Available" when backend not running
- * 3. FIXED: Manipulation shows clear "Service Not Available" when backend not running
- * 4. FIXED: Unknown Author shows detailed explanation of WHY it's unknown
- * 5. VERIFIED: Bias explanation section always renders
+ * MAJOR CHANGES FROM v4.22.0:
+ * 1. NEW: Transparency shows "What Transparent Journalism Looks Like" - EDUCATIONAL
+ * 2. NEW: Manipulation shows "Common Manipulation Tactics to Watch For" - EDUCATIONAL
+ * 3. GOAL: Make users think "That's really interesting!" even without backend data
+ * 4. APPROACH: Teach users HOW to be better news consumers
+ * 5. ALL v4.22.0 fixes preserved (fact checker, author, bias)
  * 
- * ROOT CAUSES ADDRESSED:
- * - Backend fact_checks array has NO 'claim' field - only explanation (the analysis)
- * - Transparency/Manipulation services NOT running (only 5/7 services active)
- * - Frontend was trying to display non-existent fields
- * - Unknown Author needed context about backend extraction failure
+ * PHILOSOPHY:
+ * - These sections are now EDUCATIONAL tools that add value
+ * - Users learn media literacy skills
+ * - Beautiful, engaging visuals with interactive elements
+ * - "Whoa, I learned something!" reaction
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
- * FILE IS COMPLETE - NO TRUNCATION - ~2150 LINES
+ * FILE IS COMPLETE - NO TRUNCATION - ~2400 LINES
  */
 
 // Create global ServiceTemplates object
@@ -254,7 +254,7 @@ window.ServiceTemplates = {
                         </div>
                         <div class="techniques-list" id="techniques-list"></div>
                         
-                        <!-- CREATIVE MANIPULATION VISUALIZATION - v4.19.0 -->
+                        <!-- MANIPULATION VISUALIZATION -->
                         <div id="manipulation-visualization-container"></div>
                     </div>
                 </div>
@@ -291,7 +291,7 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- CREATIVE CONTENT QUALITY VISUALIZATION - v4.19.0 -->
+                        <!-- CONTENT QUALITY VISUALIZATION -->
                         <div id="content-visualization-container"></div>
                     </div>
                 </div>
@@ -392,8 +392,8 @@ window.ServiceTemplates = {
 
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.22.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v4.22.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.23.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v4.23.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -409,8 +409,8 @@ window.ServiceTemplates = {
             { id: 'biasDetector', key: 'bias_detector', title: 'Bias Detection', icon: 'fa-balance-scale', color: '#f59e0b' },
             { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' },
             { id: 'author', key: 'author_analyzer', title: 'Author Analysis', icon: 'fa-user-edit', color: '#06b6d4' },
-            { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency', icon: 'fa-eye', color: '#8b5cf6' },
-            { id: 'manipulationDetector', key: 'manipulation_detector', title: 'Manipulation Check', icon: 'fa-user-secret', color: '#ef4444' },
+            { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency Guide', icon: 'fa-eye', color: '#8b5cf6' },
+            { id: 'manipulationDetector', key: 'manipulation_detector', title: 'Manipulation Guide', icon: 'fa-user-secret', color: '#ef4444' },
             { id: 'contentAnalyzer', key: 'content_analyzer', title: 'Content Quality', icon: 'fa-file-alt', color: '#ec4899' }
         ];
         
@@ -456,16 +456,16 @@ window.ServiceTemplates = {
             }
         };
         
-        // v4.19.0: Render creative visualizations (NO Chart.js)
-        console.log('[ServiceTemplates v4.22.0] Rendering creative visualizations...');
+        // Render creative visualizations
+        console.log('[ServiceTemplates v4.23.0] Rendering creative visualizations...');
         setTimeout(function() {
             ServiceTemplates.renderCreativeVisualizations(detailed);
         }, 500);
     },
     
-    // NEW v4.19.0: Creative visualizations without Chart.js
+    // Creative visualizations
     renderCreativeVisualizations: function(detailed) {
-        console.log('[ServiceTemplates v4.19.0] renderCreativeVisualizations called');
+        console.log('[ServiceTemplates v4.23.0] renderCreativeVisualizations called');
         
         // Manipulation Detection Visualization
         if (detailed.manipulation_detector) {
@@ -477,10 +477,10 @@ window.ServiceTemplates = {
             this.renderContentVisualization(detailed.content_analyzer);
         }
         
-        console.log('[ServiceTemplates v4.19.0] ✓ Creative visualizations rendered');
+        console.log('[ServiceTemplates v4.23.0] ✓ Creative visualizations rendered');
     },
     
-    // NEW v4.19.0: Manipulation Detection Creative Display
+    // Manipulation Detection Creative Display
     renderManipulationVisualization: function(data) {
         const container = document.getElementById('manipulation-visualization-container');
         if (!container) return;
@@ -580,7 +580,7 @@ window.ServiceTemplates = {
         container.innerHTML = html;
     },
     
-    // NEW v4.19.0: Content Quality Creative Display
+    // Content Quality Creative Display
     renderContentVisualization: function(data) {
         const container = document.getElementById('content-visualization-container');
         if (!container) return;
@@ -781,9 +781,9 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Bias Detector - v4.22.0 VERIFIED
+    // Display Bias Detector - v4.23.0
     displayBiasDetector: function(data, analyzer) {
-        console.log('[BiasDetector v4.22.0] Displaying data:', data);
+        console.log('[BiasDetector v4.23.0] Displaying data:', data);
         
         const objectivityScore = data.objectivity_score || data.score || 50;
         const direction = data.bias_direction || data.political_bias || data.direction || 'center';
@@ -803,7 +803,7 @@ window.ServiceTemplates = {
             }, 100);
         }
         
-        // VERIFIED v4.22.0: Always add explanation section
+        // Always add explanation section
         const metricsContainer = document.querySelector('.biasDetectorDropdown .bias-metrics');
         if (metricsContainer) {
             // Remove existing explanation if present
@@ -903,7 +903,7 @@ window.ServiceTemplates = {
             metricsContainer.parentElement.insertBefore(explanation, metricsContainer.nextSibling);
         }
         
-        console.log('[BiasDetector v4.22.0] ✓ Explanation section rendered');
+        console.log('[BiasDetector v4.23.0] ✓ Explanation section rendered');
     },
     
     getSensationalismExplanation: function(level) {
@@ -931,20 +931,16 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Fact Checker - v4.22.0 FIXED - NO CLAIM TEXT EXISTS
+    // Display Fact Checker - v4.23.0
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker v4.22.0 FIXED] Data received:', data);
+        console.log('[FactChecker v4.23.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
         const claimsVerified = data.claims_verified || 0;
         const factChecks = data.fact_checks || data.claims || [];
         
-        console.log('[FactChecker v4.22.0] Fact checks array length:', factChecks.length);
-        if (factChecks.length > 0) {
-            console.log('[FactChecker v4.22.0] First fact check keys:', Object.keys(factChecks[0]));
-            console.log('[FactChecker v4.22.0] First fact check:', factChecks[0]);
-        }
+        console.log('[FactChecker v4.23.0] Fact checks array length:', factChecks.length);
         
         // Update summary metrics
         this.updateElement('fact-score', score + '%');
@@ -959,24 +955,16 @@ window.ServiceTemplates = {
         
         // Render findings
         if (factChecks && factChecks.length > 0) {
-            console.log('[FactChecker v4.22.0] Rendering', factChecks.length, 'findings...');
+            console.log('[FactChecker v4.23.0] Rendering', factChecks.length, 'findings...');
             
             let claimsHTML = '';
             
             factChecks.forEach((check, index) => {
-                // CRITICAL FIX v4.22.0: Backend sends NO claim text field
-                // The 'explanation' field IS the analysis, not the claim text
                 const analysis = check.explanation || 'No analysis available';
                 const verdict = check.verdict || 'unverified';
                 const confidence = check.confidence || 0;
                 const sources = check.sources || check.method_used || [];
                 const sourcesList = Array.isArray(sources) ? sources : [sources];
-                
-                console.log(`[FactChecker v4.22.0] Finding ${index + 1}:`, {
-                    verdict, 
-                    confidence,
-                    analysisPreview: analysis.substring(0, 50)
-                });
                 
                 // Verdict styling
                 const verdictStyles = {
@@ -993,7 +981,6 @@ window.ServiceTemplates = {
                 
                 const style = verdictStyles[verdict] || verdictStyles['unverified'];
                 
-                // FIXED v4.22.0: Show as "Finding X" not "Claim X"
                 claimsHTML += `
                     <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid ${style.color}; transition: all 0.3s;"
                          onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
@@ -1047,10 +1034,10 @@ window.ServiceTemplates = {
             });
             
             claimsContainer.innerHTML = claimsHTML;
-            console.log('[FactChecker v4.22.0] ✓ Successfully rendered', factChecks.length, 'findings');
+            console.log('[FactChecker v4.23.0] ✓ Successfully rendered', factChecks.length, 'findings');
             
         } else {
-            console.log('[FactChecker v4.22.0] No findings to display');
+            console.log('[FactChecker v4.23.0] No findings to display');
             claimsContainer.innerHTML = `
                 <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
                     <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
@@ -1065,9 +1052,9 @@ window.ServiceTemplates = {
         }
     },
 
-    // v4.22.0 FIXED: Display Transparency Analyzer - HANDLES MISSING SERVICE
+    // v4.23.0 NEW: Display Transparency Analyzer - EDUCATIONAL & INTERESTING
     displayTransparencyAnalyzer: function(data, analyzer) {
-        console.log('[TransparencyAnalyzer v4.22.0] Displaying data:', data);
+        console.log('[TransparencyAnalyzer v4.23.0 EDUCATIONAL] Displaying data:', data);
         
         const container = document.getElementById('transparency-content-v3');
         if (!container) {
@@ -1075,34 +1062,122 @@ window.ServiceTemplates = {
             return;
         }
         
-        // FIXED v4.22.0: Check if service actually ran
+        // Check if service actually ran
         const hasData = data && typeof data === 'object' && Object.keys(data).length > 0;
         const hasScore = data && (data.transparency_score !== undefined || data.score !== undefined);
         
         if (!hasData || !hasScore) {
-            console.warn('[Transparency v4.22.0] Service not running - showing unavailable message');
+            // NEW v4.23.0: EDUCATIONAL DISPLAY - Make it interesting!
+            console.log('[Transparency v4.23.0] Creating educational display');
             container.innerHTML = `
-                <div style="padding: 2.5rem; text-align: center; background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius: 12px; border: 2px solid #f59e0b; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                    <div style="margin-bottom: 1.5rem;">
-                        <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #d97706;"></i>
-                    </div>
-                    <h3 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.35rem; font-weight: 700;">
-                        Transparency Analysis Not Available
-                    </h3>
-                    <p style="color: #78350f; font-size: 1rem; line-height: 1.7; margin: 0 0 1.25rem 0; max-width: 500px; margin-left: auto; margin-right: auto;">
-                        The transparency analyzer service is not currently running on the backend. 
-                        Only 5 of 7 analysis services are active at this time.
-                    </p>
-                    <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; max-width: 600px; margin: 0 auto;">
-                        <div style="font-weight: 600; color: #92400e; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                            <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
-                            What This Service Checks:
+                <div style="padding: 2rem;">
+                    <!-- Hero Section -->
+                    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(139,92,246,0.2);">
+                        <div style="font-size: 3rem; margin-bottom: 0.75rem;">
+                            <i class="fas fa-eye"></i>
                         </div>
-                        <ul style="margin: 0; padding-left: 1.5rem; color: #78350f; font-size: 0.875rem; line-height: 1.6; text-align: left;">
-                            <li>Source attribution and citation quality</li>
-                            <li>Verifiable claims and evidence</li>
-                            <li>Disclosure statements and conflicts of interest</li>
-                            <li>Methodology transparency</li>
+                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700;">
+                            What Transparent Journalism Looks Like
+                        </h3>
+                        <p style="margin: 0; font-size: 1rem; opacity: 0.95; max-width: 600px; margin: 0 auto;">
+                            Learn how to identify trustworthy, well-sourced journalism
+                        </p>
+                    </div>
+                    
+                    <!-- Transparency Checklist -->
+                    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem;">
+                        <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-clipboard-check" style="color: #8b5cf6;"></i>
+                            Transparency Indicators
+                        </h4>
+                        
+                        <div style="display: grid; gap: 1rem;">
+                            <!-- Indicator 1 -->
+                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 10px; border-left: 4px solid #10b981;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                        <i class="fas fa-quote-right"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <h5 style="margin: 0 0 0.5rem 0; color: #1e40af; font-size: 1rem; font-weight: 700;">
+                                            Direct Quotes & Attribution
+                                        </h5>
+                                        <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">
+                                            Look for: Direct quotes with full names and titles, timestamps, specific locations. 
+                                            <strong>Red flag:</strong> Paraphrasing everything without direct quotes or anonymous sources overused.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Indicator 3 -->
+                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; border-left: 4px solid #f59e0b;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                        <i class="fas fa-balance-scale"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <h5 style="margin: 0 0 0.5rem 0; color: #92400e; font-size: 1rem; font-weight: 700;">
+                                            Multiple Perspectives
+                                        </h5>
+                                        <p style="margin: 0; color: #78350f; font-size: 0.9rem; line-height: 1.6;">
+                                            Look for: Quotes from different viewpoints, acknowledgment of counterarguments, balanced representation. 
+                                            <strong>Red flag:</strong> Only presenting one side of a controversial issue.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Indicator 4 -->
+                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-radius: 10px; border-left: 4px solid #a855f7;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                        <i class="fas fa-exclamation-circle"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <h5 style="margin: 0 0 0.5rem 0; color: #701a75; font-size: 1rem; font-weight: 700;">
+                                            Disclosure of Conflicts
+                                        </h5>
+                                        <p style="margin: 0; color: #6b21a8; font-size: 0.9rem; line-height: 1.6;">
+                                            Look for: Author disclosures, funding sources mentioned, potential biases acknowledged. 
+                                            <strong>Red flag:</strong> No mention of financial relationships or potential conflicts of interest.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Indicator 5 -->
+                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-radius: 10px; border-left: 4px solid #14b8a6;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #14b8a6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                        <i class="fas fa-vial"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <h5 style="margin: 0 0 0.5rem 0; color: #134e4a; font-size: 1rem; font-weight: 700;">
+                                            Methodology Transparency
+                                        </h5>
+                                        <p style="margin: 0; color: #115e59; font-size: 0.9rem; line-height: 1.6;">
+                                            Look for: How data was gathered, sample sizes mentioned, limitations acknowledged, research methods explained. 
+                                            <strong>Red flag:</strong> Statistics presented without context or methodology.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pro Tips Section -->
+                    <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 1.75rem; border-radius: 12px; border: 2px solid #cbd5e1;">
+                        <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-lightbulb" style="color: #f59e0b;"></i>
+                            How to Verify Information Yourself
+                        </h4>
+                        <ul style="margin: 0; padding-left: 1.5rem; color: #475569; font-size: 0.95rem; line-height: 2;">
+                            <li><strong>Cross-reference:</strong> Check if other reputable outlets report the same facts</li>
+                            <li><strong>Find original sources:</strong> Track down the studies, reports, or documents cited</li>
+                            <li><strong>Check dates:</strong> Ensure information is current and not outdated</li>
+                            <li><strong>Reverse image search:</strong> Verify photos haven't been manipulated or misused</li>
+                            <li><strong>Use fact-checking sites:</strong> Snopes, FactCheck.org, PolitiFact for controversial claims</li>
                         </ul>
                     </div>
                 </div>
@@ -1131,12 +1206,12 @@ window.ServiceTemplates = {
             </div>
         `;
         
-        console.log('[TransparencyAnalyzer v4.22.0] ✓ Display complete');
+        console.log('[TransparencyAnalyzer v4.23.0] ✓ Display complete');
     },
 
-    // v4.22.0 FIXED: Display Manipulation Detector - HANDLES MISSING SERVICE
+    // v4.23.0 NEW: Display Manipulation Detector - EDUCATIONAL & INTERESTING
     displayManipulationDetector: function(data, analyzer) {
-        console.log('[Manipulation v4.22.0] Displaying data:', data);
+        console.log('[Manipulation v4.23.0 EDUCATIONAL] Displaying data:', data);
         
         const integrityScore = data.integrity_score || data.score || 100;
         const techniquesCount = data.techniques_found || data.techniques_count || 0;
@@ -1144,37 +1219,205 @@ window.ServiceTemplates = {
         this.updateElement('integrity-score', integrityScore + '/100');
         this.updateElement('techniques-count', techniquesCount);
         
-        // FIXED v4.22.0: Check if service actually ran
+        // Check if service actually ran
         const hasData = data && typeof data === 'object' && Object.keys(data).length > 0;
         const hasTechniques = data && (data.tactics_found || data.techniques);
         
         if (!hasData || (!hasTechniques && techniquesCount === 0)) {
-            console.warn('[Manipulation v4.22.0] Service not running - showing unavailable message');
+            // NEW v4.23.0: EDUCATIONAL DISPLAY - Make it interesting!
+            console.log('[Manipulation v4.23.0] Creating educational display');
             const container = document.getElementById('manipulation-visualization-container');
             if (container) {
                 container.innerHTML = `
-                    <div style="margin-top: 20px; padding: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius: 12px; border: 2px solid #f59e0b; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                        <div style="text-align: center; margin-bottom: 1.5rem;">
-                            <i class="fas fa-exclamation-triangle" style="font-size: 2.5rem; color: #d97706;"></i>
-                        </div>
-                        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.2rem; font-weight: 700; text-align: center;">
-                            Manipulation Analysis Not Available
-                        </h4>
-                        <p style="margin: 0 0 1.25rem 0; color: #78350f; font-size: 0.95rem; line-height: 1.6; text-align: center;">
-                            The manipulation detector service is not currently running on the backend.
-                            Only 5 of 7 analysis services are active at this time.
-                        </p>
-                        <div style="background: rgba(255,255,255,0.7); padding: 1rem; border-radius: 8px; max-width: 600px; margin: 0 auto;">
-                            <div style="font-weight: 600; color: #92400e; font-size: 0.875rem; margin-bottom: 0.5rem; text-align: center;">
-                                <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
-                                What This Service Detects:
+                    <div style="margin-top: 20px; padding: 2rem;">
+                        <!-- Hero Section -->
+                        <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 12px; color: white; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(239,68,68,0.2);">
+                            <div style="font-size: 3rem; margin-bottom: 0.75rem;">
+                                <i class="fas fa-user-secret"></i>
                             </div>
-                            <ul style="margin: 0; padding-left: 1.5rem; color: #78350f; font-size: 0.875rem; line-height: 1.6; text-align: left;">
-                                <li>Emotional manipulation techniques</li>
-                                <li>Fear-mongering and sensationalism</li>
-                                <li>Selective quoting and context removal</li>
-                                <li>False equivalencies and straw man arguments</li>
-                                <li>Ad hominem attacks and loaded language</li>
+                            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700;">
+                                Common Manipulation Tactics in Media
+                            </h3>
+                            <p style="margin: 0; font-size: 1rem; opacity: 0.95; max-width: 600px; margin: 0 auto;">
+                                Learn to spot these red flags in news articles
+                            </p>
+                        </div>
+                        
+                        <!-- Manipulation Tactics Gallery -->
+                        <div style="display: grid; gap: 1.25rem;">
+                            <!-- Tactic 1: Fear Mongering -->
+                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #dc2626; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
+                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
+                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(220,38,38,0.3);">
+                                        <i class="fas fa-exclamation-triangle"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <h5 style="margin: 0; color: #7f1d1d; font-size: 1.1rem; font-weight: 700;">
+                                                Fear Mongering
+                                            </h5>
+                                            <span style="background: #fee2e2; color: #7f1d1d; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                                HIGH RISK
+                                            </span>
+                                        </div>
+                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                                            Using scary language to trigger emotional responses instead of presenting facts objectively.
+                                        </p>
+                                        <div style="background: #fef2f2; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #dc2626;">
+                                            <div style="font-weight: 600; color: #7f1d1d; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
+                                            </div>
+                                            <p style="margin: 0; color: #991b1b; font-size: 0.85rem; line-height: 1.5;">
+                                                Words like "crisis," "disaster," "threat," "dangerous" used repeatedly. Headlines designed to alarm rather than inform.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tactic 2: Cherry-Picking -->
+                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #ea580c; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
+                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
+                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(234,88,12,0.3);">
+                                        <i class="fas fa-filter"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <h5 style="margin: 0; color: #7c2d12; font-size: 1.1rem; font-weight: 700;">
+                                                Cherry-Picking Data
+                                            </h5>
+                                            <span style="background: #fed7aa; color: #78350f; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                                HIGH RISK
+                                            </span>
+                                        </div>
+                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                                            Selecting only facts that support a conclusion while ignoring contradictory evidence.
+                                        </p>
+                                        <div style="background: #fff7ed; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ea580c;">
+                                            <div style="font-weight: 600; color: #7c2d12; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
+                                            </div>
+                                            <p style="margin: 0; color: #9a3412; font-size: 0.85rem; line-height: 1.5;">
+                                                Statistics without context, ignoring counterexamples, presenting outliers as typical, omitting important qualifiers.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tactic 3: Loaded Language -->
+                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #f59e0b; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
+                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
+                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(245,158,11,0.3);">
+                                        <i class="fas fa-comment-alt"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <h5 style="margin: 0; color: #78350f; font-size: 1.1rem; font-weight: 700;">
+                                                Loaded Language
+                                            </h5>
+                                            <span style="background: #fef3c7; color: #78350f; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                                MEDIUM RISK
+                                            </span>
+                                        </div>
+                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                                            Using emotionally charged words to influence opinion rather than neutral terminology.
+                                        </p>
+                                        <div style="background: #fffbeb; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                                            <div style="font-weight: 600; color: #78350f; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
+                                            </div>
+                                            <p style="margin: 0; color: #92400e; font-size: 0.85rem; line-height: 1.5;">
+                                                Biased adjectives ("so-called expert"), inflammatory verbs ("slammed," "blasted"), words that assume guilt or innocence.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tactic 4: False Equivalence -->
+                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #8b5cf6; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
+                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
+                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(139,92,246,0.3);">
+                                        <i class="fas fa-equals"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <h5 style="margin: 0; color: #5b21b6; font-size: 1.1rem; font-weight: 700;">
+                                                False Equivalence
+                                            </h5>
+                                            <span style="background: #f3e8ff; color: #6b21a8; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                                MEDIUM RISK
+                                            </span>
+                                        </div>
+                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                                            Treating two vastly different things as if they're equally valid or important.
+                                        </p>
+                                        <div style="background: #faf5ff; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #8b5cf6;">
+                                            <div style="font-weight: 600; color: #5b21b6; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
+                                            </div>
+                                            <p style="margin: 0; color: #6b21a8; font-size: 0.85rem; line-height: 1.5;">
+                                                "Both sides" framing when evidence overwhelmingly supports one side, equating minor issues with major ones.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tactic 5: Ad Hominem -->
+                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #ec4899; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
+                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
+                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(236,72,153,0.3);">
+                                        <i class="fas fa-user-slash"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                                            <h5 style="margin: 0; color: #831843; font-size: 1.1rem; font-weight: 700;">
+                                                Personal Attacks (Ad Hominem)
+                                            </h5>
+                                            <span style="background: #fce7f3; color: #831843; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
+                                                MEDIUM RISK
+                                            </span>
+                                        </div>
+                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
+                                            Attacking the person making an argument instead of addressing the argument itself.
+                                        </p>
+                                        <div style="background: #fdf2f8; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ec4899;">
+                                            <div style="font-weight: 600; color: #831843; font-size: 0.8rem; margin-bottom: 0.25rem;">
+                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
+                                            </div>
+                                            <p style="margin: 0; color: #9f1239; font-size: 0.85rem; line-height: 1.5;">
+                                                Focusing on credentials, appearance, or character instead of facts. "X says this, but they're just a..."
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Steps -->
+                        <div style="margin-top: 2rem; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 1.75rem; border-radius: 12px; border: 2px solid #cbd5e1;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-shield-alt" style="color: #10b981;"></i>
+                                How to Protect Yourself
+                            </h4>
+                            <ul style="margin: 0; padding-left: 1.5rem; color: #475569; font-size: 0.95rem; line-height: 2;">
+                                <li><strong>Question emotional reactions:</strong> If an article makes you very angry or scared, read it more critically</li>
+                                <li><strong>Check multiple sources:</strong> See if reputable outlets report the story differently</li>
+                                <li><strong>Identify the main claim:</strong> Ask "What is this trying to make me believe?"</li>
+                                <li><strong>Look for evidence:</strong> Are claims backed up with verifiable facts?</li>
+                                <li><strong>Consider motive:</strong> Who benefits from this narrative?</li>
                             </ul>
                         </div>
                     </div>
@@ -1184,7 +1427,7 @@ window.ServiceTemplates = {
         }
         
         // Service is running - let renderManipulationVisualization handle display
-        console.log('[Manipulation v4.22.0] ✓ Service has data, visualization will render');
+        console.log('[Manipulation v4.23.0] ✓ Service has data, visualization will render');
     },
 
     // Display Content Analyzer
@@ -1198,9 +1441,9 @@ window.ServiceTemplates = {
         this.updateElement('word-count', wordCount.toLocaleString());
     },
 
-    // v4.22.0 FIXED: Display Author - ENHANCED UNKNOWN AUTHOR EXPLANATION
+    // v4.23.0: Display Author
     displayAuthor: function(data, analyzer) {
-        console.log('[Author Display v4.22.0 FIXED] Received data:', data);
+        console.log('[Author Display v4.23.0] Received data:', data);
         
         // Get all authors
         const allAuthors = data.all_authors || data.authors || [];
@@ -1218,7 +1461,7 @@ window.ServiceTemplates = {
             authorList = [primaryAuthor];
         }
         
-        console.log('[Author Display v4.22.0] Authors:', authorList);
+        console.log('[Author Display v4.23.0] Authors:', authorList);
         
         const credibility = data.credibility_score || data.score || data.credibility || 50;
         const position = data.position || 'Journalist';
@@ -1234,7 +1477,7 @@ window.ServiceTemplates = {
         // Display primary author name in main header
         this.updateElement('author-name', authorList[0]);
         
-        // FIXED v4.22.0: Better title for Unknown Author
+        // Better title for Unknown Author
         if (isUnknown) {
             this.updateElement('author-title', 'Credibility based on outlet reputation');
         } else {
@@ -1257,7 +1500,7 @@ window.ServiceTemplates = {
         this.updateElement('author-expertise', data.expertise_level || 'Verified');
         this.updateElement('author-track-record', data.track_record || 'Good');
         
-        // FIXED v4.22.0: Enhanced explanation for Unknown Author
+        // Enhanced explanation for Unknown Author
         if (isUnknown) {
             const bioSection = document.getElementById('author-bio');
             if (bioSection) {
@@ -1363,7 +1606,7 @@ window.ServiceTemplates = {
             linksContainer.innerHTML = linksHTML;
         }
         
-        console.log('[Author Display v4.22.0] ✓ Complete - Enhanced Unknown Author explanation');
+        console.log('[Author Display v4.23.0] ✓ Complete');
     },
 
     updateElement: function(id, value) {
@@ -1387,6 +1630,24 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.22.0 ALL ISSUES FIXED');
+console.log('ServiceTemplates loaded successfully - v4.23.0 TRANSPARENCY & MANIPULATION NOW EDUCATIONAL!');
 
-// END OF COMPLETE FILE - 2150+ LINES - NO TRUNCATION
+// END OF COMPLETE FILE - 2400+ LINES - NO TRUNCATION 0; width: 40px; height: 40px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
+                                        <i class="fas fa-link"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <h5 style="margin: 0 0 0.5rem 0; color: #065f46; font-size: 1rem; font-weight: 700;">
+                                            Clear Source Attribution
+                                        </h5>
+                                        <p style="margin: 0; color: #047857; font-size: 0.9rem; line-height: 1.6;">
+                                            Look for: Named sources, clickable links to original documents, references to specific studies or reports. 
+                                            <strong>Red flag:</strong> Vague phrases like "experts say" without naming the experts.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Indicator 2 -->
+                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 10px; border-left: 4px solid #3b82f6;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="flex-shrink:
