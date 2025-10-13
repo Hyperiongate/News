@@ -1,22 +1,24 @@
 """
-Data Transformer - WITH ALL_AUTHORS PRESERVATION
-Date: October 10, 2025
-Version: 2.8 - FIX ARTICLE PARAMETER TYPE ERROR
+Data Transformer - WITH V4.0 EDUCATIONAL FIELDS PRESERVATION
+Date: October 13, 2025
+Version: 2.9 - PRESERVE EDUCATIONAL CONTENT FROM TRANSPARENCY & MANIPULATION V4.0
 
-CHANGES FROM 2.7:
-- CRITICAL FIX: Handle case where article parameter is a string instead of dict
-- FIXED: Line 354 error - article.get() when article is a string
-- Added defensive type checking for article parameter
-- All chart preservation and all_authors functionality maintained
+CRITICAL CHANGES FROM 2.8:
+- FIXED: _transform_transparency now preserves v4.0 educational fields
+- FIXED: _transform_manipulation now preserves v4.0 educational fields
+- NEW: Preserves article_type, what_to_look_for, transparency_lessons, findings
+- NEW: Preserves how_to_spot, manipulation_lessons, risk_profile, tactics_found
+- All existing functionality maintained (charts, all_authors, type safety)
 
 THE BUG:
-Line 354: result['domain'] = raw_data.get('domain', article.get('domain', 'Unknown'))
-Error: 'str' object has no attribute 'get'
-Cause: article was a string "NPR" instead of a dictionary
+Transparency & Manipulation v4.0 services send rich educational data like:
+  - article_type, what_to_look_for, transparency_lessons, findings, expectations
+  - how_to_spot, manipulation_lessons, risk_profile
+But DataTransformer was only preserving score and basic metrics, discarding all educational content!
 
 THE FIX:
-Added type checking to ensure article is always treated as a dict
-If article is a string, treat it as an empty dict for .get() calls
+Added comprehensive field preservation in both _transform_transparency and _transform_manipulation
+Now ALL v4.0 educational fields pass through to the frontend
 
 Save as: services/data_transformer.py (REPLACE existing file)
 """
@@ -31,6 +33,7 @@ logger = logging.getLogger(__name__)
 class DataTransformer:
     """
     THE single transformer that ensures data matches the contract
+    v2.9: Now preserves v4.0 educational content from Transparency & Manipulation
     """
     
     # Source name mapping
@@ -49,7 +52,8 @@ class DataTransformer:
         'independent.co.uk': 'The Independent',
         'politico.com': 'Politico',
         'axios.com': 'Axios',
-        'thehill.com': 'The Hill'
+        'thehill.com': 'The Hill',
+        'nypost.com': 'New York Post'
     }
     
     # Source metadata
@@ -85,6 +89,14 @@ class DataTransformer:
             'readership': 'National',
             'awards': 'Multiple Pulitzer Prizes',
             'default_score': 87
+        },
+        'New York Post': {
+            'founded': 1801,
+            'type': 'Tabloid',
+            'ownership': 'News Corp',
+            'readership': 'Regional/National',
+            'awards': 'Various journalism awards',
+            'default_score': 60
         }
     }
     
@@ -92,14 +104,14 @@ class DataTransformer:
     def transform_response(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform the raw NewsAnalyzer response to match frontend contract"""
         
-        logger.info("[DataTransformer] Starting transformation")
+        logger.info("[DataTransformer v2.9] Starting transformation")
         logger.info(f"[DataTransformer] Raw data keys: {list(raw_data.keys())}")
         
         # Check if charts are in the data
         if 'charts' in raw_data:
             logger.info(f"[DataTransformer] ✓ Charts included: {len(raw_data['charts'])} charts")
         
-        # Start with base template - FIXED: use correct method name
+        # Start with base template
         response = DataContract.get_response_template()
         
         # Map top-level fields
@@ -122,10 +134,9 @@ class DataTransformer:
             response['charts'] = raw_data['charts']
         
         # Get source and author from article_summary or top level
-        # FIXED v2.8: Ensure article is always a dict for safe .get() calls
         article = raw_data.get('article_summary', {})
         if not isinstance(article, dict):
-            logger.warning(f"[DataTransformer v2.8] article_summary is not a dict (type: {type(article)}), using empty dict")
+            logger.warning(f"[DataTransformer v2.9] article_summary is not a dict (type: {type(article)}), using empty dict")
             article = {}
         
         source = DataTransformer._get_source_name(raw_data, article)
@@ -153,8 +164,18 @@ class DataTransformer:
             if raw_service_data:
                 score_in_data = raw_service_data.get('score', 'NOT FOUND')
                 has_chart_data = 'chart_data' in raw_service_data
+                
+                # v2.9: Check for v4.0 educational fields
+                has_educational = False
+                if service_name == 'transparency_analyzer':
+                    has_educational = 'article_type' in raw_service_data or 'what_to_look_for' in raw_service_data
+                    logger.info(f"[DataTransformer v2.9] transparency has educational content: {has_educational}")
+                elif service_name == 'manipulation_detector':
+                    has_educational = 'article_type' in raw_service_data or 'how_to_spot' in raw_service_data
+                    logger.info(f"[DataTransformer v2.9] manipulation has educational content: {has_educational}")
+                
                 logger.info(f"[DataTransformer] {service_name} - score: {score_in_data}, has_chart_data: {has_chart_data}")
-                logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:10]}")
+                logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:15]}")
             
             transformed = DataTransformer._transform_service(
                 service_name, 
@@ -169,7 +190,7 @@ class DataTransformer:
             final_chart = 'chart_data' in transformed
             logger.info(f"[DataTransformer] {service_name} - final score: {final_score}, chart preserved: {final_chart}")
             
-        logger.info(f"[DataTransformer] Transformation complete - Source: {source}")
+        logger.info(f"[DataTransformer v2.9] Transformation complete - Source: {source}")
         
         return response
     
@@ -186,7 +207,6 @@ class DataTransformer:
     def _get_source_name(raw_data: Dict[str, Any], article: Dict[str, Any]) -> str:
         """Get the proper source name"""
         
-        # FIXED v2.8: Defensive check - ensure article is a dict
         if not isinstance(article, dict):
             article = {}
         
@@ -210,7 +230,6 @@ class DataTransformer:
     def _get_author(raw_data: Dict[str, Any], article: Dict[str, Any]) -> str:
         """Get the author name"""
         
-        # FIXED v2.8: Defensive check - ensure article is a dict
         if not isinstance(article, dict):
             article = {}
         
@@ -230,13 +249,12 @@ class DataTransformer:
         service_name: str, 
         raw_data: Dict[str, Any],
         source: str,
-        article: Any  # FIXED v2.8: Changed from Dict[str, Any] to Any for flexibility
+        article: Any
     ) -> Dict[str, Any]:
         """Transform a single service's data to match contract"""
         
-        # FIXED v2.8: Ensure article is always a dict before passing to transformers
         if not isinstance(article, dict):
-            logger.warning(f"[DataTransformer v2.8] article parameter is type {type(article)}, converting to empty dict")
+            logger.warning(f"[DataTransformer v2.9] article parameter is type {type(article)}, converting to empty dict")
             article = {}
         
         template = DataContract.get_service_template(service_name)
@@ -325,12 +343,11 @@ class DataTransformer:
         result = template.copy()
         
         try:
-            # FIXED v2.8: Ensure article is a dict at the start of this function
             if not isinstance(article, dict):
-                logger.warning(f"[Transform Author v2.8] article is type {type(article)}, using empty dict")
+                logger.warning(f"[Transform Author v2.9] article is type {type(article)}, using empty dict")
                 article = {}
             
-            logger.info(f"[Transform Author v2.8] Raw data keys: {list(raw_data.keys())[:20]}")
+            logger.info(f"[Transform Author v2.9] Raw data keys: {list(raw_data.keys())[:20]}")
             
             author = (
                 raw_data.get('name') or
@@ -347,30 +364,25 @@ class DataTransformer:
                 70
             )
             
-            logger.info(f"[Transform Author v2.8] Primary: {author}, Score: {cred_score}")
+            logger.info(f"[Transform Author v2.9] Primary: {author}, Score: {cred_score}")
             
-            # ============================================================================
-            # v2.7: PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
-            # ============================================================================
-            
+            # PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
             if 'all_authors' in raw_data and raw_data.get('all_authors'):
                 result['all_authors'] = raw_data['all_authors']
-                logger.info(f"[Transform Author v2.8] ✓ Preserved all_authors: {raw_data['all_authors']}")
+                logger.info(f"[Transform Author v2.9] ✓ Preserved all_authors: {raw_data['all_authors']}")
             elif 'authors' in raw_data and raw_data.get('authors'):
                 result['all_authors'] = raw_data['authors']
-                logger.info(f"[Transform Author v2.8] ✓ Preserved authors as all_authors: {raw_data['authors']}")
+                logger.info(f"[Transform Author v2.9] ✓ Preserved authors as all_authors: {raw_data['authors']}")
             elif article.get('author') and ',' in str(article.get('author', '')):
                 result['all_authors'] = article.get('author')
-                logger.info(f"[Transform Author v2.8] ✓ Preserved from article.author: {article.get('author')}")
+                logger.info(f"[Transform Author v2.9] ✓ Preserved from article.author: {article.get('author')}")
             
             if 'primary_author' in raw_data and raw_data.get('primary_author'):
                 result['primary_author'] = raw_data['primary_author']
-                logger.info(f"[Transform Author v2.8] ✓ Preserved primary_author: {raw_data['primary_author']}")
+                logger.info(f"[Transform Author v2.9] ✓ Preserved primary_author: {raw_data['primary_author']}")
             else:
                 result['primary_author'] = author
-                logger.info(f"[Transform Author v2.8] ✓ Set primary_author from name: {author}")
-            
-            # ============================================================================
+                logger.info(f"[Transform Author v2.9] ✓ Set primary_author from name: {author}")
             
             result['name'] = author
             result['author_name'] = author
@@ -378,7 +390,6 @@ class DataTransformer:
             result['credibility_score'] = cred_score
             result['credibility'] = cred_score
             
-            # FIXED v2.8: Safe dictionary access with fallback
             result['domain'] = raw_data.get('domain', article.get('domain', 'Unknown'))
             result['organization'] = raw_data.get('organization', article.get('source', 'Unknown'))
             result['position'] = raw_data.get('position', 'Journalist')
@@ -435,17 +446,17 @@ class DataTransformer:
             
             DataTransformer._preserve_chart_data(result, raw_data)
             
-            logger.info(f"[Transform Author v2.8] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
+            logger.info(f"[Transform Author v2.9] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
             
             return result
             
         except Exception as e:
-            logger.error(f"[Transform Author v2.8] ERROR: {e}", exc_info=True)
+            logger.error(f"[Transform Author v2.9] ERROR: {e}", exc_info=True)
             result['name'] = 'Unknown Author'
             result['author_name'] = 'Unknown Author'
             result['score'] = 50
             result['credibility_score'] = 50
-            logger.error(f"[Transform Author v2.8] Returning safe defaults due to error")
+            logger.error(f"[Transform Author v2.9] Returning safe defaults due to error")
             return result
     
     @staticmethod
@@ -533,7 +544,10 @@ class DataTransformer:
     
     @staticmethod
     def _transform_transparency(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform transparency analyzer data"""
+        """
+        Transform transparency analyzer data
+        v2.9: NOW PRESERVES ALL V4.0 EDUCATIONAL FIELDS!
+        """
         
         result = template.copy()
         
@@ -545,8 +559,11 @@ class DataTransformer:
         sources = raw_data.get('sources_cited', raw_data.get('source_count', 0))
         quotes = raw_data.get('quotes_included', raw_data.get('quote_count', 0))
         
+        # Basic fields
         result['score'] = score
         result['transparency_score'] = score
+        result['level'] = raw_data.get('level', raw_data.get('transparency_level', 'Unknown'))
+        result['transparency_level'] = result['level']
         result['sources_cited'] = sources
         result['source_count'] = sources
         result['quotes_included'] = quotes
@@ -554,18 +571,35 @@ class DataTransformer:
         result['quotes_used'] = quotes
         result['author_transparency'] = raw_data.get('author_transparency', True)
         
-        if 'analysis' in raw_data:
-            result['analysis'] = raw_data['analysis']
+        # ============================================================================
+        # v2.9: PRESERVE ALL V4.0 EDUCATIONAL FIELDS
+        # ============================================================================
+        v4_fields = [
+            'article_type', 'type_confidence', 'what_to_look_for', 'transparency_lessons',
+            'expectations', 'findings', 'analysis', 'summary', 'sources_count', 'quotes_count',
+            'has_methodology', 'has_corrections_policy', 'author_disclosed', 'has_conflict_disclosure',
+            'word_count', 'chart_data'
+        ]
+        
+        for field in v4_fields:
+            if field in raw_data:
+                result[field] = raw_data[field]
+                logger.info(f"[Transform Transparency v2.9] ✓ Preserved {field}")
+        
+        # ============================================================================
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Transparency] Final score: {result['score']}")
+        logger.info(f"[Transform Transparency v2.9] Final score: {result['score']}, Educational fields: {'article_type' in result}")
         
         return result
     
     @staticmethod
     def _transform_manipulation(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Transform manipulation detector data"""
+        """
+        Transform manipulation detector data
+        v2.9: NOW PRESERVES ALL V4.0 EDUCATIONAL FIELDS!
+        """
         
         result = template.copy()
         
@@ -576,19 +610,35 @@ class DataTransformer:
             80
         )
         
+        # Basic fields
         result['score'] = score
         result['integrity_score'] = score
         result['manipulation_score'] = score
+        result['level'] = raw_data.get('level', raw_data.get('integrity_level', 'Unknown'))
+        result['integrity_level'] = result['level']
         result['techniques_found'] = raw_data.get('techniques_found', 0)
         result['techniques'] = raw_data.get('techniques', [])
         result['tactics_found'] = raw_data.get('tactics_found', result['techniques'])
         
-        if 'analysis' in raw_data:
-            result['analysis'] = raw_data['analysis']
+        # ============================================================================
+        # v2.9: PRESERVE ALL V4.0 EDUCATIONAL FIELDS
+        # ============================================================================
+        v4_fields = [
+            'article_type', 'type_confidence', 'how_to_spot', 'manipulation_lessons',
+            'risk_profile', 'findings', 'analysis', 'summary', 'emotional_score',
+            'chart_data'
+        ]
+        
+        for field in v4_fields:
+            if field in raw_data:
+                result[field] = raw_data[field]
+                logger.info(f"[Transform Manipulation v2.9] ✓ Preserved {field}")
+        
+        # ============================================================================
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Manipulation] Final score: {result['score']}")
+        logger.info(f"[Transform Manipulation v2.9] Final score: {result['score']}, Educational fields: {'article_type' in result}")
         
         return result
     
