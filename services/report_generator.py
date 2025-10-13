@@ -1,7 +1,18 @@
 # services/report_generator.py
 """
-Report Generation Service
+Report Generation Service - v2.0
 Creates various report formats from analysis results
+
+CHANGE LOG:
+- 2025-10-13: v2.0 - Enhanced "What We Found" summary generation
+  * Added dynamic, conversational summaries (2-5 sentences)
+  * Summaries now highlight specific findings from each service
+  * Intelligently identifies concerns vs strengths
+  * Added Pro version prompt at end
+  * Summaries are informative and actionable, not generic
+
+Previous versions:
+- v1.0 - Initial report generation with basic summary
 """
 
 import json
@@ -56,11 +67,158 @@ class ReportGenerator:
                 'clickbait_score': data.get('clickbait_analysis', {}).get('score', 0),
                 'transparency_score': data.get('transparency_analysis', {}).get('score', 0)
             },
-            'summary': self._create_text_summary(data),
+            'summary': self._create_enhanced_text_summary(data),
             'recommendations': self._get_key_recommendations(data)
         }
         
         return summary
+    
+    def _create_enhanced_text_summary(self, data):
+        """
+        Create enhanced, conversational text summary (2-5 sentences)
+        Highlights specific findings from analysis services
+        """
+        trust_score = data.get('trust_score', 0)
+        article_domain = data.get('article', {}).get('domain', 'this source')
+        
+        # Collect specific concerns and strengths from each service
+        concerns = []
+        strengths = []
+        
+        # Source Credibility Analysis (25% weight)
+        source_data = data.get('source_credibility', {})
+        if source_data:
+            source_score = source_data.get('score', 0)
+            source_max = source_data.get('max_score', 25)
+            source_pct = (source_score / source_max * 100) if source_max > 0 else 0
+            
+            if source_pct < 60:
+                concerns.append('weak source credibility')
+            elif source_pct >= 80:
+                strengths.append('strong source credibility')
+        
+        # Bias Detection (20% weight)
+        bias_data = data.get('bias_analysis', {})
+        if bias_data:
+            bias_score = bias_data.get('score', 0)
+            bias_max = bias_data.get('max_score', 20)
+            bias_pct = (bias_score / bias_max * 100) if bias_max > 0 else 0
+            political_lean = abs(bias_data.get('political_lean', 0))
+            
+            if bias_pct < 70 or political_lean > 0.5:
+                if political_lean > 0.7:
+                    concerns.append('significant political bias')
+                else:
+                    concerns.append('noticeable bias')
+            elif bias_pct >= 90 and political_lean < 0.3:
+                strengths.append('minimal bias')
+        
+        # Author Analysis (15% weight)
+        author_data = data.get('author_info', {})
+        if author_data:
+            author_score = author_data.get('score', 0)
+            author_max = author_data.get('max_score', 15)
+            author_pct = (author_score / author_max * 100) if author_max > 0 else 0
+            
+            if author_pct < 60:
+                concerns.append('limited author credibility')
+            elif author_pct >= 85:
+                strengths.append('credible author')
+        
+        # Fact Checking (15% weight)
+        fact_data = data.get('fact_checking', {})
+        if fact_data:
+            fact_score = fact_data.get('score', 0)
+            fact_max = fact_data.get('max_score', 15)
+            fact_pct = (fact_score / fact_max * 100) if fact_max > 0 else 0
+            
+            if fact_pct >= 90:
+                strengths.append('strong factual accuracy')
+            elif fact_pct < 60:
+                concerns.append('factual accuracy issues')
+        
+        # Transparency (10% weight)
+        trans_data = data.get('transparency_analysis', {})
+        if trans_data:
+            trans_score = trans_data.get('score', 0)
+            trans_max = trans_data.get('max_score', 10)
+            trans_pct = (trans_score / trans_max * 100) if trans_max > 0 else 0
+            
+            if trans_pct < 50:
+                concerns.append('poor transparency')
+            elif trans_pct >= 85:
+                strengths.append('good transparency')
+        
+        # Manipulation Detection (10% weight)
+        manip_data = data.get('persuasion_analysis', {})
+        if manip_data:
+            manip_score = manip_data.get('score', 0)
+            manip_max = manip_data.get('max_score', 10)
+            manip_pct = (manip_score / manip_max * 100) if manip_max > 0 else 0
+            manipulation_detected = manip_data.get('manipulation_detected', False)
+            
+            if manip_pct < 60 or manipulation_detected:
+                concerns.append('manipulative techniques detected')
+        
+        # Content Quality (5% weight)
+        quality_data = data.get('content_quality', {})
+        if quality_data:
+            quality_score = quality_data.get('score', 0)
+            quality_max = quality_data.get('max_score', 5)
+            quality_pct = (quality_score / quality_max * 100) if quality_max > 0 else 0
+            
+            if quality_pct < 50:
+                concerns.append('low content quality')
+        
+        # Build conversational summary (2-5 sentences)
+        summary_parts = []
+        
+        # Sentence 1: Overall assessment
+        if trust_score >= 70:
+            summary_parts.append(
+                f"This article from {article_domain} shows moderate to high credibility "
+                f"with a trust score of {trust_score}/100."
+            )
+        elif trust_score >= 40:
+            summary_parts.append(
+                f"This article from {article_domain} shows mixed credibility "
+                f"with a trust score of {trust_score}/100."
+            )
+        else:
+            summary_parts.append(
+                f"This article from {article_domain} shows low credibility "
+                f"with a trust score of {trust_score}/100."
+            )
+        
+        # Sentence 2-3: Specific findings
+        if concerns:
+            # Format concerns naturally
+            if len(concerns) == 1:
+                summary_parts.append(f"Our analysis identified {concerns[0]}.")
+            elif len(concerns) == 2:
+                summary_parts.append(f"Our analysis identified {concerns[0]} and {concerns[1]}.")
+            else:
+                # Multiple concerns: list them naturally
+                last_concern = concerns[-1]
+                other_concerns = ', '.join(concerns[:-1])
+                summary_parts.append(
+                    f"Our analysis identified {other_concerns}, and {last_concern}."
+                )
+        elif strengths:
+            # If no concerns, highlight strengths
+            if len(strengths) == 1:
+                summary_parts.append(f"The article demonstrates {strengths[0]}.")
+            else:
+                summary_parts.append(f"The article demonstrates {' and '.join(strengths)}.")
+        
+        # Sentence 4: Recommendation (if needed)
+        if trust_score < 60:
+            summary_parts.append("We recommend verifying claims through additional sources.")
+        
+        # Sentence 5: Pro version prompt (always included)
+        summary_parts.append("Upgrade to Pro for detailed breakdowns and source comparisons.")
+        
+        return ' '.join(summary_parts)
     
     def _generate_detailed_report(self, data):
         """Generate detailed report"""
@@ -144,37 +302,6 @@ class ReportGenerator:
             'content': markdown
         }
     
-    def _create_text_summary(self, data):
-        """Create text summary of analysis"""
-        trust_score = data.get('trust_score', 0)
-        bias_score = abs(data.get('bias_score', 0))
-        
-        if trust_score >= 70:
-            trust_assessment = "high credibility"
-        elif trust_score >= 40:
-            trust_assessment = "moderate credibility"
-        else:
-            trust_assessment = "low credibility"
-        
-        if bias_score < 0.3:
-            bias_assessment = "minimal bias"
-        elif bias_score < 0.6:
-            bias_assessment = "moderate bias"
-        else:
-            bias_assessment = "significant bias"
-        
-        summary = f"""
-        This article from {data.get('article', {}).get('domain', 'unknown source')} shows {trust_assessment} 
-        with a trust score of {trust_score}%. The analysis detected {bias_assessment} with a political lean 
-        score of {data.get('bias_analysis', {}).get('political_lean', 0)}. 
-        
-        The source has a {data.get('source_credibility', {}).get('credibility', 'unknown')} credibility rating.
-        Transparency score is {data.get('transparency_analysis', {}).get('score', 0)}%, 
-        indicating {'good' if data.get('transparency_analysis', {}).get('score', 0) > 60 else 'poor'} disclosure practices.
-        """
-        
-        return summary.strip()
-    
     def _get_key_recommendations(self, data):
         """Get key recommendations from analysis"""
         recommendations = []
@@ -233,7 +360,7 @@ class ReportGenerator:
         
         findings = []
         findings.append(f"- **Political Lean**: {bias_data.get('political_lean', 0)}")
-        findings.append(f"- **Objectivity Score**: {bias_data.get('objectivity_score', 'N/A')}")  # Fixed line!
+        findings.append(f"- **Objectivity Score**: {bias_data.get('objectivity_score', 'N/A')}")
         findings.append(f"- **Confidence**: {bias_data.get('confidence', 0)}%")
         
         if bias_data.get('factors'):
