@@ -1,24 +1,20 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
  * Date: October 12, 2025
- * Version: 4.23.0 - TRANSPARENCY & MANIPULATION NOW EDUCATIONAL & ENGAGING
+ * Version: 4.20.0 - ENHANCED TRANSPARENCY DISPLAY
  * 
- * MAJOR CHANGES FROM v4.22.0:
- * 1. NEW: Transparency shows "What Transparent Journalism Looks Like" - EDUCATIONAL
- * 2. NEW: Manipulation shows "Common Manipulation Tactics to Watch For" - EDUCATIONAL
- * 3. GOAL: Make users think "That's really interesting!" even without backend data
- * 4. APPROACH: Teach users HOW to be better news consumers
- * 5. ALL v4.22.0 fixes preserved (fact checker, author, bias)
- * 
- * PHILOSOPHY:
- * - These sections are now EDUCATIONAL tools that add value
- * - Users learn media literacy skills
- * - Beautiful, engaging visuals with interactive elements
- * - "Whoa, I learned something!" reaction
+ * CRITICAL CHANGES FROM v4.19.0:
+ * - REPLACED: displayTransparencyAnalyzer function with v3.0.0 implementation
+ * - ENHANCED: Shows "what we looked for" and "what we found" sections
+ * - ENHANCED: Displays specific findings with examples from text
+ * - ENHANCED: Educational content about transparency importance
+ * - ENHANCED: Visual breakdown of transparency components
+ * - ENHANCED: Issue cards showing specific problems with impact explanations
+ * - All v4.19.0 functionality preserved
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
- * FILE IS COMPLETE - NO TRUNCATION - ~2400 LINES
+ * FILE IS COMPLETE - NO TRUNCATION - ~2100 LINES
  */
 
 // Create global ServiceTemplates object
@@ -167,7 +163,6 @@ window.ServiceTemplates = {
                                 <span class="metric-value" id="bias-direction">--</span>
                             </div>
                         </div>
-                        <!-- Explanation section will be inserted here dynamically -->
                     </div>
                 </div>
             `,
@@ -193,14 +188,14 @@ window.ServiceTemplates = {
                                 <div class="metric-icon"><i class="fas fa-clipboard-check"></i></div>
                                 <div class="metric-content">
                                     <span class="metric-value" id="claims-checked">--</span>
-                                    <span class="metric-label">Findings</span>
+                                    <span class="metric-label">Claims Found</span>
                                 </div>
                             </div>
                             <div class="metric-card warning">
                                 <div class="metric-icon"><i class="fas fa-search"></i></div>
                                 <div class="metric-content">
                                     <span class="metric-value" id="claims-verified">--</span>
-                                    <span class="metric-label">Verified</span>
+                                    <span class="metric-label">In Databases</span>
                                 </div>
                             </div>
                         </div>
@@ -209,7 +204,7 @@ window.ServiceTemplates = {
                         <div class="claims-section">
                             <h4 class="claims-section-title">
                                 <i class="fas fa-list-check"></i>
-                                Our Findings
+                                Detailed Claim Analysis
                             </h4>
                             <div class="claims-list-enhanced" id="claims-list-enhanced">
                                 <!-- Claims will be populated here -->
@@ -222,8 +217,128 @@ window.ServiceTemplates = {
             transparencyAnalyzer: `
                 <div class="service-analysis-section">
                     <div class="transparency-enhanced-v3">
-                        <div id="transparency-content-v3">
-                            <!-- Content will be populated dynamically -->
+                        <!-- HERO SECTION WITH SCORE -->
+                        <div class="trans-hero-v3">
+                            <div class="trans-score-display-v3">
+                                <div class="trans-score-circle-v3">
+                                    <div class="trans-score-number-v3" id="trans-score-hero-v3">--</div>
+                                    <div class="trans-score-label-v3">/ 100</div>
+                                </div>
+                                <div class="trans-score-text-v3">
+                                    <h3 id="trans-level-hero-v3">Analyzing...</h3>
+                                    <p id="trans-summary-hero-v3">Evaluating transparency...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- WHAT WE ANALYZED SECTION -->
+                        <div class="trans-section-v3">
+                            <div class="trans-section-header-v3">
+                                <i class="fas fa-search"></i>
+                                <h4>What We Analyzed</h4>
+                            </div>
+                            <div class="trans-section-content-v3" id="trans-what-looked-v3">
+                                Loading analysis...
+                            </div>
+                        </div>
+
+                        <!-- QUICK STATS GRID -->
+                        <div class="trans-stats-grid-v3">
+                            <div class="trans-stat-card-v3 sources">
+                                <div class="trans-stat-icon-v3">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div class="trans-stat-value-v3" id="trans-sources-v3">--</div>
+                                <div class="trans-stat-label-v3">Sources Cited</div>
+                                <div class="trans-stat-detail-v3" id="trans-sources-detail-v3">--</div>
+                            </div>
+                            
+                            <div class="trans-stat-card-v3 quotes">
+                                <div class="trans-stat-icon-v3">
+                                    <i class="fas fa-quote-right"></i>
+                                </div>
+                                <div class="trans-stat-value-v3" id="trans-quotes-v3">--</div>
+                                <div class="trans-stat-label-v3">Direct Quotes</div>
+                                <div class="trans-stat-detail-v3" id="trans-quotes-detail-v3">--</div>
+                            </div>
+                            
+                            <div class="trans-stat-card-v3 verifiable">
+                                <div class="trans-stat-icon-v3">
+                                    <i class="fas fa-check-double"></i>
+                                </div>
+                                <div class="trans-stat-value-v3" id="trans-verifiable-v3">--</div>
+                                <div class="trans-stat-label-v3">Verifiable</div>
+                                <div class="trans-stat-detail-v3" id="trans-verifiable-detail-v3">--</div>
+                            </div>
+                            
+                            <div class="trans-stat-card-v3 links">
+                                <div class="trans-stat-icon-v3">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </div>
+                                <div class="trans-stat-value-v3" id="trans-links-v3">--</div>
+                                <div class="trans-stat-label-v3">Links Provided</div>
+                                <div class="trans-stat-detail-v3" id="trans-links-detail-v3">--</div>
+                            </div>
+                        </div>
+
+                        <!-- WHAT WE FOUND SECTION -->
+                        <div class="trans-section-v3">
+                            <div class="trans-section-header-v3">
+                                <i class="fas fa-clipboard-list"></i>
+                                <h4>What We Found</h4>
+                            </div>
+                            <div id="trans-findings-container-v3">
+                                <!-- Findings will be inserted here -->
+                            </div>
+                        </div>
+
+                        <!-- WHAT IT MEANS SECTION -->
+                        <div class="trans-section-v3 meaning">
+                            <div class="trans-section-header-v3">
+                                <i class="fas fa-lightbulb"></i>
+                                <h4>What This Means</h4>
+                            </div>
+                            <div class="trans-section-content-v3" id="trans-what-means-v3">
+                                Analyzing impact...
+                            </div>
+                        </div>
+
+                        <!-- WHY TRANSPARENCY MATTERS -->
+                        <div class="trans-education-v3">
+                            <div class="trans-edu-header-v3">
+                                <i class="fas fa-graduation-cap"></i>
+                                <h4>Why Transparency Matters in Journalism</h4>
+                            </div>
+                            <div class="trans-edu-grid-v3">
+                                <div class="trans-edu-item-v3">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <div>
+                                        <strong>Builds Trust</strong>
+                                        <p>Clear sourcing shows the journalist did their homework and has nothing to hide</p>
+                                    </div>
+                                </div>
+                                <div class="trans-edu-item-v3">
+                                    <i class="fas fa-search"></i>
+                                    <div>
+                                        <strong>Enables Verification</strong>
+                                        <p>You can check sources yourself instead of blindly trusting</p>
+                                    </div>
+                                </div>
+                                <div class="trans-edu-item-v3">
+                                    <i class="fas fa-balance-scale"></i>
+                                    <div>
+                                        <strong>Shows Accountability</strong>
+                                        <p>Clear sources mean journalists can be held accountable for errors</p>
+                                    </div>
+                                </div>
+                                <div class="trans-edu-item-v3">
+                                    <i class="fas fa-book-open"></i>
+                                    <div>
+                                        <strong>Educational Value</strong>
+                                        <p>Good sourcing helps readers learn and research topics deeper</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -254,7 +369,7 @@ window.ServiceTemplates = {
                         </div>
                         <div class="techniques-list" id="techniques-list"></div>
                         
-                        <!-- MANIPULATION VISUALIZATION -->
+                        <!-- CREATIVE MANIPULATION VISUALIZATION - v4.19.0 -->
                         <div id="manipulation-visualization-container"></div>
                     </div>
                 </div>
@@ -291,7 +406,7 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- CONTENT QUALITY VISUALIZATION -->
+                        <!-- CREATIVE CONTENT QUALITY VISUALIZATION - v4.19.0 -->
                         <div id="content-visualization-container"></div>
                     </div>
                 </div>
@@ -392,8 +507,8 @@ window.ServiceTemplates = {
 
     // Display all analyses
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.23.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v4.23.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.20.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v4.20.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -409,8 +524,8 @@ window.ServiceTemplates = {
             { id: 'biasDetector', key: 'bias_detector', title: 'Bias Detection', icon: 'fa-balance-scale', color: '#f59e0b' },
             { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' },
             { id: 'author', key: 'author_analyzer', title: 'Author Analysis', icon: 'fa-user-edit', color: '#06b6d4' },
-            { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency Guide', icon: 'fa-eye', color: '#8b5cf6' },
-            { id: 'manipulationDetector', key: 'manipulation_detector', title: 'Manipulation Guide', icon: 'fa-user-secret', color: '#ef4444' },
+            { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency', icon: 'fa-eye', color: '#8b5cf6' },
+            { id: 'manipulationDetector', key: 'manipulation_detector', title: 'Manipulation Check', icon: 'fa-user-secret', color: '#ef4444' },
             { id: 'contentAnalyzer', key: 'content_analyzer', title: 'Content Quality', icon: 'fa-file-alt', color: '#ec4899' }
         ];
         
@@ -456,16 +571,16 @@ window.ServiceTemplates = {
             }
         };
         
-        // Render creative visualizations
-        console.log('[ServiceTemplates v4.23.0] Rendering creative visualizations...');
+        // v4.19.0: Render creative visualizations (NO Chart.js)
+        console.log('[ServiceTemplates v4.20.0] Rendering creative visualizations...');
         setTimeout(function() {
             ServiceTemplates.renderCreativeVisualizations(detailed);
         }, 500);
     },
     
-    // Creative visualizations
+    // NEW v4.19.0: Creative visualizations without Chart.js
     renderCreativeVisualizations: function(detailed) {
-        console.log('[ServiceTemplates v4.23.0] renderCreativeVisualizations called');
+        console.log('[ServiceTemplates v4.19.0] renderCreativeVisualizations called');
         
         // Manipulation Detection Visualization
         if (detailed.manipulation_detector) {
@@ -477,10 +592,10 @@ window.ServiceTemplates = {
             this.renderContentVisualization(detailed.content_analyzer);
         }
         
-        console.log('[ServiceTemplates v4.23.0] ✓ Creative visualizations rendered');
+        console.log('[ServiceTemplates v4.19.0] ✓ Creative visualizations rendered');
     },
     
-    // Manipulation Detection Creative Display
+    // NEW v4.19.0: Manipulation Detection Creative Display
     renderManipulationVisualization: function(data) {
         const container = document.getElementById('manipulation-visualization-container');
         if (!container) return;
@@ -580,7 +695,7 @@ window.ServiceTemplates = {
         container.innerHTML = html;
     },
     
-    // Content Quality Creative Display
+    // NEW v4.19.0: Content Quality Creative Display
     renderContentVisualization: function(data) {
         const container = document.getElementById('content-visualization-container');
         if (!container) return;
@@ -781,9 +896,9 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Bias Detector - v4.23.0
+    // Display Bias Detector
     displayBiasDetector: function(data, analyzer) {
-        console.log('[BiasDetector v4.23.0] Displaying data:', data);
+        console.log('[BiasDetector] Displaying data:', data);
         
         const objectivityScore = data.objectivity_score || data.score || 50;
         const direction = data.bias_direction || data.political_bias || data.direction || 'center';
@@ -803,10 +918,8 @@ window.ServiceTemplates = {
             }, 100);
         }
         
-        // Always add explanation section
         const metricsContainer = document.querySelector('.biasDetectorDropdown .bias-metrics');
         if (metricsContainer) {
-            // Remove existing explanation if present
             const existingExplanation = metricsContainer.parentElement.querySelector('.bias-explanation-section');
             if (existingExplanation) {
                 existingExplanation.remove();
@@ -902,8 +1015,6 @@ window.ServiceTemplates = {
             
             metricsContainer.parentElement.insertBefore(explanation, metricsContainer.nextSibling);
         }
-        
-        console.log('[BiasDetector v4.23.0] ✓ Explanation section rendered');
     },
     
     getSensationalismExplanation: function(level) {
@@ -931,16 +1042,14 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Fact Checker - v4.23.0
+    // Display Fact Checker - v4.17.0
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker v4.23.0] Data received:', data);
+        console.log('[FactChecker Display v4.17.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
         const claimsVerified = data.claims_verified || 0;
         const factChecks = data.fact_checks || data.claims || [];
-        
-        console.log('[FactChecker v4.23.0] Fact checks array length:', factChecks.length);
         
         // Update summary metrics
         this.updateElement('fact-score', score + '%');
@@ -953,16 +1062,17 @@ window.ServiceTemplates = {
             return;
         }
         
-        // Render findings
+        // Render claims
         if (factChecks && factChecks.length > 0) {
-            console.log('[FactChecker v4.23.0] Rendering', factChecks.length, 'findings...');
+            console.log('[FactChecker v4.17.0] Rendering', factChecks.length, 'claims...');
             
             let claimsHTML = '';
             
             factChecks.forEach((check, index) => {
-                const analysis = check.explanation || 'No analysis available';
+                const claim = check.claim || check.text || 'No claim text';
                 const verdict = check.verdict || 'unverified';
                 const confidence = check.confidence || 0;
+                const explanation = check.explanation || 'No explanation available';
                 const sources = check.sources || check.method_used || [];
                 const sourcesList = Array.isArray(sources) ? sources : [sources];
                 
@@ -989,8 +1099,8 @@ window.ServiceTemplates = {
                         <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
                             <div style="flex: 1; min-width: 200px;">
                                 <div style="font-weight: 700; color: #1e293b; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-                                    <i class="fas fa-search" style="color: ${style.color}; font-size: 0.75rem; margin-right: 0.5rem;"></i>
-                                    Finding ${index + 1}
+                                    <i class="fas fa-quote-left" style="color: ${style.color}; font-size: 0.75rem; margin-right: 0.5rem;"></i>
+                                    Claim ${index + 1}
                                 </div>
                             </div>
                             <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
@@ -1004,21 +1114,27 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <div style="background: #f8fafc; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 3px solid ${style.color};">
-                            <div style="font-weight: 600; color: #475569; font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                <i class="fas fa-clipboard-list" style="color: ${style.color}; margin-right: 0.5rem;"></i>
-                                Our Analysis:
-                            </div>
-                            <p style="margin: 0; color: #1e293b; font-size: 0.95rem; line-height: 1.6;">
-                                ${analysis}
+                        <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 3px solid ${style.color};">
+                            <p style="margin: 0; color: #1e293b; font-size: 0.95rem; line-height: 1.6; font-style: italic;">
+                                "${claim}"
                             </p>
                         </div>
                         
-                        ${sourcesList.length > 0 && sourcesList[0] ? `
+                        <div style="margin-bottom: 1rem;">
+                            <div style="font-weight: 600; color: #475569; font-size: 0.85rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-lightbulb" style="color: ${style.color};"></i>
+                                Analysis:
+                            </div>
+                            <p style="margin: 0; color: #64748b; font-size: 0.875rem; line-height: 1.6;">
+                                ${explanation}
+                            </p>
+                        </div>
+                        
+                        ${sourcesList.length > 0 ? `
                             <div style="padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
                                 <div style="font-weight: 600; color: #475569; font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
                                     <i class="fas fa-check-double" style="color: ${style.color}; margin-right: 0.5rem;"></i>
-                                    Verification Method:
+                                    Verified Using:
                                 </div>
                                 <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
                                     ${sourcesList.map(source => `
@@ -1034,15 +1150,15 @@ window.ServiceTemplates = {
             });
             
             claimsContainer.innerHTML = claimsHTML;
-            console.log('[FactChecker v4.23.0] ✓ Successfully rendered', factChecks.length, 'findings');
+            console.log('[FactChecker v4.17.0] ✓ Successfully rendered', factChecks.length, 'claims');
             
         } else {
-            console.log('[FactChecker v4.23.0] No findings to display');
+            console.log('[FactChecker v4.17.0] No claims to display');
             claimsContainer.innerHTML = `
                 <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
                     <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
                     <p style="color: #1e40af; font-size: 1rem; font-weight: 600; margin: 0;">
-                        No specific findings for fact-checking in this article.
+                        No specific claims were identified for fact-checking in this article.
                     </p>
                     <p style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
                         The article may be opinion-based, editorial content, or contain primarily general statements.
@@ -1052,382 +1168,228 @@ window.ServiceTemplates = {
         }
     },
 
-    // v4.23.0 NEW: Display Transparency Analyzer - EDUCATIONAL & INTERESTING
+    // NEW v4.20.0: Display Transparency Analyzer - ENHANCED VERSION
     displayTransparencyAnalyzer: function(data, analyzer) {
-        console.log('[TransparencyAnalyzer v4.23.0 EDUCATIONAL] Displaying data:', data);
+        console.log('[TransparencyAnalyzer v3.0.0] Displaying data:', data);
         
-        const container = document.getElementById('transparency-content-v3');
-        if (!container) {
-            console.error('[Transparency] Container not found');
-            return;
-        }
-        
-        // Check if service actually ran
-        const hasData = data && typeof data === 'object' && Object.keys(data).length > 0;
-        const hasScore = data && (data.transparency_score !== undefined || data.score !== undefined);
-        
-        if (!hasData || !hasScore) {
-            // NEW v4.23.0: EDUCATIONAL DISPLAY - Make it interesting!
-            console.log('[Transparency v4.23.0] Creating educational display');
-            container.innerHTML = `
-                <div style="padding: 2rem;">
-                    <!-- Hero Section -->
-                    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(139,92,246,0.2);">
-                        <div style="font-size: 3rem; margin-bottom: 0.75rem;">
-                            <i class="fas fa-eye"></i>
-                        </div>
-                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700;">
-                            What Transparent Journalism Looks Like
-                        </h3>
-                        <p style="margin: 0; font-size: 1rem; opacity: 0.95; max-width: 600px; margin: 0 auto;">
-                            Learn how to identify trustworthy, well-sourced journalism
-                        </p>
-                    </div>
-                    
-                    <!-- Transparency Checklist -->
-                    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-clipboard-check" style="color: #8b5cf6;"></i>
-                            Transparency Indicators
-                        </h4>
-                        
-                        <div style="display: grid; gap: 1rem;">
-                            <!-- Indicator 1 -->
-                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 10px; border-left: 4px solid #10b981;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
-                                        <i class="fas fa-quote-right"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h5 style="margin: 0 0 0.5rem 0; color: #1e40af; font-size: 1rem; font-weight: 700;">
-                                            Direct Quotes & Attribution
-                                        </h5>
-                                        <p style="margin: 0; color: #1e3a8a; font-size: 0.9rem; line-height: 1.6;">
-                                            Look for: Direct quotes with full names and titles, timestamps, specific locations. 
-                                            <strong>Red flag:</strong> Paraphrasing everything without direct quotes or anonymous sources overused.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Indicator 3 -->
-                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 10px; border-left: 4px solid #f59e0b;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
-                                        <i class="fas fa-balance-scale"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h5 style="margin: 0 0 0.5rem 0; color: #92400e; font-size: 1rem; font-weight: 700;">
-                                            Multiple Perspectives
-                                        </h5>
-                                        <p style="margin: 0; color: #78350f; font-size: 0.9rem; line-height: 1.6;">
-                                            Look for: Quotes from different viewpoints, acknowledgment of counterarguments, balanced representation. 
-                                            <strong>Red flag:</strong> Only presenting one side of a controversial issue.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Indicator 4 -->
-                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-radius: 10px; border-left: 4px solid #a855f7;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #a855f7; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
-                                        <i class="fas fa-exclamation-circle"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h5 style="margin: 0 0 0.5rem 0; color: #701a75; font-size: 1rem; font-weight: 700;">
-                                            Disclosure of Conflicts
-                                        </h5>
-                                        <p style="margin: 0; color: #6b21a8; font-size: 0.9rem; line-height: 1.6;">
-                                            Look for: Author disclosures, funding sources mentioned, potential biases acknowledged. 
-                                            <strong>Red flag:</strong> No mention of financial relationships or potential conflicts of interest.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Indicator 5 -->
-                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%); border-radius: 10px; border-left: 4px solid #14b8a6;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 40px; height: 40px; background: #14b8a6; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
-                                        <i class="fas fa-vial"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h5 style="margin: 0 0 0.5rem 0; color: #134e4a; font-size: 1rem; font-weight: 700;">
-                                            Methodology Transparency
-                                        </h5>
-                                        <p style="margin: 0; color: #115e59; font-size: 0.9rem; line-height: 1.6;">
-                                            Look for: How data was gathered, sample sizes mentioned, limitations acknowledged, research methods explained. 
-                                            <strong>Red flag:</strong> Statistics presented without context or methodology.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Pro Tips Section -->
-                    <div style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 1.75rem; border-radius: 12px; border: 2px solid #cbd5e1;">
-                        <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                            <i class="fas fa-lightbulb" style="color: #f59e0b;"></i>
-                            How to Verify Information Yourself
-                        </h4>
-                        <ul style="margin: 0; padding-left: 1.5rem; color: #475569; font-size: 0.95rem; line-height: 2;">
-                            <li><strong>Cross-reference:</strong> Check if other reputable outlets report the same facts</li>
-                            <li><strong>Find original sources:</strong> Track down the studies, reports, or documents cited</li>
-                            <li><strong>Check dates:</strong> Ensure information is current and not outdated</li>
-                            <li><strong>Reverse image search:</strong> Verify photos haven't been manipulated or misused</li>
-                            <li><strong>Use fact-checking sites:</strong> Snopes, FactCheck.org, PolitiFact for controversial claims</li>
-                        </ul>
-                    </div>
-                </div>
-            `;
-            return;
-        }
-        
-        // Service is running - display results
         const score = data.transparency_score || data.score || 0;
         const level = data.transparency_level || data.level || 'Unknown';
+        const summary = data.summary || 'Analyzing transparency...';
         
-        container.innerHTML = `
-            <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 1.5rem;">
-                <div style="font-size: 3.5rem; font-weight: 800; margin-bottom: 0.5rem;">${score}</div>
-                <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">${level} Transparency</div>
-                <div style="font-size: 0.95rem; opacity: 0.9;">Analysis complete</div>
-            </div>
+        // Get analysis sections
+        const analysis = data.analysis || {};
+        const whatLooked = analysis.what_we_looked || 'Analyzing article transparency elements...';
+        const whatFound = analysis.what_we_found || 'Processing results...';
+        const whatMeans = analysis.what_it_means || 'Evaluating impact...';
+        
+        // Get component data
+        const components = data.components || {};
+        const sourceAttr = components.source_attribution || {};
+        const disclosures = components.disclosures || {};
+        const vagueSourcing = components.vague_sourcing || {};
+        
+        // Get counts
+        const sourcesCount = data.source_count || sourceAttr.total_sources || 0;
+        const verifiableCount = data.verifiable_sources || sourceAttr.verifiable_count || 0;
+        const linkedSources = data.linked_sources || sourceAttr.linked_sources || 0;
+        const quoteCount = data.quote_count || sourceAttr.quote_count || 0;
+        const vagueCount = vagueSourcing.instance_count || sourceAttr.vague_count || 0;
+        
+        // Update hero section
+        this.updateElement('trans-score-hero-v3', score);
+        this.updateElement('trans-level-hero-v3', level);
+        this.updateElement('trans-summary-hero-v3', summary);
+        
+        // Update "What We Analyzed" section
+        const whatLookedEl = document.getElementById('trans-what-looked-v3');
+        if (whatLookedEl) {
+            whatLookedEl.innerHTML = `<p style="margin: 0; color: #475569; line-height: 1.7; font-size: 0.95rem;">${whatLooked}</p>`;
+        }
+        
+        // Update quick stats
+        this.updateElement('trans-sources-v3', sourcesCount);
+        this.updateElement('trans-quotes-v3', quoteCount);
+        this.updateElement('trans-verifiable-v3', verifiableCount);
+        this.updateElement('trans-links-v3', linkedSources);
+        
+        // Update stat details
+        const sourceQuality = sourceAttr.quality_rating || 'Unknown';
+        this.updateElement('trans-sources-detail-v3', sourceQuality);
+        this.updateElement('trans-quotes-detail-v3', quoteCount > 0 ? 'Included' : 'None found');
+        this.updateElement('trans-verifiable-detail-v3', verifiableCount > 0 ? 'Can verify' : 'Cannot verify');
+        this.updateElement('trans-links-detail-v3', linkedSources > 0 ? 'Provided' : 'Missing');
+        
+        // Build findings section
+        const findingsContainer = document.getElementById('trans-findings-container-v3');
+        if (findingsContainer) {
+            const findings = data.findings || [];
             
-            <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                <p style="margin: 0; color: #475569; line-height: 1.7; font-size: 0.95rem;">
-                    The transparency analyzer evaluated this article's source attribution, citation quality, and disclosure statements.
-                    ${score >= 70 ? 'This article demonstrates strong transparency with verifiable sources.' : 
-                      score >= 50 ? 'This article has moderate transparency with some verifiable elements.' :
-                      'This article has limited transparency. Consider verifying claims independently.'}
-                </p>
-            </div>
-        `;
+            if (findings.length > 0) {
+                let findingsHTML = '';
+                
+                findings.forEach(function(finding) {
+                    const isPositive = finding.severity === 'positive';
+                    const isHigh = finding.severity === 'high';
+                    
+                    let bgColor = '#f8fafc';
+                    let borderColor = '#cbd5e1';
+                    let iconColor = '#64748b';
+                    let icon = 'fa-info-circle';
+                    
+                    if (isPositive) {
+                        bgColor = '#f0fdf4';
+                        borderColor = '#10b981';
+                        iconColor = '#059669';
+                        icon = 'fa-check-circle';
+                    } else if (isHigh) {
+                        bgColor = '#fef2f2';
+                        borderColor = '#ef4444';
+                        iconColor = '#dc2626';
+                        icon = 'fa-exclamation-triangle';
+                    } else {
+                        bgColor = '#fffbeb';
+                        borderColor = '#f59e0b';
+                        iconColor = '#d97706';
+                        icon = 'fa-exclamation-circle';
+                    }
+                    
+                    findingsHTML += `
+                        <div style="background: ${bgColor}; border-left: 3px solid ${borderColor}; padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px;">
+                            <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                <i class="fas ${icon}" style="color: ${iconColor}; font-size: 1.125rem; margin-top: 2px; flex-shrink: 0;"></i>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                                        ${finding.text}
+                                    </div>
+                                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.5;">
+                                        ${finding.explanation}
+                                    </div>
+                                    ${finding.examples && finding.examples.length > 0 ? `
+                                        <div style="margin-top: 0.5rem; padding: 0.5rem; background: rgba(255,255,255,0.6); border-radius: 4px; font-size: 0.8rem; color: #64748b; font-style: italic;">
+                                            Example: "${finding.examples[0].text || finding.examples[0]}"
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                findingsContainer.innerHTML = findingsHTML;
+            } else {
+                // Show component-based findings if no specific findings array
+                let componentFindings = '';
+                
+                if (verifiableCount === 0 && sourcesCount === 0) {
+                    componentFindings += `
+                        <div style="background: #fef2f2; border-left: 3px solid #ef4444; padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px;">
+                            <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                <i class="fas fa-exclamation-triangle" style="color: #dc2626; font-size: 1.125rem; margin-top: 2px;"></i>
+                                <div>
+                                    <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                                        No sources cited
+                                    </div>
+                                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.5;">
+                                        This article does not cite any sources. Without source attribution, it's impossible to verify the information presented.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (linkedSources === 0 && sourcesCount > 0) {
+                    componentFindings += `
+                        <div style="background: #fffbeb; border-left: 3px solid #f59e0b; padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px;">
+                            <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                <i class="fas fa-exclamation-circle" style="color: #d97706; font-size: 1.125rem; margin-top: 2px;"></i>
+                                <div>
+                                    <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                                        No clickable links to sources
+                                    </div>
+                                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.5;">
+                                        While sources are mentioned, no hyperlinks are provided to verify them independently.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (vagueCount > 0) {
+                    componentFindings += `
+                        <div style="background: #fffbeb; border-left: 3px solid #f59e0b; padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px;">
+                            <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                <i class="fas fa-exclamation-circle" style="color: #d97706; font-size: 1.125rem; margin-top: 2px;"></i>
+                                <div>
+                                    <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                                        ${vagueCount} instance(s) of vague sourcing
+                                    </div>
+                                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.5;">
+                                        Phrases like "studies show" or "experts say" without naming specific sources reduce credibility.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (verifiableCount >= 3 && linkedSources >= 2) {
+                    componentFindings += `
+                        <div style="background: #f0fdf4; border-left: 3px solid #10b981; padding: 1rem; margin-bottom: 0.75rem; border-radius: 8px;">
+                            <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                <i class="fas fa-check-circle" style="color: #059669; font-size: 1.125rem; margin-top: 2px;"></i>
+                                <div>
+                                    <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                                        Strong source attribution
+                                    </div>
+                                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.5;">
+                                        Multiple verifiable sources with clickable links enable independent verification.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                if (!componentFindings) {
+                    componentFindings = `
+                        <div style="background: #f8fafc; border-left: 3px solid #cbd5e1; padding: 1rem; border-radius: 8px;">
+                            <div style="display: flex; align-items: start; gap: 0.75rem;">
+                                <i class="fas fa-info-circle" style="color: #64748b; font-size: 1.125rem; margin-top: 2px;"></i>
+                                <div>
+                                    <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 0.25rem;">
+                                        Basic transparency elements present
+                                    </div>
+                                    <div style="color: #475569; font-size: 0.85rem; line-height: 1.5;">
+                                        ${whatFound}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                findingsContainer.innerHTML = componentFindings;
+            }
+        }
         
-        console.log('[TransparencyAnalyzer v4.23.0] ✓ Display complete');
+        // Update "What It Means" section
+        const whatMeansEl = document.getElementById('trans-what-means-v3');
+        if (whatMeansEl) {
+            whatMeansEl.innerHTML = `<p style="margin: 0; color: #475569; line-height: 1.7; font-size: 0.95rem;">${whatMeans}</p>`;
+        }
+        
+        console.log('[TransparencyAnalyzer v3.0.0] ✓ Display complete');
     },
 
-    // v4.23.0 NEW: Display Manipulation Detector - EDUCATIONAL & INTERESTING
+    // Display Manipulation Detector
     displayManipulationDetector: function(data, analyzer) {
-        console.log('[Manipulation v4.23.0 EDUCATIONAL] Displaying data:', data);
-        
         const integrityScore = data.integrity_score || data.score || 100;
         const techniquesCount = data.techniques_found || data.techniques_count || 0;
         
         this.updateElement('integrity-score', integrityScore + '/100');
         this.updateElement('techniques-count', techniquesCount);
-        
-        // Check if service actually ran
-        const hasData = data && typeof data === 'object' && Object.keys(data).length > 0;
-        const hasTechniques = data && (data.tactics_found || data.techniques);
-        
-        if (!hasData || (!hasTechniques && techniquesCount === 0)) {
-            // NEW v4.23.0: EDUCATIONAL DISPLAY - Make it interesting!
-            console.log('[Manipulation v4.23.0] Creating educational display');
-            const container = document.getElementById('manipulation-visualization-container');
-            if (container) {
-                container.innerHTML = `
-                    <div style="margin-top: 20px; padding: 2rem;">
-                        <!-- Hero Section -->
-                        <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 12px; color: white; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(239,68,68,0.2);">
-                            <div style="font-size: 3rem; margin-bottom: 0.75rem;">
-                                <i class="fas fa-user-secret"></i>
-                            </div>
-                            <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700;">
-                                Common Manipulation Tactics in Media
-                            </h3>
-                            <p style="margin: 0; font-size: 1rem; opacity: 0.95; max-width: 600px; margin: 0 auto;">
-                                Learn to spot these red flags in news articles
-                            </p>
-                        </div>
-                        
-                        <!-- Manipulation Tactics Gallery -->
-                        <div style="display: grid; gap: 1.25rem;">
-                            <!-- Tactic 1: Fear Mongering -->
-                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #dc2626; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
-                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
-                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(220,38,38,0.3);">
-                                        <i class="fas fa-exclamation-triangle"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                                            <h5 style="margin: 0; color: #7f1d1d; font-size: 1.1rem; font-weight: 700;">
-                                                Fear Mongering
-                                            </h5>
-                                            <span style="background: #fee2e2; color: #7f1d1d; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                                                HIGH RISK
-                                            </span>
-                                        </div>
-                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                                            Using scary language to trigger emotional responses instead of presenting facts objectively.
-                                        </p>
-                                        <div style="background: #fef2f2; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #dc2626;">
-                                            <div style="font-weight: 600; color: #7f1d1d; font-size: 0.8rem; margin-bottom: 0.25rem;">
-                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
-                                            </div>
-                                            <p style="margin: 0; color: #991b1b; font-size: 0.85rem; line-height: 1.5;">
-                                                Words like "crisis," "disaster," "threat," "dangerous" used repeatedly. Headlines designed to alarm rather than inform.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Tactic 2: Cherry-Picking -->
-                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #ea580c; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
-                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
-                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(234,88,12,0.3);">
-                                        <i class="fas fa-filter"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                                            <h5 style="margin: 0; color: #7c2d12; font-size: 1.1rem; font-weight: 700;">
-                                                Cherry-Picking Data
-                                            </h5>
-                                            <span style="background: #fed7aa; color: #78350f; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                                                HIGH RISK
-                                            </span>
-                                        </div>
-                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                                            Selecting only facts that support a conclusion while ignoring contradictory evidence.
-                                        </p>
-                                        <div style="background: #fff7ed; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ea580c;">
-                                            <div style="font-weight: 600; color: #7c2d12; font-size: 0.8rem; margin-bottom: 0.25rem;">
-                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
-                                            </div>
-                                            <p style="margin: 0; color: #9a3412; font-size: 0.85rem; line-height: 1.5;">
-                                                Statistics without context, ignoring counterexamples, presenting outliers as typical, omitting important qualifiers.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Tactic 3: Loaded Language -->
-                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #f59e0b; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
-                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
-                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(245,158,11,0.3);">
-                                        <i class="fas fa-comment-alt"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                                            <h5 style="margin: 0; color: #78350f; font-size: 1.1rem; font-weight: 700;">
-                                                Loaded Language
-                                            </h5>
-                                            <span style="background: #fef3c7; color: #78350f; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                                                MEDIUM RISK
-                                            </span>
-                                        </div>
-                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                                            Using emotionally charged words to influence opinion rather than neutral terminology.
-                                        </p>
-                                        <div style="background: #fffbeb; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #f59e0b;">
-                                            <div style="font-weight: 600; color: #78350f; font-size: 0.8rem; margin-bottom: 0.25rem;">
-                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
-                                            </div>
-                                            <p style="margin: 0; color: #92400e; font-size: 0.85rem; line-height: 1.5;">
-                                                Biased adjectives ("so-called expert"), inflammatory verbs ("slammed," "blasted"), words that assume guilt or innocence.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Tactic 4: False Equivalence -->
-                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #8b5cf6; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
-                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
-                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(139,92,246,0.3);">
-                                        <i class="fas fa-equals"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                                            <h5 style="margin: 0; color: #5b21b6; font-size: 1.1rem; font-weight: 700;">
-                                                False Equivalence
-                                            </h5>
-                                            <span style="background: #f3e8ff; color: #6b21a8; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                                                MEDIUM RISK
-                                            </span>
-                                        </div>
-                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                                            Treating two vastly different things as if they're equally valid or important.
-                                        </p>
-                                        <div style="background: #faf5ff; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #8b5cf6;">
-                                            <div style="font-weight: 600; color: #5b21b6; font-size: 0.8rem; margin-bottom: 0.25rem;">
-                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
-                                            </div>
-                                            <p style="margin: 0; color: #6b21a8; font-size: 0.85rem; line-height: 1.5;">
-                                                "Both sides" framing when evidence overwhelmingly supports one side, equating minor issues with major ones.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Tactic 5: Ad Hominem -->
-                            <div style="background: white; padding: 1.5rem; border-radius: 12px; border-left: 4px solid #ec4899; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.3s;"
-                                 onmouseover="this.style.boxShadow='0 4px 12px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
-                                 onmouseout="this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink: 0; width: 50px; height: 50px; background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.5rem; box-shadow: 0 2px 8px rgba(236,72,153,0.3);">
-                                        <i class="fas fa-user-slash"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
-                                            <h5 style="margin: 0; color: #831843; font-size: 1.1rem; font-weight: 700;">
-                                                Personal Attacks (Ad Hominem)
-                                            </h5>
-                                            <span style="background: #fce7f3; color: #831843; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 700;">
-                                                MEDIUM RISK
-                                            </span>
-                                        </div>
-                                        <p style="margin: 0 0 0.75rem 0; color: #475569; font-size: 0.95rem; line-height: 1.6;">
-                                            Attacking the person making an argument instead of addressing the argument itself.
-                                        </p>
-                                        <div style="background: #fdf2f8; padding: 0.75rem; border-radius: 6px; border-left: 3px solid #ec4899;">
-                                            <div style="font-weight: 600; color: #831843; font-size: 0.8rem; margin-bottom: 0.25rem;">
-                                                <i class="fas fa-search" style="margin-right: 0.5rem;"></i>Watch for:
-                                            </div>
-                                            <p style="margin: 0; color: #9f1239; font-size: 0.85rem; line-height: 1.5;">
-                                                Focusing on credentials, appearance, or character instead of facts. "X says this, but they're just a..."
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Action Steps -->
-                        <div style="margin-top: 2rem; background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 1.75rem; border-radius: 12px; border: 2px solid #cbd5e1;">
-                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                                <i class="fas fa-shield-alt" style="color: #10b981;"></i>
-                                How to Protect Yourself
-                            </h4>
-                            <ul style="margin: 0; padding-left: 1.5rem; color: #475569; font-size: 0.95rem; line-height: 2;">
-                                <li><strong>Question emotional reactions:</strong> If an article makes you very angry or scared, read it more critically</li>
-                                <li><strong>Check multiple sources:</strong> See if reputable outlets report the story differently</li>
-                                <li><strong>Identify the main claim:</strong> Ask "What is this trying to make me believe?"</li>
-                                <li><strong>Look for evidence:</strong> Are claims backed up with verifiable facts?</li>
-                                <li><strong>Consider motive:</strong> Who benefits from this narrative?</li>
-                            </ul>
-                        </div>
-                    </div>
-                `;
-            }
-            return;
-        }
-        
-        // Service is running - let renderManipulationVisualization handle display
-        console.log('[Manipulation v4.23.0] ✓ Service has data, visualization will render');
     },
 
     // Display Content Analyzer
@@ -1441,9 +1403,9 @@ window.ServiceTemplates = {
         this.updateElement('word-count', wordCount.toLocaleString());
     },
 
-    // v4.23.0: Display Author
+    // Display Author - v4.16.0 ENHANCED WITH CLICKABLE LINKS
     displayAuthor: function(data, analyzer) {
-        console.log('[Author Display v4.23.0] Received data:', data);
+        console.log('[Author Display v4.16.0 ENHANCED] Received data:', data);
         
         // Get all authors
         const allAuthors = data.all_authors || data.authors || [];
@@ -1461,9 +1423,9 @@ window.ServiceTemplates = {
             authorList = [primaryAuthor];
         }
         
-        console.log('[Author Display v4.23.0] Authors:', authorList);
+        console.log('[Author Display] Authors:', authorList);
         
-        const credibility = data.credibility_score || data.score || data.credibility || 50;
+        const credibility = data.credibility_score || data.score || data.credibility || 70;
         const position = data.position || 'Journalist';
         const organization = data.organization || data.domain || 'News Organization';
         const bio = data.bio || data.biography || '';
@@ -1471,18 +1433,9 @@ window.ServiceTemplates = {
         const socialMedia = data.social_media || {};
         const wikipediaUrl = data.wikipedia_url || null;
         
-        // Check if author is unknown
-        const isUnknown = primaryAuthor === 'Unknown Author' || primaryAuthor === 'Unknown' || !primaryAuthor;
-        
         // Display primary author name in main header
         this.updateElement('author-name', authorList[0]);
-        
-        // Better title for Unknown Author
-        if (isUnknown) {
-            this.updateElement('author-title', 'Credibility based on outlet reputation');
-        } else {
-            this.updateElement('author-title', `${position} at ${organization}`);
-        }
+        this.updateElement('author-title', `${position} at ${organization}`);
         
         const credBadge = document.getElementById('author-cred-badge');
         if (credBadge) {
@@ -1500,58 +1453,22 @@ window.ServiceTemplates = {
         this.updateElement('author-expertise', data.expertise_level || 'Verified');
         this.updateElement('author-track-record', data.track_record || 'Good');
         
-        // Enhanced explanation for Unknown Author
-        if (isUnknown) {
+        // Display bio if available
+        if (bio && bio.length > 10) {
             const bioSection = document.getElementById('author-bio');
             if (bioSection) {
                 bioSection.innerHTML = `
-                    <div style="padding: 1.75rem; background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius: 10px; border-left: 4px solid #f59e0b; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
-                        <h4 style="margin: 0 0 1rem 0; color: #92400e; display: flex; align-items: center; gap: 0.5rem; font-size: 1.1rem;">
-                            <i class="fas fa-info-circle"></i>
-                            Why "Unknown Author"?
-                        </h4>
-                        <div style="background: rgba(255,255,255,0.6); padding: 1rem; border-radius: 6px; margin-bottom: 1rem;">
-                            <p style="margin: 0 0 0.75rem 0; color: #78350f; line-height: 1.7; font-size: 0.95rem;">
-                                <strong>Our system couldn't identify the article's author.</strong> This happens when:
-                            </p>
-                            <ul style="margin: 0; padding-left: 1.5rem; color: #78350f; line-height: 1.7; font-size: 0.9rem;">
-                                <li>The article's metadata doesn't include author information</li>
-                                <li>The byline is missing or formatted unusually</li>
-                                <li>Multiple contributors without a clear primary author</li>
-                                <li>Wire service or aggregated content</li>
-                            </ul>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.6); padding: 1rem; border-radius: 6px;">
-                            <p style="margin: 0; color: #78350f; line-height: 1.7; font-size: 0.95rem;">
-                                <strong><i class="fas fa-chart-line" style="color: #f59e0b; margin-right: 0.25rem;"></i> Credibility Score (${credibility}/100):</strong> 
-                                Based on <strong>${organization}</strong>'s outlet reputation rather than individual author credentials. 
-                                ${credibility >= 70 ? 'This is a reputable news source.' : 
-                                  credibility >= 50 ? 'This outlet has moderate credibility.' :
-                                  'Consider verifying information with additional sources.'}
-                            </p>
-                        </div>
-                    </div>
+                    <h4><i class="fas fa-user-circle"></i> About ${authorList[0]}</h4>
+                    <p style="line-height: 1.6; color: #475569;">${bio}</p>
                 `;
                 bioSection.style.display = 'block';
             }
-        } else {
-            // Display bio if available for known authors
-            if (bio && bio.length > 10) {
-                const bioSection = document.getElementById('author-bio');
-                if (bioSection) {
-                    bioSection.innerHTML = `
-                        <h4><i class="fas fa-user-circle"></i> About ${authorList[0]}</h4>
-                        <p style="line-height: 1.6; color: #475569;">${bio}</p>
-                    `;
-                    bioSection.style.display = 'block';
-                }
-            }
         }
         
-        // Display expertise tags (only for known authors)
+        // Display expertise tags
         let expertiseArray = [];
         const expertiseTags = document.getElementById('expertise-tags');
-        if (expertiseTags && expertise && !isUnknown) {
+        if (expertiseTags && expertise) {
             if (typeof expertise === 'string') {
                 expertiseArray = expertise.split(',').map(e => e.trim());
             } else if (Array.isArray(expertise)) {
@@ -1567,9 +1484,9 @@ window.ServiceTemplates = {
             }
         }
         
-        // Display social links (only for known authors)
+        // Display social links
         const linksContainer = document.getElementById('author-links');
-        if (linksContainer && (wikipediaUrl || socialMedia.linkedin || socialMedia.twitter) && !isUnknown) {
+        if (linksContainer && (wikipediaUrl || socialMedia.linkedin || socialMedia.twitter)) {
             let linksHTML = '<div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">';
             
             if (wikipediaUrl) {
@@ -1606,7 +1523,160 @@ window.ServiceTemplates = {
             linksContainer.innerHTML = linksHTML;
         }
         
-        console.log('[Author Display v4.23.0] ✓ Complete');
+        // Multi-author handling
+        if (authorList.length > 1) {
+            console.log('[Author Display] Multiple authors detected:', authorList.length);
+            
+            const authorHeader = document.querySelector('.author-profile-header');
+            if (authorHeader) {
+                let multiAuthorHeader = authorHeader.querySelector('.multi-author-header');
+                if (!multiAuthorHeader) {
+                    multiAuthorHeader = document.createElement('div');
+                    multiAuthorHeader.className = 'multi-author-header';
+                    multiAuthorHeader.style.cssText = 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); padding: 1rem 1.5rem; margin: -1.5rem -1.5rem 1.5rem -1.5rem; border-radius: 12px 12px 0 0; color: white; text-align: center;';
+                    multiAuthorHeader.innerHTML = `
+                        <i class="fas fa-users" style="margin-right: 0.5rem;"></i>
+                        <strong>Article by ${authorList.length} Authors</strong>
+                    `;
+                    authorHeader.insertBefore(multiAuthorHeader, authorHeader.firstChild);
+                }
+                
+                let coAuthorsSection = document.querySelector('.co-authors-section');
+                if (!coAuthorsSection) {
+                    coAuthorsSection = document.createElement('div');
+                    coAuthorsSection.className = 'co-authors-section';
+                    coAuthorsSection.style.cssText = 'margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;';
+                    
+                    let coAuthorsHTML = `
+                        <h4 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1.1rem; font-weight: 700;">
+                            <i class="fas fa-user-friends" style="margin-right: 0.5rem;"></i>
+                            Contributing Authors
+                        </h4>
+                        <div style="display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                    `;
+                    
+                    const primaryLinks = [];
+                    if (wikipediaUrl) primaryLinks.push({ icon: 'fab fa-wikipedia-w', url: wikipediaUrl, label: 'Wikipedia' });
+                    if (socialMedia.linkedin) primaryLinks.push({ icon: 'fab fa-linkedin-in', url: socialMedia.linkedin, label: 'LinkedIn' });
+                    if (socialMedia.twitter) primaryLinks.push({ icon: 'fab fa-twitter', url: socialMedia.twitter, label: 'Twitter' });
+                    
+                    coAuthorsHTML += this._buildAuthorCard(
+                        authorList[0], 
+                        position, 
+                        organization, 
+                        true, 
+                        primaryLinks,
+                        bio,
+                        expertiseArray
+                    );
+                    
+                    for (let i = 1; i < authorList.length; i++) {
+                        const coAuthor = authorList[i];
+                        coAuthorsHTML += this._buildAuthorCard(
+                            coAuthor,
+                            position,
+                            organization,
+                            false,
+                            [],
+                            null,
+                            null
+                        );
+                    }
+                    
+                    coAuthorsHTML += '</div>';
+                    coAuthorsSection.innerHTML = coAuthorsHTML;
+                    
+                    const detailSections = document.querySelector('.author-detail-sections');
+                    if (detailSections) {
+                        detailSections.appendChild(coAuthorsSection);
+                    }
+                }
+            }
+        }
+        
+        console.log('[Author Display v4.16.0] Complete - Enhanced with clickable links');
+    },
+    
+    _buildAuthorCard: function(name, position, organization, isPrimary, links, bio, expertise) {
+        const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2);
+        const borderColor = isPrimary ? '#3b82f6' : '#06b6d4';
+        const bgGradient = isPrimary ? 
+            'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)' : 
+            'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)';
+        const titleColor = isPrimary ? '#1e40af' : '#0e7490';
+        const badgeColor = isPrimary ? '#3b82f6' : '#06b6d4';
+        const label = isPrimary ? 'Primary Author' : 'Co-Author';
+        
+        let cardHTML = `
+            <div style="background: white; padding: 1rem; border-radius: 8px; border-left: 4px solid ${borderColor}; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.3s; position: relative; overflow: hidden;"
+                 onmouseover="this.style.boxShadow='0 8px 16px rgba(0,0,0,0.15)'; this.style.transform='translateY(-2px)';"
+                 onmouseout="this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'; this.style.transform='translateY(0)';">
+                
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <div style="width: 40px; height: 40px; background: ${bgGradient}; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 1.1rem; flex-shrink: 0;">
+                        ${initials}
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 700; color: ${titleColor}; font-size: 0.95rem;">${name}</div>
+                        <div style="font-size: 0.75rem; color: ${badgeColor}; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">${label}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.75rem;">
+                    ${position} at ${organization}
+                </div>
+        `;
+        
+        if (bio && bio.length > 10) {
+            const bioSnippet = bio.substring(0, 120) + (bio.length > 120 ? '...' : '');
+            cardHTML += `
+                <div style="font-size: 0.8rem; color: #64748b; line-height: 1.4; margin-bottom: 0.75rem; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                    ${bioSnippet}
+                </div>
+            `;
+        }
+        
+        if (expertise && expertise.length > 0) {
+            cardHTML += `
+                <div style="display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.75rem;">
+                    ${expertise.slice(0, 3).map(exp => 
+                        `<span style="font-size: 0.65rem; background: ${bgGradient}; color: white; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600;">
+                            ${exp}
+                        </span>`
+                    ).join('')}
+                </div>
+            `;
+        }
+        
+        if (links && links.length > 0) {
+            cardHTML += `
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
+            `;
+            
+            links.forEach(link => {
+                cardHTML += `
+                    <a href="${link.url}" target="_blank" rel="noopener noreferrer"
+                       style="flex: 1; display: flex; align-items: center; justify-content: center; gap: 0.25rem; padding: 0.4rem; background: ${bgGradient}; color: white; border-radius: 4px; text-decoration: none; font-size: 0.7rem; font-weight: 600; transition: all 0.2s;"
+                       onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'"
+                       title="${link.label}">
+                        <i class="${link.icon}"></i>
+                    </a>
+                `;
+            });
+            
+            cardHTML += `</div>`;
+        } else if (!isPrimary) {
+            cardHTML += `
+                <div style="font-size: 0.7rem; color: #94a3b8; text-align: center; padding: 0.5rem; margin-top: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                    <i class="fas fa-info-circle" style="margin-right: 0.25rem;"></i>
+                    Additional author information available in full analysis
+                </div>
+            `;
+        }
+        
+        cardHTML += `</div>`;
+        
+        return cardHTML;
     },
 
     updateElement: function(id, value) {
@@ -1630,24 +1700,6 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.23.0 TRANSPARENCY & MANIPULATION NOW EDUCATIONAL!');
+console.log('ServiceTemplates loaded successfully - v4.20.0 ENHANCED TRANSPARENCY');
 
-// END OF COMPLETE FILE - 2400+ LINES - NO TRUNCATION 0; width: 40px; height: 40px; background: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem;">
-                                        <i class="fas fa-link"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <h5 style="margin: 0 0 0.5rem 0; color: #065f46; font-size: 1rem; font-weight: 700;">
-                                            Clear Source Attribution
-                                        </h5>
-                                        <p style="margin: 0; color: #047857; font-size: 0.9rem; line-height: 1.6;">
-                                            Look for: Named sources, clickable links to original documents, references to specific studies or reports. 
-                                            <strong>Red flag:</strong> Vague phrases like "experts say" without naming the experts.
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Indicator 2 -->
-                            <div style="padding: 1.25rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 10px; border-left: 4px solid #3b82f6;">
-                                <div style="display: flex; align-items: start; gap: 1rem;">
-                                    <div style="flex-shrink:
+// END OF COMPLETE FILE - 2100+ LINES - NO TRUNCATION
