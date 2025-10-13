@@ -1,18 +1,24 @@
 """
-Fact Checker Service - v10.0.0 SPEED OPTIMIZED
-Last Updated: October 11, 2025
+Fact Checker Service - v11.0 CRITICAL FIX: CURRENT DATE CONTEXT
+Date: October 12, 2025
+Last Updated: October 12, 2025 - CONTEXT FIX
 
-CHANGES FROM v9.1.0:
-✅ CRITICAL: Parallel claim checking (15 claims in 8s instead of 37s!)
-✅ OPTIMIZED: ThreadPoolExecutor for concurrent OpenAI calls
-✅ OPTIMIZED: Batch processing with max 10 workers
-✅ OPTIMIZED: Reduced OpenAI timeout: 10s → 5s per claim
-✅ OPTIMIZED: Skip cache checks if empty (faster startup)
-✅ PRESERVED: All v9.1 functionality (DO NO HARM)
+CHANGES FROM v10.0:
+✅ CRITICAL: AI now knows current date is October 2025
+✅ CRITICAL: AI knows Donald Trump is current president (elected Nov 2024)
+✅ CRITICAL: Added current political context to AI prompts
+✅ FIXED: Won't mark current president's actions as FALSE based on outdated info
+✅ PRESERVED: All v10.0 parallel checking speed optimizations
 
-SPEED IMPROVEMENT: ~75% faster (37s → 8-10s for 15 claims)
-- Old: Sequential checking (2-3s each × 15 = 37s)
-- New: Parallel checking (10 workers = ~8s total)
+THE BUG WE FIXED:
+- AI thought it was October 2023 ✗
+- AI thought Biden was president ✗
+- Marked TRUE statement about Trump as FALSE ✗
+
+THE SOLUTION:
+- Pass current date to AI in every verification
+- Include current US president context
+- AI makes decisions based on 2025 reality, not 2023
 
 Save as: services/fact_checker.py (REPLACE existing file)
 """
@@ -44,8 +50,8 @@ logger = logging.getLogger(__name__)
 
 class FactChecker(BaseAnalyzer):
     """
-    Speed-optimized fact-checker with parallel claim checking
-    v10.0.0 - 75% faster than v9.1
+    Speed-optimized fact-checker with CURRENT DATE CONTEXT
+    v11.0 - Knows it's October 2025 and Trump is president
     """
     
     def __init__(self):
@@ -57,11 +63,11 @@ class FactChecker(BaseAnalyzer):
             try:
                 self.openai_client = OpenAI(
                     api_key=Config.OPENAI_API_KEY,
-                    timeout=httpx.Timeout(5.0, connect=2.0)  # 5s total, 2s connect
+                    timeout=httpx.Timeout(5.0, connect=2.0)
                 )
-                logger.info("[FactChecker v10.0] OpenAI client initialized (5s timeout)")
+                logger.info("[FactChecker v11.0] OpenAI client initialized (5s timeout)")
             except Exception as e:
-                logger.warning(f"[FactChecker v10.0] Failed to initialize OpenAI: {e}")
+                logger.warning(f"[FactChecker v11.0] Failed to initialize OpenAI: {e}")
                 self.openai_client = None
         
         # OPTIMIZED v10.0: ThreadPoolExecutor for parallel checking
@@ -78,7 +84,13 @@ class FactChecker(BaseAnalyzer):
         self.claim_patterns = self._initialize_claim_patterns()
         self.exclusion_patterns = self._initialize_exclusion_patterns()
         
-        logger.info(f"[FactChecker v10.0] OPTIMIZED - Parallel checking with 10 workers")
+        # NEW v11.0: Current context for AI
+        self.current_date = datetime.now().strftime("%B %d, %Y")  # e.g., "October 12, 2025"
+        self.current_year = datetime.now().year
+        self.current_us_president = "Donald Trump"  # Updated for 2025
+        
+        logger.info(f"[FactChecker v11.0] CONTEXT: {self.current_date}, President: {self.current_us_president}")
+        logger.info(f"[FactChecker v11.0] OPTIMIZED - Parallel checking with 10 workers")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -86,8 +98,8 @@ class FactChecker(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze article with PARALLEL claim checking
-        v10.0: Claims checked simultaneously for 75% speed boost
+        Analyze article with PARALLEL claim checking + CURRENT DATE CONTEXT
+        v11.0: Claims verified with knowledge of current date/president
         """
         try:
             start_time = time.time()
@@ -105,13 +117,14 @@ class FactChecker(BaseAnalyzer):
             quotes_count = data.get('quotes_count', 0)
             author = data.get('author', '')
             
-            logger.info(f"[FactChecker v10.0] Analyzing: {len(content)} chars, {sources_count} sources")
+            logger.info(f"[FactChecker v11.0] Analyzing: {len(content)} chars, {sources_count} sources")
+            logger.info(f"[FactChecker v11.0] Current context: {self.current_date}, President {self.current_us_president}")
             
             # 1. Extract claims from content
             extracted_claims = self._extract_claims_enhanced(content)
-            logger.info(f"[FactChecker v10.0] Extracted {len(extracted_claims)} claims")
+            logger.info(f"[FactChecker v11.0] Extracted {len(extracted_claims)} claims")
             
-            # 2. OPTIMIZED v10.0: Check claims in PARALLEL
+            # 2. OPTIMIZED v10.0: Check claims in PARALLEL (with v11.0 current context)
             fact_checks = self._check_claims_parallel(extracted_claims, article_url, article_title)
             
             # 3. Calculate verification score
@@ -214,36 +227,33 @@ class FactChecker(BaseAnalyzer):
                     'text_length': len(content),
                     'article_url': article_url,
                     'article_title': article_title,
-                    'version': '10.0.0',
+                    'version': '11.0.0',
                     'ai_enhanced': bool(self.openai_client),
-                    'parallel_checking': True
+                    'parallel_checking': True,
+                    'current_date_context': self.current_date,
+                    'current_president': self.current_us_president
                 }
             }
             
-            logger.info(f"[FactChecker v10.0] Complete: {verification_score}/100 ({verification_level}) - {verified_true} verified, {verified_false} disputed")
+            logger.info(f"[FactChecker v11.0] Complete: {verification_score}/100 ({verification_level}) - {verified_true} verified, {verified_false} disputed")
             return self.get_success_result(result)
             
         except Exception as e:
-            logger.error(f"[FactChecker v10.0] Error: {e}", exc_info=True)
+            logger.error(f"[FactChecker v11.0] Error: {e}", exc_info=True)
             return self.get_error_result(f"Fact checking error: {str(e)}")
     
     # ============================================================================
-    # CRITICAL OPTIMIZATION: Parallel claim checking
+    # OPTIMIZED: Parallel claim checking (from v10.0)
     # ============================================================================
     
     def _check_claims_parallel(self, claims: List[str], article_url: Optional[str] = None,
                                 article_title: Optional[str] = None) -> List[Dict[str, Any]]:
-        """
-        OPTIMIZED v10.0: Check ALL claims in PARALLEL using ThreadPoolExecutor
+        """Check ALL claims in PARALLEL using ThreadPoolExecutor"""
         
-        SPEED GAIN: 75% faster
-        - Old: 15 claims × 2-3s each = 37s total
-        - New: 15 claims / 10 workers = ~8s total
-        """
         fact_checks = []
         futures = {}
         
-        logger.info(f"[FactChecker v10.0] Starting parallel check of {len(claims)} claims...")
+        logger.info(f"[FactChecker v11.0] Starting parallel check of {len(claims)} claims...")
         
         # Submit all claims to thread pool simultaneously
         for i, claim in enumerate(claims):
@@ -253,17 +263,17 @@ class FactChecker(BaseAnalyzer):
             )
             futures[future] = (i, claim)
         
-        # Collect results as they complete (not in order, but faster!)
+        # Collect results as they complete
         completed_results = []
-        for future in as_completed(futures, timeout=15):  # 15s max total
+        for future in as_completed(futures, timeout=15):
             try:
                 i, claim = futures[future]
-                result = future.result(timeout=1)  # Each claim gets 1s to return
+                result = future.result(timeout=1)
                 completed_results.append((i, result))
-                logger.info(f"[FactChecker v10.0] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
+                logger.info(f"[FactChecker v11.0] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
             except Exception as e:
                 i, claim = futures[future]
-                logger.error(f"[FactChecker v10.0] Claim {i+1} failed: {e}")
+                logger.error(f"[FactChecker v11.0] Claim {i+1} failed: {e}")
                 completed_results.append((i, {
                     'claim': claim,
                     'verdict': 'unverified',
@@ -277,18 +287,16 @@ class FactChecker(BaseAnalyzer):
         completed_results.sort(key=lambda x: x[0])
         fact_checks = [result for _, result in completed_results]
         
-        logger.info(f"[FactChecker v10.0] ✓ Parallel checking complete: {len(fact_checks)} claims")
+        logger.info(f"[FactChecker v11.0] ✓ Parallel checking complete: {len(fact_checks)} claims")
         return fact_checks
     
     def _verify_single_claim(self, claim: str, index: int,
                              article_url: Optional[str],
                              article_title: Optional[str]) -> Dict[str, Any]:
-        """
-        Verify a SINGLE claim (called by thread pool)
-        OPTIMIZED v10.0: Fast with 5s timeout
-        """
+        """Verify a SINGLE claim (called by thread pool)"""
+        
         try:
-            # OPTIMIZED v10.0: Skip cache if empty (faster)
+            # OPTIMIZED v10.0: Skip cache if empty
             if self.cache:
                 cache_key = self._get_cache_key(claim)
                 cached_result = self._get_cached_result(cache_key)
@@ -296,7 +304,7 @@ class FactChecker(BaseAnalyzer):
                     cached_result['from_cache'] = True
                     return cached_result
             
-            # Verify claim
+            # Verify claim with CURRENT CONTEXT (v11.0)
             result = self._verify_claim_comprehensive(claim, index, article_url, article_title)
             
             # Cache result
@@ -307,7 +315,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v10.0] Error verifying claim {index}: {e}")
+            logger.error(f"[FactChecker v11.0] Error verifying claim {index}: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -317,8 +325,182 @@ class FactChecker(BaseAnalyzer):
                 'method_used': 'error'
             }
     
+    def _verify_claim_comprehensive(self, claim: str, index: int,
+                                   article_url: Optional[str],
+                                   article_title: Optional[str]) -> Dict[str, Any]:
+        """Comprehensive claim verification using multiple methods"""
+        
+        try:
+            # Skip trivial claims
+            if len(claim.strip()) < 15:
+                return {
+                    'claim': claim,
+                    'verdict': 'opinion',
+                    'explanation': 'Statement too short to verify meaningfully',
+                    'confidence': 50,
+                    'sources': [],
+                    'evidence': [],
+                    'method_used': 'filtered'
+                }
+            
+            # METHOD 1: AI Analysis (BEST) - NOW WITH CURRENT CONTEXT (v11.0)
+            if self.openai_client:
+                ai_result = self._ai_verify_claim(claim, article_title)
+                if ai_result and ai_result.get('verdict') != 'needs_context':
+                    ai_result['method_used'] = 'AI Verification'
+                    return ai_result
+            
+            # METHOD 2: Google Fact Check API
+            if self.google_api_key:
+                google_result = self._check_google_api(claim)
+                if google_result.get('found'):
+                    result = google_result['data']
+                    result['claim'] = claim
+                    result['method_used'] = 'Google Fact Check Database'
+                    return result
+            
+            # METHOD 3: Pattern Analysis (fallback)
+            pattern_result = self._analyze_claim_patterns(claim)
+            pattern_result['claim'] = claim
+            pattern_result['method_used'] = 'Pattern Analysis'
+            return pattern_result
+            
+        except Exception as e:
+            logger.error(f"[FactChecker v11.0] Error verifying claim: {e}")
+            return {
+                'claim': claim,
+                'verdict': 'unverified',
+                'explanation': f'Verification error: {str(e)}',
+                'confidence': 0,
+                'sources': [],
+                'evidence': [],
+                'method_used': 'error'
+            }
+    
+    def _ai_verify_claim(self, claim: str, article_context: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """
+        NEW v11.0: Use AI to verify claim with CURRENT DATE AND PRESIDENT CONTEXT
+        """
+        if not self.openai_client:
+            return None
+        
+        try:
+            prompt = self._build_verification_prompt_with_context(claim, article_context)
+            
+            # OPTIMIZED v10.0: Timeout handled by client (5s)
+            response = self.openai_client.chat.completions.create(
+                model='gpt-4o-mini',
+                messages=[
+                    {"role": "system", "content": self._get_system_prompt_with_context()},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,
+                max_tokens=300
+            )
+            
+            result = self._parse_ai_verification(response.choices[0].message.content)
+            return result
+            
+        except Exception as e:
+            logger.warning(f"[FactChecker v11.0] AI verification failed: {e}")
+            return None
+    
+    def _get_system_prompt_with_context(self) -> str:
+        """
+        NEW v11.0: System prompt with current date and political context
+        """
+        return f"""You are an expert fact-checker analyzing claims as of {self.current_date}.
+
+CRITICAL CURRENT CONTEXT:
+- Today's date: {self.current_date}
+- Current year: {self.current_year}
+- Current US President: {self.current_us_president} (elected November 2024, inaugurated January 2025)
+
+When verifying claims:
+1. Use information current as of {self.current_date}
+2. Remember that Donald Trump is the current sitting president
+3. Events from 2024-2025 are RECENT, not historical
+4. Don't mark current events as false based on outdated information
+
+Analyze claims and provide clear verdicts with explanations based on {self.current_year} reality."""
+    
+    def _build_verification_prompt_with_context(self, claim: str, context: Optional[str] = None) -> str:
+        """
+        NEW v11.0: Build prompt with current date context
+        """
+        prompt_parts = [
+            f"Verify this factual claim (as of {self.current_date}):",
+            f'"{claim}"',
+            ""
+        ]
+        
+        if context:
+            prompt_parts.append(f"Context: This claim appears in an article titled \"{context}\"")
+            prompt_parts.append("")
+        
+        prompt_parts.extend([
+            f"IMPORTANT: Today is {self.current_date}. {self.current_us_president} is the current US President.",
+            "",
+            "Analyze this claim and provide:",
+            "1. VERDICT: Is it true, false, misleading, or needs more context?",
+            "2. CONFIDENCE: Your confidence level (50-95%)",
+            "3. EXPLANATION: Why you reached this verdict (2-3 sentences)",
+            "",
+            "Format your response EXACTLY like this:",
+            "VERDICT: [verdict]",
+            "CONFIDENCE: [number]",
+            "EXPLANATION: [explanation]"
+        ])
+        
+        return "\n".join(prompt_parts)
+    
+    def _parse_ai_verification(self, response: str) -> Optional[Dict[str, Any]]:
+        """Parse AI verification response (same as v10.0)"""
+        
+        try:
+            lines = response.strip().split('\n')
+            result = {
+                'verdict': 'unverified',
+                'confidence': 50,
+                'explanation': 'AI analysis completed',
+                'sources': ['AI Analysis']
+            }
+            
+            for line in lines:
+                line = line.strip()
+                if line.startswith('VERDICT:'):
+                    verdict = line.replace('VERDICT:', '').strip().lower()
+                    verdict_map = {
+                        'true': 'true', 'mostly true': 'mostly_true', 'mostly_true': 'mostly_true',
+                        'mixed': 'mixed', 'misleading': 'misleading',
+                        'mostly false': 'mostly_false', 'mostly_false': 'mostly_false',
+                        'false': 'false', 'unverified': 'unverified', 'needs context': 'needs_context'
+                    }
+                    result['verdict'] = verdict_map.get(verdict, 'unverified')
+                    
+                elif line.startswith('CONFIDENCE:'):
+                    conf_str = re.findall(r'\d+', line)
+                    if conf_str:
+                        result['confidence'] = min(int(conf_str[0]), 95)
+                        
+                elif line.startswith('EXPLANATION:'):
+                    explanation = line.replace('EXPLANATION:', '').strip()
+                    if explanation:
+                        result['explanation'] = explanation
+            
+            # Collect remaining lines as explanation if needed
+            explanation_lines = [l for l in lines if not l.startswith(('VERDICT:', 'CONFIDENCE:', 'EXPLANATION:')) and l.strip()]
+            if explanation_lines and len(result['explanation']) < 50:
+                result['explanation'] = ' '.join(explanation_lines[:3])
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"[FactChecker v11.0] Failed to parse AI response: {e}")
+            return None
+    
     # ============================================================================
-    # All verification methods (same as v9.1, just called in parallel now)
+    # All other methods same as v10.0 (extraction, scoring, etc.)
     # ============================================================================
     
     def _extract_claims_enhanced(self, content: str) -> List[str]:
@@ -326,7 +508,7 @@ class FactChecker(BaseAnalyzer):
         sentences = self._split_sentences(content)
         claims = []
         
-        logger.info(f"[FactChecker v10.0] Evaluating {len(sentences)} sentences...")
+        logger.info(f"[FactChecker v11.0] Evaluating {len(sentences)} sentences...")
         
         for i, sentence in enumerate(sentences):
             if self._matches_exclusion_patterns(sentence):
@@ -334,12 +516,12 @@ class FactChecker(BaseAnalyzer):
             
             score = self._score_claim_likelihood_enhanced(sentence)
             
-            if score >= 8:  # Threshold from v9.1
+            if score >= 8:
                 claim = sentence.strip()
                 if 20 < len(claim) < 500:
                     claims.append(claim)
         
-        logger.info(f"[FactChecker v10.0] Found {len(claims)} potential claims")
+        logger.info(f"[FactChecker v11.0] Found {len(claims)} potential claims")
         return claims[:15]
     
     def _score_claim_likelihood_enhanced(self, sentence: str) -> int:
@@ -416,153 +598,6 @@ class FactChecker(BaseAnalyzer):
         
         return max(0, score)
     
-    def _verify_claim_comprehensive(self, claim: str, index: int,
-                                   article_url: Optional[str],
-                                   article_title: Optional[str]) -> Dict[str, Any]:
-        """Comprehensive claim verification using multiple methods"""
-        
-        try:
-            # Skip trivial claims
-            if len(claim.strip()) < 15:
-                return {
-                    'claim': claim,
-                    'verdict': 'opinion',
-                    'explanation': 'Statement too short to verify meaningfully',
-                    'confidence': 50,
-                    'sources': [],
-                    'evidence': [],
-                    'method_used': 'filtered'
-                }
-            
-            # METHOD 1: AI Analysis (BEST) - OPTIMIZED with 5s timeout
-            if self.openai_client:
-                ai_result = self._ai_verify_claim(claim, article_title)
-                if ai_result and ai_result.get('verdict') != 'needs_context':
-                    ai_result['method_used'] = 'AI Verification'
-                    return ai_result
-            
-            # METHOD 2: Google Fact Check API
-            if self.google_api_key:
-                google_result = self._check_google_api(claim)
-                if google_result.get('found'):
-                    result = google_result['data']
-                    result['claim'] = claim
-                    result['method_used'] = 'Google Fact Check Database'
-                    return result
-            
-            # METHOD 3: Pattern Analysis (fallback)
-            pattern_result = self._analyze_claim_patterns(claim)
-            pattern_result['claim'] = claim
-            pattern_result['method_used'] = 'Pattern Analysis'
-            return pattern_result
-            
-        except Exception as e:
-            logger.error(f"[FactChecker v10.0] Error verifying claim: {e}")
-            return {
-                'claim': claim,
-                'verdict': 'unverified',
-                'explanation': f'Verification error: {str(e)}',
-                'confidence': 0,
-                'sources': [],
-                'evidence': [],
-                'method_used': 'error'
-            }
-    
-    def _ai_verify_claim(self, claim: str, article_context: Optional[str] = None) -> Optional[Dict[str, Any]]:
-        """
-        Use AI to verify a claim
-        OPTIMIZED v10.0: Uses 5s timeout from client initialization
-        """
-        if not self.openai_client:
-            return None
-        
-        try:
-            prompt = self._build_verification_prompt(claim, article_context)
-            
-            # OPTIMIZED v10.0: Timeout handled by client (5s)
-            response = self.openai_client.chat.completions.create(
-                model='gpt-4o-mini',
-                messages=[
-                    {"role": "system", "content": "You are an expert fact-checker. Analyze claims and provide clear verdicts with explanations."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.1,
-                max_tokens=300  # OPTIMIZED: Reduced from 500
-            )
-            
-            result = self._parse_ai_verification(response.choices[0].message.content)
-            return result
-            
-        except Exception as e:
-            logger.warning(f"[FactChecker v10.0] AI verification failed: {e}")
-            return None
-    
-    def _build_verification_prompt(self, claim: str, context: Optional[str] = None) -> str:
-        """Build prompt for AI verification"""
-        prompt_parts = [f"Verify this factual claim: \"{claim}\"", ""]
-        
-        if context:
-            prompt_parts.append(f"Context: This claim appears in an article titled \"{context}\"")
-            prompt_parts.append("")
-        
-        prompt_parts.extend([
-            "Analyze this claim and provide:",
-            "1. VERDICT: Is it true, false, misleading, or needs more context?",
-            "2. CONFIDENCE: Your confidence level (50-95%)",
-            "3. EXPLANATION: Why you reached this verdict (2-3 sentences)",
-            "",
-            "Format your response EXACTLY like this:",
-            "VERDICT: [verdict]",
-            "CONFIDENCE: [number]",
-            "EXPLANATION: [explanation]"
-        ])
-        
-        return "\n".join(prompt_parts)
-    
-    def _parse_ai_verification(self, response: str) -> Optional[Dict[str, Any]]:
-        """Parse AI verification response"""
-        try:
-            lines = response.strip().split('\n')
-            result = {
-                'verdict': 'unverified',
-                'confidence': 50,
-                'explanation': 'AI analysis completed',
-                'sources': ['AI Analysis']
-            }
-            
-            for line in lines:
-                line = line.strip()
-                if line.startswith('VERDICT:'):
-                    verdict = line.replace('VERDICT:', '').strip().lower()
-                    verdict_map = {
-                        'true': 'true', 'mostly true': 'mostly_true', 'mostly_true': 'mostly_true',
-                        'mixed': 'mixed', 'misleading': 'misleading',
-                        'mostly false': 'mostly_false', 'mostly_false': 'mostly_false',
-                        'false': 'false', 'unverified': 'unverified', 'needs context': 'needs_context'
-                    }
-                    result['verdict'] = verdict_map.get(verdict, 'unverified')
-                    
-                elif line.startswith('CONFIDENCE:'):
-                    conf_str = re.findall(r'\d+', line)
-                    if conf_str:
-                        result['confidence'] = min(int(conf_str[0]), 95)
-                        
-                elif line.startswith('EXPLANATION:'):
-                    explanation = line.replace('EXPLANATION:', '').strip()
-                    if explanation:
-                        result['explanation'] = explanation
-            
-            # Collect remaining lines as explanation if needed
-            explanation_lines = [l for l in lines if not l.startswith(('VERDICT:', 'CONFIDENCE:', 'EXPLANATION:')) and l.strip()]
-            if explanation_lines and len(result['explanation']) < 50:
-                result['explanation'] = ' '.join(explanation_lines[:3])
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"[FactChecker v10.0] Failed to parse AI response: {e}")
-            return None
-    
     def _check_google_api(self, claim: str) -> Dict[str, Any]:
         """Check Google Fact Check API"""
         if not self.google_api_key:
@@ -616,7 +651,7 @@ class FactChecker(BaseAnalyzer):
             return {'found': False}
             
         except Exception as e:
-            logger.error(f"[FactChecker v10.0] Google API error: {e}")
+            logger.error(f"[FactChecker v11.0] Google API error: {e}")
             return {'found': False}
     
     def _analyze_claim_patterns(self, claim: str) -> Dict[str, Any]:
@@ -645,10 +680,6 @@ class FactChecker(BaseAnalyzer):
             result['evidence'] = ['Contains absolute language that suggests exaggeration']
         
         return result
-    
-    # ============================================================================
-    # Supporting methods (same as v9.1)
-    # ============================================================================
     
     def _split_sentences(self, text: str) -> List[str]:
         """Split text into sentences"""
@@ -934,19 +965,21 @@ class FactChecker(BaseAnalyzer):
         """Get service information"""
         info = super().get_service_info()
         info.update({
-            'version': '10.0.0',
-            'optimization': 'Parallel claim checking with ThreadPoolExecutor',
+            'version': '11.0.0',
+            'optimization': 'Parallel claim checking with current date context',
+            'current_context': f'{self.current_date}, President {self.current_us_president}',
             'speed_improvement': '75% faster than v9.1',
             'capabilities': [
                 'PARALLEL claim verification (10 workers)',
-                'AI-powered claim verification (5s timeout)',
+                'AI-powered claim verification with current context',
                 'Google Fact Check database integration',
                 'Multi-method verification (AI → API → Pattern)',
+                'Current date and political awareness',
                 'Claim-by-claim accuracy assessment',
                 'Source citation analysis'
             ],
             'verification_methods': [
-                'AI Verification' if self.openai_client else None,
+                'AI Verification (with 2025 context)' if self.openai_client else None,
                 'Google Fact Check Database' if self.google_api_key else None,
                 'Pattern Analysis'
             ],
@@ -956,4 +989,4 @@ class FactChecker(BaseAnalyzer):
         return info
 
 
-logger.info("[FactChecker v10.0] Module loaded - OPTIMIZED parallel checking enabled")
+logger.info("[FactChecker v11.0] Module loaded - WITH CURRENT DATE CONTEXT (Trump is president)")
