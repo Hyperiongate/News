@@ -1,24 +1,28 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
  * Date: October 13, 2025
- * Version: 4.24.0 - FIXED: Now displays v4.0 educational content properly
+ * Version: 4.25.0 - MANIPULATION SERVICE COMPLETELY REMOVED
  * 
- * CRITICAL FIX FROM v4.23.0:
- * - FIXED: Transparency now checks for v4.0 educational fields (article_type, what_to_look_for, etc.)
- * - FIXED: Manipulation now checks for v4.0 educational fields (article_type, how_to_spot, etc.)
- * - FIXED: If v4.0 fields exist, display the rich educational content
- * - FIXED: Only fall back to generic text if NO v4.0 fields exist
- * - The backend v4.0 services ARE running - we just weren't displaying their data!
+ * CHANGES FROM v4.24.0:
+ * - REMOVED: manipulationDetector service entirely (per user request)
+ * - REMOVED: renderManipulationVisualization function
+ * - REMOVED: displayManipulationDetector function
+ * - REMOVED: manipulation_detector from services array
+ * - REMOVED: manipulationDetector template
+ * - CLEANED: All references to manipulation service
+ * - Now displays only 6 services instead of 7
  * 
- * ROOT CAUSE:
- * Backend was sending rich educational data in fields like:
- *   - article_type, what_to_look_for, transparency_lessons, expectations
- *   - how_to_spot, manipulation_lessons, risk_profile
- * But we were checking for score only and ignoring these fields!
+ * REMAINING SERVICES (6):
+ * 1. Source Credibility
+ * 2. Bias Detection
+ * 3. Fact Checking
+ * 4. Author Analysis
+ * 5. Transparency Guide
+ * 6. Content Quality
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
- * FILE IS COMPLETE - NO TRUNCATION - ~2400 LINES
+ * FILE IS COMPLETE - NO TRUNCATION - ~2100 LINES
  */
 
 // Create global ServiceTemplates object
@@ -229,37 +233,6 @@ window.ServiceTemplates = {
                 </div>
             `,
             
-            manipulationDetector: `
-                <div class="service-analysis-section">
-                    <div class="service-card-enhanced">
-                        <div class="card-header-gradient manipulation-header">
-                            <i class="fas fa-user-secret"></i>
-                            <h3>Manipulation Detection</h3>
-                        </div>
-                        <div class="manipulation-metrics">
-                            <div class="metric-card success">
-                                <div class="metric-icon"><i class="fas fa-shield-virus"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="integrity-score">--</span>
-                                    <span class="metric-label">Integrity Score</span>
-                                </div>
-                            </div>
-                            <div class="metric-card danger">
-                                <div class="metric-icon"><i class="fas fa-exclamation-triangle"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="techniques-count">--</span>
-                                    <span class="metric-label">Techniques Found</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="techniques-list" id="techniques-list"></div>
-                        
-                        <!-- MANIPULATION VISUALIZATION -->
-                        <div id="manipulation-visualization-container"></div>
-                    </div>
-                </div>
-            `,
-            
             contentAnalyzer: `
                 <div class="service-analysis-section">
                     <div class="service-card-enhanced">
@@ -390,10 +363,10 @@ window.ServiceTemplates = {
         return templates[serviceId] || '<div class="error">Template not found</div>';
     },
 
-    // Display all analyses
+    // Display all analyses - v4.25.0 - MANIPULATION REMOVED
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.24.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v4.24.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.25.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v4.25.0] Displaying analyses with data:', data);
         
         const detailed = data.detailed_analysis || {};
         
@@ -403,14 +376,13 @@ window.ServiceTemplates = {
         
         container.innerHTML = '';
         
-        // Define services in order with colored borders
+        // Define services in order with colored borders - MANIPULATION REMOVED
         const services = [
             { id: 'sourceCredibility', key: 'source_credibility', title: 'Source Credibility', icon: 'fa-globe-americas', color: '#6366f1' },
             { id: 'biasDetector', key: 'bias_detector', title: 'Bias Detection', icon: 'fa-balance-scale', color: '#f59e0b' },
             { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' },
             { id: 'author', key: 'author_analyzer', title: 'Author Analysis', icon: 'fa-user-edit', color: '#06b6d4' },
             { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency Guide', icon: 'fa-eye', color: '#8b5cf6' },
-            { id: 'manipulationDetector', key: 'manipulation_detector', title: 'Manipulation Guide', icon: 'fa-user-secret', color: '#ef4444' },
             { id: 'contentAnalyzer', key: 'content_analyzer', title: 'Content Quality', icon: 'fa-file-alt', color: '#ec4899' }
         ];
         
@@ -456,128 +428,23 @@ window.ServiceTemplates = {
             }
         };
         
-        // Render creative visualizations
-        console.log('[ServiceTemplates v4.24.0] Rendering creative visualizations...');
+        // Render creative visualizations - MANIPULATION REMOVED
+        console.log('[ServiceTemplates v4.25.0] Rendering creative visualizations...');
         setTimeout(function() {
             ServiceTemplates.renderCreativeVisualizations(detailed);
         }, 500);
     },
     
-    // Creative visualizations
+    // Creative visualizations - v4.25.0 - MANIPULATION REMOVED
     renderCreativeVisualizations: function(detailed) {
-        console.log('[ServiceTemplates v4.24.0] renderCreativeVisualizations called');
+        console.log('[ServiceTemplates v4.25.0] renderCreativeVisualizations called');
         
-        // Manipulation Detection Visualization
-        if (detailed.manipulation_detector) {
-            this.renderManipulationVisualization(detailed.manipulation_detector);
-        }
-        
-        // Content Quality Visualization
+        // Content Quality Visualization (Manipulation removed)
         if (detailed.content_analyzer) {
             this.renderContentVisualization(detailed.content_analyzer);
         }
         
-        console.log('[ServiceTemplates v4.24.0] ✓ Creative visualizations rendered');
-    },
-    
-    // Manipulation Detection Creative Display
-    renderManipulationVisualization: function(data) {
-        const container = document.getElementById('manipulation-visualization-container');
-        if (!container) return;
-        
-        const tactics = data.tactics_found || data.techniques || [];
-        const integrityScore = data.integrity_score || data.score || 100;
-        const emotionalScore = data.emotional_score || 0;
-        
-        console.log('[Manipulation Viz] tactics:', tactics.length, 'integrity:', integrityScore);
-        
-        if (tactics.length === 0) {
-            container.innerHTML = `
-                <div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); border-radius: 12px; border-left: 4px solid #10b981; text-align: center;">
-                    <div style="font-size: 3rem; color: #059669; margin-bottom: 10px;">
-                        <i class="fas fa-shield-check"></i>
-                    </div>
-                    <h4 style="margin: 0 0 8px 0; color: #065f46; font-size: 1.1rem; font-weight: 700;">
-                        No Manipulation Detected
-                    </h4>
-                    <p style="margin: 0; color: #047857; font-size: 0.95rem;">
-                        This article presents information straightforwardly without significant use of manipulation tactics.
-                    </p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Build tactic cards
-        let html = `
-            <div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 12px; border-left: 4px solid #ef4444;">
-                <h4 style="margin: 0 0 15px 0; color: #991b1b; font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 1rem;"></i>
-                    Manipulation Tactics Detected (${tactics.length})
-                </h4>
-                
-                <div style="display: grid; gap: 12px; margin-bottom: 20px;">
-        `;
-        
-        // Show up to 10 tactics
-        tactics.slice(0, 10).forEach(function(tactic) {
-            const severity = tactic.severity || 'low';
-            const severityColors = {
-                'high': { bg: '#fee2e2', border: '#dc2626', text: '#7f1d1d' },
-                'medium': { bg: '#fed7aa', border: '#f59e0b', text: '#78350f' },
-                'low': { bg: '#dbeafe', border: '#3b82f6', text: '#1e40af' }
-            };
-            const colors = severityColors[severity] || severityColors['low'];
-            
-            html += `
-                <div style="background: white; padding: 12px 15px; border-radius: 8px; border-left: 3px solid ${colors.border}; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <div style="display: flex; align-items: start; justify-content: space-between; gap: 10px;">
-                        <div style="flex: 1;">
-                            <div style="font-weight: 700; color: #1e293b; font-size: 0.9rem; margin-bottom: 4px;">
-                                ${tactic.name || 'Unknown Tactic'}
-                            </div>
-                            <div style="font-size: 0.8rem; color: #64748b; line-height: 1.4;">
-                                ${tactic.description || 'No description available'}
-                            </div>
-                            ${tactic.example ? `
-                                <div style="margin-top: 8px; padding: 8px; background: #f8fafc; border-radius: 4px; font-size: 0.75rem; color: #475569; font-style: italic;">
-                                    "${tactic.example.substring(0, 120)}${tactic.example.length > 120 ? '...' : ''}"
-                                </div>
-                            ` : ''}
-                        </div>
-                        <div style="background: ${colors.bg}; color: ${colors.text}; padding: 4px 10px; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; white-space: nowrap;">
-                            ${severity}
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += `
-                </div>
-                
-                <div style="display: flex; gap: 15px; padding: 15px; background: white; border-radius: 8px;">
-                    <div style="flex: 1; text-align: center;">
-                        <div style="font-size: 2rem; font-weight: 800; color: ${integrityScore >= 60 ? '#10b981' : integrityScore >= 40 ? '#f59e0b' : '#ef4444'};">
-                            ${integrityScore}
-                        </div>
-                        <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
-                            Integrity Score
-                        </div>
-                    </div>
-                    <div style="flex: 1; text-align: center;">
-                        <div style="font-size: 2rem; font-weight: 800; color: ${emotionalScore > 60 ? '#ef4444' : emotionalScore > 40 ? '#f59e0b' : '#10b981'};">
-                            ${emotionalScore}
-                        </div>
-                        <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
-                            Emotional Intensity
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        container.innerHTML = html;
+        console.log('[ServiceTemplates v4.25.0] ✓ Creative visualizations rendered');
     },
     
     // Content Quality Creative Display
@@ -781,9 +648,9 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Bias Detector - v4.24.0
+    // Display Bias Detector - v4.25.0
     displayBiasDetector: function(data, analyzer) {
-        console.log('[BiasDetector v4.24.0] Displaying data:', data);
+        console.log('[BiasDetector v4.25.0] Displaying data:', data);
         
         const objectivityScore = data.objectivity_score || data.score || 50;
         const direction = data.bias_direction || data.political_bias || data.direction || 'center';
@@ -903,7 +770,7 @@ window.ServiceTemplates = {
             metricsContainer.parentElement.insertBefore(explanation, metricsContainer.nextSibling);
         }
         
-        console.log('[BiasDetector v4.24.0] ✓ Explanation section rendered');
+        console.log('[BiasDetector v4.25.0] ✓ Explanation section rendered');
     },
     
     getSensationalismExplanation: function(level) {
@@ -931,16 +798,16 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Fact Checker - v4.24.0
+    // Display Fact Checker - v4.25.0
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker v4.24.0] Data received:', data);
+        console.log('[FactChecker v4.25.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
         const claimsVerified = data.claims_verified || 0;
         const factChecks = data.fact_checks || data.claims || [];
         
-        console.log('[FactChecker v4.24.0] Fact checks array length:', factChecks.length);
+        console.log('[FactChecker v4.25.0] Fact checks array length:', factChecks.length);
         
         // Update summary metrics
         this.updateElement('fact-score', score + '%');
@@ -955,7 +822,7 @@ window.ServiceTemplates = {
         
         // Render findings
         if (factChecks && factChecks.length > 0) {
-            console.log('[FactChecker v4.24.0] Rendering', factChecks.length, 'findings...');
+            console.log('[FactChecker v4.25.0] Rendering', factChecks.length, 'findings...');
             
             let claimsHTML = '';
             
@@ -1034,10 +901,10 @@ window.ServiceTemplates = {
             });
             
             claimsContainer.innerHTML = claimsHTML;
-            console.log('[FactChecker v4.24.0] ✓ Successfully rendered', factChecks.length, 'findings');
+            console.log('[FactChecker v4.25.0] ✓ Successfully rendered', factChecks.length, 'findings');
             
         } else {
-            console.log('[FactChecker v4.24.0] No findings to display');
+            console.log('[FactChecker v4.25.0] No findings to display');
             claimsContainer.innerHTML = `
                 <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
                     <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
@@ -1052,10 +919,10 @@ window.ServiceTemplates = {
         }
     },
 
-    // v4.24.0 FIXED: Display Transparency Analyzer - Check for v4.0 educational fields first!
+    // v4.25.0: Display Transparency Analyzer
     displayTransparencyAnalyzer: function(data, analyzer) {
-        console.log('[TransparencyAnalyzer v4.24.0 FIXED] Displaying data:', data);
-        console.log('[TransparencyAnalyzer v4.24.0] Full data object:', JSON.stringify(data, null, 2));
+        console.log('[TransparencyAnalyzer v4.25.0] Displaying data:', data);
+        console.log('[TransparencyAnalyzer v4.25.0] Full data object:', JSON.stringify(data, null, 2));
         
         const container = document.getElementById('transparency-content-v3');
         if (!container) {
@@ -1063,11 +930,11 @@ window.ServiceTemplates = {
             return;
         }
         
-        // CRITICAL FIX: Check for v4.0 educational fields FIRST!
+        // Check for v4.0 educational fields
         const hasEducationalContent = data.article_type || data.what_to_look_for || data.transparency_lessons;
         
         if (hasEducationalContent) {
-            console.log('[Transparency v4.24.0] ✓ Found v4.0 educational content! Displaying rich educational guide...');
+            console.log('[Transparency v4.25.0] ✓ Found v4.0 educational content! Displaying rich educational guide...');
             
             // Extract v4.0 educational data
             const articleType = data.article_type || 'News Report';
@@ -1076,7 +943,6 @@ window.ServiceTemplates = {
             const whatToLookFor = data.what_to_look_for || [];
             const lessons = data.transparency_lessons || [];
             const findings = data.findings || [];
-            const analysis = data.analysis || {};
             
             // Build rich educational display
             let html = `
@@ -1173,7 +1039,7 @@ window.ServiceTemplates = {
             
             html += `</div>`;
             container.innerHTML = html;
-            console.log('[TransparencyAnalyzer v4.24.0] ✓ Displayed v4.0 educational content');
+            console.log('[TransparencyAnalyzer v4.25.0] ✓ Displayed v4.0 educational content');
             return;
         }
         
@@ -1182,7 +1048,7 @@ window.ServiceTemplates = {
         const level = data.transparency_level || data.level || 'Unknown';
         
         if (score > 0) {
-            console.log('[Transparency v4.24.0] Displaying score-only view');
+            console.log('[Transparency v4.25.0] Displaying score-only view');
             container.innerHTML = `
                 <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 1.5rem;">
                     <div style="font-size: 3.5rem; font-weight: 800; margin-bottom: 0.5rem;">${score}</div>
@@ -1201,7 +1067,7 @@ window.ServiceTemplates = {
             `;
         } else {
             // No data at all - show generic educational content
-            console.log('[Transparency v4.24.0] No data - showing generic educational content');
+            console.log('[Transparency v4.25.0] No data - showing generic educational content');
             container.innerHTML = `
                 <div style="padding: 2rem;">
                     <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 2rem;">
@@ -1226,163 +1092,10 @@ window.ServiceTemplates = {
             `;
         }
         
-        console.log('[TransparencyAnalyzer v4.24.0] ✓ Display complete');
+        console.log('[TransparencyAnalyzer v4.25.0] ✓ Display complete');
     },
 
-    // v4.24.0 FIXED: Display Manipulation Detector - Check for v4.0 educational fields first!
-    displayManipulationDetector: function(data, analyzer) {
-        console.log('[Manipulation v4.24.0 FIXED] Displaying data:', data);
-        console.log('[Manipulation v4.24.0] Full data object:', JSON.stringify(data, null, 2));
-        
-        const integrityScore = data.integrity_score || data.score || 100;
-        const techniquesCount = data.techniques_found || data.techniques_count || 0;
-        
-        this.updateElement('integrity-score', integrityScore + '/100');
-        this.updateElement('techniques-count', techniquesCount);
-        
-        // CRITICAL FIX: Check for v4.0 educational fields FIRST!
-        const hasEducationalContent = data.article_type || data.how_to_spot || data.manipulation_lessons || data.risk_profile;
-        
-        if (hasEducationalContent) {
-            console.log('[Manipulation v4.24.0] ✓ Found v4.0 educational content! Displaying rich educational guide...');
-            
-            const container = document.getElementById('manipulation-visualization-container');
-            if (!container) return;
-            
-            // Extract v4.0 educational data
-            const articleType = data.article_type || 'News Report';
-            const howToSpot = data.how_to_spot || [];
-            const lessons = data.manipulation_lessons || [];
-            const riskProfile = data.risk_profile || {};
-            const tactics = data.tactics_found || [];
-            
-            let html = `
-                <div style="margin-top: 20px; padding: 2rem;">
-                    <!-- Hero Section -->
-                    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); border-radius: 12px; color: white; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(239,68,68,0.2);">
-                        <div style="font-size: 3rem; margin-bottom: 0.75rem;">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700;">
-                            Manipulation Detection for ${articleType}
-                        </h3>
-                        <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 1rem;">
-                            <div>
-                                <div style="font-size: 2rem; font-weight: 800;">${integrityScore}</div>
-                                <div style="font-size: 0.9rem; opacity: 0.9;">Integrity Score</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 2rem; font-weight: 800;">${techniquesCount}</div>
-                                <div style="font-size: 0.9rem; opacity: 0.9;">Tactics Found</div>
-                            </div>
-                        </div>
-                    </div>
-            `;
-            
-            // Display tactics if found
-            if (tactics.length > 0) {
-                html += `
-                    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0 0 1.5rem 0; color: #991b1b; font-size: 1.2rem; font-weight: 700;">
-                            <i class="fas fa-exclamation-triangle" style="margin-right: 0.5rem;"></i>
-                            Tactics Detected (${tactics.length})
-                        </h4>
-                        <div style="display: grid; gap: 1rem;">
-                `;
-                
-                tactics.slice(0, 8).forEach(tactic => {
-                    const severity = tactic.severity || 'medium';
-                    const severityColors = {
-                        'high': '#dc2626',
-                        'medium': '#f59e0b',
-                        'low': '#3b82f6'
-                    };
-                    const color = severityColors[severity] || '#f59e0b';
-                    
-                    html += `
-                        <div style="padding: 1.25rem; background: #f8fafc; border-radius: 8px; border-left: 3px solid ${color};">
-                            <div style="display: flex; justify-content: between; align-items: start; margin-bottom: 0.5rem;">
-                                <div style="font-weight: 700; color: #1e293b; flex: 1;">
-                                    ${tactic.name || 'Manipulation Tactic'}
-                                </div>
-                                <div style="background: ${color}20; color: ${color}; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase;">
-                                    ${severity}
-                                </div>
-                            </div>
-                            <div style="color: #475569; font-size: 0.9rem; line-height: 1.6; margin-bottom: 0.75rem;">
-                                ${tactic.description || ''}
-                            </div>
-                            ${tactic.why_it_works ? `
-                                <div style="background: white; padding: 0.75rem; border-radius: 6px; font-size: 0.85rem; color: #64748b;">
-                                    <strong style="color: #1e293b;">Why it works:</strong> ${tactic.why_it_works}
-                                </div>
-                            ` : ''}
-                        </div>
-                    `;
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Display "How to Spot" guide
-            if (howToSpot.length > 0) {
-                html += `
-                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 2rem; border-radius: 12px; border-left: 4px solid #f59e0b; margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">
-                            <i class="fas fa-search" style="margin-right: 0.5rem;"></i>
-                            How to Spot Manipulation in ${articleType}s
-                        </h4>
-                        <div style="background: rgba(255,255,255,0.6); padding: 1.5rem; border-radius: 8px;">
-                `;
-                
-                howToSpot.forEach(item => {
-                    if (typeof item === 'string') {
-                        html += `<p style="margin: 0 0 0.75rem 0; color: #78350f; line-height: 1.7;">${item}</p>`;
-                    }
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Display lessons
-            if (lessons.length > 0) {
-                html += `
-                    <div style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); padding: 1.75rem; border-radius: 12px; border-left: 4px solid #64748b;">
-                        <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
-                            <i class="fas fa-graduation-cap" style="margin-right: 0.5rem;"></i>
-                            Key Lessons
-                        </h4>
-                        <ul style="margin: 0; padding-left: 1.5rem; color: #475569; line-height: 1.9;">
-                `;
-                
-                lessons.forEach(lesson => {
-                    html += `<li style="margin-bottom: 0.5rem;">${lesson}</li>`;
-                });
-                
-                html += `
-                        </ul>
-                    </div>
-                `;
-            }
-            
-            html += `</div>`;
-            container.innerHTML = html;
-            console.log('[Manipulation v4.24.0] ✓ Displayed v4.0 educational content');
-            return;
-        }
-        
-        // Fall back to standard visualization if no educational content
-        console.log('[Manipulation v4.24.0] No educational content, using standard visualization');
-        // Let renderManipulationVisualization handle it
-    },
-
-    // Display Content Analyzer
+    // Display Content Analyzer - v4.25.0
     displayContentAnalyzer: function(data, analyzer) {
         const qualityScore = data.quality_score || data.score || 0;
         const readabilityLevel = data.readability_level || data.readability || 'Unknown';
@@ -1393,9 +1106,9 @@ window.ServiceTemplates = {
         this.updateElement('word-count', wordCount.toLocaleString());
     },
 
-    // v4.24.0: Display Author
+    // v4.25.0: Display Author
     displayAuthor: function(data, analyzer) {
-        console.log('[Author Display v4.24.0] Received data:', data);
+        console.log('[Author Display v4.25.0] Received data:', data);
         
         // Get all authors
         const allAuthors = data.all_authors || data.authors || [];
@@ -1413,7 +1126,7 @@ window.ServiceTemplates = {
             authorList = [primaryAuthor];
         }
         
-        console.log('[Author Display v4.24.0] Authors:', authorList);
+        console.log('[Author Display v4.25.0] Authors:', authorList);
         
         const credibility = data.credibility_score || data.score || data.credibility || 50;
         const position = data.position || 'Journalist';
@@ -1558,7 +1271,7 @@ window.ServiceTemplates = {
             linksContainer.innerHTML = linksHTML;
         }
         
-        console.log('[Author Display v4.24.0] ✓ Complete');
+        console.log('[Author Display v4.25.0] ✓ Complete');
     },
 
     updateElement: function(id, value) {
@@ -1582,4 +1295,4 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.24.0 - EDUCATIONAL CONTENT FIXED');
+console.log('ServiceTemplates loaded successfully - v4.25.0 - MANIPULATION SERVICE REMOVED');
