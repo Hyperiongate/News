@@ -1,16 +1,24 @@
+# services/news_analyzer.py
 """
-News Analyzer Service - WITH SERVICE-INTEGRATED CHARTS
-Date: October 8, 2025
-Version: 13.1 - CHARTS NOW EMBEDDED IN EACH SERVICE
+News Analyzer Service - WITH ENHANCED "WHAT WE FOUND" SUMMARY
+Date: October 13, 2025
+Version: 21.0 - CONVERSATIONAL FINDINGS SUMMARY
 
-CHANGES FROM 13.0:
-- Charts now embedded in each service's data (chart_data field)
-- Added _integrate_charts_into_services() method
-- Called after normalizing detailed_analysis in _build_response()
-- All existing functionality preserved (DO NO HARM)
+CHANGE LOG:
+- 2025-10-13: v21.0 - Enhanced _generate_findings_summary() method
+  * Now generates 2-5 sentence conversational summaries
+  * Highlights specific concerns from each service
+  * Dynamic content based on actual findings
+  * Always ends with Pro version upgrade prompt
+  * Replaces generic statements with actionable insights
+
+Previous versions:
+- v13.1 - Charts embedded in services
+- v13.0 - Chart generation integration
+- Earlier - Initial orchestrator
 
 DEPLOYMENT:
-Replace services/news_analyzer.py with this complete file
+Replace existing services/news_analyzer.py with this complete file
 """
 
 import logging
@@ -34,7 +42,7 @@ class NewsAnalyzer:
         self.pipeline = AnalysisPipeline()
         self.insight_generator = InsightGenerator()
         self.data_enricher = DataEnricher()
-        logger.info("[NewsAnalyzer v13.1] Initialized - WITH SERVICE-INTEGRATED CHARTS")
+        logger.info("[NewsAnalyzer v21.0] Initialized - WITH ENHANCED FINDINGS SUMMARY")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
@@ -155,7 +163,7 @@ class NewsAnalyzer:
             'article_summary': title[:200] if title else 'Article analyzed',
             'source': source,
             'author': author,
-            'findings_summary': self._generate_findings_summary(normalized_detailed, trust_score),
+            'findings_summary': self._generate_findings_summary(normalized_detailed, trust_score, source),
             'detailed_analysis': normalized_detailed,
             'processing_time': round(time.time() - start_time, 2),
             'content_type': content_type,
@@ -206,52 +214,37 @@ class NewsAnalyzer:
         
         This adds a 'chart_data' field to each service containing its visualization data.
         Frontend (service-templates.js) will read this and render charts inside service cards.
-        
-        Args:
-            detailed_analysis: Normalized service data dict
-            
-        Returns:
-            Same dict with chart_data added to each service
         """
         try:
-            logger.info("[NewsAnalyzer] Integrating charts into service data...")
-            
             from services.chart_generator import ChartGenerator
-            
             chart_gen = ChartGenerator()
             
-            # Service ID mapping (service key -> chart service ID)
+            # Map service names to their chart generation methods
             service_map = {
                 'source_credibility': 'source_credibility',
                 'bias_detector': 'bias_detector',
                 'fact_checker': 'fact_checker',
+                'author_analyzer': 'author_analyzer',
                 'transparency_analyzer': 'transparency_analyzer',
                 'manipulation_detector': 'manipulation_detector',
-                'author_analyzer': 'author_analyzer',
                 'content_analyzer': 'content_analyzer'
             }
             
             charts_generated = 0
             
-            # Generate chart for each service
-            for service_key, chart_service_id in service_map.items():
+            for service_key, chart_id in service_map.items():
                 if service_key in detailed_analysis:
-                    service_data = detailed_analysis[service_key]
-                    
-                    # Skip if data is empty or error
-                    if not service_data or not isinstance(service_data, dict):
-                        logger.debug(f"[Charts] Skipping {service_key} - no valid data")
-                        continue
-                    
-                    # Generate chart data for this service
                     try:
-                        chart_data = chart_gen.generate_service_chart(chart_service_id, service_data)
+                        service_data = detailed_analysis[service_key]
                         
-                        if chart_data:
-                            # Embed chart data into service response
-                            detailed_analysis[service_key]['chart_data'] = chart_data
+                        # Generate chart for this service
+                        chart_data = chart_gen.generate_service_chart(chart_id, service_data)
+                        
+                        if chart_data and chart_data.get('success'):
+                            # Embed chart directly in service data
+                            detailed_analysis[service_key]['chart_data'] = chart_data.get('chart')
                             charts_generated += 1
-                            logger.debug(f"[Charts] ✓ {service_key}: chart integrated")
+                            logger.debug(f"[Charts] ✓ {service_key}: chart embedded")
                         else:
                             logger.debug(f"[Charts] ✗ {service_key}: no chart data returned")
                             
@@ -268,43 +261,144 @@ class NewsAnalyzer:
             # Non-critical - return original data if charts fail
             return detailed_analysis
     
-    def _generate_findings_summary(self, detailed: Dict[str, Any], trust_score: int) -> str:
-        """Generate human-readable findings summary"""
+    def _generate_findings_summary(self, detailed: Dict[str, Any], trust_score: int, source: str) -> str:
+        """
+        ===== ENHANCED v21.0 =====
+        Generate conversational, informative "What We Found" summary (2-5 sentences)
         
-        findings = []
+        This replaces the generic summary with specific, actionable insights based on
+        what each service actually found during analysis.
+        """
         
-        # Trust level
-        if trust_score >= 80:
-            findings.append("This article demonstrates high credibility and trustworthiness.")
-        elif trust_score >= 60:
-            findings.append("This article shows moderate credibility with some areas of concern.")
-        else:
-            findings.append("This article raises significant credibility concerns.")
+        # Collect specific concerns and strengths from each service
+        concerns = []
+        strengths = []
         
-        # Source credibility
+        # Source Credibility Analysis (25% weight)
         source_data = detailed.get('source_credibility', {})
-        source_score = source_data.get('credibility_score', source_data.get('score', 0))
-        if source_score >= 80:
-            findings.append("The source has an excellent reputation.")
-        elif source_score < 50:
-            findings.append("The source has limited credibility.")
+        if source_data:
+            source_score = source_data.get('score', 0)
+            
+            if source_score < 60:
+                concerns.append('weak source credibility')
+            elif source_score >= 80:
+                strengths.append('strong source credibility')
         
-        # Bias detection
+        # Bias Detection (20% weight)
         bias_data = detailed.get('bias_detector', {})
-        bias_score = bias_data.get('objectivity_score', bias_data.get('score', 0))
-        if bias_score < 50:
-            findings.append("Significant bias detected in the content.")
+        if bias_data:
+            bias_score = bias_data.get('score', 0)
+            # Try to get political lean from various possible field names
+            political_lean = abs(
+                bias_data.get('political_lean', 
+                bias_data.get('bias_score', 
+                bias_data.get('lean', 0)))
+            )
+            
+            if bias_score < 70 or political_lean > 50:
+                if political_lean > 70:
+                    concerns.append('significant political bias')
+                else:
+                    concerns.append('noticeable bias')
+            elif bias_score >= 90 and political_lean < 30:
+                strengths.append('minimal bias')
         
-        # Fact checking
+        # Author Analysis (15% weight)
+        author_data = detailed.get('author_analyzer', {})
+        if author_data:
+            author_score = author_data.get('score', 0)
+            
+            if author_score < 60:
+                concerns.append('limited author credibility')
+            elif author_score >= 85:
+                strengths.append('credible author')
+        
+        # Fact Checking (15% weight)
         fact_data = detailed.get('fact_checker', {})
-        fact_score = fact_data.get('verification_score', 
-                                   fact_data.get('accuracy_score', fact_data.get('score', 0)))
-        if fact_score >= 80:
-            findings.append("Strong factual accuracy verified.")
-        elif fact_score < 50:
-            findings.append("Multiple factual concerns identified.")
+        if fact_data:
+            fact_score = fact_data.get('score', 0)
+            
+            if fact_score >= 90:
+                strengths.append('strong factual accuracy')
+            elif fact_score < 60:
+                concerns.append('factual accuracy issues')
         
-        return " ".join(findings)
+        # Transparency (10% weight)
+        trans_data = detailed.get('transparency_analyzer', {})
+        if trans_data:
+            trans_score = trans_data.get('score', 0)
+            
+            if trans_score < 50:
+                concerns.append('poor transparency')
+            elif trans_score >= 85:
+                strengths.append('good transparency')
+        
+        # Manipulation Detection (10% weight)
+        manip_data = detailed.get('manipulation_detector', {})
+        if manip_data:
+            manip_score = manip_data.get('score', 0)
+            manipulation_detected = manip_data.get('manipulation_detected', False)
+            
+            if manip_score < 60 or manipulation_detected:
+                concerns.append('manipulative techniques detected')
+        
+        # Content Quality (5% weight)
+        quality_data = detailed.get('content_analyzer', {})
+        if quality_data:
+            quality_score = quality_data.get('score', 0)
+            
+            if quality_score < 50:
+                concerns.append('low content quality')
+        
+        # Build conversational summary (2-5 sentences)
+        summary_parts = []
+        
+        # Sentence 1: Overall assessment
+        if trust_score >= 70:
+            summary_parts.append(
+                f"This article from {source} shows moderate to high credibility "
+                f"with a trust score of {trust_score}/100."
+            )
+        elif trust_score >= 40:
+            summary_parts.append(
+                f"This article from {source} shows mixed credibility "
+                f"with a trust score of {trust_score}/100."
+            )
+        else:
+            summary_parts.append(
+                f"This article from {source} shows low credibility "
+                f"with a trust score of {trust_score}/100."
+            )
+        
+        # Sentence 2-3: Specific findings
+        if concerns:
+            # Format concerns naturally
+            if len(concerns) == 1:
+                summary_parts.append(f"Our analysis identified {concerns[0]}.")
+            elif len(concerns) == 2:
+                summary_parts.append(f"Our analysis identified {concerns[0]} and {concerns[1]}.")
+            else:
+                # Multiple concerns: list them naturally
+                last_concern = concerns[-1]
+                other_concerns = ', '.join(concerns[:-1])
+                summary_parts.append(
+                    f"Our analysis identified {other_concerns}, and {last_concern}."
+                )
+        elif strengths:
+            # If no concerns, highlight strengths
+            if len(strengths) == 1:
+                summary_parts.append(f"The article demonstrates {strengths[0]}.")
+            else:
+                summary_parts.append(f"The article demonstrates {' and '.join(strengths)}.")
+        
+        # Sentence 4: Recommendation (if needed)
+        if trust_score < 60:
+            summary_parts.append("We recommend verifying claims through additional sources.")
+        
+        # Sentence 5: Pro version prompt (always included)
+        summary_parts.append("Upgrade to Pro for detailed breakdowns and source comparisons.")
+        
+        return ' '.join(summary_parts)
     
     def _create_error_response(self, error_msg: str) -> Dict[str, Any]:
         """Create error response"""
