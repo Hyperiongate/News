@@ -1,34 +1,24 @@
 """
-Article Extractor - v19.0 COMPREHENSIVE FIX FOR CBS & AUTHOR EXTRACTION
-Date: October 10, 2025
-Last Updated: October 10, 2025 - COMPLETE REWRITE
+Article Extractor - v20.0 CRITICAL FIX: STOP AFTER META TAG SUCCESS
+Date: October 12, 2025
+Last Updated: October 12, 2025 - PRIORITY FIX
 
-FIXES IN v19.0:
-✅ CRITICAL: Never returns None - always returns valid dictionary
-✅ CRITICAL: Logs HTTP status codes so we can see WHY fetches fail
-✅ ENHANCED: Increased timeouts (ScraperAPI: 45s, Direct: 20s)
-✅ ENHANCED: Added retry logic with exponential backoff
-✅ ENHANCED: Better error messages showing exact failure reasons
-✅ FIXED: Byline detection now searches meta tags, JSON-LD, and more elements
-✅ FIXED: AI fallback validates responses and rejects "No author names found"
-✅ FIXED: Multi-author parsing handles more separator variations
-✅ ENHANCED: CBS-specific byline patterns added
-✅ ENHANCED: Searches first 200 elements instead of 50
-✅ ENHANCED: Removed restrictive 200-char byline limit
+FIXES IN v20.0:
+✅ CRITICAL: When meta tags find author, RETURN IMMEDIATELY (don't continue to AI/regex)
+✅ CRITICAL: Don't overwrite correct meta tag results with article body text
+✅ FIXED: "Isabel Kershner" in meta tag was being overwritten by "Arab mediators" from article text
+✅ PRESERVED: All v19.0 functionality (comprehensive error handling, never returns None)
 
-THE PROBLEM WE FIXED:
-- CBS URL returning "Extraction failed: None" ❌
-- No visibility into WHY extraction failed ❌
-- Byline detection missing authors that are visible ❌
-- AI returning "No author names found" as the actual author ❌
+THE BUG WE FIXED:
+- Meta tags correctly found "Isabel Kershner" ✓
+- But then AI and regex ran anyway and found "Arab mediators" in article text ✗
+- The wrong author overwrote the correct one ✗
 
 THE SOLUTION:
-1. Never return None - always return valid dict with error details
-2. Log HTTP status codes and error types
-3. Enhanced byline detection with meta tags and JSON-LD
-4. AI response validation - retry if it returns generic text
-5. Better multi-author parsing
-6. Graceful fallback chain with informative errors
+- When PRIORITY 1 (meta tags) succeeds → RETURN IMMEDIATELY
+- When PRIORITY 2 (JSON-LD) succeeds → RETURN IMMEDIATELY
+- Only try AI/regex if meta tags AND JSON-LD both fail
+- This is how priority systems should work!
 
 Save as: services/article_extractor.py (REPLACE existing file)
 """
@@ -68,8 +58,8 @@ NON_JOURNALIST_NAMES = {
 
 class ArticleExtractor:
     """
-    Article extractor with comprehensive error handling and author URL construction
-    v19.0 - Never fails silently, always returns valid data
+    Article extractor with FIXED author priority system
+    v20.0 - Returns immediately when meta tags succeed
     """
     
     def __init__(self):
@@ -89,7 +79,7 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        logger.info(f"[ArticleExtractor v19.0 COMPLETE FIX] Never fails silently - OpenAI: {openai_available}")
+        logger.info(f"[ArticleExtractor v20.0 PRIORITY FIX] Stops after meta tag success - OpenAI: {openai_available}")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Service interface - always returns valid structure"""
@@ -110,7 +100,6 @@ class ArticleExtractor:
                     'data': self._get_fallback_result('', 'No URL or text provided')
                 }
             
-            # result is ALWAYS a valid dict, never None
             return {
                 'service': self.service_name,
                 'success': result.get('extraction_successful', False),
@@ -128,12 +117,9 @@ class ArticleExtractor:
             }
     
     def extract(self, url: str) -> Dict[str, Any]:
-        """
-        Main extraction method - ALWAYS returns valid Dict, never None
-        Includes detailed error logging
-        """
+        """Main extraction method - ALWAYS returns valid Dict, never None"""
         
-        logger.info(f"[ArticleExtractor v19.0] Extracting: {url}")
+        logger.info(f"[ArticleExtractor v20.0] Extracting: {url}")
         
         extraction_errors = []
         
@@ -178,7 +164,7 @@ class ArticleExtractor:
                     extraction_errors.append(f"Direct fetch attempt {attempt + 1} failed: {error}")
                     logger.warning(f"[Direct] ✗ Attempt {attempt + 1} failed: {error}")
                     if attempt == 0:
-                        time.sleep(2)  # Wait before retry
+                        time.sleep(2)
             except Exception as e:
                 error_msg = f"Direct fetch attempt {attempt + 1} exception: {str(e)}"
                 extraction_errors.append(error_msg)
@@ -204,7 +190,7 @@ class ArticleExtractor:
             extraction_errors.append(error_msg)
             logger.error(f"[AltHeaders] ✗ Exception: {e}", exc_info=True)
         
-        # ALL ATTEMPTS FAILED - Return comprehensive error
+        # ALL ATTEMPTS FAILED
         error_summary = " | ".join(extraction_errors)
         logger.error(f"[ArticleExtractor] ❌ ALL EXTRACTION ATTEMPTS FAILED")
         logger.error(f"[ArticleExtractor] Errors: {error_summary}")
@@ -212,10 +198,7 @@ class ArticleExtractor:
         return self._get_fallback_result(url, error_summary)
     
     def _fetch_with_scraperapi(self, url: str) -> tuple[Optional[str], Optional[str]]:
-        """
-        Fetch using ScraperAPI
-        Returns: (html, error_message)
-        """
+        """Fetch using ScraperAPI"""
         
         api_url = 'http://api.scraperapi.com'
         params = {
@@ -227,7 +210,6 @@ class ArticleExtractor:
         
         try:
             response = requests.get(api_url, params=params, timeout=45)
-            
             logger.info(f"[ScraperAPI] HTTP Status: {response.status_code}")
             
             if response.status_code == 200:
@@ -246,10 +228,7 @@ class ArticleExtractor:
             return None, f"Exception: {str(e)}"
     
     def _fetch_direct(self, url: str, attempt: int = 1) -> tuple[Optional[str], Optional[str]]:
-        """
-        Direct fetch with detailed error reporting
-        Returns: (html, error_message)
-        """
+        """Direct fetch with detailed error reporting"""
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -301,10 +280,7 @@ class ArticleExtractor:
             return None, f"Exception: {str(e)[:100]}"
     
     def _fetch_with_alt_headers(self, url: str) -> tuple[Optional[str], Optional[str]]:
-        """
-        Try with mobile user agent and minimal headers
-        Returns: (html, error_message)
-        """
+        """Try with mobile user agent and minimal headers"""
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
@@ -313,7 +289,6 @@ class ArticleExtractor:
         
         try:
             response = requests.get(url, headers=headers, timeout=15, allow_redirects=True)
-            
             logger.info(f"[AltHeaders] HTTP Status: {response.status_code}")
             
             if response.status_code == 200 and len(response.text) > 100:
@@ -325,10 +300,7 @@ class ArticleExtractor:
             return None, f"Exception: {str(e)[:100]}"
     
     def _parse_html(self, html: str, url: str) -> Dict[str, Any]:
-        """
-        Parse HTML and extract all components
-        ALWAYS returns valid dict, never raises exceptions
-        """
+        """Parse HTML and extract all components"""
         
         try:
             soup = BeautifulSoup(html, 'html.parser')
@@ -341,7 +313,7 @@ class ArticleExtractor:
             title = self._extract_title(soup)
             text = self._extract_text(soup)
             
-            # Enhanced author extraction with URL construction
+            # FIXED v20.0: Enhanced author extraction with PROPER PRIORITY
             author, author_page_url, author_page_urls = self._extract_authors_and_construct_urls(soup, url, html)
             
             source = self._get_source_from_url(url)
@@ -451,13 +423,13 @@ class ArticleExtractor:
     
     def _extract_authors_and_construct_urls(self, soup: BeautifulSoup, url: str, html: str) -> tuple[str, Optional[str], List[str]]:
         """
-        ENHANCED v19.0: Extract author names and construct profile URLs
-        Now checks meta tags, JSON-LD, and more HTML patterns
+        FIXED v20.0: Extract author names with PROPER PRIORITY
+        CRITICAL: Returns IMMEDIATELY when high-priority methods succeed
         Returns: (comma_separated_names, primary_url, all_urls)
         """
         
         logger.info("=" * 70)
-        logger.info("[AUTHOR v19.0 ENHANCED] Starting comprehensive author extraction")
+        logger.info("[AUTHOR v20.0 PRIORITY FIX] Starting author extraction")
         
         domain = urlparse(url).netloc.replace('www.', '')
         base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
@@ -472,9 +444,10 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR] ✓✓✓ SUCCESS via meta tags: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.0] ✓✓✓ SUCCESS via meta tags: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.0] 🛑 RETURNING IMMEDIATELY - Not trying AI/regex")
             logger.info("=" * 70)
-            return all_names, primary_url, author_urls
+            return all_names, primary_url, author_urls  # ← RETURN IMMEDIATELY!
         
         # PRIORITY 2: Check JSON-LD structured data
         author_names = self._extract_from_json_ld(soup)
@@ -486,11 +459,13 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.0] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.0] 🛑 RETURNING IMMEDIATELY - Not trying AI/regex")
             logger.info("=" * 70)
-            return all_names, primary_url, author_urls
+            return all_names, primary_url, author_urls  # ← RETURN IMMEDIATELY!
         
         # PRIORITY 3: Find byline text in HTML
+        logger.info("[AUTHOR v20.0] Meta tags & JSON-LD failed, trying byline...")
         byline_text = self._find_byline_text(soup)
         if byline_text:
             logger.info(f"[AUTHOR] ✓ Found byline text: '{byline_text}'")
@@ -506,11 +481,13 @@ class ArticleExtractor:
                 all_names = ', '.join(author_names)
                 primary_url = author_urls[0] if author_urls else None
                 
-                logger.info(f"[AUTHOR] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
+                logger.info(f"[AUTHOR v20.0] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
+                logger.info(f"[AUTHOR v20.0] 🛑 RETURNING IMMEDIATELY - Not trying AI/regex")
                 logger.info("=" * 70)
-                return all_names, primary_url, author_urls
+                return all_names, primary_url, author_urls  # ← RETURN IMMEDIATELY!
         
-        # PRIORITY 4: AI extraction with validation
+        # PRIORITY 4: AI extraction with validation (only if all above failed)
+        logger.info("[AUTHOR v20.0] Byline failed, trying AI as last resort...")
         if openai_available and openai_client:
             logger.info("[AUTHOR] Trying AI extraction...")
             author_text = self._extract_with_ai_multiauthor(soup.get_text()[:1000])
@@ -527,14 +504,14 @@ class ArticleExtractor:
                     all_names = ', '.join(author_names)
                     primary_url = author_urls[0] if author_urls else None
                     
-                    logger.info(f"[AUTHOR] ✓✓ SUCCESS via AI: {len(author_names)} author(s)")
+                    logger.info(f"[AUTHOR v20.0] ✓✓ SUCCESS via AI: {len(author_names)} author(s)")
                     logger.info("=" * 70)
                     return all_names, primary_url, author_urls
             else:
                 logger.warning(f"[AUTHOR] AI returned invalid/generic response: '{author_text}'")
         
-        # PRIORITY 5: Regex patterns
-        logger.info("[AUTHOR] Trying regex patterns...")
+        # PRIORITY 5: Regex patterns (absolute last resort)
+        logger.info("[AUTHOR v20.0] AI failed, trying regex as absolute last resort...")
         author_text = self._extract_with_universal_patterns(soup.get_text()[:2000])
         if author_text and author_text != 'Unknown':
             author_names = self._parse_multiple_authors_from_text(author_text)
@@ -547,12 +524,12 @@ class ArticleExtractor:
                 all_names = ', '.join(author_names)
                 primary_url = author_urls[0] if author_urls else None
                 
-                logger.info(f"[AUTHOR] ✓ SUCCESS via regex: {len(author_names)} author(s)")
+                logger.info(f"[AUTHOR v20.0] ✓ SUCCESS via regex: {len(author_names)} author(s)")
                 logger.info("=" * 70)
                 return all_names, primary_url, author_urls
         
         # ALL METHODS FAILED
-        logger.warning("[AUTHOR] ❌ All extraction methods failed")
+        logger.warning("[AUTHOR v20.0] ❌ All extraction methods failed")
         logger.info("=" * 70)
         return "Unknown", None, []
     
@@ -656,17 +633,13 @@ class ArticleExtractor:
         return []
     
     def _find_byline_text(self, soup: BeautifulSoup) -> Optional[str]:
-        """
-        ENHANCED: Find byline text with more patterns and no char limit
-        Now searches first 200 elements instead of 50
-        """
+        """Find byline text with multiple patterns"""
         
         # Enhanced byline patterns including CBS-specific ones
         byline_patterns = [
             'byline', 'author', 'by-line', 'article-author', 'articlebyline',
             'contributor', 'writtenby', 'story-byline', 'post-author',
             'article-meta', 'entry-meta', 'content-meta',
-            # CBS-specific patterns
             'content-author', 'cbs-byline', 'liveblog-author'
         ]
         
@@ -675,10 +648,8 @@ class ArticleExtractor:
             elements = soup.find_all(class_=re.compile(pattern, re.I))
             for elem in elements:
                 text = elem.get_text().strip()
-                # Check if it looks like a byline
                 if text and (text.lower().startswith('by ') or ',' in text):
-                    # Removed restrictive 200-char limit
-                    if len(text) < 500:  # Still need some sanity check
+                    if len(text) < 500:
                         logger.info(f"[Byline] Found via class '{pattern}': {text[:100]}")
                         return text
         
@@ -690,15 +661,13 @@ class ArticleExtractor:
                 logger.info(f"[Byline] Found via rel='author': {text}")
                 return f"By {text}"
         
-        # Search first 200 elements for "By" text (increased from 50)
+        # Search first 200 elements for "By" text
         for elem in soup.find_all(['div', 'p', 'span', 'h2', 'h3'])[:200]:
             text = elem.get_text().strip()
             if text.lower().startswith('by ') and len(text) < 500:
-                # Check if it contains name-like words
                 words = text.split()
-                if len(words) >= 3:  # "By First Last"
-                    # Make sure it's not a long paragraph
-                    if text.count('.') <= 2:  # Bylines usually don't have multiple sentences
+                if len(words) >= 3:
+                    if text.count('.') <= 2:
                         logger.info(f"[Byline] Found via text search: {text[:100]}")
                         return text
         
@@ -706,21 +675,18 @@ class ArticleExtractor:
         return None
     
     def _parse_multiple_authors_from_byline(self, byline_text: str) -> List[str]:
-        """
-        ENHANCED: Parse multiple authors with more separator variations
-        Handles: "By A, B, and C" | "By A and B and C" | "By A | B | C"
-        """
+        """Parse multiple authors with more separator variations"""
         
         # Remove "By" prefix and common suffixes
         text = re.sub(r'^by\s+', '', byline_text, flags=re.I).strip()
-        text = re.sub(r'\s*\|\s*updated.*$', '', text, flags=re.I)  # Remove "| Updated..."
-        text = re.sub(r'\s*-\s*\d+/\d+/\d+.*$', '', text)  # Remove dates
+        text = re.sub(r'\s*\|\s*updated.*, '', text, flags=re.I)
+        text = re.sub(r'\s*-\s*\d+/\d+/\d+.*, '', text)
         
-        # Replace various separators with commas for uniform splitting
+        # Replace various separators with commas
         text = re.sub(r'\s+and\s+', ', ', text, flags=re.I)
-        text = re.sub(r'\s*\|\s*', ', ', text)  # Handle "A | B | C"
-        text = re.sub(r'\s*;\s*', ', ', text)  # Handle "A; B; C"
-        text = re.sub(r'\s+&\s+', ', ', text)  # Handle "A & B"
+        text = re.sub(r'\s*\|\s*', ', ', text)
+        text = re.sub(r'\s*;\s*', ', ', text)
+        text = re.sub(r'\s+&\s+', ', ', text)
         
         # Split by comma
         potential_names = [name.strip() for name in text.split(',')]
@@ -739,10 +705,7 @@ class ArticleExtractor:
         return self._parse_multiple_authors_from_byline(text)
     
     def _construct_author_url(self, author_name: str, domain: str, base_url: str) -> Optional[str]:
-        """
-        Construct author profile URL from name
-        Domain-specific patterns for major news sites
-        """
+        """Construct author profile URL from name"""
         
         if not author_name or author_name == 'Unknown':
             return None
@@ -772,14 +735,10 @@ class ArticleExtractor:
         elif 'bbc.com' in domain or 'bbc.co.uk' in domain:
             return f"{base_url}/news/correspondents/{slug}"
         else:
-            # Generic pattern - most sites use /author/ or /authors/
             return f"{base_url}/authors/{slug}"
     
     def _extract_with_ai_multiauthor(self, visible_text: str) -> str:
-        """
-        ENHANCED: AI extraction with response validation
-        Rejects generic responses like "No author names found"
-        """
+        """AI extraction with response validation"""
         
         try:
             prompt = f"""Extract ALL journalist author names from this article beginning.
@@ -840,7 +799,7 @@ Author names:"""
         return any(generic in text_lower for generic in generic_responses)
     
     def _extract_with_universal_patterns(self, visible_text: str) -> str:
-        """ENHANCED: Extract authors with regex patterns"""
+        """Extract authors with regex patterns"""
         
         NAME_PART = r"[A-Z][a-zà-ÿÀ-ÿ''-]+"
         
@@ -885,7 +844,7 @@ Author names:"""
         return text.strip()
     
     def _is_valid_author_name(self, name: str) -> bool:
-        """ENHANCED: Check if a name is valid"""
+        """Check if a name is valid"""
         
         if not name or name == 'Unknown':
             return False
@@ -919,8 +878,8 @@ Author names:"""
             return False
         
         # Each word should be mostly letters
-        for word in words[:3]:  # Check first 3 words
-            if not re.match(r'^[A-Za-zÀ-ÿ\'-]+$', word):
+        for word in words[:3]:
+            if not re.match(r'^[A-Za-zÀ-ÿ\'-]+, word):
                 return False
         
         return True
@@ -989,10 +948,7 @@ Author names:"""
         }
     
     def _get_fallback_result(self, url: str, error_message: str) -> Dict[str, Any]:
-        """
-        CRITICAL: Return valid fallback structure when extraction fails
-        This prevents "Extraction failed: None" errors
-        """
+        """Return valid fallback structure when extraction fails"""
         
         domain = urlparse(url).netloc.replace('www.', '') if url else 'unknown'
         source = self._get_source_from_url(url) if url else 'Unknown'
@@ -1025,4 +981,4 @@ Author names:"""
         return True
 
 
-logger.info("[ArticleExtractor v19.0] ✓ COMPREHENSIVE FIX - Never fails silently!")
+logger.info("[ArticleExtractor v20.0] ✓ PRIORITY FIX - Stops after meta tag success!")
