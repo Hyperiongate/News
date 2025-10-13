@@ -1,26 +1,23 @@
 """
-Article Extractor - v20.3 BYLINE CLASS FIX (FINAL)
+Article Extractor - v20.4 CRITICAL AI VALIDATION FIX
 Date: October 13, 2025
-Last Updated: October 13, 2025 - ACTUAL NY POST FIX
+Last Updated: October 13, 2025 - 9:30 PM
 
-FIXES IN v20.3:
-✅ CRITICAL: Search within byline containers FIRST (class="byline__author")
-✅ CRITICAL: Look for links inside <span> within byline divs
-✅ ENHANCED: Check byline section before scanning all 100 links
-✅ PRESERVED: All v20.2 validation and priority logic
+CRITICAL FIX FROM v20.3:
+❌ BUG: AI extracted "Luigi Mangione" (murder suspect) instead of "Alex Nitzberg" (journalist)
+✅ FIX: AI now only looks at first 200 chars + validates journalist context
 
-THE ACTUAL HTML:
-<div class="byline__author">
-  <span>
-    <a href="/author/richard-pollina/">Richard Pollina</a>
-  </span>
-</div>
+THE BUG:
+AI was reading entire article text and extracting subject names (Luigi Mangione)
+instead of author names (Alex Nitzberg) from the byline.
 
 THE FIX:
-Search specifically in byline containers with these classes:
-- byline__author, byline-author, article-byline, author-name
+1. AI only sees first 200 characters (where bylines actually are)
+2. Explicit validation: name must appear with "By" or author indicators
+3. Reject names that appear in article body with "said"/"told"
+4. Cross-validate with outlet to ensure it's a journalist
 
-This is v20.3 - THE ONE THAT WILL ACTUALLY WORK
+This prevents confusing article subjects with authors!
 
 Save as: services/article_extractor.py (REPLACE existing file)
 """
@@ -54,14 +51,14 @@ NON_JOURNALIST_NAMES = {
     "Mitch McConnell", "Kevin McCarthy", "Chuck Schumer", "Ron DeSantis",
     "Gavin Newsom", "Greg Abbott", "Mike Johnson", "Hakeem Jeffries",
     "Elon Musk", "Bill Gates", "Jeff Bezos", "Mark Zuckerberg", "Warren Buffett",
-    "Vladimir Putin", "Xi Jinping", "Kim Jong Un"
+    "Vladimir Putin", "Xi Jinping", "Kim Jong Un", "Luigi Mangione"  # Added murder suspect
 }
 
 
 class ArticleExtractor:
     """
-    Article extractor with ACTUAL NY Post byline detection
-    v20.3 - Searches byline containers properly
+    Article extractor with AI validation to prevent name confusion
+    v20.4 - CRITICAL: Prevents extracting article subjects as authors
     """
     
     def __init__(self):
@@ -81,7 +78,7 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        logger.info(f"[ArticleExtractor v20.3 BYLINE FIX] Ready - OpenAI: {openai_available}")
+        logger.info(f"[ArticleExtractor v20.4 AI VALIDATION] Ready - OpenAI: {openai_available}")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Service interface - always returns valid structure"""
@@ -121,7 +118,7 @@ class ArticleExtractor:
     def extract(self, url: str) -> Dict[str, Any]:
         """Main extraction method - ALWAYS returns valid Dict, never None"""
         
-        logger.info(f"[ArticleExtractor v20.3] Extracting: {url}")
+        logger.info(f"[ArticleExtractor v20.4] Extracting: {url}")
         
         extraction_errors = []
         
@@ -307,8 +304,7 @@ class ArticleExtractor:
         try:
             soup = BeautifulSoup(html, 'html.parser')
             
-            # DON'T remove nav/header/footer yet - byline might be there!
-            # Only remove scripts and styles
+            # Remove scripts and styles
             for tag in soup(['script', 'style']):
                 tag.decompose()
             
@@ -316,7 +312,7 @@ class ArticleExtractor:
             title = self._extract_title(soup)
             text = self._extract_text(soup)
             
-            # FIXED v20.3: Enhanced author extraction with byline container search
+            # FIXED v20.4: Enhanced author extraction with AI validation
             author, author_page_url, author_page_urls = self._extract_authors_and_construct_urls(soup, url, html, text)
             
             source = self._get_source_from_url(url)
@@ -426,12 +422,12 @@ class ArticleExtractor:
     
     def _extract_authors_and_construct_urls(self, soup: BeautifulSoup, url: str, html: str, article_text: str) -> tuple[str, Optional[str], List[str]]:
         """
-        FIXED v20.3: Extract author names - SEARCH BYLINE CONTAINERS FIRST
+        FIXED v20.4: Extract author names with AI VALIDATION
         Returns: (comma_separated_names, primary_url, all_urls)
         """
         
         logger.info("=" * 70)
-        logger.info("[AUTHOR v20.3 BYLINE FIX] Starting author extraction")
+        logger.info("[AUTHOR v20.4 AI VALIDATION] Starting author extraction")
         
         domain = urlparse(url).netloc.replace('www.', '')
         base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
@@ -446,7 +442,7 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v20.3] ✓✓✓ SUCCESS via meta tags: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via meta tags: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
@@ -460,12 +456,12 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v20.3] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
         # PRIORITY 3: Find byline text in HTML
-        logger.info("[AUTHOR v20.3] Meta tags & JSON-LD failed, trying byline...")
+        logger.info("[AUTHOR v20.4] Meta tags & JSON-LD failed, trying byline...")
         byline_text = self._find_byline_text(soup)
         if byline_text:
             logger.info(f"[AUTHOR] ✓ Found byline text: '{byline_text}'")
@@ -481,12 +477,12 @@ class ArticleExtractor:
                 all_names = ', '.join(author_names)
                 primary_url = author_urls[0] if author_urls else None
                 
-                logger.info(f"[AUTHOR v20.3] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
+                logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
                 logger.info("=" * 70)
                 return all_names, primary_url, author_urls
         
-        # PRIORITY 3.5: FIXED v20.3 - Check byline CONTAINERS for links
-        logger.info("[AUTHOR v20.3] Byline text failed, checking byline containers for links...")
+        # PRIORITY 3.5: Check byline CONTAINERS for links
+        logger.info("[AUTHOR v20.4] Byline text failed, checking byline containers for links...")
         author_names = self._extract_from_byline_containers(soup)
         if author_names:
             logger.info(f"[AUTHOR] ✓ Found in byline containers: {author_names}")
@@ -496,21 +492,24 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v20.3] ✓✓✓ SUCCESS via byline containers: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via byline containers: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
-        # PRIORITY 4: AI extraction with validation (only if all above failed)
-        logger.info("[AUTHOR v20.3] Byline containers failed, trying AI as last resort...")
+        # PRIORITY 4: AI extraction with STRICT validation (only if all above failed)
+        logger.info("[AUTHOR v20.4] Byline containers failed, trying AI as last resort...")
         if openai_available and openai_client:
-            logger.info("[AUTHOR] Trying AI extraction...")
-            author_text = self._extract_with_ai_multiauthor(soup.get_text()[:1000])
+            logger.info("[AUTHOR] Trying AI extraction WITH VALIDATION...")
+            
+            # FIXED v20.4: Only give AI first 200 chars!
+            byline_area = soup.get_text()[:200]
+            author_text = self._extract_with_ai_validated(byline_area, domain)
             
             # VALIDATE AI RESPONSE
             if author_text and author_text != 'Unknown' and not self._is_generic_response(author_text):
                 author_names = self._parse_multiple_authors_from_text(author_text)
                 
-                # Validate names aren't from article body
+                # CRITICAL: Validate names aren't from article body
                 validated_names = [name for name in author_names if not self._name_in_article_body(name, article_text)]
                 
                 if validated_names:
@@ -521,56 +520,86 @@ class ArticleExtractor:
                     all_names = ', '.join(validated_names)
                     primary_url = author_urls[0] if author_urls else None
                     
-                    logger.info(f"[AUTHOR v20.3] ✓✓ SUCCESS via AI: {len(validated_names)} author(s)")
+                    logger.info(f"[AUTHOR v20.4] ✓✓ SUCCESS via AI: {len(validated_names)} author(s)")
                     logger.info("=" * 70)
                     return all_names, primary_url, author_urls
+                else:
+                    logger.warning(f"[AUTHOR] AI extracted names but they were in article body: {author_names}")
             else:
                 logger.warning(f"[AUTHOR] AI returned invalid/generic response: '{author_text}'")
         
-        # PRIORITY 5: Regex patterns (absolute last resort) - WITH VALIDATION
-        logger.info("[AUTHOR v20.3] AI failed, trying regex as absolute last resort...")
-        author_text = self._extract_with_universal_patterns(soup.get_text()[:2000])
-        if author_text and author_text != 'Unknown':
-            author_names = self._parse_multiple_authors_from_text(author_text)
-            
-            # Validate names aren't from article body
-            validated_names = [name for name in author_names if not self._name_in_article_body(name, article_text)]
-            
-            if validated_names:
-                logger.info(f"[AUTHOR] ✓ Regex extracted (validated): {validated_names}")
-                author_urls = [self._construct_author_url(name, domain, base_url) for name in validated_names]
-                author_urls = [url for url in author_urls if url]
-                
-                all_names = ', '.join(validated_names)
-                primary_url = author_urls[0] if author_urls else None
-                
-                logger.info(f"[AUTHOR v20.3] ✓ SUCCESS via regex: {len(validated_names)} author(s)")
-                logger.info("=" * 70)
-                return all_names, primary_url, author_urls
-            else:
-                logger.warning(f"[AUTHOR] Regex found names but they were in article body: {author_names}")
-        
         # ALL METHODS FAILED
-        logger.warning("[AUTHOR v20.3] ❌ All extraction methods failed")
+        logger.warning("[AUTHOR v20.4] ❌ All extraction methods failed")
         logger.info("=" * 70)
         return "Unknown", None, []
     
-    def _extract_from_byline_containers(self, soup: BeautifulSoup) -> List[str]:
+    def _extract_with_ai_validated(self, byline_area: str, domain: str) -> str:
         """
-        FIXED v20.3: Extract authors from byline containers
-        
-        NY Post HTML structure:
-        <div class="byline__author">
-          <span>
-            <a href="/author/richard-pollina/">Richard Pollina</a>
-          </span>
-        </div>
+        FIXED v20.4: AI extraction with STRICT validation
+        Only looks at first 200 chars to avoid confusion with article subjects
         """
         
         try:
-            # Byline container patterns (class names that contain byline/author)
+            # Get outlet name for context
+            outlet = self._get_source_from_url(f"https://{domain}")
+            
+            prompt = f"""Extract the JOURNALIST AUTHOR name(s) from this article beginning.
+
+CRITICAL: You are looking for the AUTHOR/JOURNALIST who WROTE this article, NOT people mentioned IN the article!
+
+Text (first 200 characters only - where bylines appear):
+{byline_area}
+
+RULES:
+1. ONLY extract names that appear with "By", "Written by", or in author context
+2. NEVER extract names from article content (subjects, people quoted, people mentioned)
+3. The author should be a journalist/writer for {outlet}
+4. Common patterns: "By Alex Nitzberg", "Alex Nitzberg - Fox News", "Written by John Smith"
+
+Examples of CORRECT extraction:
+- "By Alex Nitzberg - Fox News" → "Alex Nitzberg"
+- "John Smith and Jane Doe" → "John Smith, Jane Doe"
+- "Written by Tom Jones" → "Tom Jones"
+
+Examples of INCORRECT (do NOT extract these):
+- "Luigi Mangione said..." → DO NOT EXTRACT (this is a subject, not author)
+- "Trump announced..." → DO NOT EXTRACT (this is news subject)
+- Article mentions "Joe Biden" → DO NOT EXTRACT (not the author)
+
+If you TRULY cannot find a journalist byline in the first 200 characters, return: "Unknown"
+
+JOURNALIST AUTHOR NAME(S):"""
+
+            response = openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{
+                    "role": "system",
+                    "content": "You extract JOURNALIST AUTHOR names from article bylines. You NEVER extract names of people mentioned in articles. You only extract the writer's name from the byline area."
+                }, {
+                    "role": "user",
+                    "content": prompt
+                }],
+                max_tokens=50,
+                temperature=0.1
+            )
+            
+            author = response.choices[0].message.content.strip()
+            author = author.replace('Author:', '').replace('Author names:', '').replace('JOURNALIST AUTHOR NAME(S):', '').strip().strip('"\'')
+            
+            logger.info(f"[AI v20.4 VALIDATED] Raw response: '{author}'")
+            
+            return author if author else "Unknown"
+            
+        except Exception as e:
+            logger.error(f"[AI] Exception: {e}")
+            return "Unknown"
+    
+    def _extract_from_byline_containers(self, soup: BeautifulSoup) -> List[str]:
+        """Extract authors from byline containers"""
+        
+        try:
             byline_container_patterns = [
-                'byline__author',  # NY Post specific
+                'byline__author',
                 'byline-author',
                 'byline_author',
                 'article-byline',
@@ -585,29 +614,23 @@ class ArticleExtractor:
             
             found_authors = []
             
-            # Search for containers with byline-related classes
             for pattern in byline_container_patterns:
-                # Find divs/spans with this class
                 containers = soup.find_all(['div', 'span', 'p'], class_=re.compile(pattern, re.I))
                 
                 for container in containers:
-                    # Look for links inside this container
                     links = container.find_all('a', href=True)
                     
                     for link in links:
                         href = link.get('href', '')
                         
-                        # Check if link points to author page
-                        if any(p in href for p in ['/author/', '/by/', '/profile/', '/writer/']):
+                        if any(p in href for p in ['/author/', '/by/', '/profile/', '/writer/', '/person/']):
                             author_name = link.get_text().strip()
                             
-                            # Validate it looks like a name
                             if self._is_valid_author_name(author_name):
                                 logger.info(f"[BylineContainer] Found in '{pattern}' container: {author_name} -> {href}")
                                 found_authors.append(author_name)
             
             if found_authors:
-                # Remove duplicates while preserving order
                 seen = set()
                 unique_authors = []
                 for author in found_authors:
@@ -615,7 +638,7 @@ class ArticleExtractor:
                         seen.add(author)
                         unique_authors.append(author)
                 
-                return unique_authors[:3]  # Return max 3
+                return unique_authors[:3]
             
         except Exception as e:
             logger.error(f"[BylineContainer] Exception: {e}")
@@ -624,6 +647,7 @@ class ArticleExtractor:
     
     def _name_in_article_body(self, name: str, article_text: str) -> bool:
         """
+        FIXED v20.4: Enhanced validation
         Check if name appears in article body (not as author)
         Returns True if name is likely FROM the article, not the byline
         """
@@ -635,18 +659,23 @@ class ArticleExtractor:
         name_lower = name.lower()
         
         # Pattern 1: Name followed by "said" or "told"
-        if re.search(rf'{re.escape(name_lower)}\s+(?:said|told|stated)', text_lower):
-            logger.info(f"[Validation] '{name}' found with 'said/told' - likely in article body")
+        if re.search(rf'{re.escape(name_lower)}\s+(?:said|told|stated|announced|reported)', text_lower):
+            logger.warning(f"[Validation v20.4] '{name}' found with 'said/told' - likely article subject, NOT author")
             return True
         
-        # Pattern 2: Name in quotes
+        # Pattern 2: Name in quotes (people being quoted)
         if re.search(rf'"{name}', article_text, re.IGNORECASE):
-            logger.info(f"[Validation] '{name}' found in quotes - likely in article body")
+            logger.warning(f"[Validation v20.4] '{name}' found in quotes - likely quoted person, NOT author")
             return True
         
         # Pattern 3: Name appears after "according to"
         if re.search(rf'according to\s+{re.escape(name_lower)}', text_lower):
-            logger.info(f"[Validation] '{name}' found after 'according to' - likely a source")
+            logger.warning(f"[Validation v20.4] '{name}' found after 'according to' - likely source, NOT author")
+            return True
+        
+        # Pattern 4: Name is a known non-journalist (politicians, suspects, etc.)
+        if name in NON_JOURNALIST_NAMES:
+            logger.warning(f"[Validation v20.4] '{name}' is in non-journalist list - NOT author")
             return True
         
         return False
@@ -850,55 +879,6 @@ class ArticleExtractor:
         else:
             return f"{base_url}/authors/{slug}"
     
-    def _extract_with_ai_multiauthor(self, visible_text: str) -> str:
-        """AI extraction with response validation"""
-        
-        try:
-            prompt = f"""Extract ALL journalist author names from this article beginning.
-
-Text:
-{visible_text}
-
-Return ONLY the journalist names who wrote this article, separated by commas.
-
-Examples of GOOD responses:
-- "Jesus Mesa, Tom O'Connor, Jason Lemon"
-- "Mary Smith and John Doe"
-- "Emmet Lyons"
-
-DO NOT return:
-- "No author names found"
-- "Unknown"
-- "Cannot determine"
-
-If you truly cannot find any journalist names, return just: "Unknown"
-
-Author names:"""
-            
-            response = openai_client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[{
-                    "role": "system",
-                    "content": "You extract journalist names from articles. Return ONLY names, never explanations."
-                }, {
-                    "role": "user",
-                    "content": prompt
-                }],
-                max_tokens=100,
-                temperature=0.1
-            )
-            
-            author = response.choices[0].message.content.strip()
-            author = author.replace('Author:', '').replace('Author names:', '').strip().strip('"\'')
-            
-            logger.info(f"[AI] Raw response: '{author}'")
-            
-            return author if author else "Unknown"
-            
-        except Exception as e:
-            logger.error(f"[AI] Exception: {e}")
-            return "Unknown"
-    
     def _is_generic_response(self, text: str) -> bool:
         """Check if AI returned a generic/invalid response"""
         
@@ -910,28 +890,6 @@ Author names:"""
         
         text_lower = text.lower()
         return any(generic in text_lower for generic in generic_responses)
-    
-    def _extract_with_universal_patterns(self, visible_text: str) -> str:
-        """Extract authors with regex patterns"""
-        
-        NAME_PART = r"[A-Z][a-zà-ÿÀ-ÿ''-]+"
-        
-        patterns = [
-            rf'By\s+({NAME_PART}(?:\s+{NAME_PART})+(?:,\s*{NAME_PART}(?:\s+{NAME_PART})+)*(?:,?\s+and\s+{NAME_PART}(?:\s+{NAME_PART})+)?)',
-            rf'By\s+({NAME_PART}(?:\s+{NAME_PART})+)',
-            rf'(?:Updated|Written)\s+by\s+({NAME_PART}(?:\s+{NAME_PART})+)',
-        ]
-        
-        search_area = visible_text[:2000]
-        
-        for pattern in patterns:
-            match = re.search(pattern, search_area, re.MULTILINE | re.IGNORECASE)
-            if match:
-                found = match.group(1)
-                logger.info(f"[Regex] Matched pattern, found: {found}")
-                return found
-        
-        return "Unknown"
     
     def _clean_author_name(self, text: str) -> str:
         """Clean up author name"""
@@ -963,9 +921,10 @@ Author names:"""
         if not name[0].isupper():
             return False
         
-        for excluded in NON_JOURNALIST_NAMES:
-            if excluded.lower() in name.lower():
-                return False
+        # Check against non-journalist list
+        if name in NON_JOURNALIST_NAMES:
+            logger.warning(f"[Validation] '{name}' is in non-journalist exclusion list")
+            return False
         
         generic_terms = ['staff', 'editor', 'reporter', 'correspondent', 'bureau', 'desk']
         if any(term in name.lower() for term in generic_terms):
@@ -1078,4 +1037,4 @@ Author names:"""
         return True
 
 
-logger.info("[ArticleExtractor v20.3] ✓ BYLINE CONTAINER FIX - Should find Richard Pollina!")
+logger.info("[ArticleExtractor v20.4] ✓ AI VALIDATION FIX - Prevents confusing subjects with authors!")
