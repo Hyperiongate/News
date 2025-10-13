@@ -1,23 +1,28 @@
 """
-Article Extractor - v20.4 CRITICAL AI VALIDATION FIX
+Article Extractor - v20.5 JAVASCRIPT RENDERING FIX
 Date: October 13, 2025
-Last Updated: October 13, 2025 - 9:30 PM
+Last Updated: October 13, 2025 - 11:00 PM
 
-CRITICAL FIX FROM v20.3:
-❌ BUG: AI extracted "Luigi Mangione" (murder suspect) instead of "Alex Nitzberg" (journalist)
-✅ FIX: AI now only looks at first 200 chars + validates journalist context
+CRITICAL FIX FROM v20.4:
+❌ BUG: ScraperAPI 'render': 'false' prevented JavaScript execution
+   Fox News bylines are added by JS, so author data was invisible!
+   
+✅ FIX: Enable JavaScript rendering for modern news sites
+   - render': 'true' for sites that need JS (Fox, CNN, etc.)
+   - Keeps render': 'false' for static sites (BBC, Reuters)
+   - Auto-detects which sites need rendering
 
 THE BUG:
-AI was reading entire article text and extracting subject names (Luigi Mangione)
-instead of author names (Alex Nitzberg) from the byline.
+ScraperAPI was fetching raw HTML without executing JavaScript.
+Modern sites like Fox News use React/Nuxt - bylines added client-side.
+Result: 366,885 chars of HTML, but NO author data visible to parser.
 
 THE FIX:
-1. AI only sees first 200 characters (where bylines actually are)
-2. Explicit validation: name must appear with "By" or author indicators
-3. Reject names that appear in article body with "said"/"told"
-4. Cross-validate with outlet to ensure it's a journalist
+1. Detect if site needs JS rendering (Fox, CNN, NBC, CBS)
+2. Use 'render': 'true' for those sites (costs more credits but works)
+3. Keep 'render': 'false' for static HTML sites (faster, cheaper)
 
-This prevents confusing article subjects with authors!
+This fixes Alex Nitzberg not being extracted from Fox News!
 
 Save as: services/article_extractor.py (REPLACE existing file)
 """
@@ -51,14 +56,24 @@ NON_JOURNALIST_NAMES = {
     "Mitch McConnell", "Kevin McCarthy", "Chuck Schumer", "Ron DeSantis",
     "Gavin Newsom", "Greg Abbott", "Mike Johnson", "Hakeem Jeffries",
     "Elon Musk", "Bill Gates", "Jeff Bezos", "Mark Zuckerberg", "Warren Buffett",
-    "Vladimir Putin", "Xi Jinping", "Kim Jong Un", "Luigi Mangione"  # Added murder suspect
+    "Vladimir Putin", "Xi Jinping", "Kim Jong Un", "Luigi Mangione"
+}
+
+# Sites that require JavaScript rendering
+JS_REQUIRED_SITES = {
+    'foxnews.com',      # React/Nuxt app
+    'cnn.com',          # Heavy JS
+    'nbcnews.com',      # Dynamic content
+    'cbsnews.com',      # JS-rendered bylines
+    'newsweek.com',     # Modern JS framework
+    'nypost.com',       # Dynamic loading
 }
 
 
 class ArticleExtractor:
     """
-    Article extractor with AI validation to prevent name confusion
-    v20.4 - CRITICAL: Prevents extracting article subjects as authors
+    Article extractor with JavaScript rendering support
+    v20.5 - CRITICAL: Enables JS rendering for modern news sites
     """
     
     def __init__(self):
@@ -78,7 +93,22 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        logger.info(f"[ArticleExtractor v20.4 AI VALIDATION] Ready - OpenAI: {openai_available}")
+        logger.info(f"[ArticleExtractor v20.5 JS RENDERING] Ready - OpenAI: {openai_available}")
+    
+    def _needs_js_rendering(self, url: str) -> bool:
+        """
+        NEW v20.5: Determine if a site needs JavaScript rendering
+        Returns True for modern JS-heavy sites like Fox News
+        """
+        domain = urlparse(url).netloc.replace('www.', '')
+        needs_js = domain in JS_REQUIRED_SITES
+        
+        if needs_js:
+            logger.info(f"[JSDetect v20.5] ✓ {domain} requires JavaScript rendering")
+        else:
+            logger.info(f"[JSDetect v20.5] ○ {domain} uses static HTML (no rendering needed)")
+        
+        return needs_js
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Service interface - always returns valid structure"""
@@ -118,15 +148,15 @@ class ArticleExtractor:
     def extract(self, url: str) -> Dict[str, Any]:
         """Main extraction method - ALWAYS returns valid Dict, never None"""
         
-        logger.info(f"[ArticleExtractor v20.4] Extracting: {url}")
+        logger.info(f"[ArticleExtractor v20.5] Extracting: {url}")
         
         extraction_errors = []
         
-        # ATTEMPT 1: ScraperAPI (if configured)
+        # ATTEMPT 1: ScraperAPI with SMART rendering (v20.5 FIX!)
         if self.scraperapi_key:
-            logger.info("[Attempt 1/3] Trying ScraperAPI...")
+            logger.info("[Attempt 1/3] Trying ScraperAPI with smart JS rendering...")
             try:
-                html, error = self._fetch_with_scraperapi(url)
+                html, error = self._fetch_with_scraperapi(url)  # Now auto-detects JS need
                 if html:
                     logger.info(f"[ScraperAPI] ✓ Success! Got {len(html)} chars of HTML")
                     result = self._parse_html(html, url)
@@ -197,22 +227,35 @@ class ArticleExtractor:
         return self._get_fallback_result(url, error_summary)
     
     def _fetch_with_scraperapi(self, url: str) -> tuple[Optional[str], Optional[str]]:
-        """Fetch using ScraperAPI"""
+        """
+        Fetch using ScraperAPI with SMART JS rendering
+        v20.5 FIX: Automatically enables 'render': 'true' for JS-heavy sites
+        """
         
         api_url = 'http://api.scraperapi.com'
+        
+        # NEW v20.5: Auto-detect if JS rendering is needed
+        needs_rendering = self._needs_js_rendering(url)
+        
         params = {
             'api_key': self.scraperapi_key,
             'url': url,
-            'render': 'false',
+            'render': 'true' if needs_rendering else 'false',  # ✅ FIXED!
             'country_code': 'us'
         }
         
+        if needs_rendering:
+            logger.info(f"[ScraperAPI v20.5] Using JavaScript rendering for this site")
+        else:
+            logger.info(f"[ScraperAPI v20.5] Using fast mode (no JS rendering)")
+        
         try:
-            response = requests.get(api_url, params=params, timeout=45)
+            response = requests.get(api_url, params=params, timeout=60)  # Increased timeout for JS rendering
             logger.info(f"[ScraperAPI] HTTP Status: {response.status_code}")
             
             if response.status_code == 200:
                 if len(response.text) > 100:
+                    logger.info(f"[ScraperAPI] ✓ Rendered HTML: {len(response.text)} chars")
                     return response.text, None
                 else:
                     return None, f"Response too short ({len(response.text)} chars)"
@@ -220,7 +263,7 @@ class ArticleExtractor:
                 return None, f"HTTP {response.status_code}: {response.text[:200]}"
                 
         except requests.Timeout:
-            return None, "Timeout after 45 seconds"
+            return None, "Timeout after 60 seconds (JS rendering takes longer)"
         except requests.ConnectionError:
             return None, "Connection error"
         except Exception as e:
@@ -691,6 +734,7 @@ JOURNALIST AUTHOR NAME(S):"""
                 {'name': 'byl'},
                 {'name': 'cXenseParse:author'},
                 {'property': 'author'},
+                {'name': 'dc.creator'},  # Added for Fox News
             ]
             
             for pattern in meta_patterns:
@@ -1037,4 +1081,4 @@ JOURNALIST AUTHOR NAME(S):"""
         return True
 
 
-logger.info("[ArticleExtractor v20.4] ✓ AI VALIDATION FIX - Prevents confusing subjects with authors!")
+logger.info("[ArticleExtractor v20.5] ✓ JAVASCRIPT RENDERING FIX - Fox News authors now extractable!")
