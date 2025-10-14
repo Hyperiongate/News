@@ -3,15 +3,18 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.1.0 - CHARTS SYSTEM REMOVED
-    Date: October 12, 2025
+    Version: 4.2.0 - MANIPULATION CHECK REMOVED
+    Date: October 14, 2025
     
-    CHANGES FROM 4.0.0:
-    - REMOVED: renderCharts() function (broken top-level charts)
-    - REMOVED: Chart canvas placeholder code
-    - KEPT: All existing layout and functionality
-    - Service charts handled by service-templates.js
-    - All existing functionality preserved (DO NO HARM ✓)
+    CHANGES FROM 4.1.0:
+    - REMOVED: Manipulation Check bar from Score Breakdown display
+    - REMOVED: manipulation_detector from weights calculation
+    - REMOVED: manipulation_detector from service contribution updates
+    - All other functionality preserved (DO NO HARM ✓)
+    
+    Previous versions:
+    - 4.1.0 - Charts system removed
+    - 4.0.0 - Initial enhanced version
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -497,7 +500,7 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.1.0 - Charts System Removed');
+            console.log('TruthLens v4.2.0 - Manipulation Check Removed');
             
             const inputs = ['newsUrlInput', 'newsTextInput', 'youtubeUrlInput', 'transcriptTextInput'];
             inputs.forEach(id => {
@@ -626,16 +629,6 @@
                             </div>
 
                             <div class="contribution-item">
-                                <span class="contribution-label">Manipulation Check</span>
-                                <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-manipulation" style="width: 0%" id="contribManipulation">
-                                        <span class="contribution-score">0/10</span>
-                                    </div>
-                                </div>
-                                <span class="contribution-weight">10%</span>
-                            </div>
-
-                            <div class="contribution-item">
                                 <span class="contribution-label">Content Quality</span>
                                 <div class="contribution-bar-container">
                                     <div class="contribution-bar contribution-content" style="width: 0%" id="contribContent">
@@ -674,13 +667,13 @@
         }
 
         function updateServiceContributions(detailed) {
+            // ===== v4.2.0: REMOVED manipulation_detector from weights =====
             const weights = {
                 source_credibility: 0.25,
                 author_analyzer: 0.15,
                 bias_detector: 0.20,
                 fact_checker: 0.15,
                 transparency_analyzer: 0.10,
-                manipulation_detector: 0.10,
                 content_analyzer: 0.05
             };
             
@@ -700,8 +693,6 @@
                         score = serviceData.credibility_score || serviceData.credibility || serviceData.score || 0;
                     } else if (serviceKey === 'transparency_analyzer') {
                         score = serviceData.transparency_score || serviceData.score || 0;
-                    } else if (serviceKey === 'manipulation_detector') {
-                        score = serviceData.integrity_score || serviceData.score || 0;
                     } else if (serviceKey === 'content_analyzer') {
                         score = serviceData.quality_score || serviceData.score || 0;
                     } else {
@@ -710,13 +701,13 @@
                     
                     const contribution = (score * weights[serviceKey]).toFixed(1);
                     
+                    // ===== v4.2.0: REMOVED manipulation_detector from element map =====
                     const elementIdMap = {
                         'source_credibility': 'contribSource',
                         'bias_detector': 'contribBias',
                         'author_analyzer': 'contribAuthor',
                         'fact_checker': 'contribFacts',
                         'transparency_analyzer': 'contribTransparency',
-                        'manipulation_detector': 'contribManipulation',
                         'content_analyzer': 'contribContent'
                     };
                     
