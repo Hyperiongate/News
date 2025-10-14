@@ -1,15 +1,20 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 3.0.0 - COMPLETE FIX
+ * VERSION: 3.1.0 - NESTED DATA FIX
  * DATE: October 14, 2025
  * 
- * CRITICAL FIXES FROM 2.0.0:
- * ✅ FIXED: [object Object] display - now extracts actual text from objects
+ * CRITICAL FIXES FROM 3.0.0:
+ * ✅ FIXED: Now extracts data from nested 'analysis' objects (Transparency service)
+ * ✅ FIXED: Maps different field names (what_we_looked → what_we_analyzed)
+ * ✅ ADDED: extractAnalysisSections() helper function
+ * ✅ IMPROVED: Handles all service data structures consistently
+ * 
+ * PREVIOUS FIXES (v3.0.0):
+ * ✅ FIXED: [object Object] display - extracts actual text from objects
  * ✅ FIXED: Proper handling of what_we_analyzed, what_we_found, what_it_means fields
  * ✅ ADDED: Graphics rendering for trust score and contribution breakdown
  * ✅ ADDED: Proper text extraction from nested objects and arrays
  * ✅ IMPROVED: Multi-page content flow with proper pagination
- * ✅ TESTED: Works with actual backend data structure
  * 
  * DEPLOYMENT:
  * 1. Save this ENTIRE file as: static/js/pdf-generator.js
@@ -586,6 +591,51 @@ function extractText(value, maxLength = 500) {
     return String(value).substring(0, maxLength);
 }
 
+/**
+ * Extract analysis sections from service data
+ * Services store these in different places, so we need to check multiple locations
+ */
+function extractAnalysisSections(data) {
+    const sections = {
+        what_we_analyzed: '',
+        what_we_found: '',
+        what_it_means: ''
+    };
+    
+    // Check if there's a nested 'analysis' object (Transparency service uses this)
+    const analysisObj = data.analysis || data;
+    
+    // Map different field names to our standard sections
+    const fieldMappings = {
+        what_we_analyzed: ['what_we_analyzed', 'what_we_looked', 'what_analyzed', 'analyzed'],
+        what_we_found: ['what_we_found', 'what_found', 'found', 'findings_text'],
+        what_it_means: ['what_it_means', 'what_means', 'means', 'interpretation', 'significance']
+    };
+    
+    // Try to extract each section
+    for (const [section, possibleFields] of Object.entries(fieldMappings)) {
+        // Check in analysis object first
+        for (const field of possibleFields) {
+            if (analysisObj[field]) {
+                sections[section] = extractText(analysisObj[field]);
+                break;
+            }
+        }
+        
+        // If not found, check in root data object
+        if (!sections[section]) {
+            for (const field of possibleFields) {
+                if (data[field]) {
+                    sections[section] = extractText(data[field]);
+                    break;
+                }
+            }
+        }
+    }
+    
+    return sections;
+}
+
 // ============================================================================
 // SOURCE CREDIBILITY ANALYSIS
 // ============================================================================
@@ -629,34 +679,33 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     yPos += 5;
     
     // CRITICAL FIX: Extract text properly from what_we_analyzed, what_we_found, what_it_means
-    const sections = [
+    const analysisSections = extractAnalysisSections(data);
+    const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
         { title: 'What We Found', key: 'what_we_found' },
         { title: 'What It Means', key: 'what_it_means' }
     ];
     
-    sections.forEach(section => {
-        if (data[section.key]) {
-            const text = extractText(data[section.key]);
-            
-            if (text && text.length > 10) {
-                if (yPos > 250) {
-                    doc.addPage();
-                    yPos = 25;
-                }
-                
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...colors.text);
-                doc.text(section.title, 20, yPos);
-                yPos += 7;
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                const textLines = doc.splitTextToSize(text, 170);
-                doc.text(textLines, 20, yPos);
-                yPos += (textLines.length * 4) + 8;
+    sectionTitles.forEach(section => {
+        const text = analysisSections[section.key];
+        
+        if (text && text.length > 10) {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 25;
             }
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...colors.text);
+            doc.text(section.title, 20, yPos);
+            yPos += 7;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const textLines = doc.splitTextToSize(text, 170);
+            doc.text(textLines, 20, yPos);
+            yPos += (textLines.length * 4) + 8;
         }
     });
     
@@ -697,33 +746,32 @@ function generateBiasDetectionComplete(doc, data, yPos, colors, serviceColor) {
     yPos += 5;
     
     // What we analyzed/found/means sections
-    const sections = [
+    const analysisSections = extractAnalysisSections(data);
+    const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
         { title: 'What We Found', key: 'what_we_found' },
         { title: 'What It Means', key: 'what_it_means' }
     ];
     
-    sections.forEach(section => {
-        if (data[section.key]) {
-            const text = extractText(data[section.key]);
-            
-            if (text && text.length > 10) {
-                if (yPos > 250) {
-                    doc.addPage();
-                    yPos = 25;
-                }
-                
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text(section.title, 20, yPos);
-                yPos += 7;
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                const textLines = doc.splitTextToSize(text, 170);
-                doc.text(textLines, 20, yPos);
-                yPos += (textLines.length * 4) + 8;
+    sectionTitles.forEach(section => {
+        const text = analysisSections[section.key];
+        
+        if (text && text.length > 10) {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 25;
             }
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text(section.title, 20, yPos);
+            yPos += 7;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const textLines = doc.splitTextToSize(text, 170);
+            doc.text(textLines, 20, yPos);
+            yPos += (textLines.length * 4) + 8;
         }
     });
     
@@ -805,33 +853,32 @@ function generateFactCheckingComplete(doc, data, yPos, colors, serviceColor) {
     yPos += 8;
     
     // What we analyzed/found/means sections
-    const sections = [
+    const analysisSections = extractAnalysisSections(data);
+    const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
         { title: 'What We Found', key: 'what_we_found' },
         { title: 'What It Means', key: 'what_it_means' }
     ];
     
-    sections.forEach(section => {
-        if (data[section.key]) {
-            const text = extractText(data[section.key]);
-            
-            if (text && text.length > 10) {
-                if (yPos > 250) {
-                    doc.addPage();
-                    yPos = 25;
-                }
-                
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text(section.title, 20, yPos);
-                yPos += 7;
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                const textLines = doc.splitTextToSize(text, 170);
-                doc.text(textLines, 20, yPos);
-                yPos += (textLines.length * 4) + 8;
+    sectionTitles.forEach(section => {
+        const text = analysisSections[section.key];
+        
+        if (text && text.length > 10) {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 25;
             }
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text(section.title, 20, yPos);
+            yPos += 7;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const textLines = doc.splitTextToSize(text, 170);
+            doc.text(textLines, 20, yPos);
+            yPos += (textLines.length * 4) + 8;
         }
     });
     
@@ -946,33 +993,32 @@ function generateAuthorAnalysisComplete(doc, data, yPos, colors, serviceColor) {
     yPos += 5;
     
     // What we analyzed/found/means sections
-    const sections = [
+    const analysisSections = extractAnalysisSections(data);
+    const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
         { title: 'What We Found', key: 'what_we_found' },
         { title: 'What It Means', key: 'what_it_means' }
     ];
     
-    sections.forEach(section => {
-        if (data[section.key]) {
-            const text = extractText(data[section.key]);
-            
-            if (text && text.length > 10) {
-                if (yPos > 250) {
-                    doc.addPage();
-                    yPos = 25;
-                }
-                
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text(section.title, 20, yPos);
-                yPos += 7;
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                const textLines = doc.splitTextToSize(text, 170);
-                doc.text(textLines, 20, yPos);
-                yPos += (textLines.length * 4) + 8;
+    sectionTitles.forEach(section => {
+        const text = analysisSections[section.key];
+        
+        if (text && text.length > 10) {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 25;
             }
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text(section.title, 20, yPos);
+            yPos += 7;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const textLines = doc.splitTextToSize(text, 170);
+            doc.text(textLines, 20, yPos);
+            yPos += (textLines.length * 4) + 8;
         }
     });
     
@@ -1014,33 +1060,32 @@ function generateTransparencyComplete(doc, data, yPos, colors, serviceColor) {
     yPos += 8;
     
     // What we analyzed/found/means sections
-    const sections = [
+    const analysisSections = extractAnalysisSections(data);
+    const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
         { title: 'What We Found', key: 'what_we_found' },
         { title: 'What It Means', key: 'what_it_means' }
     ];
     
-    sections.forEach(section => {
-        if (data[section.key]) {
-            const text = extractText(data[section.key]);
-            
-            if (text && text.length > 10) {
-                if (yPos > 250) {
-                    doc.addPage();
-                    yPos = 25;
-                }
-                
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text(section.title, 20, yPos);
-                yPos += 7;
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                const textLines = doc.splitTextToSize(text, 170);
-                doc.text(textLines, 20, yPos);
-                yPos += (textLines.length * 4) + 8;
+    sectionTitles.forEach(section => {
+        const text = analysisSections[section.key];
+        
+        if (text && text.length > 10) {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 25;
             }
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text(section.title, 20, yPos);
+            yPos += 7;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const textLines = doc.splitTextToSize(text, 170);
+            doc.text(textLines, 20, yPos);
+            yPos += (textLines.length * 4) + 8;
         }
     });
     
@@ -1153,33 +1198,32 @@ function generateContentQualityComplete(doc, data, yPos, colors, serviceColor) {
     yPos += 5;
     
     // What we analyzed/found/means sections
-    const sections = [
+    const analysisSections = extractAnalysisSections(data);
+    const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
         { title: 'What We Found', key: 'what_we_found' },
         { title: 'What It Means', key: 'what_it_means' }
     ];
     
-    sections.forEach(section => {
-        if (data[section.key]) {
-            const text = extractText(data[section.key]);
-            
-            if (text && text.length > 10) {
-                if (yPos > 250) {
-                    doc.addPage();
-                    yPos = 25;
-                }
-                
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text(section.title, 20, yPos);
-                yPos += 7;
-                
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                const textLines = doc.splitTextToSize(text, 170);
-                doc.text(textLines, 20, yPos);
-                yPos += (textLines.length * 4) + 8;
+    sectionTitles.forEach(section => {
+        const text = analysisSections[section.key];
+        
+        if (text && text.length > 10) {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 25;
             }
+            
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text(section.title, 20, yPos);
+            yPos += 7;
+            
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            const textLines = doc.splitTextToSize(text, 170);
+            doc.text(textLines, 20, yPos);
+            yPos += (textLines.length * 4) + 8;
         }
     });
     
