@@ -1,28 +1,25 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 3.1.0 - NESTED DATA FIX
+ * VERSION: 3.2.0 - PREMIUM SHOWCASE EDITION
  * DATE: October 14, 2025
  * 
- * CRITICAL FIXES FROM 3.0.0:
- * ✅ FIXED: Now extracts data from nested 'analysis' objects (Transparency service)
- * ✅ FIXED: Maps different field names (what_we_looked → what_we_analyzed)
- * ✅ ADDED: extractAnalysisSections() helper function
- * ✅ IMPROVED: Handles all service data structures consistently
+ * NEW IN 3.2.0:
+ * ✅ ENHANCED: Executive Summary now includes article summary, source/author info, and findings
+ * ✅ ADDED: Source Credibility graphics (credibility bar, reputation indicator)
+ * ✅ ADDED: Bias Detection graphics (political spectrum, objectivity bar)
+ * ✅ IMPROVED: Two-column layout for source information
+ * ✅ IMPROVED: Visual reputation assessment scale
+ * ✅ ADDED: Political spectrum with position indicator
+ * 
+ * PREVIOUS FIXES (v3.1.0):
+ * ✅ FIXED: Extracts data from nested 'analysis' objects
+ * ✅ FIXED: Maps different field names across services
  * 
  * PREVIOUS FIXES (v3.0.0):
- * ✅ FIXED: [object Object] display - extracts actual text from objects
- * ✅ FIXED: Proper handling of what_we_analyzed, what_we_found, what_it_means fields
- * ✅ ADDED: Graphics rendering for trust score and contribution breakdown
- * ✅ ADDED: Proper text extraction from nested objects and arrays
- * ✅ IMPROVED: Multi-page content flow with proper pagination
+ * ✅ FIXED: [object Object] display issues
+ * ✅ ADDED: Graphics and proper text extraction
  * 
- * DEPLOYMENT:
- * 1. Save this ENTIRE file as: static/js/pdf-generator.js
- * 2. REPLACE the existing file completely
- * 3. Hard refresh browser (Ctrl+Shift+R)
- * 4. Test PDF generation
- * 
- * This file generates comprehensive PDFs in the browser using jsPDF.
+ * This file generates premium, showcase-quality PDFs that customers will pay for.
  */
 
 // ============================================================================
@@ -307,20 +304,71 @@ function generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode,
     
     let yPos = 45;
     
-    // Key Findings
-    doc.setFontSize(14);
+    // Article Summary Section
+    const article = data.article || {};
+    if (article.title || article.excerpt) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text('Article Summary', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        if (article.title) {
+            const titleLines = doc.splitTextToSize(article.title, 170);
+            doc.text(titleLines, 20, yPos);
+            yPos += (titleLines.length * 4) + 5;
+        }
+        
+        if (article.excerpt) {
+            doc.setFont('helvetica', 'italic');
+            doc.setTextColor(...colors.textLight);
+            const excerptLines = doc.splitTextToSize(article.excerpt.substring(0, 300) + '...', 170);
+            doc.text(excerptLines, 20, yPos);
+            yPos += (excerptLines.length * 4) + 10;
+        }
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.text);
+    }
+    
+    // Source & Author Information
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Source & Author', 20, yPos);
+    yPos += 7;
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    
+    const sourceInfo = [];
+    if (article.domain || data.source) sourceInfo.push(`Source: ${article.domain || data.source}`);
+    if (article.author || data.author) sourceInfo.push(`Author: ${article.author || data.author}`);
+    if (article.publish_date) sourceInfo.push(`Published: ${article.publish_date}`);
+    if (article.word_count) sourceInfo.push(`Length: ${article.word_count.toLocaleString()} words`);
+    
+    sourceInfo.forEach(info => {
+        doc.text(info, 20, yPos);
+        yPos += 5;
+    });
+    yPos += 8;
+    
+    // Analysis Findings Summary
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
-    doc.text('Key Findings', 20, yPos);
-    yPos += 10;
+    doc.text('Analysis Findings', 20, yPos);
+    yPos += 7;
     
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     
     const summary = analysis.summary || data.article_summary || data.findings_summary || 'Complete comprehensive analysis conducted across all services.';
     const summaryLines = doc.splitTextToSize(summary, 170);
     doc.text(summaryLines, 20, yPos);
-    yPos += (summaryLines.length * 5) + 15;
+    yPos += (summaryLines.length * 4) + 12;
     
     // Key Findings List (if available)
     if (analysis.key_findings && Array.isArray(analysis.key_findings) && analysis.key_findings.length > 0) {
@@ -647,34 +695,115 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     doc.text('Source Information', 20, yPos);
     yPos += 8;
     
+    // Create a visual credibility meter
+    const credScore = data.credibility_score || 0;
+    
+    // Draw credibility bar
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...colors.textLight);
+    doc.text('Credibility Score:', 20, yPos);
+    yPos += 5;
+    
+    // Bar background
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, yPos, 140, 8, 'F');
+    
+    // Bar fill
+    const barWidth = (credScore / 100) * 140;
+    let barColor = colors.orange;
+    if (credScore >= 80) barColor = colors.green;
+    else if (credScore >= 60) barColor = colors.blue;
+    else if (credScore < 40) barColor = colors.red;
+    
+    doc.setFillColor(...barColor);
+    doc.rect(20, yPos, barWidth, 8, 'F');
+    
+    // Score text
     doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
+    doc.text(`${Math.round(credScore)}/100`, 165, yPos + 6);
+    yPos += 15;
+    
+    // Detailed fields in two columns
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     
-    const fields = [
-        ['Organization', data.organization || data.source || 'Unknown'],
-        ['Domain', data.domain || 'N/A'],
-        ['Reputation', data.credibility_level || data.credibility || 'Unknown'],
-        ['Credibility Score', `${Math.round(data.credibility_score || 0)}/100`],
-        ['Established', data.established_year || data.founded || 'Unknown'],
-        ['Country', data.country || 'Unknown'],
-        ['Awards', data.awards || 'N/A']
+    const leftColumn = [
+        ['Organization:', data.organization || data.source || 'Unknown'],
+        ['Domain:', data.domain || 'N/A'],
+        ['Established:', data.established_year || data.founded || 'Unknown']
     ];
     
-    fields.forEach(([label, value]) => {
+    const rightColumn = [
+        ['Reputation:', data.credibility_level || data.credibility || 'Unknown'],
+        ['Country:', data.country || 'Unknown'],
+        ['Awards:', data.awards || 'N/A']
+    ];
+    
+    // Left column
+    leftColumn.forEach(([label, value]) => {
         if (yPos > 270) {
             doc.addPage();
             yPos = 25;
         }
-        
         doc.setTextColor(...colors.textLight);
-        doc.text(label + ':', 25, yPos);
+        doc.text(label, 20, yPos);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.text);
-        const valueLines = doc.splitTextToSize(String(value), 140);
-        doc.text(valueLines, 70, yPos);
-        yPos += Math.max(6, valueLines.length * 5);
+        const valueLines = doc.splitTextToSize(String(value), 60);
+        doc.text(valueLines, 50, yPos);
+        yPos += Math.max(5, valueLines.length * 5);
         doc.setFont('helvetica', 'normal');
     });
+    
+    // Right column (reset yPos)
+    let rightYPos = yPos - (leftColumn.length * 5);
+    rightColumn.forEach(([label, value]) => {
+        doc.setTextColor(...colors.textLight);
+        doc.text(label, 110, rightYPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        const valueLines = doc.splitTextToSize(String(value), 60);
+        doc.text(valueLines, 140, rightYPos);
+        rightYPos += Math.max(5, valueLines.length * 5);
+        doc.setFont('helvetica', 'normal');
+    });
+    
+    yPos = Math.max(yPos, rightYPos) + 8;
+    
+    // Reputation indicator graphic
+    const reputation = (data.credibility_level || data.credibility || '').toLowerCase();
+    if (reputation) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Reputation Assessment', 20, yPos);
+        yPos += 6;
+        
+        // Visual reputation indicator
+        const repLevels = [
+            { label: 'Very Low', active: reputation.includes('very low') || reputation.includes('unreliable') },
+            { label: 'Low', active: reputation === 'low' },
+            { label: 'Medium', active: reputation === 'medium' || reputation === 'moderate' },
+            { label: 'High', active: reputation === 'high' },
+            { label: 'Very High', active: reputation.includes('very high') || reputation === 'excellent') }
+        ];
+        
+        let xPos = 20;
+        repLevels.forEach((level, idx) => {
+            const boxColor = level.active ? colors.green : [220, 220, 220];
+            doc.setFillColor(...boxColor);
+            doc.rect(xPos, yPos, 30, 6, 'F');
+            
+            doc.setFontSize(7);
+            doc.setTextColor(level.active ? 255 : 150, level.active ? 255 : 150, level.active ? 255 : 150);
+            doc.text(level.label, xPos + 15, yPos + 4, { align: 'center' });
+            
+            xPos += 32;
+        });
+        yPos += 12;
+    }
     
     yPos += 5;
     
@@ -723,17 +852,78 @@ function generateBiasDetectionComplete(doc, data, yPos, colors, serviceColor) {
     doc.text('Bias Analysis Summary', 20, yPos);
     yPos += 8;
     
+    // Political Spectrum Graphic
     doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Political Spectrum', 20, yPos);
+    yPos += 6;
+    
+    // Draw political spectrum bar
+    const spectrumWidth = 150;
+    const spectrumX = 30;
+    
+    // Background spectrum (gradient simulation with sections)
+    const sections = [
+        { color: [220, 38, 38], width: 30 },   // Far left - red
+        { color: [239, 68, 68], width: 30 },   // Left - lighter red
+        { color: [156, 163, 175], width: 30 }, // Center - gray
+        { color: [59, 130, 246], width: 30 },  // Right - blue
+        { color: [29, 78, 216], width: 30 }    // Far right - dark blue
+    ];
+    
+    let sectionX = spectrumX;
+    sections.forEach(section => {
+        doc.setFillColor(...section.color);
+        doc.rect(sectionX, yPos, section.width, 8, 'F');
+        sectionX += section.width;
+    });
+    
+    // Political position indicator
+    const politicalLabel = data.political_label || data.political_leaning || 'Center';
+    let indicatorX = spectrumX + (spectrumWidth / 2); // Default center
+    
+    if (politicalLabel.toLowerCase().includes('left')) {
+        indicatorX = spectrumX + (spectrumWidth * 0.25);
+        if (politicalLabel.toLowerCase().includes('far')) indicatorX = spectrumX + 15;
+    } else if (politicalLabel.toLowerCase().includes('right')) {
+        indicatorX = spectrumX + (spectrumWidth * 0.75);
+        if (politicalLabel.toLowerCase().includes('far')) indicatorX = spectrumX + spectrumWidth - 15;
+    }
+    
+    // Draw indicator triangle (pointing down and up)
+    const triangleColor = [0, 0, 0];
+    // Top triangle (pointing down)
+    drawTriangle(doc, indicatorX - 3, yPos - 2, indicatorX + 3, yPos - 2, indicatorX, yPos + 1, triangleColor);
+    // Bottom triangle (pointing up)
+    drawTriangle(doc, indicatorX - 3, yPos + 9, indicatorX + 3, yPos + 9, indicatorX, yPos + 7, triangleColor);
+    
+    // Labels
+    doc.setFontSize(7);
+    doc.setTextColor(...colors.textLight);
+    doc.text('Far Left', spectrumX, yPos + 13);
+    doc.text('Center', spectrumX + (spectrumWidth / 2), yPos + 13, { align: 'center' });
+    doc.text('Far Right', spectrumX + spectrumWidth, yPos + 13, { align: 'right' });
+    
+    yPos += 20;
+    
+    // Political position label
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
+    doc.text(`Position: ${politicalLabel}`, 20, yPos);
+    yPos += 10;
+    
+    // Metrics in grid format
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     
-    const fields = [
-        ['Political Leaning', data.political_label || data.political_leaning || 'Center'],
+    const metrics = [
         ['Objectivity Score', `${Math.round(data.objectivity_score || 0)}/100`],
         ['Sensationalism', data.sensationalism_level || 'Low'],
         ['Bias Rating', data.bias_rating || 'Minimal']
     ];
     
-    fields.forEach(([label, value]) => {
+    metrics.forEach(([label, value]) => {
         doc.setTextColor(...colors.textLight);
         doc.text(label + ':', 25, yPos);
         doc.setFont('helvetica', 'bold');
@@ -744,6 +934,34 @@ function generateBiasDetectionComplete(doc, data, yPos, colors, serviceColor) {
     });
     
     yPos += 5;
+    
+    // Bias indicators visual
+    const biasScore = data.objectivity_score || 0;
+    if (biasScore > 0) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Objectivity Assessment', 20, yPos);
+        yPos += 6;
+        
+        // Progress bar
+        doc.setFillColor(240, 240, 240);
+        doc.rect(20, yPos, 140, 8, 'F');
+        
+        const objBarWidth = (biasScore / 100) * 140;
+        let objColor = colors.orange;
+        if (biasScore >= 80) objColor = colors.green;
+        else if (biasScore >= 60) objColor = colors.blue;
+        
+        doc.setFillColor(...objColor);
+        doc.rect(20, yPos, objBarWidth, 8, 'F');
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text(`${Math.round(biasScore)}%`, 165, yPos + 6);
+        
+        yPos += 15;
+    }
     
     // What we analyzed/found/means sections
     const analysisSections = extractAnalysisSections(data);
@@ -1369,6 +1587,14 @@ function getVerdictColor(verdict, colors) {
     return colors.orange;
 }
 
+/**
+ * Draw a triangle (helper for political spectrum indicator)
+ */
+function drawTriangle(doc, x1, y1, x2, y2, x3, y3, fillColor) {
+    doc.setFillColor(...fillColor);
+    doc.lines([[x2 - x1, y2 - y1], [x3 - x2, y3 - y2], [x1 - x3, y1 - y3]], x1, y1, null, 'F');
+}
+
 // ============================================================================
 // DATA CAPTURE HOOK
 // ============================================================================
@@ -1401,4 +1627,4 @@ function getVerdictColor(verdict, colors) {
     hookIntoAnalyzer();
 })();
 
-console.log('[PDF Generator] v3.0.0 FIXED EDITION loaded successfully - [object Object] issue resolved');
+console.log('[PDF Generator] v3.1.0 NESTED DATA FIX - Extracts from analysis objects properly');
