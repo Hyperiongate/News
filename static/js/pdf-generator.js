@@ -418,52 +418,106 @@ function generateServicePage(doc, service, serviceData, colors) {
     let findings = '';
     
     if (service.key === 'source_credibility') {
-        const org = serviceData.organization || 'Unknown';
+        const org = serviceData.organization || serviceData.source || 'Unknown';
         const reputation = serviceData.credibility || serviceData.reputation || 'Unknown';
-        findings = `Organization: ${org}\nReputation: ${reputation}\nThis source has been evaluated for historical accuracy, editorial standards, and overall credibility in journalism.`;
+        const established = serviceData.established_year || serviceData.founded || 'Unknown';
+        const awards = serviceData.awards || 'N/A';
+        findings = `Organization: ${org}\nReputation: ${reputation}\nEstablished: ${established}\nAwards: ${awards}\n\nThis source has been evaluated for historical accuracy, editorial standards, and overall credibility in journalism.`;
     } else if (service.key === 'bias_detector') {
         const political = serviceData.political_label || serviceData.political_leaning || 'Center';
         const objectivity = serviceData.objectivity_score || score;
-        findings = `Political Lean: ${political}\nObjectivity Score: ${Math.round(objectivity)}/100\nThe analysis examines political bias, loaded language, sensationalism, and framing techniques.`;
+        const sensationalism = serviceData.sensationalism_level || 'Unknown';
+        const details = serviceData.details || {};
+        const loadedLang = details.loaded_language_count || 0;
+        findings = `Political Lean: ${political}\nObjectivity Score: ${Math.round(objectivity)}/100\nSensationalism: ${sensationalism}\nLoaded Language Instances: ${loadedLang}\n\nThe analysis examines political bias, loaded language, sensationalism, and framing techniques to provide a comprehensive view of objectivity.`;
     } else if (service.key === 'fact_checker') {
         const claimsChecked = serviceData.claims_checked || serviceData.claims_found || 0;
         const claimsVerified = serviceData.claims_verified || 0;
-        findings = `Claims Analyzed: ${claimsChecked}\nClaims Verified: ${claimsVerified}\nAccuracy Score: ${Math.round(score)}%\nOur fact-checking service verifies specific claims using authoritative sources.`;
+        const accuracyScore = serviceData.accuracy_score || serviceData.verification_score || score;
+        findings = `Claims Analyzed: ${claimsChecked}\nClaims Verified: ${claimsVerified}\nAccuracy Score: ${Math.round(accuracyScore)}%\n\nOur fact-checking service verifies specific claims using authoritative sources and cross-references multiple databases.`;
+        
+        // Add fact check details if available
+        const factChecks = serviceData.fact_checks || serviceData.claims || [];
+        if (factChecks.length > 0 && yPos < 200) {
+            findings += '\n\nTop Findings:';
+            factChecks.slice(0, 3).forEach((check, idx) => {
+                const verdict = check.verdict || 'unverified';
+                const explanation = check.explanation || check.analysis || 'No details available';
+                // Truncate long explanations
+                const shortExplanation = explanation.length > 100 ? explanation.substring(0, 97) + '...' : explanation;
+                findings += `\n${idx + 1}. ${verdict.toUpperCase()}: ${shortExplanation}`;
+            });
+        }
     } else if (service.key === 'author_analyzer') {
-        const authorName = serviceData.name || serviceData.primary_author || 'Unknown';
+        const authorName = serviceData.name || serviceData.primary_author || serviceData.author_name || 'Unknown Author';
+        const position = serviceData.position || 'Journalist';
+        const organization = serviceData.organization || serviceData.domain || 'News Organization';
         const expertise = serviceData.expertise_level || 'Verified';
-        findings = `Author: ${authorName}\nExpertise Level: ${expertise}\nCredibility: ${Math.round(score)}/100\nAnalysis includes author background, expertise, track record, and credentials.`;
+        const experience = serviceData.years_experience || serviceData.experience || 'Unknown';
+        findings = `Author: ${authorName}\nPosition: ${position}\nOrganization: ${organization}\nExpertise Level: ${expertise}\nExperience: ${experience}\nCredibility: ${Math.round(score)}/100\n\nAnalysis includes author background, expertise, track record, and professional credentials.`;
     } else if (service.key === 'transparency_analyzer') {
         const level = serviceData.transparency_level || serviceData.level || 'Moderate';
-        findings = `Transparency Level: ${level}\nScore: ${Math.round(score)}/100\nEvaluates source attribution, citation quality, disclosure statements, and verifiable claims.`;
+        const articleType = serviceData.article_type || 'News Report';
+        findings = `Transparency Level: ${level}\nArticle Type: ${articleType}\nScore: ${Math.round(score)}/100\n\nEvaluates source attribution, citation quality, disclosure statements, and verifiable claims. Higher scores indicate better transparency practices.`;
+        
+        // Add key lessons if available
+        const lessons = serviceData.transparency_lessons || [];
+        if (lessons.length > 0 && yPos < 200) {
+            findings += '\n\nKey Transparency Indicators:';
+            lessons.slice(0, 3).forEach((lesson, idx) => {
+                const shortLesson = lesson.length > 80 ? lesson.substring(0, 77) + '...' : lesson;
+                findings += `\n${idx + 1}. ${shortLesson}`;
+            });
+        }
     } else if (service.key === 'content_analyzer') {
         const readability = serviceData.readability_level || serviceData.readability || 'Unknown';
         const wordCount = serviceData.word_count || 0;
-        findings = `Quality Score: ${Math.round(score)}/100\nReadability: ${readability}\nWord Count: ${wordCount}\nAnalyzes content structure, clarity, depth, and overall writing quality.`;
+        const qualityScore = serviceData.quality_score || score;
+        findings = `Quality Score: ${Math.round(qualityScore)}/100\nReadability Level: ${readability}\nWord Count: ${wordCount.toLocaleString()}\n\nAnalyzes content structure, clarity, depth, grammar, and overall writing quality using multiple metrics.`;
     }
     
     const findingsLines = doc.splitTextToSize(findings, 170);
     doc.text(findingsLines, 20, yPos);
     yPos += (findingsLines.length * 5) + 10;
     
-    // Additional insights if available
-    if (serviceData.insights || serviceData.analysis || serviceData.summary) {
-        if (yPos > 250) {
-            doc.addPage();
-            yPos = 25;
+    // Additional insights if available - properly handle different data types
+    if (yPos < 240) {
+        let insightsText = '';
+        
+        // Try different fields for insights
+        if (serviceData.insights) {
+            if (typeof serviceData.insights === 'string') {
+                insightsText = serviceData.insights;
+            } else if (Array.isArray(serviceData.insights)) {
+                insightsText = serviceData.insights.join('\n');
+            }
+        } else if (serviceData.analysis && typeof serviceData.analysis === 'string') {
+            insightsText = serviceData.analysis;
+        } else if (serviceData.summary && typeof serviceData.summary === 'string') {
+            insightsText = serviceData.summary;
+        } else if (serviceData.explanation && typeof serviceData.explanation === 'string') {
+            insightsText = serviceData.explanation;
         }
         
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.text);
-        doc.text('Key Insights', 20, yPos);
-        yPos += 8;
-        
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        const insights = serviceData.insights || serviceData.analysis || serviceData.summary;
-        const insightLines = doc.splitTextToSize(insights.toString(), 170);
-        doc.text(insightLines, 20, yPos);
+        // Only display if we have valid text
+        if (insightsText && insightsText.length > 0 && insightsText !== '[object Object]') {
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...colors.text);
+            doc.text('Additional Insights', 20, yPos);
+            yPos += 8;
+            
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            
+            // Truncate if too long
+            if (insightsText.length > 500) {
+                insightsText = insightsText.substring(0, 497) + '...';
+            }
+            
+            const insightLines = doc.splitTextToSize(insightsText, 170);
+            doc.text(insightLines, 20, yPos);
+        }
     }
 }
 
