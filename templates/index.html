@@ -3,17 +3,19 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.4.0 - TRANSCRIPT HELP DROPDOWNS ADDED
+    Version: 4.5.0 - PDF DOWNLOAD FEATURE ADDED
     Date: October 14, 2025
     
-    CHANGES FROM 4.3.0:
-    - ADDED: "How to Use This App" dropdown in Transcript tab
-    - ADDED: "Sources of Transcripts" dropdown in Transcript tab with helpful links
-    - Dropdowns styled with vibrant gradients to match v4.3.0 design
+    CHANGES FROM 4.4.0:
+    - ADDED: jsPDF library from CDN for PDF generation
+    - ADDED: pdf-generator.js script
+    - ADDED: Download PDF Report button in results header
+    - Button styled with purple gradient to match v4.3.0 design
     - All existing functionality preserved (DO NO HARM ✓)
     
     Previous versions:
-    - 4.3.0 - UI redesign with vibrant colors, removed clutter
+    - 4.4.0 - Transcript help dropdowns added
+    - 4.3.0 - UI redesign with vibrant colors
     - 4.2.0 - Manipulation check removed
     - 4.1.0 - Charts system removed
     -->
@@ -36,10 +38,13 @@
     <!-- Chart.js for Visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     
+    <!-- v4.5.0 NEW: jsPDF Library for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
     <!-- External Styles -->
     <link rel="stylesheet" href="/static/css/main.css">
     
-    <!-- v4.3.0 Enhanced Styles + v4.4.0 Help Dropdowns -->
+    <!-- v4.3.0 Enhanced Styles + v4.4.0 Help Dropdowns + v4.5.0 PDF Button -->
     <style>
         /* v4.3.0 Color Enhancements */
         :root {
@@ -177,7 +182,7 @@
             color: #8b5cf6;
         }
 
-        /* v4.4.0 NEW: Help Dropdowns for Transcript Tab */
+        /* v4.4.0: Help Dropdowns for Transcript Tab */
         .help-dropdowns-container {
             display: flex;
             flex-direction: column;
@@ -438,6 +443,58 @@
             background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
         }
 
+        /* v4.5.0 NEW: PDF Download Button */
+        .pdf-download-button {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            margin-left: 16px;
+        }
+
+        .pdf-download-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+        }
+
+        .pdf-download-button:active {
+            transform: translateY(0);
+        }
+
+        .pdf-download-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .pdf-download-button i {
+            font-size: 16px;
+        }
+
+        /* Responsive PDF Button */
+        @media (max-width: 768px) {
+            .pdf-download-button {
+                margin-left: 0;
+                margin-top: 12px;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .results-header {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .mode-selector {
@@ -603,7 +660,7 @@
                     </p>
                 </div>
 
-                <!-- v4.4.0 NEW: Help Dropdowns -->
+                <!-- v4.4.0: Help Dropdowns -->
                 <div class="help-dropdowns-container">
                     <!-- How to Use This App Dropdown -->
                     <div class="help-dropdown" id="howToUseDropdown">
@@ -824,6 +881,11 @@
                 <div class="results-header">
                     <h2 class="results-title">Analysis Complete</h2>
                     <div class="analysis-mode-badge" id="analysisModeBadge">News</div>
+                    <!-- v4.5.0 NEW: PDF Download Button -->
+                    <button class="pdf-download-button" id="pdfDownloadBtn" onclick="downloadPDFReport()">
+                        <i class="fas fa-download"></i>
+                        <span>Download PDF Report</span>
+                    </button>
                 </div>
 
                 <!-- Enhanced Analysis Overview -->
@@ -875,12 +937,14 @@
     <script src="/static/js/service-templates.js"></script>
     <script src="/static/js/chart-renderer.js"></script>
     <script src="/static/js/unified-app-core.js"></script>
+    <!-- v4.5.0 NEW: PDF Generator -->
+    <script src="/static/js/pdf-generator.js"></script>
     
     <script>
         // Global state for current mode
         let currentAnalysisMode = 'news';
 
-        // v4.4.0 NEW: Toggle Help Dropdown Function
+        // v4.4.0: Toggle Help Dropdown Function
         function toggleHelpDropdown(dropdownId) {
             const dropdown = document.getElementById(dropdownId);
             if (dropdown) {
@@ -988,7 +1052,7 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.4.0 - Transcript Help Dropdowns Added');
+            console.log('TruthLens v4.5.0 - PDF Download Feature Added');
             
             const inputs = ['newsUrlInput', 'newsTextInput', 'transcriptTextInput'];
             inputs.forEach(id => {
