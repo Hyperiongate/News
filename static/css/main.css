@@ -2198,3 +2198,139 @@ body {
 }
 
 /* End of Transparency v3.0.0 Styles */
+/**
+ * TruthLens v4.5.0 - PDF Button CSS Additions
+ * Date: October 14, 2025
+ * 
+ * INSTRUCTIONS:
+ * Add these styles to the END of your static/css/main.css file
+ * OR include them in a <style> tag in index.html (already done in v4.5.0 index.html)
+ * 
+ * These styles are for the PDF download button that appears in the results header
+ */
+
+/* ===== PDF DOWNLOAD BUTTON STYLES ===== */
+
+/* Main PDF button styling - matches v4.3.0 purple gradient theme */
+.pdf-download-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    margin-left: 16px;
+}
+
+/* Hover effect - lifts button and enhances shadow */
+.pdf-download-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+/* Active/click effect - returns to normal position */
+.pdf-download-button:active {
+    transform: translateY(0);
+}
+
+/* Disabled state - reduced opacity and no interaction */
+.pdf-download-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Icon styling within button */
+.pdf-download-button i {
+    font-size: 16px;
+}
+
+/* Results header layout adjustment to accommodate button */
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+/* Ensure title and badge work with button */
+.results-title {
+    flex: 0 0 auto;
+}
+
+.analysis-mode-badge {
+    flex: 0 0 auto;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Tablet and below - stack button below title */
+@media (max-width: 768px) {
+    .pdf-download-button {
+        margin-left: 0;
+        margin-top: 12px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .results-header {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+/* Mobile - ensure button is easily tappable */
+@media (max-width: 480px) {
+    .pdf-download-button {
+        padding: 14px 24px;
+        font-size: 16px;
+    }
+}
+
+/* ===== LOADING STATE (optional enhancement) ===== */
+
+/* Add this class via JavaScript when generating PDF */
+.pdf-download-button.generating {
+    opacity: 0.7;
+    cursor: wait;
+    pointer-events: none;
+}
+
+.pdf-download-button.generating i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ===== SUCCESS FLASH (optional enhancement) ===== */
+
+/* Add this class briefly after successful PDF generation */
+.pdf-download-button.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.pdf-download-button.success i::before {
+    content: "\f058"; /* FontAwesome check-circle */
+}
+
+/* ===== PRINT STYLES ===== */
+
+/* Hide PDF button when printing the page itself */
+@media print {
+    .pdf-download-button {
+        display: none;
+    }
+}
