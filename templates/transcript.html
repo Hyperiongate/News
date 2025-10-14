@@ -1,13 +1,14 @@
 <!--
 File: templates/transcript.html
 Last Updated: October 14, 2025
-Changes:
-- Renamed from index.html to transcript.html to avoid conflicts with news repository
-- REMOVED all video URL analysis capabilities completely
-- Simplified to 3 input methods: Text Input, File Upload, Microphone
-- Microphone feature uses Web Speech API for real-time transcription
-- Clarified that microphone transcribes speech to text for analysis
-- Clean, simple interface focused on transcript fact-checking
+Version: 2.0 - REDESIGNED UI
+Changes from v1.0:
+- Removed large info dropdown cards (too cluttered)
+- Simplified hero section (more subtle, cleaner)
+- Added vibrant colors throughout (gradients, colored tabs)
+- Moved progress section higher (visible without scrolling)
+- Cleaner, more modern design with better spacing
+- All functionality preserved from v1.0
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -15,23 +16,22 @@ Changes:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transcript Fact Checker - AI-Powered Fact Verification</title>
-    <meta name="description" content="Fact-check political speeches, interviews, and transcripts using AI and trusted APIs. Type, upload, or speak your transcript for analysis.">
+    <meta name="description" content="Fact-check political speeches, interviews, and transcripts using AI and trusted APIs.">
     
-    <!-- Inline CSS for immediate rendering -->
     <style>
         /* CSS Variables */
         :root {
-            --primary-color: #3b82f6;
+            --primary: #3b82f6;
             --primary-dark: #2563eb;
-            --primary-light: #60a5fa;
-            --secondary-color: #6366f1;
-            --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --danger-color: #ef4444;
+            --secondary: #6366f1;
+            --accent: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
             --gray-300: #d1d5db;
-            --gray-400: #9ca3af;
             --gray-500: #6b7280;
             --gray-600: #4b5563;
             --gray-700: #374151;
@@ -39,7 +39,6 @@ Changes:
             --gray-900: #111827;
         }
 
-        /* Reset and Base Styles */
         * {
             margin: 0;
             padding: 0;
@@ -47,17 +46,18 @@ Changes:
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             line-height: 1.6;
             color: var(--gray-800);
-            background: linear-gradient(135deg, #f8fafc 0%, #e0e7ff 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
         }
 
         /* Header */
         .header {
-            background: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -75,234 +75,113 @@ Changes:
         .logo {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             text-decoration: none;
             color: var(--gray-800);
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
-            transition: color 0.2s;
-        }
-
-        .logo:hover {
-            color: var(--primary-color);
         }
 
         .logo-icon {
-            color: var(--primary-color);
-            font-size: 28px;
+            color: var(--primary);
+            font-size: 24px;
         }
 
         /* Container */
         .container {
-            max-width: 1200px;
+            max-width: 900px;
             margin: 0 auto;
             padding: 20px;
         }
 
-        /* Hero Section */
+        /* Hero Section - Simplified */
         .hero-section {
             text-align: center;
-            margin-bottom: 40px;
-            padding: 40px 20px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            padding: 30px 20px 20px;
         }
 
         .hero-section h1 {
-            font-size: 48px;
+            font-size: 32px;
             font-weight: 800;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 16px;
+            color: white;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
 
         .hero-section p {
-            font-size: 20px;
-            color: var(--gray-600);
-            max-width: 600px;
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.9);
+            max-width: 500px;
             margin: 0 auto;
-        }
-
-        /* Info Dropdowns */
-        .info-dropdowns {
-            display: flex;
-            gap: 20px;
-            max-width: 800px;
-            margin: 40px auto;
-            flex-wrap: wrap;
-        }
-
-        .dropdown-container {
-            flex: 1;
-            min-width: 300px;
-            position: relative;
-        }
-
-        .dropdown-button {
-            width: 100%;
-            padding: 20px;
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            color: var(--gray-800);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .dropdown-button:hover {
-            border-color: var(--primary-color);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .dropdown-button i:first-child {
-            font-size: 24px;
-            color: var(--primary-color);
-        }
-
-        .dropdown-arrow {
-            margin-left: auto;
-            transition: transform 0.3s ease;
-            color: var(--gray-500);
-        }
-
-        .dropdown-arrow.open {
-            transform: rotate(180deg);
-        }
-
-        .dropdown-content {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            display: none;
-            background: white;
-            border: 2px solid var(--gray-200);
-            border-top: none;
-            border-radius: 0 0 12px 12px;
-            padding: 24px;
-            margin-top: -2px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            max-height: 400px;
-            overflow-y: auto;
-            z-index: 100;
-        }
-
-        .dropdown-content.show {
-            display: block;
-            animation: slideDown 0.3s ease;
-        }
-
-        .dropdown-content h4 {
-            color: var(--gray-800);
-            margin-bottom: 12px;
-            font-size: 18px;
-        }
-
-        .dropdown-content ul {
-            list-style: none;
-            padding: 0;
-            margin: 0 0 20px 0;
-        }
-
-        .dropdown-content li {
-            padding: 8px 0;
-            color: var(--gray-600);
-            line-height: 1.6;
-        }
-
-        .dropdown-content li strong {
-            color: var(--gray-800);
-        }
-
-        .dropdown-content p {
-            color: var(--gray-600);
-            line-height: 1.6;
-            margin: 12px 0;
-        }
-
-        /* Custom scrollbar for dropdowns */
-        .dropdown-content::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .dropdown-content::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-
-        .dropdown-content::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-
-        .dropdown-content::-webkit-scrollbar-thumb:hover {
-            background: #555;
         }
 
         /* Input Section */
         .input-section {
-            max-width: 800px;
-            margin: 0 auto 40px;
             background: white;
             padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
         }
 
-        .input-section h2 {
-            font-size: 24px;
+        .section-title {
+            font-size: 18px;
             font-weight: 700;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             color: var(--gray-800);
         }
 
-        /* Input Tabs */
+        /* Input Tabs - Colorful */
         .input-tabs {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid var(--gray-200);
-            flex-wrap: wrap;
         }
 
         .tab-button {
+            flex: 1;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: none;
-            border: 2px solid transparent;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--gray-500);
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .tab-button:hover {
+            gap: 6px;
+            padding: 16px 12px;
             background: var(--gray-100);
-            color: var(--gray-800);
-        }
-
-        .tab-button.active {
-            background: #eff6ff;
-            border-color: var(--primary-color);
-            color: var(--primary-color);
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-600);
+            cursor: pointer;
+            transition: all 0.3s;
         }
 
         .tab-button i {
-            font-size: 18px;
+            font-size: 24px;
+        }
+
+        .tab-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        #text-tab.active {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        #file-tab.active {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+        }
+
+        #live-tab.active {
+            background: linear-gradient(135deg, #10b981, #059669);
         }
 
         /* Input Panels */
@@ -327,185 +206,63 @@ Changes:
             padding: 16px;
             border: 2px solid var(--gray-200);
             border-radius: 12px;
-            font-size: 16px;
+            font-size: 15px;
             font-family: inherit;
             resize: vertical;
-            transition: border-color 0.2s;
+            transition: all 0.2s;
         }
 
         .text-input:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .input-info {
             margin-top: 8px;
             color: var(--gray-500);
-            font-size: 14px;
+            font-size: 13px;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
-            gap: 8px;
         }
 
         /* File Upload */
         .file-upload-area {
-            border: 2px dashed var(--gray-300);
-            border-radius: 12px;
-            padding: 60px 20px;
+            border: 3px dashed var(--gray-300);
+            border-radius: 16px;
+            padding: 50px 20px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: var(--gray-100);
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
         }
 
         .file-upload-area:hover {
-            border-color: var(--primary-color);
-            background: #eff6ff;
-        }
-
-        .file-upload-area.dragover {
-            border-color: var(--primary-color);
-            background: #eff6ff;
-            transform: scale(1.02);
+            border-color: var(--secondary);
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            transform: scale(1.01);
         }
 
         .file-upload-area i {
             font-size: 48px;
-            color: var(--primary-color);
-            margin-bottom: 16px;
+            color: var(--secondary);
+            margin-bottom: 12px;
         }
 
         .file-upload-text {
-            font-size: 18px;
-            font-weight: 500;
+            font-size: 16px;
+            font-weight: 600;
             color: var(--gray-800);
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .file-types {
             color: var(--gray-500);
-            font-size: 14px;
+            font-size: 13px;
         }
 
-        .file-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px;
-            background: var(--gray-100);
-            border-radius: 8px;
-            margin-top: 16px;
-        }
-
-        /* Real-Time Transcription Styles */
-        .transcription-controls {
-            display: flex;
-            justify-content: center;
-            gap: 16px;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-        }
-
-        .mic-button {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px 32px;
-            background: var(--success-color);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 18px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-
-        .mic-button:hover {
-            background: #059669;
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-        }
-
-        .mic-button:disabled {
-            background: var(--gray-400);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        .mic-button.recording {
-            background: var(--danger-color);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
-            50% { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.6); }
-            100% { box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3); }
-        }
-
-        .mic-button.recording:hover {
-            background: #dc2626;
-        }
-
-        .stop-button {
-            background: var(--gray-600);
-            color: white;
-            border: none;
-            padding: 16px 24px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .stop-button:hover {
-            background: var(--gray-700);
-            transform: translateY(-2px);
-        }
-
-        .clear-button {
-            background: var(--warning-color);
-            color: white;
-            border: none;
-            padding: 16px 24px;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .clear-button:hover {
-            background: #d97706;
-            transform: translateY(-2px);
-        }
-
-        .transcription-display {
-            background: var(--gray-100);
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 20px;
-            min-height: 200px;
-            max-height: 400px;
-            overflow-y: auto;
-            font-size: 16px;
-            line-height: 1.6;
-            margin-bottom: 16px;
-            position: relative;
-        }
-
-        .transcription-display:empty::before {
-            content: "Click 'Start Recording' to begin speaking. Your speech will be transcribed to text in real-time...";
-            color: var(--gray-500);
-            font-style: italic;
-        }
-
+        /* Microphone */
         .transcription-status {
             display: flex;
             align-items: center;
@@ -513,82 +270,129 @@ Changes:
             margin-bottom: 16px;
             font-size: 14px;
             font-weight: 500;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: 8px;
         }
 
         .status-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             background: var(--gray-400);
         }
 
-        .status-indicator.listening {
-            background: var(--success-color);
-            animation: pulse 1.5s infinite;
+        .status-indicator.recording {
+            background: var(--danger);
+            animation: pulse 2s infinite;
         }
 
-        .status-indicator.processing {
-            background: var(--warning-color);
-            animation: spin 1s linear infinite;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .transcription-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
         }
 
-        .live-text {
-            background: rgba(59, 130, 246, 0.1);
-            padding: 4px 8px;
-            border-radius: 4px;
-            border-left: 3px solid var(--primary-color);
-            margin: 8px 0;
-            animation: highlightNew 1s ease-out;
+        .mic-button {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 20px;
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
         }
 
-        @keyframes highlightNew {
-            from { background: rgba(59, 130, 246, 0.3); }
-            to { background: rgba(59, 130, 246, 0.1); }
+        .mic-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .stop-button, .clear-button {
+            padding: 14px 20px;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .stop-button {
+            background: linear-gradient(135deg, var(--gray-600), var(--gray-700));
+        }
+
+        .clear-button {
+            background: linear-gradient(135deg, var(--warning), #d97706);
+        }
+
+        .transcription-display {
+            background: var(--gray-50);
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 16px;
+            min-height: 180px;
+            max-height: 350px;
+            overflow-y: auto;
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .transcription-display:empty::before {
+            content: "Click 'Start Recording' and speak. Your speech will appear here...";
+            color: var(--gray-500);
+            font-style: italic;
         }
 
         /* Analyze Button */
         .analyze-button {
             width: 100%;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 20px;
+            padding: 18px;
             border-radius: 12px;
             font-size: 18px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 24px;
-            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s;
+            margin-top: 20px;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
         }
 
         .analyze-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
         }
 
-        .analyze-button:disabled {
-            background: var(--gray-400);
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
+        .analyze-button i {
+            margin-right: 8px;
         }
 
-        /* Progress Section */
+        /* Progress Section - MOVED HIGHER */
         .progress-section {
             display: none;
-            max-width: 800px;
-            margin: 40px auto;
-            padding: 30px;
             background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
             text-align: center;
+            margin-bottom: 30px;
         }
 
         .progress-section.active {
@@ -596,47 +400,63 @@ Changes:
             animation: fadeIn 0.3s ease;
         }
 
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--gray-200);
+            border-top: 5px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-section h3 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: var(--gray-800);
+        }
+
         .progress-container {
-            margin: 24px 0;
+            margin: 20px 0;
         }
 
         .progress-bar {
             width: 100%;
-            height: 8px;
+            height: 10px;
             background: var(--gray-200);
-            border-radius: 4px;
+            border-radius: 5px;
             overflow: hidden;
+            margin-bottom: 12px;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
             width: 0%;
             transition: width 0.3s ease;
-            border-radius: 4px;
+            border-radius: 5px;
         }
 
         .progress-text {
-            margin-top: 12px;
             color: var(--gray-600);
-            font-size: 16px;
-        }
-
-        .spinner {
-            width: 40px;
-            height: 40px;
-            border: 4px solid var(--gray-200);
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 16px;
+            font-size: 15px;
+            font-weight: 500;
         }
 
         /* Results Section */
         .results-section {
             display: none;
-            max-width: 1000px;
-            margin: 40px auto;
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
         }
 
         .results-section.active {
@@ -644,74 +464,363 @@ Changes:
             animation: fadeIn 0.5s ease;
         }
 
-        /* Footer */
-        .footer {
+        /* Results Styling */
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--gray-200);
+        }
+
+        .results-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .results-title i {
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        .results-title h2 {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .new-analysis-btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .new-analysis-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Credibility Card */
+        .credibility-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 16px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .credibility-card h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            opacity: 0.95;
+        }
+
+        .credibility-meter {
+            position: relative;
+            margin: 20px 0;
+        }
+
+        .meter-background {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: white;
+            border-radius: 6px;
+            transition: width 1s ease;
+        }
+
+        .meter-score {
+            font-size: 36px;
+            font-weight: 800;
+            margin: 10px 0;
+        }
+
+        .credibility-label {
+            font-size: 18px;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        /* Summary Card */
+        .summary-card {
+            background: var(--gray-50);
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .summary-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--gray-800);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .summary-card p {
+            color: var(--gray-700);
+            line-height: 1.7;
+        }
+
+        /* Metadata Section */
+        .metadata-section {
+            margin-bottom: 30px;
+        }
+
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .metadata-item {
+            background: linear-gradient(135deg, var(--gray-50), white);
+            padding: 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .metadata-item i {
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        .metadata-label {
+            font-size: 12px;
+            color: var(--gray-500);
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .metadata-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        /* Info Card */
+        .info-card {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid var(--gray-200);
+        }
+
+        .info-card h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            padding: 6px 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .tag-topic {
+            background: linear-gradient(135deg, var(--accent), var(--secondary));
+        }
+
+        /* Claims Section */
+        .claims-section {
+            margin-bottom: 30px;
+        }
+
+        .claims-section h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .claim-card {
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        .claim-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .claim-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .claim-number {
             background: var(--gray-800);
             color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .claim-verdict {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .claim-speaker {
+            padding: 6px 12px;
+            background: var(--gray-100);
+            border-radius: 20px;
+            font-size: 13px;
+            color: var(--gray-700);
+        }
+
+        .claim-text {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+
+        .claim-explanation {
+            color: var(--gray-700);
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .claim-confidence {
+            font-size: 13px;
+            color: var(--gray-600);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Export Section */
+        .export-section {
+            background: var(--gray-50);
+            padding: 24px;
+            border-radius: 12px;
             text-align: center;
-            padding: 30px 20px;
-            margin-top: 60px;
         }
 
-        /* Error Messages */
-        .error-message {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--danger-color);
+        .export-section h3 {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .export-btn {
+            padding: 12px 24px;
+            background: white;
+            border: 2px solid var(--gray-200);
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .export-btn:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Footer */
+        .footer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
             color: white;
-            padding: 16px 24px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-            z-index: 10000;
-            animation: slideInRight 0.3s ease;
-            max-width: 400px;
-        }
-
-        @keyframes slideInRight {
-            from { transform: translateX(100%); }
-            to { transform: translateX(0); }
-        }
-
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
+            text-align: center;
+            padding: 20px;
+            margin-top: 40px;
+            border-radius: 12px;
         }
 
         /* Responsive */
         @media (max-width: 768px) {
             .hero-section h1 {
-                font-size: 36px;
-            }
-
-            .hero-section p {
-                font-size: 18px;
-            }
-
-            .info-dropdowns {
-                flex-direction: column;
-            }
-
-            .dropdown-container {
-                min-width: 100%;
+                font-size: 28px;
             }
 
             .input-tabs {
                 flex-direction: column;
             }
 
-            .tab-button {
-                justify-content: center;
-            }
-
             .transcription-controls {
                 flex-direction: column;
-                align-items: center;
             }
 
             .mic-button {
                 width: 100%;
-                justify-content: center;
+            }
+
+            .metadata-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -730,66 +839,25 @@ Changes:
 
     <!-- Main Content -->
     <div class="container">
-        <!-- Hero Section -->
+        <!-- Hero Section - Simplified -->
         <div class="hero-section">
-            <h1>AI-Powered Fact Verification</h1>
-            <p>Fact-check political speeches, interviews, and transcripts using advanced AI and trusted APIs.</p>
-        </div>
-
-        <!-- Info Dropdowns -->
-        <div class="info-dropdowns">
-            <div class="dropdown-container">
-                <div class="dropdown-button" onclick="toggleDropdown('how-it-works-dropdown')">
-                    <i class="fas fa-cog"></i>
-                    <span>How It Works</span>
-                    <i class="fas fa-chevron-down dropdown-arrow" id="how-it-works-arrow"></i>
-                </div>
-                <div class="dropdown-content" id="how-it-works-dropdown">
-                    <h4>Advanced AI Analysis Process</h4>
-                    <ul>
-                        <li><strong>Smart Claim Extraction:</strong> AI identifies factual statements worth verifying</li>
-                        <li><strong>Multi-Source Verification:</strong> Cross-references claims against trusted databases</li>
-                        <li><strong>Credibility Scoring:</strong> Provides overall credibility assessment</li>
-                        <li><strong>Microphone Transcription:</strong> Speak into your mic - we transcribe and analyze</li>
-                        <li><strong>Comprehensive Reports:</strong> Detailed analysis with sources and confidence levels</li>
-                    </ul>
-                    <p>Our system uses multiple AI models and fact-checking APIs to provide accurate verification.</p>
-                </div>
-            </div>
-
-            <div class="dropdown-container">
-                <div class="dropdown-button" onclick="toggleDropdown('data-sources-dropdown')">
-                    <i class="fas fa-database"></i>
-                    <span>Data Sources</span>
-                    <i class="fas fa-chevron-down dropdown-arrow" id="data-sources-arrow"></i>
-                </div>
-                <div class="dropdown-content" id="data-sources-dropdown">
-                    <h4>Trusted Verification Sources</h4>
-                    <ul>
-                        <li><strong>Google Fact Check API:</strong> Aggregated fact-checks from multiple organizations</li>
-                        <li><strong>Government APIs:</strong> FRED, Census, NOAA, CDC official data</li>
-                        <li><strong>News APIs:</strong> MediaStack, NewsAPI for recent events</li>
-                        <li><strong>AI Analysis:</strong> OpenAI GPT-4 for complex claim evaluation</li>
-                        <li><strong>Academic Sources:</strong> Research papers and scholarly publications</li>
-                    </ul>
-                    <p>We prioritize official government data, peer-reviewed research, and established fact-checking organizations.</p>
-                </div>
-            </div>
+            <h1>🎯 Fact-Check Transcripts</h1>
+            <p>Analyze speeches, interviews, and statements with AI-powered verification</p>
         </div>
 
         <!-- Input Section -->
         <div class="input-section" id="input-section">
-            <h2>Choose Input Method</h2>
+            <div class="section-title">Choose Input Method</div>
             
-            <!-- Input Tabs -->
+            <!-- Input Tabs - Colorful -->
             <div class="input-tabs">
                 <button class="tab-button active" onclick="switchTab('text')" id="text-tab" data-tab="text">
                     <i class="fas fa-edit"></i>
-                    <span>Text Input</span>
+                    <span>Text</span>
                 </button>
                 <button class="tab-button" onclick="switchTab('file')" id="file-tab" data-tab="file">
                     <i class="fas fa-file-upload"></i>
-                    <span>File Upload</span>
+                    <span>Upload</span>
                 </button>
                 <button class="tab-button" onclick="switchTab('live')" id="live-tab" data-tab="live">
                     <i class="fas fa-microphone"></i>
@@ -799,9 +867,9 @@ Changes:
 
             <!-- Text Input Panel -->
             <div class="input-panel active" id="text-panel">
-                <textarea class="text-input" id="text-input" placeholder="Paste your transcript here for fact-checking analysis..."></textarea>
+                <textarea class="text-input" id="text-input" placeholder="Paste your transcript here..."></textarea>
                 <div class="input-info">
-                    <span>Supports multiple formats including speech transcripts, interviews, and statements</span>
+                    <span>Transcripts, speeches, interviews</span>
                     <span id="char-count">0 / 50,000</span>
                 </div>
             </div>
@@ -810,24 +878,17 @@ Changes:
             <div class="input-panel" id="file-panel">
                 <div class="file-upload-area" id="file-drop-zone">
                     <i class="fas fa-cloud-upload-alt"></i>
-                    <div class="file-upload-text">Drop files here or click to browse</div>
-                    <div class="file-types">Supports TXT, SRT, VTT files (max 10MB)</div>
+                    <div class="file-upload-text">Drop file or click to browse</div>
+                    <div class="file-types">TXT, SRT, VTT files (max 10MB)</div>
                 </div>
                 <input type="file" id="file-input" style="display: none;" accept=".txt,.srt,.vtt" />
-                <div id="file-info" class="file-info" style="display: none;">
-                    <i class="fas fa-file-alt"></i>
-                    <span id="file-name"></span>
-                    <button onclick="removeFile()" style="margin-left: auto; background: none; border: none; color: var(--danger-color); cursor: pointer;">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
             </div>
 
-            <!-- Microphone Transcription Panel -->
+            <!-- Microphone Panel -->
             <div class="input-panel" id="live-panel">
                 <div class="transcription-status">
                     <div class="status-indicator" id="status-indicator"></div>
-                    <span id="status-text">Ready to transcribe from microphone</span>
+                    <span id="status-text">Ready to record</span>
                 </div>
                 
                 <div class="transcription-controls">
@@ -836,19 +897,17 @@ Changes:
                         <span>Start Recording</span>
                     </button>
                     <button class="stop-button" id="stop-recording" onclick="stopRecording()" style="display: none;">
-                        <i class="fas fa-stop"></i>
-                        <span>Stop</span>
+                        <i class="fas fa-stop"></i> Stop
                     </button>
                     <button class="clear-button" id="clear-transcript" onclick="clearTranscript()" style="display: none;">
-                        <i class="fas fa-trash"></i>
-                        <span>Clear</span>
+                        <i class="fas fa-trash"></i> Clear
                     </button>
                 </div>
 
                 <div class="transcription-display" id="live-transcript"></div>
                 
                 <div class="input-info">
-                    <span>Speak into your microphone - we'll transcribe your speech to text, then analyze it</span>
+                    <span>Speak and we'll transcribe</span>
                     <span id="live-char-count">0 / 50,000</span>
                 </div>
             </div>
@@ -860,7 +919,7 @@ Changes:
             </button>
         </div>
 
-        <!-- Progress Section -->
+        <!-- Progress Section - HIGHER UP -->
         <div class="progress-section" id="progress-section">
             <div class="spinner"></div>
             <h3>Analyzing Transcript</h3>
@@ -874,91 +933,36 @@ Changes:
 
         <!-- Results Section -->
         <div class="results-section" id="results-section">
-            <!-- Results content will be populated by JavaScript -->
+            <!-- Results populated by JavaScript -->
         </div>
     </div>
 
     <!-- Footer -->
     <footer class="footer">
-        <p>&copy; 2024 Transcript Fact Checker. Powered by AI and trusted fact-checking APIs.</p>
+        <p>© 2024 Transcript Fact Checker • Powered by AI</p>
     </footer>
 
     <!-- JavaScript -->
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/transcript_app.js"></script>
     <script>
-        // Toggle dropdown function
-        function toggleDropdown(dropdownId) {
-            const dropdown = document.getElementById(dropdownId);
-            const arrow = document.getElementById(dropdownId.replace('-dropdown', '-arrow'));
-            const isOpen = dropdown.classList.contains('show');
-            
-            // Close all dropdowns first
-            document.querySelectorAll('.dropdown-content').forEach(d => {
-                d.classList.remove('show');
-            });
-            document.querySelectorAll('.dropdown-arrow').forEach(a => {
-                a.classList.remove('open');
-            });
-            
-            // If this dropdown wasn't open, open it
-            if (!isOpen) {
-                dropdown.classList.add('show');
-                arrow.classList.add('open');
-                
-                // Auto-close after 10 seconds
-                setTimeout(() => {
-                    if (dropdown.classList.contains('show')) {
-                        dropdown.classList.remove('show');
-                        arrow.classList.remove('open');
-                    }
-                }, 10000);
-            }
-        }
-
         // Switch main input tabs
         function switchTab(tabName) {
-            // Update tabs
             document.querySelectorAll('.tab-button').forEach(tab => {
                 tab.classList.remove('active');
             });
             document.getElementById(`${tabName}-tab`).classList.add('active');
             
-            // Update panels
             document.querySelectorAll('.input-panel').forEach(panel => {
                 panel.classList.remove('active');
             });
             document.getElementById(`${tabName}-panel`).classList.add('active');
         }
 
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(event) {
-            if (!event.target.closest('.dropdown-container')) {
-                document.querySelectorAll('.dropdown-content').forEach(d => {
-                    d.classList.remove('show');
-                });
-                document.querySelectorAll('.dropdown-arrow').forEach(a => {
-                    a.classList.remove('open');
-                });
-            }
-        });
-
-        // Initialize on page load
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            // Check if browser supports Web Speech API
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
                 const liveTab = document.getElementById('live-tab');
-                if (liveTab) {
-                    liveTab.style.display = 'none';
-                }
-                console.log('Web Speech API not supported in this browser');
-            }
-            
-            // Initialize the app
-            if (typeof initializeApp === 'function') {
-                initializeApp();
-            }
-            if (typeof initializeLiveTranscription === 'function') {
-                initializeLiveTranscription();
+                if (liveTab) liveTab.style.display = 'none';
             }
         });
     </script>
