@@ -543,8 +543,24 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     
     yPos += 5;
     
-    // Analysis details
-    if (data.analysis || data.details || data.explanation) {
+    // Analysis details - FIXED to handle objects properly
+    let analysisText = '';
+    
+    // Try different fields for analysis text
+    if (data.what_it_means && typeof data.what_it_means === 'string') {
+        analysisText = data.what_it_means;
+    } else if (data.explanation && typeof data.explanation === 'string') {
+        analysisText = data.explanation;
+    } else if (data.analysis && typeof data.analysis === 'string') {
+        analysisText = data.analysis;
+    } else if (data.details && typeof data.details === 'string') {
+        analysisText = data.details;
+    } else if (data.summary && typeof data.summary === 'string') {
+        analysisText = data.summary;
+    }
+    
+    // Only display if we have valid text
+    if (analysisText && analysisText.length > 10) {
         if (yPos > 250) {
             doc.addPage();
             yPos = 25;
@@ -557,8 +573,7 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
         
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
-        const analysisText = data.analysis || data.details || data.explanation;
-        const analysisLines = doc.splitTextToSize(String(analysisText), 170);
+        const analysisLines = doc.splitTextToSize(analysisText, 170);
         doc.text(analysisLines, 20, yPos);
         yPos += analysisLines.length * 4;
     }
