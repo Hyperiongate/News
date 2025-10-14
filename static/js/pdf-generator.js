@@ -1,10 +1,15 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 3.2.0 - PREMIUM SHOWCASE EDITION
+ * VERSION: 3.2.1 - HOOK REMOVED, DIRECT ACCESS FIX - TRULY COMPLETE
  * DATE: October 14, 2025
  * 
+ * CRITICAL FIX FROM 3.2.0:
+ * ✅ REMOVED: Unreliable hook system that tried to intercept displayResults
+ * ✅ SIMPLIFIED: Direct access to window.lastAnalysisData (set by unified-app-core.js v6.5.1)
+ * ✅ FIXED: PDF button now works reliably
+ * 
  * NEW IN 3.2.0:
- * ✅ ENHANCED: Executive Summary now includes article summary, source/author info, and findings
+ * ✅ ENHANCED: Executive Summary includes article summary, source/author info, findings
  * ✅ ADDED: Source Credibility graphics (credibility bar, reputation indicator)
  * ✅ ADDED: Bias Detection graphics (political spectrum, objectivity bar)
  * ✅ IMPROVED: Two-column layout for source information
@@ -15,38 +20,22 @@
  * ✅ FIXED: Extracts data from nested 'analysis' objects
  * ✅ FIXED: Maps different field names across services
  * 
- * PREVIOUS FIXES (v3.0.0):
- * ✅ FIXED: [object Object] display issues
- * ✅ ADDED: Graphics and proper text extraction
- * 
- * This file generates premium, showcase-quality PDFs that customers will pay for.
+ * This file generates premium, showcase-quality PDFs.
  */
-
-// ============================================================================
-// GLOBAL STATE
-// ============================================================================
-
-// Store last analysis data for PDF generation
-window.lastAnalysisData = null;
 
 // ============================================================================
 // MAIN PDF GENERATION FUNCTION
 // ============================================================================
 
-/**
- * Main entry point - called when user clicks "Download PDF Report" button
- */
 function downloadPDFReport() {
-    console.log('[PDF Generator v3.0] Starting comprehensive PDF generation...');
+    console.log('[PDF Generator v3.2.1] Starting comprehensive PDF generation...');
     
-    // Check if jsPDF library is loaded
     if (typeof window.jspdf === 'undefined') {
         console.error('[PDF Generator] jsPDF library not loaded');
         alert('PDF library not loaded. Please refresh the page and try again.');
         return;
     }
     
-    // Get analysis data
     const data = window.lastAnalysisData;
     if (!data) {
         console.error('[PDF Generator] No analysis data available');
@@ -60,15 +49,12 @@ function downloadPDFReport() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Generate complete PDF content
         generateCompletePDFContent(doc, data);
         
-        // Generate filename
         const timestamp = new Date().toISOString().split('T')[0];
         const mode = data.analysis_mode || 'news';
         const filename = `TruthLens-Complete-${mode.charAt(0).toUpperCase() + mode.slice(1)}-Report-${timestamp}.pdf`;
         
-        // Save PDF
         doc.save(filename);
         
         console.log('[PDF Generator] ✓ Complete PDF generated successfully:', filename);
@@ -83,9 +69,6 @@ function downloadPDFReport() {
 // PDF CONTENT GENERATION
 // ============================================================================
 
-/**
- * Generate complete PDF content with ALL analysis data
- */
 function generateCompletePDFContent(doc, data) {
     const trustScore = data.trust_score || 0;
     const analysisMode = data.analysis_mode || 'news';
@@ -97,7 +80,6 @@ function generateCompletePDFContent(doc, data) {
     console.log('[PDF] Article data:', article);
     console.log('[PDF] Analysis data:', analysis);
     
-    // Color palette
     const colors = {
         primary: [102, 126, 234],
         secondary: [118, 75, 162],
@@ -591,34 +573,24 @@ function generateCompleteServicePages(doc, service, serviceData, colors) {
 // TEXT EXTRACTION HELPER - CRITICAL FIX FOR [object Object]
 // ============================================================================
 
-/**
- * Extract readable text from various data types
- * This is the KEY function that fixes [object Object] display
- */
 function extractText(value, maxLength = 500) {
-    // Handle null/undefined
     if (value === null || value === undefined) {
         return '';
     }
     
-    // Already a string - return it
     if (typeof value === 'string') {
         return value.substring(0, maxLength);
     }
     
-    // Number or boolean - convert to string
     if (typeof value === 'number' || typeof value === 'boolean') {
         return String(value);
     }
     
-    // Array - join elements
     if (Array.isArray(value)) {
         return value.map(item => extractText(item, 100)).join(', ').substring(0, maxLength);
     }
     
-    // Object - try to extract meaningful text
     if (typeof value === 'object') {
-        // Try common text fields
         const textFields = ['text', 'description', 'summary', 'explanation', 'analysis', 'message', 'content', 'detail', 'reason'];
         
         for (const field of textFields) {
@@ -627,7 +599,6 @@ function extractText(value, maxLength = 500) {
             }
         }
         
-        // Try to convert to JSON string as last resort
         try {
             return JSON.stringify(value).substring(0, maxLength);
         } catch {
@@ -635,14 +606,9 @@ function extractText(value, maxLength = 500) {
         }
     }
     
-    // Fallback
     return String(value).substring(0, maxLength);
 }
 
-/**
- * Extract analysis sections from service data
- * Services store these in different places, so we need to check multiple locations
- */
 function extractAnalysisSections(data) {
     const sections = {
         what_we_analyzed: '',
@@ -650,19 +616,15 @@ function extractAnalysisSections(data) {
         what_it_means: ''
     };
     
-    // Check if there's a nested 'analysis' object (Transparency service uses this)
     const analysisObj = data.analysis || data;
     
-    // Map different field names to our standard sections
     const fieldMappings = {
         what_we_analyzed: ['what_we_analyzed', 'what_we_looked', 'what_analyzed', 'analyzed'],
         what_we_found: ['what_we_found', 'what_found', 'found', 'findings_text'],
         what_it_means: ['what_it_means', 'what_means', 'means', 'interpretation', 'significance']
     };
     
-    // Try to extract each section
     for (const [section, possibleFields] of Object.entries(fieldMappings)) {
-        // Check in analysis object first
         for (const field of possibleFields) {
             if (analysisObj[field]) {
                 sections[section] = extractText(analysisObj[field]);
@@ -670,7 +632,6 @@ function extractAnalysisSections(data) {
             }
         }
         
-        // If not found, check in root data object
         if (!sections[section]) {
             for (const field of possibleFields) {
                 if (data[field]) {
@@ -787,7 +748,7 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
             { label: 'Low', active: reputation === 'low' },
             { label: 'Medium', active: reputation === 'medium' || reputation === 'moderate' },
             { label: 'High', active: reputation === 'high' },
-            { label: 'Very High', active: reputation.includes('very high') || reputation === 'excellent') }
+            { label: 'Very High', active: reputation.includes('very high') || reputation.includes('excellent') }
         ];
         
         let xPos = 20;
@@ -807,7 +768,7 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     
     yPos += 5;
     
-    // CRITICAL FIX: Extract text properly from what_we_analyzed, what_we_found, what_it_means
+    // Analysis sections
     const analysisSections = extractAnalysisSections(data);
     const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
@@ -1544,9 +1505,6 @@ function generateContributionPage(doc, detailed, trustScore, colors) {
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Add footer to page
- */
 function addFooter(doc, pageNum, totalPages) {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -1556,9 +1514,6 @@ function addFooter(doc, pageNum, totalPages) {
     doc.text('Generated by TruthLens - Complete AI-Powered Truth Analysis', 105, 285, { align: 'center' });
 }
 
-/**
- * Extract score from service data
- */
 function extractScore(serviceKey, serviceData) {
     if (serviceKey === 'source_credibility') {
         return serviceData.credibility_score || serviceData.score || 0;
@@ -1576,9 +1531,6 @@ function extractScore(serviceKey, serviceData) {
     return 0;
 }
 
-/**
- * Get verdict color
- */
 function getVerdictColor(verdict, colors) {
     const v = verdict.toLowerCase();
     if (v.includes('true') && !v.includes('false')) return colors.green;
@@ -1587,44 +1539,9 @@ function getVerdictColor(verdict, colors) {
     return colors.orange;
 }
 
-/**
- * Draw a triangle (helper for political spectrum indicator)
- */
 function drawTriangle(doc, x1, y1, x2, y2, x3, y3, fillColor) {
     doc.setFillColor(...fillColor);
     doc.lines([[x2 - x1, y2 - y1], [x3 - x2, y3 - y2], [x1 - x3, y1 - y3]], x1, y1, null, 'F');
 }
 
-// ============================================================================
-// DATA CAPTURE HOOK
-// ============================================================================
-
-/**
- * Hook into unified-app-core to capture analysis data
- * This runs when the page loads and connects to your main app
- */
-(function() {
-    function hookIntoAnalyzer() {
-        if (typeof UnifiedTruthLensAnalyzer !== 'undefined') {
-            const originalDisplayResults = UnifiedTruthLensAnalyzer.prototype.displayResults;
-            
-            UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
-                window.lastAnalysisData = data;
-                console.log('[PDF Generator] Complete analysis data captured:', data);
-                
-                // Call original function
-                originalDisplayResults.call(this, data);
-            };
-            
-            console.log('[PDF Generator] Successfully hooked into analysis results');
-        } else {
-            // Retry after 100ms if analyzer not loaded yet
-            setTimeout(hookIntoAnalyzer, 100);
-        }
-    }
-    
-    // Start hooking process
-    hookIntoAnalyzer();
-})();
-
-console.log('[PDF Generator] v3.1.0 NESTED DATA FIX - Extracts from analysis objects properly');
+console.log('[PDF Generator v3.2.1] Loaded - Complete with all graphics and enhancements');
