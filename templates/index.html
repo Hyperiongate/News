@@ -3,18 +3,17 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.3.0 - UI REDESIGN
+    Version: 4.4.0 - TRANSCRIPT HELP DROPDOWNS ADDED
     Date: October 14, 2025
     
-    CHANGES FROM 4.2.0:
-    - REMOVED: "What We Analyze" 6 big cards section (too cluttered)
-    - REMOVED: YouTube functionality from Transcript tab
-    - ADDED: More vibrant colors and gradients throughout
-    - IMPROVED: More subtle, cleaner hero section
-    - IMPROVED: Colorful tab buttons with gradients
-    - All other functionality preserved (DO NO HARM ✓)
+    CHANGES FROM 4.3.0:
+    - ADDED: "How to Use This App" dropdown in Transcript tab
+    - ADDED: "Sources of Transcripts" dropdown in Transcript tab with helpful links
+    - Dropdowns styled with vibrant gradients to match v4.3.0 design
+    - All existing functionality preserved (DO NO HARM ✓)
     
     Previous versions:
+    - 4.3.0 - UI redesign with vibrant colors, removed clutter
     - 4.2.0 - Manipulation check removed
     - 4.1.0 - Charts system removed
     -->
@@ -40,7 +39,7 @@
     <!-- External Styles -->
     <link rel="stylesheet" href="/static/css/main.css">
     
-    <!-- v4.3.0 Enhanced Styles -->
+    <!-- v4.3.0 Enhanced Styles + v4.4.0 Help Dropdowns -->
     <style>
         /* v4.3.0 Color Enhancements */
         :root {
@@ -178,8 +177,194 @@
             color: #8b5cf6;
         }
 
-        /* REMOVED: What We Analyze Section */
-        /* All .what-we-analyze, .analyze-grid, .analyze-card styles removed */
+        /* v4.4.0 NEW: Help Dropdowns for Transcript Tab */
+        .help-dropdowns-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .help-dropdown {
+            background: white;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .help-dropdown:hover {
+            border-color: #8b5cf6;
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
+        }
+
+        .help-dropdown-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            transition: all 0.3s ease;
+        }
+
+        .help-dropdown:hover .help-dropdown-header {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+        }
+
+        .help-dropdown.open .help-dropdown-header {
+            background: var(--gradient-purple);
+            color: white;
+        }
+
+        .help-dropdown-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .help-dropdown.open .help-dropdown-title {
+            color: white;
+        }
+
+        .help-dropdown-title i {
+            font-size: 16px;
+            color: #8b5cf6;
+        }
+
+        .help-dropdown.open .help-dropdown-title i {
+            color: white;
+        }
+
+        .help-dropdown-icon {
+            font-size: 14px;
+            color: #6b7280;
+            transition: transform 0.3s ease;
+        }
+
+        .help-dropdown.open .help-dropdown-icon {
+            transform: rotate(180deg);
+            color: white;
+        }
+
+        .help-dropdown-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .help-dropdown.open .help-dropdown-content {
+            max-height: 1000px;
+        }
+
+        .help-dropdown-body {
+            padding: 18px;
+            background: white;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #374151;
+        }
+
+        .help-dropdown-body h4 {
+            font-size: 13px;
+            font-weight: 700;
+            color: #8b5cf6;
+            margin: 0 0 10px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .help-dropdown-body ol,
+        .help-dropdown-body ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .help-dropdown-body li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+
+        .help-dropdown-body strong {
+            color: #6b5cf6;
+            font-weight: 600;
+        }
+
+        .help-section {
+            margin-bottom: 16px;
+        }
+
+        .help-section:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Source Links Styling */
+        .source-links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .source-link-card {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .source-link-card:hover {
+            border-color: #8b5cf6;
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+        }
+
+        .source-link-icon {
+            font-size: 20px;
+            color: #8b5cf6;
+            flex-shrink: 0;
+        }
+
+        .source-link-content {
+            flex: 1;
+        }
+
+        .source-link-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+
+        .source-link-card:hover .source-link-title {
+            color: #6b5cf6;
+        }
+
+        .source-link-desc {
+            font-size: 12px;
+            color: #6b7280;
+            line-height: 1.4;
+        }
+
+        .source-link-arrow {
+            font-size: 14px;
+            color: #9ca3af;
+            flex-shrink: 0;
+        }
+
+        .source-link-card:hover .source-link-arrow {
+            color: #8b5cf6;
+            transform: translateX(2px);
+        }
 
         /* Analyze Button - Gradient */
         .analyze-button {
@@ -261,6 +446,10 @@
             
             .capabilities-showcase {
                 justify-content: center;
+            }
+
+            .source-links-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -414,9 +603,151 @@
                     </p>
                 </div>
 
+                <!-- v4.4.0 NEW: Help Dropdowns -->
+                <div class="help-dropdowns-container">
+                    <!-- How to Use This App Dropdown -->
+                    <div class="help-dropdown" id="howToUseDropdown">
+                        <div class="help-dropdown-header" onclick="toggleHelpDropdown('howToUseDropdown')">
+                            <div class="help-dropdown-title">
+                                <i class="fas fa-question-circle"></i>
+                                <span>How to Use This App</span>
+                            </div>
+                            <i class="fas fa-chevron-down help-dropdown-icon"></i>
+                        </div>
+                        <div class="help-dropdown-content">
+                            <div class="help-dropdown-body">
+                                <div class="help-section">
+                                    <h4>Step-by-Step Instructions</h4>
+                                    <ol>
+                                        <li><strong>Find a transcript</strong> from a speech, interview, podcast, or video (see sources below)</li>
+                                        <li><strong>Copy the transcript text</strong> to your clipboard</li>
+                                        <li><strong>Paste the text</strong> into the text area below</li>
+                                        <li><strong>Click "Analyze Transcript"</strong> to start the AI analysis</li>
+                                        <li><strong>Review the results</strong> - you'll get credibility scores, bias detection, fact-checking, and more</li>
+                                    </ol>
+                                </div>
+
+                                <div class="help-section">
+                                    <h4>What Gets Analyzed</h4>
+                                    <ul>
+                                        <li><strong>Factual Claims:</strong> AI extracts and verifies specific claims made in the transcript</li>
+                                        <li><strong>Content Credibility:</strong> Evaluates the overall trustworthiness of statements</li>
+                                        <li><strong>Bias Detection:</strong> Identifies potential bias in language and framing</li>
+                                        <li><strong>Transparency:</strong> Assesses clarity and honesty of communication</li>
+                                    </ul>
+                                </div>
+
+                                <div class="help-section">
+                                    <h4>Tips for Best Results</h4>
+                                    <ul>
+                                        <li>Use complete transcripts (not partial snippets)</li>
+                                        <li>Include speaker names/timestamps if available</li>
+                                        <li>Longer transcripts (500+ words) provide more comprehensive analysis</li>
+                                        <li>Clean text works best - remove excessive formatting</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sources of Transcripts Dropdown -->
+                    <div class="help-dropdown" id="sourcesDropdown">
+                        <div class="help-dropdown-header" onclick="toggleHelpDropdown('sourcesDropdown')">
+                            <div class="help-dropdown-title">
+                                <i class="fas fa-link"></i>
+                                <span>Sources of Transcripts</span>
+                            </div>
+                            <i class="fas fa-chevron-down help-dropdown-icon"></i>
+                        </div>
+                        <div class="help-dropdown-content">
+                            <div class="help-dropdown-body">
+                                <div class="help-section">
+                                    <h4>Government & Official Sources</h4>
+                                    <div class="source-links-grid">
+                                        <a href="https://www.whitehouse.gov/briefing-room/speeches-remarks/" target="_blank" class="source-link-card">
+                                            <i class="fas fa-landmark source-link-icon"></i>
+                                            <div class="source-link-content">
+                                                <div class="source-link-title">White House</div>
+                                                <div class="source-link-desc">Presidential speeches & remarks</div>
+                                            </div>
+                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
+                                        </a>
+                                        <a href="https://www.c-span.org/" target="_blank" class="source-link-card">
+                                            <i class="fas fa-tv source-link-icon"></i>
+                                            <div class="source-link-content">
+                                                <div class="source-link-title">C-SPAN</div>
+                                                <div class="source-link-desc">Congress & political speeches</div>
+                                            </div>
+                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
+                                        </a>
+                                        <a href="https://www.congress.gov/" target="_blank" class="source-link-card">
+                                            <i class="fas fa-balance-scale source-link-icon"></i>
+                                            <div class="source-link-content">
+                                                <div class="source-link-title">Congress.gov</div>
+                                                <div class="source-link-desc">Congressional hearings</div>
+                                            </div>
+                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
+                                        </a>
+                                        <a href="https://www.supremecourt.gov/oral_arguments/" target="_blank" class="source-link-card">
+                                            <i class="fas fa-gavel source-link-icon"></i>
+                                            <div class="source-link-content">
+                                                <div class="source-link-title">Supreme Court</div>
+                                                <div class="source-link-desc">Oral arguments transcripts</div>
+                                            </div>
+                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="help-section">
+                                    <h4>News & Media Transcripts</h4>
+                                    <div class="source-links-grid">
+                                        <a href="https://www.rev.com/blog/transcripts" target="_blank" class="source-link-card">
+                                            <i class="fas fa-file-alt source-link-icon"></i>
+                                            <div class="source-link-content">
+                                                <div class="source-link-title">Rev Transcripts</div>
+                                                <div class="source-link-desc">Public speeches & debates</div>
+                                            </div>
+                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
+                                        </a>
+                                        <a href="http://transcripts.cnn.com/" target="_blank" class="source-link-card">
+                                            <i class="fas fa-broadcast-tower source-link-icon"></i>
+                                            <div class="source-link-content">
+                                                <div class="source-link-title">CNN Transcripts</div>
+                                                <div class="source-link-desc">TV news show transcripts</div>
+                                            </div>
+                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
+                                        </a>
+                                        <a href="https://www.npr.org/" target="_blank" class="source-link-card">
+                                            <i class="fas fa-microphone-alt source-link-icon"></i>
+                                            <div class="source-link-content">
+                                                <div class="source-link-title">NPR</div>
+                                                <div class="source-link-desc">Radio stories with transcripts</div>
+                                            </div>
+                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="help-section">
+                                    <h4>How to Get YouTube Transcripts</h4>
+                                    <ol>
+                                        <li>Open any <strong>YouTube video</strong> in your browser</li>
+                                        <li>Click the <strong>"..." (more)</strong> button below the video</li>
+                                        <li>Select <strong>"Show transcript"</strong> from the menu</li>
+                                        <li><strong>Copy all the text</strong> from the transcript panel</li>
+                                        <li><strong>Paste it</strong> into the text area above</li>
+                                    </ol>
+                                    <p style="margin-top: 10px; font-style: italic; color: #6b7280;">
+                                        <i class="fas fa-info-circle"></i> Not all videos have transcripts. If you don't see the option, the creator hasn't enabled it.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <form class="input-form" id="transcriptForm">
-                    <!-- REMOVED: YouTube URL input completely -->
-                    
                     <div class="input-group">
                         <label class="input-label" for="transcriptTextInput">
                             <i class="fas fa-microphone"></i> Paste Transcript Text
@@ -488,8 +819,6 @@
                 </div>
             </div>
 
-            <!-- REMOVED: "What We Analyze" Section with 6 cards -->
-
             <!-- Results Section -->
             <div class="results-section" id="resultsSection">
                 <div class="results-header">
@@ -550,6 +879,14 @@
     <script>
         // Global state for current mode
         let currentAnalysisMode = 'news';
+
+        // v4.4.0 NEW: Toggle Help Dropdown Function
+        function toggleHelpDropdown(dropdownId) {
+            const dropdown = document.getElementById(dropdownId);
+            if (dropdown) {
+                dropdown.classList.toggle('open');
+            }
+        }
 
         // Functions to handle extraction blocking
         function showBlockedMessage(mode, message) {
@@ -651,7 +988,7 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.3.0 - UI Redesign Complete');
+            console.log('TruthLens v4.4.0 - Transcript Help Dropdowns Added');
             
             const inputs = ['newsUrlInput', 'newsTextInput', 'transcriptTextInput'];
             inputs.forEach(id => {
