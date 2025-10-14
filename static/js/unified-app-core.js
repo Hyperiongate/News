@@ -1,7 +1,11 @@
 /**
  * TruthLens Unified App Core
- * Version: 6.5.0 - CHARTS SYSTEM REMOVED
- * Date: October 12, 2025
+ * Version: 6.5.1 - PDF DATA CAPTURE FIX
+ * Date: October 14, 2025
+ * 
+ * CRITICAL FIX FROM 6.5.0:
+ * ✅ ADDED: window.lastAnalysisData = data in displayResults()
+ * ✅ FIXED: PDF generator now has access to analysis data
  * 
  * CHANGES FROM 6.4.0:
  * - REMOVED: Top-level chart rendering (trust_gauge, service_breakdown, etc.)
@@ -14,7 +18,7 @@
  */
 
 function UnifiedTruthLensAnalyzer() {
-    console.log('[UnifiedTruthLens] Initializing v6.5.0...');
+    console.log('[UnifiedTruthLens] Initializing v6.5.1...');
     
     // Core properties
     this.currentMode = 'news';
@@ -421,6 +425,12 @@ UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
     console.log('[UnifiedTruthLens] Source:', data.source);
     console.log('[UnifiedTruthLens] Author:', data.author);
     
+    // ============================================================================
+    // CRITICAL FIX v6.5.1: Store data for PDF generator
+    // ============================================================================
+    window.lastAnalysisData = data;
+    console.log('[UnifiedTruthLens v6.5.1] ✓ Stored analysis data for PDF generator');
+    
     var resultsSection = document.getElementById('resultsSection');
     if (!resultsSection) {
         console.error('[UnifiedTruthLens] Results section not found');
@@ -466,6 +476,9 @@ UnifiedTruthLensAnalyzer.prototype.clearResults = function() {
         resultsSection.style.display = 'none';
     }
     
+    // Clear stored data
+    window.lastAnalysisData = null;
+    
     // Destroy existing charts
     if (window.ChartRenderer && window.ChartRenderer.destroyAllCharts) {
         window.ChartRenderer.destroyAllCharts();
@@ -508,7 +521,7 @@ UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
 };
 
 // Initialize application
-console.log('[UnifiedTruthLens] Loading v6.5.0...');
+console.log('[UnifiedTruthLens] Loading v6.5.1 - PDF FIX...');
 var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 // Export for compatibility
