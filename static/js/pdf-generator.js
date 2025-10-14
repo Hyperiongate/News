@@ -1,23 +1,19 @@
 /**
- * TruthLens PDF Generator
- * Version: 1.0.0
+ * TruthLens PDF Generator - COMPLETE EDITION
+ * Version: 2.0.0
  * Date: October 14, 2025
  * 
- * PURPOSE:
- * Generates professional PDF reports from TruthLens analysis results
+ * CHANGES FROM 1.0.0:
+ * - NOW INCLUDES: ALL detailed analysis data from each service
+ * - EXPANDED: Fact-checking details with all claims and verdicts
+ * - ADDED: Complete bias analysis with loaded language examples
+ * - ENHANCED: Full transparency analysis with all sources and citations
+ * - IMPROVED: Author analysis with complete credentials and experience
+ * - DETAILED: Content quality metrics and readability scores
+ * - COMPREHENSIVE: Source credibility with full domain analysis
+ * - MULTI-PAGE: Services expanded to multiple pages when needed
  * 
- * FEATURES:
- * - Cover page with TruthLens branding
- * - Trust score prominently displayed
- * - All 6 service analyses with scores and findings
- * - Contribution breakdown visualization
- * - Professional formatting and layout
- * 
- * DEPENDENCIES:
- * - jsPDF library (loaded from CDN in index.html)
- * - window.lastAnalysisData (set by unified-app-core.js)
- * 
- * Save as: static/js/pdf-generator.js
+ * Save as: static/js/pdf-generator.js (REPLACE existing file)
  */
 
 // Global variable to store the last analysis data
@@ -25,19 +21,16 @@ window.lastAnalysisData = null;
 
 /**
  * Main function to download PDF report
- * Called when user clicks "Download PDF Report" button
  */
 function downloadPDFReport() {
-    console.log('[PDF Generator] Starting PDF generation...');
+    console.log('[PDF Generator] Starting comprehensive PDF generation...');
     
-    // Check if jsPDF is loaded
     if (typeof window.jspdf === 'undefined') {
         console.error('[PDF Generator] jsPDF library not loaded');
         alert('PDF library not loaded. Please refresh the page and try again.');
         return;
     }
     
-    // Get the last analysis data
     const data = window.lastAnalysisData;
     if (!data) {
         console.error('[PDF Generator] No analysis data available');
@@ -45,25 +38,21 @@ function downloadPDFReport() {
         return;
     }
     
-    console.log('[PDF Generator] Generating PDF with data:', data);
+    console.log('[PDF Generator] Full data structure:', data);
     
     try {
-        // Initialize jsPDF
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Generate the PDF
-        generatePDFContent(doc, data);
+        generateCompletePDFContent(doc, data);
         
-        // Create filename with date
         const timestamp = new Date().toISOString().split('T')[0];
         const mode = data.analysis_mode || 'news';
-        const filename = `TruthLens-${mode.charAt(0).toUpperCase() + mode.slice(1)}-Report-${timestamp}.pdf`;
+        const filename = `TruthLens-Complete-${mode.charAt(0).toUpperCase() + mode.slice(1)}-Report-${timestamp}.pdf`;
         
-        // Save the PDF
         doc.save(filename);
         
-        console.log('[PDF Generator] ✓ PDF generated successfully:', filename);
+        console.log('[PDF Generator] ✓ Complete PDF generated successfully:', filename);
     } catch (error) {
         console.error('[PDF Generator] Error generating PDF:', error);
         alert('Error generating PDF: ' + error.message);
@@ -71,14 +60,19 @@ function downloadPDFReport() {
 }
 
 /**
- * Generate PDF content
+ * Generate complete PDF content with ALL analysis data
  */
-function generatePDFContent(doc, data) {
+function generateCompletePDFContent(doc, data) {
     const trustScore = data.trust_score || 0;
     const analysisMode = data.analysis_mode || 'news';
     const detailed = data.detailed_analysis || {};
+    const analysis = data.analysis || {};
+    const article = data.article || {};
     
-    // Colors (RGB)
+    console.log('[PDF] Detailed analysis:', detailed);
+    console.log('[PDF] Article data:', article);
+    console.log('[PDF] Analysis data:', analysis);
+    
     const colors = {
         primary: [102, 126, 234],
         secondary: [118, 75, 162],
@@ -90,30 +84,36 @@ function generatePDFContent(doc, data) {
         red: [239, 68, 68],
         purple: [139, 92, 246],
         cyan: [6, 182, 212],
-        pink: [236, 72, 153]
+        pink: [236, 72, 153],
+        amber: [217, 119, 6]
     };
     
     // Page 1: Cover Page
-    generateCoverPage(doc, data, trustScore, analysisMode, colors);
+    generateCoverPage(doc, data, article, trustScore, analysisMode, colors);
     
     // Page 2: Executive Summary
     doc.addPage();
-    generateExecutiveSummary(doc, data, trustScore, analysisMode, colors);
+    generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode, colors);
     
-    // Page 3+: Service Analyses
+    // Page 3+: Article Overview (if available)
+    if (article && (article.excerpt || article.word_count)) {
+        doc.addPage();
+        generateArticleOverview(doc, article, colors);
+    }
+    
+    // Service Pages - COMPREHENSIVE with all details
     const services = [
-        { key: 'source_credibility', title: 'Source Credibility', color: colors.blue },
-        { key: 'bias_detector', title: 'Bias Detection', color: colors.orange },
-        { key: 'fact_checker', title: 'Fact Checking', color: colors.blue },
+        { key: 'source_credibility', title: 'Source Credibility Analysis', color: colors.blue },
+        { key: 'bias_detector', title: 'Bias Detection Analysis', color: colors.orange },
+        { key: 'fact_checker', title: 'Fact Checking Analysis', color: colors.blue },
         { key: 'author_analyzer', title: 'Author Analysis', color: colors.cyan },
-        { key: 'transparency_analyzer', title: 'Transparency Guide', color: colors.purple },
-        { key: 'content_analyzer', title: 'Content Quality', color: colors.pink }
+        { key: 'transparency_analyzer', title: 'Transparency Analysis', color: colors.purple },
+        { key: 'content_analyzer', title: 'Content Quality Analysis', color: colors.pink }
     ];
     
-    services.forEach((service, index) => {
+    services.forEach(service => {
         if (detailed[service.key]) {
-            doc.addPage();
-            generateServicePage(doc, service, detailed[service.key], colors);
+            generateCompleteServicePages(doc, service, detailed[service.key], colors);
         }
     });
     
@@ -132,8 +132,8 @@ function generatePDFContent(doc, data) {
 /**
  * Generate cover page
  */
-function generateCoverPage(doc, data, trustScore, analysisMode, colors) {
-    // Purple gradient background (simulated with rectangles)
+function generateCoverPage(doc, data, article, trustScore, analysisMode, colors) {
+    // Purple gradient background
     doc.setFillColor(...colors.primary);
     doc.rect(0, 0, 210, 100, 'F');
     doc.setFillColor(...colors.secondary);
@@ -148,9 +148,9 @@ function generateCoverPage(doc, data, trustScore, analysisMode, colors) {
     // Subtitle
     doc.setFontSize(16);
     doc.setFont('helvetica', 'normal');
-    doc.text('AI-Powered Truth Analysis Report', 105, 55, { align: 'center' });
+    doc.text('Complete AI-Powered Truth Analysis Report', 105, 55, { align: 'center' });
     
-    // Analysis Type Badge
+    // Analysis Type
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     const modeText = analysisMode === 'news' ? 'NEWS ANALYSIS' : 'TRANSCRIPT ANALYSIS';
@@ -165,7 +165,6 @@ function generateCoverPage(doc, data, trustScore, analysisMode, colors) {
     const centerY = 150;
     const radius = 30;
     
-    // Determine score color
     let scoreColor = colors.orange;
     let scoreLabel = 'MODERATE';
     if (trustScore >= 80) {
@@ -179,61 +178,72 @@ function generateCoverPage(doc, data, trustScore, analysisMode, colors) {
         scoreLabel = 'UNRELIABLE';
     }
     
-    // Score circle background
     doc.setFillColor(245, 245, 245);
     doc.circle(centerX, centerY, radius, 'F');
-    
-    // Score circle border
     doc.setDrawColor(...scoreColor);
     doc.setLineWidth(3);
     doc.circle(centerX, centerY, radius, 'S');
     
-    // Trust score number
     doc.setFontSize(32);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...scoreColor);
     doc.text(Math.round(trustScore).toString(), centerX, centerY - 5, { align: 'center' });
     
-    // "/100" text
     doc.setFontSize(14);
     doc.setTextColor(...colors.textLight);
     doc.text('/100', centerX, centerY + 8, { align: 'center' });
     
-    // Score label
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...scoreColor);
     doc.text(scoreLabel, centerX, centerY + 45, { align: 'center' });
     
-    // Article/Content Info
+    // Article Info
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
     doc.text('Analysis Details', 105, 210, { align: 'center' });
     
-    // Source
+    let yPos = 225;
+    
+    // Source/Domain
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.textLight);
-    doc.text('Source:', 30, 225);
+    doc.text('Source:', 30, yPos);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
-    const source = data.source || 'Unknown';
-    doc.text(source, 55, 225);
+    const source = article.domain || data.source || 'Unknown';
+    doc.text(source.substring(0, 50), 55, yPos);
+    yPos += 10;
     
     // Author
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.textLight);
-    doc.text('Author:', 30, 235);
+    doc.text('Author:', 30, yPos);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
-    const author = data.author || 'Unknown';
-    doc.text(author, 55, 235);
+    const author = article.author || data.author || 'Unknown';
+    doc.text(author.substring(0, 50), 55, yPos);
+    yPos += 10;
+    
+    // Title (if available)
+    if (article.title) {
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.textLight);
+        doc.text('Title:', 30, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        const titleText = article.title.substring(0, 80);
+        const titleLines = doc.splitTextToSize(titleText, 120);
+        doc.text(titleLines.slice(0, 2), 55, yPos);
+        yPos += 10 * Math.min(titleLines.length, 2);
+    }
     
     // Date
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.textLight);
-    doc.text('Generated:', 30, 245);
+    doc.text('Generated:', 30, yPos);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
     const now = new Date().toLocaleString('en-US', { 
@@ -243,27 +253,25 @@ function generateCoverPage(doc, data, trustScore, analysisMode, colors) {
         hour: '2-digit',
         minute: '2-digit'
     });
-    doc.text(now, 55, 245);
+    doc.text(now, 55, yPos);
 }
 
 /**
- * Generate executive summary page
+ * Generate executive summary
  */
-function generateExecutiveSummary(doc, data, trustScore, analysisMode, colors) {
-    // Page title
+function generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode, colors) {
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.primary);
     doc.text('Executive Summary', 20, 25);
     
-    // Divider line
     doc.setDrawColor(...colors.primary);
     doc.setLineWidth(0.5);
     doc.line(20, 30, 190, 30);
     
     let yPos = 45;
     
-    // Key Findings Section
+    // Key Findings
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
@@ -272,15 +280,45 @@ function generateExecutiveSummary(doc, data, trustScore, analysisMode, colors) {
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...colors.text);
     
-    const summary = data.article_summary || data.findings_summary || 'Analysis complete. See detailed service breakdowns below.';
+    const summary = analysis.summary || data.article_summary || data.findings_summary || 'Complete comprehensive analysis conducted across all services.';
     const summaryLines = doc.splitTextToSize(summary, 170);
     doc.text(summaryLines, 20, yPos);
-    yPos += (summaryLines.length * 5) + 10;
+    yPos += (summaryLines.length * 5) + 15;
     
-    // Analysis Overview
-    if (yPos > 250) {
+    // Key Findings List (if available)
+    if (analysis.key_findings && Array.isArray(analysis.key_findings) && analysis.key_findings.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Notable Issues', 20, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        analysis.key_findings.slice(0, 5).forEach(finding => {
+            if (yPos > 250) {
+                doc.addPage();
+                yPos = 25;
+            }
+            
+            const severityColor = finding.severity === 'high' ? colors.red : 
+                                 finding.severity === 'medium' ? colors.orange : colors.blue;
+            
+            doc.setFillColor(...severityColor);
+            doc.circle(22, yPos - 1, 1, 'F');
+            
+            const findingText = finding.text || '';
+            const findingLines = doc.splitTextToSize(findingText, 165);
+            doc.text(findingLines, 26, yPos);
+            yPos += (findingLines.length * 4) + 3;
+        });
+        
+        yPos += 10;
+    }
+    
+    // Service Scores Table
+    if (yPos > 220) {
         doc.addPage();
         yPos = 25;
     }
@@ -288,35 +326,16 @@ function generateExecutiveSummary(doc, data, trustScore, analysisMode, colors) {
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
-    doc.text('Analysis Overview', 20, yPos);
-    yPos += 10;
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    const overviewText = `This ${analysisMode} analysis was conducted using TruthLens's 6 advanced AI services. Each service evaluates different aspects of credibility, accuracy, and transparency. The overall trust score of ${Math.round(trustScore)}/100 is calculated based on weighted contributions from all services.`;
-    const overviewLines = doc.splitTextToSize(overviewText, 170);
-    doc.text(overviewLines, 20, yPos);
-    yPos += (overviewLines.length * 5) + 15;
-    
-    // Service Scores Summary Table
-    if (yPos > 230) {
-        doc.addPage();
-        yPos = 25;
-    }
-    
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...colors.text);
-    doc.text('Service Scores', 20, yPos);
+    doc.text('Service Scores Overview', 20, yPos);
     yPos += 8;
     
     const detailed = data.detailed_analysis || {};
     const services = [
-        { key: 'source_credibility', title: 'Source Credibility', scoreKey: 'score' },
+        { key: 'source_credibility', title: 'Source Credibility', scoreKey: 'credibility_score' },
         { key: 'bias_detector', title: 'Bias Detection', scoreKey: 'objectivity_score' },
         { key: 'fact_checker', title: 'Fact Checking', scoreKey: 'accuracy_score' },
         { key: 'author_analyzer', title: 'Author Analysis', scoreKey: 'credibility_score' },
-        { key: 'transparency_analyzer', title: 'Transparency Guide', scoreKey: 'transparency_score' },
+        { key: 'transparency_analyzer', title: 'Transparency', scoreKey: 'transparency_score' },
         { key: 'content_analyzer', title: 'Content Quality', scoreKey: 'quality_score' }
     ];
     
@@ -337,7 +356,6 @@ function generateExecutiveSummary(doc, data, trustScore, analysisMode, colors) {
             const serviceData = detailed[service.key];
             const score = serviceData[service.scoreKey] || serviceData.score || 0;
             
-            // Alternating row colors
             if (index % 2 === 0) {
                 doc.setFillColor(250, 250, 250);
                 doc.rect(20, yPos, 170, 7, 'F');
@@ -346,7 +364,6 @@ function generateExecutiveSummary(doc, data, trustScore, analysisMode, colors) {
             doc.setTextColor(...colors.text);
             doc.text(service.title, 25, yPos + 5);
             
-            // Color code the score
             let scoreColor = colors.orange;
             if (score >= 80) scoreColor = colors.green;
             else if (score >= 60) scoreColor = colors.blue;
@@ -363,10 +380,88 @@ function generateExecutiveSummary(doc, data, trustScore, analysisMode, colors) {
 }
 
 /**
- * Generate individual service page with COMPLETE analysis
+ * Generate article overview page
  */
-function generateServicePage(doc, service, serviceData, colors) {
-    // Service title with colored bar
+function generateArticleOverview(doc, article, colors) {
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.primary);
+    doc.text('Article Overview', 20, 25);
+    
+    doc.setDrawColor(...colors.primary);
+    doc.setLineWidth(0.5);
+    doc.line(20, 30, 190, 30);
+    
+    let yPos = 45;
+    
+    // Title
+    if (article.title) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text('Title', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        const titleLines = doc.splitTextToSize(article.title, 170);
+        doc.text(titleLines, 20, yPos);
+        yPos += (titleLines.length * 5) + 10;
+    }
+    
+    // Metadata
+    const metadata = [];
+    if (article.author) metadata.push(['Author', article.author]);
+    if (article.publish_date) metadata.push(['Published', article.publish_date]);
+    if (article.domain) metadata.push(['Domain', article.domain]);
+    if (article.word_count) metadata.push(['Word Count', article.word_count.toLocaleString() + ' words']);
+    
+    if (metadata.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Article Information', 20, yPos);
+        yPos += 8;
+        
+        doc.setFontSize(9);
+        metadata.forEach(([label, value]) => {
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...colors.textLight);
+            doc.text(label + ':', 25, yPos);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...colors.text);
+            const valueText = String(value).substring(0, 60);
+            doc.text(valueText, 60, yPos);
+            yPos += 6;
+        });
+        yPos += 10;
+    }
+    
+    // Excerpt
+    if (article.excerpt && yPos < 250) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text('Article Excerpt', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        const excerptLines = doc.splitTextToSize(article.excerpt, 170);
+        doc.text(excerptLines, 20, yPos);
+    }
+}
+
+/**
+ * Generate COMPLETE service pages with ALL details
+ * This may span multiple pages for data-rich services
+ */
+function generateCompleteServicePages(doc, service, serviceData, colors) {
+    console.log(`[PDF] Generating COMPLETE ${service.title} with data:`, serviceData);
+    
+    // Start new page
+    doc.addPage();
+    
+    // Service header
     doc.setFillColor(...service.color);
     doc.rect(0, 0, 210, 15, 'F');
     
@@ -377,23 +472,8 @@ function generateServicePage(doc, service, serviceData, colors) {
     
     let yPos = 30;
     
-    console.log(`[PDF] Generating ${service.title} with data:`, serviceData);
-    
     // Extract score
-    let score = 0;
-    if (service.key === 'source_credibility') {
-        score = serviceData.credibility_score || serviceData.score || 0;
-    } else if (service.key === 'bias_detector') {
-        score = serviceData.objectivity_score || serviceData.score || 0;
-    } else if (service.key === 'fact_checker') {
-        score = serviceData.verification_score || serviceData.accuracy_score || serviceData.score || 0;
-    } else if (service.key === 'author_analyzer') {
-        score = serviceData.credibility_score || serviceData.score || 0;
-    } else if (service.key === 'transparency_analyzer') {
-        score = serviceData.transparency_score || serviceData.score || 0;
-    } else if (service.key === 'content_analyzer') {
-        score = serviceData.quality_score || serviceData.score || 0;
-    }
+    let score = extractScore(service.key, serviceData);
     
     // Score badge
     doc.setFontSize(36);
@@ -404,143 +484,633 @@ function generateServicePage(doc, service, serviceData, colors) {
     doc.setFontSize(14);
     doc.setTextColor(...colors.textLight);
     doc.text('/100', 50, yPos);
-    yPos += 15;
+    yPos += 20;
     
-    // Service-specific content
+    // Generate service-specific complete content
+    if (service.key === 'source_credibility') {
+        yPos = generateSourceCredibilityComplete(doc, serviceData, yPos, colors, service.color);
+    } else if (service.key === 'bias_detector') {
+        yPos = generateBiasDetectionComplete(doc, serviceData, yPos, colors, service.color);
+    } else if (service.key === 'fact_checker') {
+        yPos = generateFactCheckingComplete(doc, serviceData, yPos, colors, service.color);
+    } else if (service.key === 'author_analyzer') {
+        yPos = generateAuthorAnalysisComplete(doc, serviceData, yPos, colors, service.color);
+    } else if (service.key === 'transparency_analyzer') {
+        yPos = generateTransparencyComplete(doc, serviceData, yPos, colors, service.color);
+    } else if (service.key === 'content_analyzer') {
+        yPos = generateContentQualityComplete(doc, serviceData, yPos, colors, service.color);
+    }
+}
+
+/**
+ * Complete Source Credibility Analysis
+ */
+function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor) {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
-    doc.text('Analysis', 20, yPos);
+    doc.text('Source Information', 20, yPos);
     yPos += 8;
     
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     
-    // Service-specific findings
-    let findings = '';
+    const fields = [
+        ['Organization', data.organization || data.source || 'Unknown'],
+        ['Domain', data.domain || 'N/A'],
+        ['Reputation', data.credibility_level || data.credibility || 'Unknown'],
+        ['Credibility Score', `${Math.round(data.credibility_score || 0)}/100`],
+        ['Established', data.established_year || data.founded || 'Unknown'],
+        ['Country', data.country || 'Unknown'],
+        ['Awards', data.awards || 'N/A']
+    ];
     
-    if (service.key === 'source_credibility') {
-        const org = serviceData.organization || serviceData.source || 'Unknown';
-        const reputation = serviceData.credibility || serviceData.reputation || 'Unknown';
-        const established = serviceData.established_year || serviceData.founded || 'Unknown';
-        const awards = serviceData.awards || 'N/A';
-        findings = `Organization: ${org}\nReputation: ${reputation}\nEstablished: ${established}\nAwards: ${awards}\n\nThis source has been evaluated for historical accuracy, editorial standards, and overall credibility in journalism.`;
-    } else if (service.key === 'bias_detector') {
-        const political = serviceData.political_label || serviceData.political_leaning || 'Center';
-        const objectivity = serviceData.objectivity_score || score;
-        const sensationalism = serviceData.sensationalism_level || 'Unknown';
-        const details = serviceData.details || {};
-        const loadedLang = details.loaded_language_count || 0;
-        findings = `Political Lean: ${political}\nObjectivity Score: ${Math.round(objectivity)}/100\nSensationalism: ${sensationalism}\nLoaded Language Instances: ${loadedLang}\n\nThe analysis examines political bias, loaded language, sensationalism, and framing techniques to provide a comprehensive view of objectivity.`;
-    } else if (service.key === 'fact_checker') {
-        const claimsChecked = serviceData.claims_checked || serviceData.claims_found || 0;
-        const claimsVerified = serviceData.claims_verified || 0;
-        const accuracyScore = serviceData.accuracy_score || serviceData.verification_score || score;
-        findings = `Claims Analyzed: ${claimsChecked}\nClaims Verified: ${claimsVerified}\nAccuracy Score: ${Math.round(accuracyScore)}%\n\nOur fact-checking service verifies specific claims using authoritative sources and cross-references multiple databases.`;
-        
-        // Add fact check details if available
-        const factChecks = serviceData.fact_checks || serviceData.claims || [];
-        if (factChecks.length > 0 && yPos < 200) {
-            findings += '\n\nTop Findings:';
-            factChecks.slice(0, 3).forEach((check, idx) => {
-                const verdict = check.verdict || 'unverified';
-                const explanation = check.explanation || check.analysis || 'No details available';
-                // Truncate long explanations
-                const shortExplanation = explanation.length > 100 ? explanation.substring(0, 97) + '...' : explanation;
-                findings += `\n${idx + 1}. ${verdict.toUpperCase()}: ${shortExplanation}`;
-            });
+    fields.forEach(([label, value]) => {
+        if (yPos > 270) {
+            doc.addPage();
+            yPos = 25;
         }
-    } else if (service.key === 'author_analyzer') {
-        const authorName = serviceData.name || serviceData.primary_author || serviceData.author_name || 'Unknown Author';
-        const position = serviceData.position || 'Journalist';
-        const organization = serviceData.organization || serviceData.domain || 'News Organization';
-        const expertise = serviceData.expertise_level || 'Verified';
-        const experience = serviceData.years_experience || serviceData.experience || 'Unknown';
-        findings = `Author: ${authorName}\nPosition: ${position}\nOrganization: ${organization}\nExpertise Level: ${expertise}\nExperience: ${experience}\nCredibility: ${Math.round(score)}/100\n\nAnalysis includes author background, expertise, track record, and professional credentials.`;
-    } else if (service.key === 'transparency_analyzer') {
-        const level = serviceData.transparency_level || serviceData.level || 'Moderate';
-        const articleType = serviceData.article_type || 'News Report';
-        findings = `Transparency Level: ${level}\nArticle Type: ${articleType}\nScore: ${Math.round(score)}/100\n\nEvaluates source attribution, citation quality, disclosure statements, and verifiable claims. Higher scores indicate better transparency practices.`;
         
-        // Add key lessons if available
-        const lessons = serviceData.transparency_lessons || [];
-        if (lessons.length > 0 && yPos < 200) {
-            findings += '\n\nKey Transparency Indicators:';
-            lessons.slice(0, 3).forEach((lesson, idx) => {
-                const shortLesson = lesson.length > 80 ? lesson.substring(0, 77) + '...' : lesson;
-                findings += `\n${idx + 1}. ${shortLesson}`;
-            });
+        doc.setTextColor(...colors.textLight);
+        doc.text(label + ':', 25, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        const valueLines = doc.splitTextToSize(String(value), 140);
+        doc.text(valueLines, 70, yPos);
+        yPos += Math.max(6, valueLines.length * 5);
+        doc.setFont('helvetica', 'normal');
+    });
+    
+    yPos += 5;
+    
+    // Analysis details
+    if (data.analysis || data.details || data.explanation) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
         }
-    } else if (service.key === 'content_analyzer') {
-        const readability = serviceData.readability_level || serviceData.readability || 'Unknown';
-        const wordCount = serviceData.word_count || 0;
-        const qualityScore = serviceData.quality_score || score;
-        findings = `Quality Score: ${Math.round(qualityScore)}/100\nReadability Level: ${readability}\nWord Count: ${wordCount.toLocaleString()}\n\nAnalyzes content structure, clarity, depth, grammar, and overall writing quality using multiple metrics.`;
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Detailed Analysis', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const analysisText = data.analysis || data.details || data.explanation;
+        const analysisLines = doc.splitTextToSize(String(analysisText), 170);
+        doc.text(analysisLines, 20, yPos);
+        yPos += analysisLines.length * 4;
     }
     
-    const findingsLines = doc.splitTextToSize(findings, 170);
-    doc.text(findingsLines, 20, yPos);
-    yPos += (findingsLines.length * 5) + 10;
+    return yPos;
+}
+
+/**
+ * Complete Bias Detection Analysis
+ */
+function generateBiasDetectionComplete(doc, data, yPos, colors, serviceColor) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
+    doc.text('Bias Analysis Summary', 20, yPos);
+    yPos += 8;
     
-    // Additional insights if available - properly handle different data types
-    if (yPos < 240) {
-        let insightsText = '';
-        
-        // Try different fields for insights
-        if (serviceData.insights) {
-            if (typeof serviceData.insights === 'string') {
-                insightsText = serviceData.insights;
-            } else if (Array.isArray(serviceData.insights)) {
-                insightsText = serviceData.insights.join('\n');
-            }
-        } else if (serviceData.analysis && typeof serviceData.analysis === 'string') {
-            insightsText = serviceData.analysis;
-        } else if (serviceData.summary && typeof serviceData.summary === 'string') {
-            insightsText = serviceData.summary;
-        } else if (serviceData.explanation && typeof serviceData.explanation === 'string') {
-            insightsText = serviceData.explanation;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    const fields = [
+        ['Political Leaning', data.political_label || data.political_leaning || 'Center'],
+        ['Objectivity Score', `${Math.round(data.objectivity_score || 0)}/100`],
+        ['Sensationalism', data.sensationalism_level || 'Low'],
+        ['Bias Rating', data.bias_rating || 'Minimal']
+    ];
+    
+    fields.forEach(([label, value]) => {
+        doc.setTextColor(...colors.textLight);
+        doc.text(label + ':', 25, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text(String(value), 80, yPos);
+        yPos += 6;
+        doc.setFont('helvetica', 'normal');
+    });
+    
+    yPos += 5;
+    
+    // Loaded Language Examples
+    const details = data.details || {};
+    const loadedLanguage = details.loaded_language_examples || data.loaded_language_examples || [];
+    
+    if (loadedLanguage.length > 0) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
         }
         
-        // Only display if we have valid text
-        if (insightsText && insightsText.length > 0 && insightsText !== '[object Object]') {
-            doc.setFontSize(12);
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Loaded Language Examples', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        loadedLanguage.slice(0, 10).forEach((example, idx) => {
+            if (yPos > 275) {
+                doc.addPage();
+                yPos = 25;
+            }
+            
+            const exampleText = typeof example === 'string' ? example : 
+                              example.phrase || example.text || JSON.stringify(example);
+            
+            doc.setFillColor(...serviceColor);
+            doc.circle(22, yPos - 1, 0.8, 'F');
+            
+            const exLines = doc.splitTextToSize(exampleText, 165);
+            doc.text(exLines, 26, yPos);
+            yPos += (exLines.length * 4) + 2;
+        });
+        
+        yPos += 5;
+    }
+    
+    // Framing Techniques
+    const framing = details.framing_techniques || data.framing_techniques || [];
+    if (framing.length > 0) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Framing Techniques Detected', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        framing.slice(0, 8).forEach(technique => {
+            if (yPos > 275) {
+                doc.addPage();
+                yPos = 25;
+            }
+            
+            const techText = typeof technique === 'string' ? technique :
+                           technique.technique || JSON.stringify(technique);
+            
+            doc.setFillColor(...serviceColor);
+            doc.circle(22, yPos - 1, 0.8, 'F');
+            
+            const techLines = doc.splitTextToSize(techText, 165);
+            doc.text(techLines, 26, yPos);
+            yPos += (techLines.length * 4) + 2;
+        });
+    }
+    
+    // Overall explanation
+    if (data.explanation || data.analysis) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Analysis Explanation', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const explText = data.explanation || data.analysis;
+        const explLines = doc.splitTextToSize(String(explText), 170);
+        doc.text(explLines, 20, yPos);
+        yPos += explLines.length * 4;
+    }
+    
+    return yPos;
+}
+
+/**
+ * Complete Fact Checking Analysis with ALL claims
+ */
+function generateFactCheckingComplete(doc, data, yPos, colors, serviceColor) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
+    doc.text('Fact Check Summary', 20, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    const claimsChecked = data.claims_checked || data.claims_found || data.total_claims || 0;
+    const claimsVerified = data.claims_verified || data.verified_count || 0;
+    const accuracyScore = data.accuracy_score || data.verification_score || data.score || 0;
+    
+    const fields = [
+        ['Claims Analyzed', claimsChecked],
+        ['Claims Verified', claimsVerified],
+        ['Accuracy Score', `${Math.round(accuracyScore)}%`],
+        ['Verification Rate', `${Math.round((claimsVerified / Math.max(claimsChecked, 1)) * 100)}%`]
+    ];
+    
+    fields.forEach(([label, value]) => {
+        doc.setTextColor(...colors.textLight);
+        doc.text(label + ':', 25, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text(String(value), 80, yPos);
+        yPos += 6;
+        doc.setFont('helvetica', 'normal');
+    });
+    
+    yPos += 8;
+    
+    // COMPLETE CLAIMS LIST - ALL CLAIMS WITH VERDICTS
+    const claims = data.fact_checks || data.claims || data.claims_analyzed || [];
+    
+    if (claims.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('All Claims Checked', 20, yPos);
+        yPos += 7;
+        
+        claims.forEach((claim, idx) => {
+            if (yPos > 260) {
+                doc.addPage();
+                yPos = 25;
+            }
+            
+            // Claim number and verdict
+            doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(...colors.text);
-            doc.text('Additional Insights', 20, yPos);
-            yPos += 8;
+            doc.text(`Claim ${idx + 1}:`, 20, yPos);
             
-            doc.setFontSize(10);
+            const verdict = claim.verdict || claim.status || 'unverified';
+            const verdictColor = getVerdictColor(verdict, colors);
+            doc.setTextColor(...verdictColor);
+            doc.text(verdict.toUpperCase(), 160, yPos);
+            yPos += 6;
+            
+            // Claim text
+            doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
+            doc.setTextColor(...colors.text);
+            const claimText = claim.claim || claim.text || claim.statement || '';
+            const claimLines = doc.splitTextToSize(claimText, 170);
+            doc.text(claimLines, 20, yPos);
+            yPos += (claimLines.length * 4) + 3;
             
-            // Truncate if too long
-            if (insightsText.length > 500) {
-                insightsText = insightsText.substring(0, 497) + '...';
+            // Explanation/Analysis
+            const explanation = claim.explanation || claim.analysis || claim.reason || '';
+            if (explanation) {
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(...colors.textLight);
+                doc.setFontSize(8);
+                const explLines = doc.splitTextToSize(String(explanation).substring(0, 300), 170);
+                doc.text(explLines, 20, yPos);
+                yPos += (explLines.length * 3.5) + 2;
             }
             
-            const insightLines = doc.splitTextToSize(insightsText, 170);
-            doc.text(insightLines, 20, yPos);
-        }
+            // Confidence score if available
+            if (claim.confidence) {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.setTextColor(...colors.textLight);
+                doc.text(`Confidence: ${claim.confidence}%`, 20, yPos);
+                yPos += 4;
+            }
+            
+            yPos += 5; // Space between claims
+        });
     }
+    
+    return yPos;
+}
+
+/**
+ * Complete Author Analysis
+ */
+function generateAuthorAnalysisComplete(doc, data, yPos, colors, serviceColor) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
+    doc.text('Author Profile', 20, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    const fields = [
+        ['Name', data.name || data.primary_author || data.author_name || 'Unknown'],
+        ['Position', data.position || data.role || 'Journalist'],
+        ['Organization', data.organization || data.domain || 'Unknown'],
+        ['Credibility Score', `${Math.round(data.credibility_score || 0)}/100`],
+        ['Expertise Level', data.expertise_level || data.expertise || 'Unknown'],
+        ['Years Experience', data.years_experience || data.experience || 'Unknown'],
+        ['Verified', data.verified ? 'Yes' : 'No']
+    ];
+    
+    fields.forEach(([label, value]) => {
+        if (yPos > 270) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setTextColor(...colors.textLight);
+        doc.text(label + ':', 25, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        const valueLines = doc.splitTextToSize(String(value), 140);
+        doc.text(valueLines, 70, yPos);
+        yPos += Math.max(6, valueLines.length * 5);
+        doc.setFont('helvetica', 'normal');
+    });
+    
+    yPos += 5;
+    
+    // Educational background
+    if (data.education || data.credentials) {
+        if (yPos > 260) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Education & Credentials', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const eduText = data.education || data.credentials;
+        const eduLines = doc.splitTextToSize(String(eduText), 170);
+        doc.text(eduLines, 20, yPos);
+        yPos += eduLines.length * 4 + 8;
+    }
+    
+    // Notable works or publications
+    if (data.notable_works || data.publications) {
+        if (yPos > 260) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Notable Works', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const works = data.notable_works || data.publications;
+        const worksText = Array.isArray(works) ? works.join(', ') : String(works);
+        const worksLines = doc.splitTextToSize(worksText, 170);
+        doc.text(worksLines, 20, yPos);
+        yPos += worksLines.length * 4 + 8;
+    }
+    
+    // Analysis summary
+    if (data.analysis || data.summary) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Analysis', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const analysisText = data.analysis || data.summary;
+        const analysisLines = doc.splitTextToSize(String(analysisText), 170);
+        doc.text(analysisLines, 20, yPos);
+        yPos += analysisLines.length * 4;
+    }
+    
+    return yPos;
+}
+
+/**
+ * Complete Transparency Analysis
+ */
+function generateTransparencyComplete(doc, data, yPos, colors, serviceColor) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
+    doc.text('Transparency Assessment', 20, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    const fields = [
+        ['Transparency Level', data.transparency_level || data.level || 'Unknown'],
+        ['Transparency Score', `${Math.round(data.transparency_score || 0)}/100`],
+        ['Article Type', data.article_type || data.content_type || 'News Report'],
+        ['Sources Cited', data.sources_count || data.source_count || 'Unknown'],
+        ['Direct Quotes', data.quotes_count || data.quote_count || 'Unknown']
+    ];
+    
+    fields.forEach(([label, value]) => {
+        doc.setTextColor(...colors.textLight);
+        doc.text(label + ':', 25, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text(String(value), 80, yPos);
+        yPos += 6;
+        doc.setFont('helvetica', 'normal');
+    });
+    
+    yPos += 8;
+    
+    // Transparency lessons/indicators
+    const lessons = data.transparency_lessons || data.key_indicators || data.findings || [];
+    if (lessons.length > 0) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Key Transparency Indicators', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        lessons.forEach((lesson, idx) => {
+            if (yPos > 275) {
+                doc.addPage();
+                yPos = 25;
+            }
+            
+            const lessonText = typeof lesson === 'string' ? lesson :
+                             lesson.text || lesson.lesson || JSON.stringify(lesson);
+            
+            doc.setFillColor(...serviceColor);
+            doc.circle(22, yPos - 1, 0.8, 'F');
+            
+            const lessonLines = doc.splitTextToSize(lessonText, 165);
+            doc.text(lessonLines, 26, yPos);
+            yPos += (lessonLines.length * 4) + 2;
+        });
+        
+        yPos += 5;
+    }
+    
+    // Sources cited (if detailed list available)
+    const sources = data.sources_cited || data.sources || [];
+    if (sources.length > 0) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Sources Referenced', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        
+        sources.slice(0, 15).forEach((source, idx) => {
+            if (yPos > 280) {
+                doc.addPage();
+                yPos = 25;
+            }
+            
+            const sourceText = typeof source === 'string' ? source :
+                             source.name || source.source || JSON.stringify(source);
+            
+            doc.text(`${idx + 1}. ${sourceText}`, 22, yPos);
+            yPos += 4;
+        });
+    }
+    
+    return yPos;
+}
+
+/**
+ * Complete Content Quality Analysis
+ */
+function generateContentQualityComplete(doc, data, yPos, colors, serviceColor) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
+    doc.text('Content Quality Metrics', 20, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    
+    const fields = [
+        ['Quality Score', `${Math.round(data.quality_score || 0)}/100`],
+        ['Readability Level', data.readability_level || data.readability || 'Unknown'],
+        ['Word Count', (data.word_count || 0).toLocaleString()],
+        ['Sentence Count', data.sentence_count || 'Unknown'],
+        ['Average Sentence Length', data.avg_sentence_length ? `${Math.round(data.avg_sentence_length)} words` : 'Unknown'],
+        ['Paragraph Count', data.paragraph_count || 'Unknown'],
+        ['Grammar Issues', data.grammar_issues || data.grammar_errors || 'None detected']
+    ];
+    
+    fields.forEach(([label, value]) => {
+        if (yPos > 270) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setTextColor(...colors.textLight);
+        doc.text(label + ':', 25, yPos);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        const valueLines = doc.splitTextToSize(String(value), 140);
+        doc.text(valueLines, 80, yPos);
+        yPos += Math.max(6, valueLines.length * 5);
+        doc.setFont('helvetica', 'normal');
+    });
+    
+    yPos += 5;
+    
+    // Readability metrics
+    if (data.readability_scores || data.metrics) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Readability Metrics', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        const metrics = data.readability_scores || data.metrics;
+        Object.entries(metrics).forEach(([key, value]) => {
+            if (yPos > 275) {
+                doc.addPage();
+                yPos = 25;
+            }
+            
+            const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            doc.setTextColor(...colors.textLight);
+            doc.text(label + ':', 25, yPos);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...colors.text);
+            doc.text(String(value), 100, yPos);
+            doc.setFont('helvetica', 'normal');
+            yPos += 5;
+        });
+    }
+    
+    // Quality analysis
+    if (data.analysis || data.summary) {
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Quality Analysis', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        const analysisText = data.analysis || data.summary;
+        const analysisLines = doc.splitTextToSize(String(analysisText), 170);
+        doc.text(analysisLines, 20, yPos);
+        yPos += analysisLines.length * 4;
+    }
+    
+    return yPos;
 }
 
 /**
  * Generate contribution breakdown page
  */
 function generateContributionPage(doc, detailed, trustScore, colors) {
-    // Page title
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.primary);
     doc.text('Score Contribution Breakdown', 20, 25);
     
-    // Divider line
     doc.setDrawColor(...colors.primary);
     doc.setLineWidth(0.5);
     doc.line(20, 30, 190, 30);
     
     let yPos = 45;
     
-    // Explanation
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.text);
@@ -549,7 +1119,6 @@ function generateContributionPage(doc, detailed, trustScore, colors) {
     doc.text(explLines, 20, yPos);
     yPos += (explLines.length * 5) + 15;
     
-    // Contribution bars
     const services = [
         { key: 'source_credibility', title: 'Source Credibility', weight: 0.25, color: colors.blue },
         { key: 'bias_detector', title: 'Bias Detection', weight: 0.20, color: colors.orange },
@@ -562,48 +1131,27 @@ function generateContributionPage(doc, detailed, trustScore, colors) {
     services.forEach(service => {
         if (detailed[service.key]) {
             const serviceData = detailed[service.key];
-            
-            // Extract score
-            let score = 0;
-            if (service.key === 'source_credibility') {
-                score = serviceData.credibility_score || serviceData.score || 0;
-            } else if (service.key === 'bias_detector') {
-                score = serviceData.objectivity_score || serviceData.score || 0;
-            } else if (service.key === 'fact_checker') {
-                score = serviceData.verification_score || serviceData.accuracy_score || serviceData.score || 0;
-            } else if (service.key === 'author_analyzer') {
-                score = serviceData.credibility_score || serviceData.score || 0;
-            } else if (service.key === 'transparency_analyzer') {
-                score = serviceData.transparency_score || serviceData.score || 0;
-            } else if (service.key === 'content_analyzer') {
-                score = serviceData.quality_score || serviceData.score || 0;
-            }
-            
+            const score = extractScore(service.key, serviceData);
             const contribution = (score * service.weight).toFixed(1);
             const maxContribution = service.weight * 100;
             
-            // Service name
             doc.setFontSize(10);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(...colors.text);
             doc.text(service.title, 20, yPos);
             
-            // Weight percentage
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(...colors.textLight);
             doc.text(`${Math.round(service.weight * 100)}%`, 180, yPos);
             yPos += 5;
             
-            // Background bar
             doc.setFillColor(240, 240, 240);
             doc.rect(20, yPos, 160, 6, 'F');
             
-            // Filled bar (proportional to score)
             const barWidth = (score / 100) * 160;
             doc.setFillColor(...service.color);
             doc.rect(20, yPos, barWidth, 6, 'F');
             
-            // Score label
             doc.setFontSize(8);
             doc.setFont('helvetica', 'bold');
             doc.setTextColor(255, 255, 255);
@@ -620,7 +1168,6 @@ function generateContributionPage(doc, detailed, trustScore, colors) {
         }
     });
     
-    // Total Score Summary
     yPos += 10;
     doc.setDrawColor(...colors.primary);
     doc.setLineWidth(0.5);
@@ -645,36 +1192,60 @@ function addFooter(doc, pageNum, totalPages) {
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(150, 150, 150);
     
-    // Page number
     doc.text(`Page ${pageNum} of ${totalPages}`, 105, 290, { align: 'center' });
-    
-    // Generated by TruthLens
-    doc.text('Generated by TruthLens - AI-Powered Truth Analysis', 105, 285, { align: 'center' });
+    doc.text('Generated by TruthLens - Complete AI-Powered Truth Analysis', 105, 285, { align: 'center' });
 }
 
 /**
- * Hook into the unified-app-core to capture analysis data
- * Override the displayResults function to store data
+ * Helper: Extract score from service data
+ */
+function extractScore(serviceKey, serviceData) {
+    if (serviceKey === 'source_credibility') {
+        return serviceData.credibility_score || serviceData.score || 0;
+    } else if (serviceKey === 'bias_detector') {
+        return serviceData.objectivity_score || serviceData.score || 0;
+    } else if (serviceKey === 'fact_checker') {
+        return serviceData.verification_score || serviceData.accuracy_score || serviceData.score || 0;
+    } else if (serviceKey === 'author_analyzer') {
+        return serviceData.credibility_score || serviceData.score || 0;
+    } else if (serviceKey === 'transparency_analyzer') {
+        return serviceData.transparency_score || serviceData.score || 0;
+    } else if (serviceKey === 'content_analyzer') {
+        return serviceData.quality_score || serviceData.score || 0;
+    }
+    return 0;
+}
+
+/**
+ * Helper: Get verdict color
+ */
+function getVerdictColor(verdict, colors) {
+    const v = verdict.toLowerCase();
+    if (v.includes('true') && !v.includes('false')) return colors.green;
+    if (v.includes('false') || v.includes('misleading')) return colors.red;
+    if (v.includes('exaggeration') || v.includes('opinion') || v.includes('rhetoric')) return colors.amber;
+    return colors.orange;
+}
+
+/**
+ * Hook into unified-app-core to capture analysis data
  */
 (function() {
-    // Wait for UnifiedTruthLensAnalyzer to be defined
     if (typeof UnifiedTruthLensAnalyzer !== 'undefined') {
         const originalDisplayResults = UnifiedTruthLensAnalyzer.prototype.displayResults;
         
         UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
-            // Store the data globally for PDF generation
             window.lastAnalysisData = data;
-            console.log('[PDF Generator] Analysis data captured:', data);
+            console.log('[PDF Generator] Complete analysis data captured for comprehensive PDF:', data);
             
-            // Call the original function
             originalDisplayResults.call(this, data);
         };
         
         console.log('[PDF Generator] Successfully hooked into analysis results');
     } else {
-        console.warn('[PDF Generator] UnifiedTruthLensAnalyzer not found yet, will retry');
+        console.warn('[PDF Generator] UnifiedTruthLensAnalyzer not found, will retry');
         setTimeout(arguments.callee, 100);
     }
 })();
 
-console.log('[PDF Generator] v1.0.0 loaded successfully');
+console.log('[PDF Generator] v2.0.0 Complete Edition loaded successfully');
