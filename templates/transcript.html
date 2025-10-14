@@ -3,12 +3,11 @@ File: templates/transcript.html
 Last Updated: October 14, 2025
 Changes:
 - Renamed from index.html to transcript.html to avoid conflicts with news repository
-- Removed all YouTube branding and references
-- Changed "YouTube Video" tab to "Transcript Sources" with dropdown selector
-- Made video platform capabilities generic
-- Updated tab icon from fab fa-youtube to fas fa-list
-- Removed YouTube-specific messaging and placeholders
-- Made all language platform-agnostic for video sources
+- REMOVED all video URL analysis capabilities completely
+- Simplified to 3 input methods: Text Input, File Upload, Microphone
+- Microphone feature uses Web Speech API for real-time transcription
+- Clarified that microphone transcribes speech to text for analysis
+- Clean, simple interface focused on transcript fact-checking
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -16,7 +15,7 @@ Changes:
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transcript Fact Checker - AI-Powered Fact Verification</title>
-    <meta name="description" content="Fact-check political speeches, interviews, and transcripts using AI and trusted APIs. Analyze video transcripts, upload files, or use microphone transcription.">
+    <meta name="description" content="Fact-check political speeches, interviews, and transcripts using AI and trusted APIs. Type, upload, or speak your transcript for analysis.">
     
     <!-- Inline CSS for immediate rendering -->
     <style>
@@ -224,122 +223,10 @@ Changes:
             color: var(--gray-800);
         }
 
-        .dropdown-content a {
-            color: var(--primary-color);
-            text-decoration: none;
-            transition: color 0.2s;
-        }
-
-        .dropdown-content a:hover {
-            color: var(--primary-dark);
-            text-decoration: underline;
-        }
-
         .dropdown-content p {
             color: var(--gray-600);
             line-height: 1.6;
             margin: 12px 0;
-        }
-
-        /* Video Platform Limitations Alert */
-        .video-limitations {
-            background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
-            border: 2px solid var(--warning-color);
-            border-radius: 12px;
-            padding: 16px 20px;
-            margin-top: 12px;
-            display: none;
-        }
-
-        .video-limitations.show {
-            display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .video-limitations h5 {
-            color: #92400e;
-            margin-bottom: 8px;
-            font-size: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .video-limitations ul {
-            list-style: none;
-            padding: 0;
-            margin: 8px 0;
-        }
-
-        .video-limitations li {
-            padding: 4px 0;
-            color: #78350f;
-            font-size: 14px;
-        }
-
-        .video-limitations li.supported {
-            color: #166534;
-        }
-
-        .video-limitations li.limited {
-            color: #92400e;
-        }
-
-        .video-limitations li.not-supported {
-            color: #991b1b;
-            text-decoration: line-through;
-            opacity: 0.7;
-        }
-
-        /* Source Selector Dropdown */
-        .source-selector {
-            margin-bottom: 16px;
-        }
-
-        .source-selector label {
-            display: block;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 8px;
-        }
-
-        .source-select {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--gray-200);
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--gray-800);
-            background: white;
-            cursor: pointer;
-            transition: all 0.2s;
-            appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 16px center;
-            padding-right: 40px;
-        }
-
-        .source-select:hover {
-            border-color: var(--primary-color);
-        }
-
-        .source-select:focus {
-            outline: none;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        /* Source input panels */
-        .source-input-panel {
-            display: none;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .source-input-panel.active {
-            display: block;
         }
 
         /* Custom scrollbar for dropdowns */
@@ -462,11 +349,6 @@ Changes:
             gap: 8px;
         }
 
-        .input-info .warning {
-            color: var(--warning-color);
-            font-weight: 500;
-        }
-
         /* File Upload */
         .file-upload-area {
             border: 2px dashed var(--gray-300);
@@ -515,21 +397,6 @@ Changes:
             background: var(--gray-100);
             border-radius: 8px;
             margin-top: 16px;
-        }
-
-        /* URL Input */
-        .url-input {
-            width: 100%;
-            padding: 16px;
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            font-size: 16px;
-            transition: border-color 0.2s;
-        }
-
-        .url-input:focus {
-            outline: none;
-            border-color: var(--primary-color);
         }
 
         /* Real-Time Transcription Styles */
@@ -634,7 +501,7 @@ Changes:
         }
 
         .transcription-display:empty::before {
-            content: "Click 'Start Recording' to begin real-time transcription from your microphone...";
+            content: "Click 'Start Recording' to begin speaking. Your speech will be transcribed to text in real-time...";
             color: var(--gray-500);
             font-style: italic;
         }
@@ -765,7 +632,7 @@ Changes:
             margin: 0 auto 16px;
         }
 
-        /* Results Section (keeping existing styles) */
+        /* Results Section */
         .results-section {
             display: none;
             max-width: 1000px;
@@ -883,8 +750,7 @@ Changes:
                         <li><strong>Smart Claim Extraction:</strong> AI identifies factual statements worth verifying</li>
                         <li><strong>Multi-Source Verification:</strong> Cross-references claims against trusted databases</li>
                         <li><strong>Credibility Scoring:</strong> Provides overall credibility assessment</li>
-                        <li><strong>Microphone Transcription:</strong> Live transcription from your microphone</li>
-                        <li><strong>Video Transcript Analysis:</strong> Extract and analyze transcripts from video platforms</li>
+                        <li><strong>Microphone Transcription:</strong> Speak into your mic - we transcribe and analyze</li>
                         <li><strong>Comprehensive Reports:</strong> Detailed analysis with sources and confidence levels</li>
                     </ul>
                     <p>Our system uses multiple AI models and fact-checking APIs to provide accurate verification.</p>
@@ -925,10 +791,6 @@ Changes:
                     <i class="fas fa-file-upload"></i>
                     <span>File Upload</span>
                 </button>
-                <button class="tab-button" onclick="switchTab('transcript')" id="transcript-tab" data-tab="transcript">
-                    <i class="fas fa-list"></i>
-                    <span>Transcript Sources</span>
-                </button>
                 <button class="tab-button" onclick="switchTab('live')" id="live-tab" data-tab="live">
                     <i class="fas fa-microphone"></i>
                     <span>Microphone</span>
@@ -961,69 +823,6 @@ Changes:
                 </div>
             </div>
 
-            <!-- Transcript Sources Panel (formerly YouTube URL Panel) -->
-            <div class="input-panel" id="transcript-panel">
-                <!-- Source Selector Dropdown -->
-                <div class="source-selector">
-                    <label for="transcript-source-select">Select Transcript Source:</label>
-                    <select id="transcript-source-select" class="source-select" onchange="switchTranscriptSource(this.value)">
-                        <option value="video-url">Video URL</option>
-                        <option value="text-paste">Paste Transcript</option>
-                        <option value="file-upload">Upload File</option>
-                    </select>
-                </div>
-
-                <!-- Video URL Input -->
-                <div class="source-input-panel active" id="video-url-panel">
-                    <input type="url" class="url-input" id="video-url" placeholder="Enter video URL (e.g., https://youtube.com/watch?v=...)" />
-                    
-                    <!-- Video Platform Capabilities Alert -->
-                    <div class="video-limitations show">
-                        <h5><i class="fas fa-info-circle"></i> Video Platform Capabilities</h5>
-                        <ul>
-                            <li class="supported">✓ Videos with captions (any length)</li>
-                            <li class="limited">⚠ Videos without captions (max 30 minutes)</li>
-                            <li class="not-supported">✗ Live streams (process after stream ends)</li>
-                            <li class="not-supported">✗ Real-time streaming transcription</li>
-                        </ul>
-                        <p style="font-size: 13px; margin-top: 8px; color: #78350f;">
-                            <strong>Tip:</strong> For live content, use the microphone feature to transcribe audio from your speakers.
-                        </p>
-                    </div>
-                    
-                    <div class="input-info">
-                        <span>Extract and analyze transcripts from video platforms</span>
-                        <span class="warning">Not for live streams</span>
-                    </div>
-                </div>
-
-                <!-- Text Paste Input -->
-                <div class="source-input-panel" id="text-paste-panel">
-                    <textarea class="text-input" id="transcript-text-input" placeholder="Paste the transcript text here..."></textarea>
-                    <div class="input-info">
-                        <span>Paste pre-existing transcript text from any source</span>
-                        <span id="transcript-char-count">0 / 50,000</span>
-                    </div>
-                </div>
-
-                <!-- File Upload Input -->
-                <div class="source-input-panel" id="file-upload-panel">
-                    <div class="file-upload-area" id="transcript-file-drop-zone">
-                        <i class="fas fa-cloud-upload-alt"></i>
-                        <div class="file-upload-text">Drop transcript file here or click to browse</div>
-                        <div class="file-types">Supports TXT, SRT, VTT files (max 10MB)</div>
-                    </div>
-                    <input type="file" id="transcript-file-input" style="display: none;" accept=".txt,.srt,.vtt" />
-                    <div id="transcript-file-info" class="file-info" style="display: none;">
-                        <i class="fas fa-file-alt"></i>
-                        <span id="transcript-file-name"></span>
-                        <button onclick="removeTranscriptFile()" style="margin-left: auto; background: none; border: none; color: var(--danger-color); cursor: pointer;">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
             <!-- Microphone Transcription Panel -->
             <div class="input-panel" id="live-panel">
                 <div class="transcription-status">
@@ -1049,7 +848,7 @@ Changes:
                 <div class="transcription-display" id="live-transcript"></div>
                 
                 <div class="input-info">
-                    <span>Transcribe audio from your microphone in real-time</span>
+                    <span>Speak into your microphone - we'll transcribe your speech to text, then analyze it</span>
                     <span id="live-char-count">0 / 50,000</span>
                 </div>
             </div>
@@ -1073,9 +872,9 @@ Changes:
             </div>
         </div>
 
-        <!-- Results Section (keeping existing structure) -->
+        <!-- Results Section -->
         <div class="results-section" id="results-section">
-            <!-- Results content remains the same -->
+            <!-- Results content will be populated by JavaScript -->
         </div>
     </div>
 
@@ -1129,112 +928,6 @@ Changes:
                 panel.classList.remove('active');
             });
             document.getElementById(`${tabName}-panel`).classList.add('active');
-            
-            // Show video limitations when transcript tab is selected
-            if (tabName === 'transcript') {
-                const limitations = document.querySelector('.video-limitations');
-                if (limitations) {
-                    limitations.classList.add('show');
-                }
-            }
-        }
-
-        // Switch transcript source within the transcript tab
-        function switchTranscriptSource(sourceType) {
-            // Hide all source input panels
-            document.querySelectorAll('.source-input-panel').forEach(panel => {
-                panel.classList.remove('active');
-            });
-            
-            // Show selected panel
-            const panelId = `${sourceType}-panel`;
-            const panel = document.getElementById(panelId);
-            if (panel) {
-                panel.classList.add('active');
-            }
-        }
-
-        // Remove transcript file
-        function removeTranscriptFile() {
-            const fileInput = document.getElementById('transcript-file-input');
-            const fileInfo = document.getElementById('transcript-file-info');
-            const dropZone = document.getElementById('transcript-file-drop-zone');
-            
-            if (fileInput) fileInput.value = '';
-            if (fileInfo) fileInfo.style.display = 'none';
-            if (dropZone) dropZone.style.display = 'block';
-        }
-
-        // Initialize transcript file upload
-        function initTranscriptFileUpload() {
-            const fileInput = document.getElementById('transcript-file-input');
-            const dropZone = document.getElementById('transcript-file-drop-zone');
-            
-            if (!fileInput || !dropZone) return;
-            
-            dropZone.addEventListener('click', () => {
-                fileInput.click();
-            });
-            
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const fileInfo = document.getElementById('transcript-file-info');
-                    const fileName = document.getElementById('transcript-file-name');
-                    
-                    if (fileInfo && fileName) {
-                        fileName.textContent = file.name;
-                        fileInfo.style.display = 'flex';
-                        dropZone.style.display = 'none';
-                    }
-                }
-            });
-            
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-            
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('dragover');
-            });
-            
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                
-                const files = e.dataTransfer.files;
-                if (files.length > 0) {
-                    const file = files[0];
-                    const fileInfo = document.getElementById('transcript-file-info');
-                    const fileName = document.getElementById('transcript-file-name');
-                    
-                    if (fileInfo && fileName) {
-                        fileName.textContent = file.name;
-                        fileInfo.style.display = 'flex';
-                        dropZone.style.display = 'none';
-                    }
-                }
-            });
-        }
-
-        // Initialize transcript text character counter
-        function initTranscriptTextCounter() {
-            const textInput = document.getElementById('transcript-text-input');
-            const charCount = document.getElementById('transcript-char-count');
-            
-            if (textInput && charCount) {
-                textInput.addEventListener('input', () => {
-                    const length = textInput.value.length;
-                    charCount.textContent = `${length.toLocaleString()} / 50,000`;
-                    
-                    if (length > 45000) {
-                        charCount.style.color = '#ef4444';
-                    } else {
-                        charCount.style.color = '#6b7280';
-                    }
-                });
-            }
         }
 
         // Close dropdowns when clicking outside
@@ -1253,13 +946,12 @@ Changes:
         document.addEventListener('DOMContentLoaded', function() {
             // Check if browser supports Web Speech API
             if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                document.getElementById('live-tab').style.display = 'none';
+                const liveTab = document.getElementById('live-tab');
+                if (liveTab) {
+                    liveTab.style.display = 'none';
+                }
                 console.log('Web Speech API not supported in this browser');
             }
-            
-            // Initialize transcript-specific features
-            initTranscriptFileUpload();
-            initTranscriptTextCounter();
             
             // Initialize the app
             if (typeof initializeApp === 'function') {
