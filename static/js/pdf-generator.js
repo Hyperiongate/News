@@ -363,7 +363,7 @@ function generateExecutiveSummary(doc, data, trustScore, analysisMode, colors) {
 }
 
 /**
- * Generate individual service page
+ * Generate individual service page with COMPLETE analysis
  */
 function generateServicePage(doc, service, serviceData, colors) {
     // Service title with colored bar
@@ -376,6 +376,8 @@ function generateServicePage(doc, service, serviceData, colors) {
     doc.text(service.title, 20, 10);
     
     let yPos = 30;
+    
+    console.log(`[PDF] Generating ${service.title} with data:`, serviceData);
     
     // Extract score
     let score = 0;
