@@ -3,18 +3,20 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.2.0 - MANIPULATION CHECK REMOVED
+    Version: 4.3.0 - UI REDESIGN
     Date: October 14, 2025
     
-    CHANGES FROM 4.1.0:
-    - REMOVED: Manipulation Check bar from Score Breakdown display
-    - REMOVED: manipulation_detector from weights calculation
-    - REMOVED: manipulation_detector from service contribution updates
+    CHANGES FROM 4.2.0:
+    - REMOVED: "What We Analyze" 6 big cards section (too cluttered)
+    - REMOVED: YouTube functionality from Transcript tab
+    - ADDED: More vibrant colors and gradients throughout
+    - IMPROVED: More subtle, cleaner hero section
+    - IMPROVED: Colorful tab buttons with gradients
     - All other functionality preserved (DO NO HARM ✓)
     
     Previous versions:
+    - 4.2.0 - Manipulation check removed
     - 4.1.0 - Charts system removed
-    - 4.0.0 - Initial enhanced version
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,6 +39,231 @@
     
     <!-- External Styles -->
     <link rel="stylesheet" href="/static/css/main.css">
+    
+    <!-- v4.3.0 Enhanced Styles -->
+    <style>
+        /* v4.3.0 Color Enhancements */
+        :root {
+            --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            --gradient-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        /* Hero Section - More Subtle */
+        .section-header-compact {
+            text-align: center;
+            padding: 20px 20px 10px;
+            margin-bottom: 20px;
+        }
+
+        .main-title-compact {
+            font-size: 28px !important;
+            margin-bottom: 8px !important;
+        }
+
+        .subtitle-compact {
+            font-size: 15px !important;
+            color: #6b7280 !important;
+        }
+
+        /* Capabilities Badges - More Colorful */
+        .capabilities-showcase {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 24px;
+            padding: 0 20px;
+        }
+
+        .capability-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: var(--gradient-blue);
+            color: white;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .capability-badge:nth-child(2) {
+            background: var(--gradient-purple);
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .capability-badge:nth-child(3) {
+            background: var(--gradient-green);
+            box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+        }
+
+        .capability-badge:nth-child(4) {
+            background: var(--gradient-orange);
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+        }
+
+        /* Mode Selector - Colorful Tabs */
+        .mode-selector {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            padding: 0 20px;
+        }
+
+        .mode-tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            padding: 16px;
+            background: #f3f4f6;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-tab i {
+            font-size: 24px;
+        }
+
+        .mode-tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .mode-tab.active {
+            background: var(--gradient-blue);
+            color: white;
+            border-color: #3b82f6;
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .mode-tab[data-mode="transcript"].active {
+            background: var(--gradient-purple);
+            border-color: #667eea;
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Mode Description - Cleaner */
+        .mode-description-compact {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-left: 4px solid #3b82f6;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #1e40af;
+        }
+
+        .mode-description-compact i {
+            margin-right: 8px;
+            color: #3b82f6;
+        }
+
+        #transcript-mode .mode-description-compact {
+            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+            border-left-color: #8b5cf6;
+            color: #5b21b6;
+        }
+
+        #transcript-mode .mode-description-compact i {
+            color: #8b5cf6;
+        }
+
+        /* REMOVED: What We Analyze Section */
+        /* All .what-we-analyze, .analyze-grid, .analyze-card styles removed */
+
+        /* Analyze Button - Gradient */
+        .analyze-button {
+            background: var(--gradient-purple) !important;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4) !important;
+        }
+
+        .analyze-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5) !important;
+        }
+
+        /* Progress Bar - Colorful */
+        .progress-bar {
+            background: var(--gradient-purple) !important;
+        }
+
+        /* Results Mode Badge - Colorful */
+        .analysis-mode-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .analysis-mode-badge.news {
+            background: var(--gradient-blue);
+            color: white;
+        }
+
+        .analysis-mode-badge.transcript {
+            background: var(--gradient-purple);
+            color: white;
+        }
+
+        /* Trust Score - Enhanced Colors */
+        .trust-score-big.high {
+            background: var(--gradient-green);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .trust-label-badge.high {
+            background: var(--gradient-green);
+            color: white;
+        }
+
+        /* Contribution Bars - More Vibrant */
+        .contribution-source {
+            background: var(--gradient-blue) !important;
+        }
+
+        .contribution-bias {
+            background: var(--gradient-orange) !important;
+        }
+
+        .contribution-author {
+            background: var(--gradient-purple) !important;
+        }
+
+        .contribution-facts {
+            background: var(--gradient-green) !important;
+        }
+
+        .contribution-transparency {
+            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+        }
+
+        .contribution-content {
+            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .mode-selector {
+                flex-direction: column;
+            }
+            
+            .capabilities-showcase {
+                justify-content: center;
+            }
+        }
+    </style>
 </head>
 <body>
     <!-- Compact Header -->
@@ -81,11 +308,11 @@
                 </div>
                 <div class="capability-badge">
                     <i class="fas fa-newspaper"></i>
-                    <span>Reuters & AP Data</span>
+                    <span>Reuters & AP</span>
                 </div>
                 <div class="capability-badge">
                     <i class="fas fa-chart-line"></i>
-                    <span>Real-Time Scoring</span>
+                    <span>Real-Time</span>
                 </div>
                 <div class="capability-badge">
                     <i class="fas fa-shield-check"></i>
@@ -100,7 +327,7 @@
                     <span>News Analysis</span>
                 </button>
                 <button class="mode-tab" data-mode="transcript" onclick="switchMode('transcript')">
-                    <i class="fas fa-video"></i>
+                    <i class="fas fa-microphone"></i>
                     <span>Transcript Analysis</span>
                 </button>
             </div>
@@ -182,37 +409,23 @@
             <div class="mode-content" id="transcript-mode">
                 <div class="mode-description-compact">
                     <p>
-                        <i class="fas fa-video"></i>
+                        <i class="fas fa-microphone"></i>
                         In-depth transcript fact-checking with claim extraction and verification
                     </p>
                 </div>
 
                 <form class="input-form" id="transcriptForm">
-                    <div class="input-group">
-                        <label class="input-label" for="youtubeUrlInput">
-                            <i class="fab fa-youtube"></i> YouTube URL
-                        </label>
-                        <input 
-                            type="url" 
-                            id="youtubeUrlInput" 
-                            class="input-field" 
-                            placeholder="https://www.youtube.com/watch?v=..."
-                        >
-                        <div class="content-type-indicator" id="youtubeTypeIndicator">YOUTUBE</div>
-                    </div>
-
-                    <div class="youtube-helper">
-                        <strong>YouTube Analysis:</strong> We'll automatically extract the transcript and analyze claims for accuracy.
-                    </div>
-
+                    <!-- REMOVED: YouTube URL input completely -->
+                    
                     <div class="input-group">
                         <label class="input-label" for="transcriptTextInput">
-                            <i class="fas fa-microphone"></i> Or Paste Transcript Text
+                            <i class="fas fa-microphone"></i> Paste Transcript Text
                         </label>
                         <textarea 
                             id="transcriptTextInput" 
                             class="input-field textarea-field transcript-textarea" 
-                            placeholder="Paste video transcript or spoken content here for fact-checking..."
+                            placeholder="Paste video transcript, speech, or spoken content here for fact-checking..."
+                            style="min-height: 250px;"
                         ></textarea>
                         <div class="content-type-indicator" id="transcriptTextTypeIndicator">TRANSCRIPT</div>
                     </div>
@@ -221,7 +434,7 @@
                         <button type="submit" class="analyze-button" id="transcriptAnalyzeBtn">
                             <div class="button-content">
                                 <span class="button-text">
-                                    <i class="fas fa-video"></i>
+                                    <i class="fas fa-search"></i>
                                     Analyze Transcript
                                 </span>
                             </div>
@@ -275,69 +488,7 @@
                 </div>
             </div>
 
-            <!-- What We Analyze Section -->
-            <div class="what-we-analyze" id="whatWeAnalyze">
-                <h3 class="analyze-title">
-                    <i class="fas fa-microscope"></i>
-                    What TruthLens Analyzes
-                </h3>
-                <div class="analyze-grid">
-                    <div class="analyze-card">
-                        <div class="analyze-icon source">
-                            <i class="fas fa-building"></i>
-                        </div>
-                        <h4>Source Credibility</h4>
-                        <p>Compare against 100+ trusted sources including Reuters, AP, BBC, and major news outlets</p>
-                    </div>
-                    <div class="analyze-card">
-                        <div class="analyze-icon bias">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <h4>Bias Detection</h4>
-                        <p>Advanced AI detects political bias, emotional manipulation, and loaded language</p>
-                    </div>
-                    <div class="analyze-card">
-                        <div class="analyze-icon facts">
-                            <i class="fas fa-check-double"></i>
-                        </div>
-                        <h4>Fact Checking</h4>
-                        <p>Extract and verify claims against verified databases and reputable sources</p>
-                    </div>
-                    <div class="analyze-card">
-                        <div class="analyze-icon author">
-                            <i class="fas fa-user-shield"></i>
-                        </div>
-                        <h4>Author Verification</h4>
-                        <p>Analyze author credentials, expertise, and credibility across platforms</p>
-                    </div>
-                    <div class="analyze-card">
-                        <div class="analyze-icon transparency">
-                            <i class="fas fa-eye"></i>
-                        </div>
-                        <h4>Transparency</h4>
-                        <p>Check for disclosed sources, corrections policy, and editorial standards</p>
-                    </div>
-                    <div class="analyze-card">
-                        <div class="analyze-icon manipulation">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <h4>Manipulation Detection</h4>
-                        <p>Identify clickbait, sensationalism, and psychological manipulation tactics</p>
-                    </div>
-                </div>
-
-                <!-- Data Sources Badge -->
-                <div class="data-sources">
-                    <span class="sources-label">Powered by data from:</span>
-                    <div class="source-badges">
-                        <span class="source-badge">Reuters</span>
-                        <span class="source-badge">Associated Press</span>
-                        <span class="source-badge">BBC</span>
-                        <span class="source-badge">Media Bias Fact Check</span>
-                        <span class="source-badge">100+ News Sources</span>
-                    </div>
-                </div>
-            </div>
+            <!-- REMOVED: "What We Analyze" Section with 6 cards -->
 
             <!-- Results Section -->
             <div class="results-section" id="resultsSection">
@@ -500,9 +651,9 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.2.0 - Manipulation Check Removed');
+            console.log('TruthLens v4.3.0 - UI Redesign Complete');
             
-            const inputs = ['newsUrlInput', 'newsTextInput', 'youtubeUrlInput', 'transcriptTextInput'];
+            const inputs = ['newsUrlInput', 'newsTextInput', 'transcriptTextInput'];
             inputs.forEach(id => {
                 const input = document.getElementById(id);
                 if (input) {
@@ -667,7 +818,6 @@
         }
 
         function updateServiceContributions(detailed) {
-            // ===== v4.2.0: REMOVED manipulation_detector from weights =====
             const weights = {
                 source_credibility: 0.25,
                 author_analyzer: 0.15,
@@ -701,7 +851,6 @@
                     
                     const contribution = (score * weights[serviceKey]).toFixed(1);
                     
-                    // ===== v4.2.0: REMOVED manipulation_detector from element map =====
                     const elementIdMap = {
                         'source_credibility': 'contribSource',
                         'bias_detector': 'contribBias',
