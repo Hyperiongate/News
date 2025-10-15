@@ -1,30 +1,20 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 10.0.0 - COMPLETE REBUILD - PROFESSIONAL SALES TOOL
+ * VERSION: 10.1.0 - FIXED DATA EXTRACTION FROM REAL BACKEND
  * DATE: October 15, 2025
  * AUTHOR: TruthLens Development Team
  * 
- * COMPLETE REBUILD FROM SCRATCH
+ * FIXES FROM v10.0.0:
+ * ✅ Removed broken emoji icons (replaced with text)
+ * ✅ Extracts real findings from analysis.what_we_found
+ * ✅ Shows actual backend data in Additional Details
+ * ✅ Fixed Key Findings to use real data
+ * ✅ No more placeholder text
  * 
- * DESIGN PHILOSOPHY:
- * - Professional document that serves as a sales/credibility tool
- * - Clean, modern layout with meaningful data visualization
- * - Tells a story: Score → Executive Summary → Service Details → Insights
- * - Informative, educational, and engaging
- * - No thick borders around empty containers
- * - Real data from backend, no placeholders
- * 
- * SECTIONS:
- * 1. Cover Page - Bold trust score with visual grade
- * 2. Executive Summary - Article info, source, author, key findings
- * 3. Service Analysis - Each service with scores, findings, and insights
- * 4. Visual Dashboard - Charts and metrics
- * 5. Recommendations - Actionable insights
- * 
- * DATA SOURCE:
- * - window.lastAnalysisData (set by app after analysis)
- * - Real backend fields: trust_score, article_summary, source, author,
- *   findings_summary, detailed_analysis{}, word_count
+ * DATA STRUCTURE DISCOVERED:
+ * - Each service has: score, analysis{what_we_looked, what_we_found, what_it_means}
+ * - No findings array - data is in analysis object
+ * - Service-specific fields vary by service
  */
 
 // ============================================================================
@@ -32,7 +22,7 @@
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[PDF v10.0.0] Starting professional PDF generation...');
+    console.log('[PDF v10.1.0] Starting professional PDF generation...');
     
     // Validate jsPDF
     if (typeof window.jspdf === 'undefined') {
@@ -47,7 +37,7 @@ function downloadPDFReport() {
         return;
     }
     
-    console.log('[PDF v10.0.0] Generating report for:', data.source || 'Unknown source');
+    console.log('[PDF v10.1.0] Generating report for:', data.source || 'Unknown source');
     
     try {
         const { jsPDF } = window.jspdf;
@@ -66,10 +56,10 @@ function downloadPDFReport() {
         const filename = `TruthLens-Report-${sourceShort}-${timestamp}.pdf`;
         
         doc.save(filename);
-        console.log('[PDF v10.0.0] ✓ PDF generated successfully:', filename);
+        console.log('[PDF v10.1.0] ✓ PDF generated successfully:', filename);
         
     } catch (error) {
-        console.error('[PDF v10.0.0] Error generating PDF:', error);
+        console.error('[PDF v10.1.0] Error generating PDF:', error);
         alert('Error generating PDF. Please try again.');
     }
 }
@@ -109,12 +99,12 @@ function generateProfessionalPDF(doc, data) {
     
     // Page 3+: Service Analysis Pages
     const services = [
-        { key: 'source_credibility', title: 'Source Credibility', icon: '🏛️' },
-        { key: 'bias_detector', title: 'Bias Detection', icon: '⚖️' },
-        { key: 'fact_checker', title: 'Fact Verification', icon: '✓' },
-        { key: 'author_analyzer', title: 'Author Analysis', icon: '👤' },
-        { key: 'transparency_analyzer', title: 'Transparency', icon: '🔍' },
-        { key: 'content_analyzer', title: 'Content Quality', icon: '📄' }
+        { key: 'source_credibility', title: 'Source Credibility Analysis' },
+        { key: 'bias_detector', title: 'Bias Detection Analysis' },
+        { key: 'fact_checker', title: 'Fact Verification Analysis' },
+        { key: 'author_analyzer', title: 'Author Credibility Analysis' },
+        { key: 'transparency_analyzer', title: 'Transparency Analysis' },
+        { key: 'content_analyzer', title: 'Content Quality Analysis' }
     ];
     
     services.forEach(service => {
@@ -288,14 +278,14 @@ function generateExecutiveSummary(doc, data, trustScore, scoreColor, colors) {
     doc.text(summaryLines.slice(0, 4), 20, yPos);
     yPos += summaryLines.slice(0, 4).length * 5 + 10;
     
-    // Key Findings Section
+    // Key Findings Section - FIXED TO USE REAL DATA
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
     doc.text('Key Findings', 20, yPos);
     
     yPos += 8;
     
-    const findings = extractKeyFindings(data);
+    const findings = extractRealKeyFindings(data);
     
     findings.slice(0, 5).forEach(finding => {
         // Bullet point
@@ -375,7 +365,7 @@ function generateExecutiveSummary(doc, data, trustScore, scoreColor, colors) {
 }
 
 // ============================================================================
-// PAGE 3+: SERVICE ANALYSIS PAGES
+// PAGE 3+: SERVICE ANALYSIS PAGES - FIXED TO USE REAL DATA
 // ============================================================================
 
 function generateServicePage(doc, service, serviceData, colors) {
@@ -386,7 +376,7 @@ function generateServicePage(doc, service, serviceData, colors) {
     doc.setFontSize(18);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.white);
-    doc.text(`${service.icon} ${service.title}`, 105, 13, { align: 'center' });
+    doc.text(service.title, 105, 13, { align: 'center' });
     
     let yPos = 35;
     
@@ -408,8 +398,9 @@ function generateServicePage(doc, service, serviceData, colors) {
     doc.setTextColor(...colors.gray);
     doc.text('/100', 45, yPos + 28, { align: 'center' });
     
-    // Service interpretation
-    const interpretation = getServiceInterpretation(service.key, score, serviceData);
+    // Service interpretation - USES REAL analysis.what_it_means
+    const interpretation = serviceData.analysis?.what_it_means || 
+                          getServiceInterpretation(service.key, score, serviceData);
     
     doc.setFillColor(...colors.lightGray);
     doc.roundedRect(75, yPos, 115, 35, 2, 2, 'F');
@@ -426,8 +417,8 @@ function generateServicePage(doc, service, serviceData, colors) {
     
     yPos += 45;
     
-    // Findings section
-    if (serviceData.findings && Array.isArray(serviceData.findings) && serviceData.findings.length > 0) {
+    // What We Found section - USES REAL analysis.what_we_found
+    if (serviceData.analysis?.what_we_found) {
         doc.setFontSize(13);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.darkGray);
@@ -435,31 +426,24 @@ function generateServicePage(doc, service, serviceData, colors) {
         
         yPos += 8;
         
-        serviceData.findings.slice(0, 6).forEach(finding => {
-            const findingText = typeof finding === 'string' ? finding :
-                              finding.text || finding.finding || '';
-            
-            if (findingText && yPos < 250) {
-                // Checkmark bullet
-                doc.setFontSize(10);
-                doc.setTextColor(...colors.success);
-                doc.text('✓', 22, yPos);
-                
-                // Finding text
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                doc.setTextColor(...colors.darkGray);
-                const lines = doc.splitTextToSize(findingText.substring(0, 150), 165);
-                doc.text(lines[0], 28, yPos);
-                
-                yPos += 7;
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.darkGray);
+        
+        const findings = serviceData.analysis.what_we_found;
+        const findingLines = doc.splitTextToSize(findings, 170);
+        
+        findingLines.slice(0, 8).forEach(line => {
+            if (yPos < 250) {
+                doc.text(line, 20, yPos);
+                yPos += 5;
             }
         });
         
         yPos += 5;
     }
     
-    // Service-specific insights
+    // Service-specific insights - USES REAL DATA
     if (yPos < 240) {
         addServiceSpecificInsights(doc, service.key, serviceData, yPos, colors);
     }
@@ -544,7 +528,7 @@ function generateRecommendationsPage(doc, data, trustScore, scoreColor, colors) 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.primary);
-    doc.text('💡 About TruthLens', 25, yPos + 8);
+    doc.text('About TruthLens', 25, yPos + 8);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -555,24 +539,27 @@ function generateRecommendationsPage(doc, data, trustScore, scoreColor, colors) 
 }
 
 // ============================================================================
-// HELPER FUNCTIONS - DATA EXTRACTION
+// HELPER FUNCTIONS - EXTRACT FROM REAL BACKEND DATA
 // ============================================================================
 
-function extractKeyFindings(data) {
+function extractRealKeyFindings(data) {
     const findings = [];
     const detailed = data.detailed_analysis || {};
     
-    // Extract from each service's findings array
-    Object.values(detailed).forEach(service => {
-        if (service && service.findings && Array.isArray(service.findings)) {
-            service.findings.forEach(f => {
-                const text = typeof f === 'string' ? f : f.text || f.finding || '';
-                if (text) findings.push(text);
-            });
+    // Extract what_we_found from each service
+    Object.keys(detailed).forEach(serviceKey => {
+        const service = detailed[serviceKey];
+        if (service && service.analysis && service.analysis.what_we_found) {
+            // Split by bullet points or periods and take first meaningful statement
+            const found = service.analysis.what_we_found;
+            const statements = found.split(/[•\n]/).filter(s => s.trim().length > 20);
+            if (statements.length > 0) {
+                findings.push(statements[0].trim());
+            }
         }
     });
     
-    // If no findings, generate from score
+    // If no findings extracted, generate from scores
     if (findings.length === 0) {
         const score = data.trust_score || 0;
         findings.push(
@@ -682,7 +669,7 @@ function generateRecommendations(data, score) {
 }
 
 function addServiceSpecificInsights(doc, key, data, yPos, colors) {
-    if (yPos > 240) return;
+    if (yPos > 235) return;
     
     doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
@@ -694,25 +681,44 @@ function addServiceSpecificInsights(doc, key, data, yPos, colors) {
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
     
-    // Service-specific details
+    // Service-specific details - EXTRACT REAL DATA
     const details = [];
     
     if (key === 'source_credibility') {
         if (data.source_name) details.push(`Organization: ${data.source_name}`);
         if (data.credibility_level) details.push(`Credibility Level: ${data.credibility_level}`);
         if (data.reputation) details.push(`Reputation: ${data.reputation}`);
+        if (data.domain) details.push(`Domain: ${data.domain}`);
     } else if (key === 'bias_detector') {
-        if (data.political_leaning) details.push(`Political Leaning: ${data.political_leaning}`);
+        if (data.political_leaning || data.political_label) {
+            details.push(`Political Leaning: ${data.political_label || data.political_leaning}`);
+        }
         if (data.objectivity_score) details.push(`Objectivity: ${data.objectivity_score}/100`);
         if (data.sensationalism_level) details.push(`Sensationalism: ${data.sensationalism_level}`);
+        if (data.loaded_language_count !== undefined) {
+            details.push(`Loaded Language: ${data.loaded_language_count} instances`);
+        }
     } else if (key === 'fact_checker') {
         if (data.claims_verified) details.push(`Claims Verified: ${data.claims_verified}`);
         if (data.accuracy_score) details.push(`Accuracy: ${data.accuracy_score}%`);
+    } else if (key === 'author_analyzer') {
+        if (data.author_name) details.push(`Author: ${data.author_name}`);
+        if (data.years_experience) details.push(`Experience: ${data.years_experience} years`);
+        if (data.articles_count) details.push(`Articles: ${data.articles_count}+`);
+        if (data.expertise) details.push(`Expertise: ${data.expertise}`);
+    } else if (key === 'transparency_analyzer') {
+        if (data.sources_count) details.push(`Sources Cited: ${data.sources_count}`);
+        if (data.quote_count) details.push(`Direct Quotes: ${data.quote_count}`);
+    } else if (key === 'content_analyzer') {
+        if (data.readability_level) details.push(`Readability: ${data.readability_level}`);
+        if (data.word_count) details.push(`Word Count: ${data.word_count}`);
     }
     
-    details.slice(0, 4).forEach(detail => {
-        doc.text(`• ${detail}`, 22, yPos);
-        yPos += 5;
+    details.slice(0, 6).forEach(detail => {
+        if (yPos < 250) {
+            doc.text(`• ${detail}`, 22, yPos);
+            yPos += 5;
+        }
     });
 }
 
@@ -736,5 +742,5 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
 // INITIALIZATION
 // ============================================================================
 
-console.log('[PDF v10.0.0] Professional PDF generator loaded successfully');
-console.log('[PDF v10.0.0] Ready to generate comprehensive credibility reports');
+console.log('[PDF v10.1.0] Professional PDF generator loaded - FIXED DATA EXTRACTION');
+console.log('[PDF v10.1.0] Now using real backend data from analysis object');
