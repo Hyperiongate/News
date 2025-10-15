@@ -159,22 +159,12 @@ function generatePremiumCoverPage(doc, data, trustScore, analysisMode, colors) {
     doc.setFillColor(...colors.secondary);
     doc.rect(0, 100, 210, 20, 'F');
     
-    // Decorative circles with transparency
-    // Note: jsPDF doesn't support setGlobalAlpha, so we'll use lighter colors instead
-    // This creates a similar visual effect without requiring transparency
-    doc.setFillColor(255, 255, 255);
-    // Use setGState for opacity if available, otherwise use lighter fill
-    try {
-        doc.setGState(new doc.GState({ opacity: 0.1 }));
-        doc.circle(180, 30, 40, 'F');
-        doc.circle(30, 90, 30, 'F');
-        doc.setGState(new doc.GState({ opacity: 1.0 }));
-    } catch (e) {
-        // Fallback: use very light fill color to simulate transparency
-        doc.setFillColor(255, 255, 255, 25); // Very light white (if RGBA is supported)
-        doc.circle(180, 30, 40, 'F');
-        doc.circle(30, 90, 30, 'F');
-    }
+    // Decorative circles - use lighter color blend instead of transparency
+    // Mix white with the primary color for a translucent effect
+    const lightPrimary = colors.primary.map(c => Math.min(255, c + ((255 - c) * 0.85)));
+    doc.setFillColor(...lightPrimary);
+    doc.circle(180, 30, 40, 'F');
+    doc.circle(30, 90, 30, 'F');
     
     // TruthLens Logo and Title
     doc.setFontSize(42);
@@ -241,7 +231,7 @@ function generatePremiumCoverPage(doc, data, trustScore, analysisMode, colors) {
     
     // Colored ring
     doc.setDrawColor(...scoreColor);
-    doc.setLineWidth(8);
+    doc.setLineWidth(10);  // Increased from 8 for better visibility
     doc.circle(centerX, centerY, radius, 'S');
     
     // Score display
@@ -457,6 +447,11 @@ function generatePremiumExecutiveSummary(doc, data, insights, trustScore, colors
             doc.setFillColor(...service.color);
             const barWidth = (score / 100) * 140;
             doc.rect(25, yPos + 2, barWidth, 4, 'F');
+            
+            // Add border to make progress bar more visible
+            doc.setDrawColor(200, 200, 200);
+            doc.setLineWidth(0.1);
+            doc.rect(25, yPos + 2, 140, 4, 'S');
             
             yPos += 12;
         }
