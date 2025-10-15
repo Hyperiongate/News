@@ -1,15 +1,14 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 11.1.0 - ENHANCED GRAPHICS + SHOW REAL DATA
+ * VERSION: 11.2.0 - THIRD-PARTY RATING SERVICES BARS
  * DATE: October 15, 2025
  * 
- * IMPROVEMENTS:
- * ✅ Fixed overlapping score numbers
- * ✅ Added political bias dial with color spectrum
- * ✅ Shows actual fact-check claims (all 10)
- * ✅ Shows actual sources cited (all 12)
- * ✅ Better visual hierarchy
- * ✅ Do no harm - kept all working content
+ * IMPROVEMENTS FROM v11.1.0:
+ * ✅ Added third-party rating service bars to Source Credibility section
+ * ✅ Shows AllSides, Media Bias/Fact Check, and NewsGuard ratings
+ * ✅ Color-coded NewsGuard scores (Green/Yellow/Red)
+ * ✅ Visual breakdown of all rating services
+ * ✅ Do No Harm - all existing features preserved
  */
 
 // ============================================================================
@@ -42,7 +41,7 @@ function isGenericPlaceholder(text) {
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[PDF v11.1.0] Generating enhanced PDF with graphics...');
+    console.log('[PDF v11.2.0] Generating PDF with third-party rating services...');
     
     if (typeof window.jspdf === 'undefined') {
         alert('PDF library not loaded. Please refresh the page and try again.');
@@ -70,10 +69,10 @@ function downloadPDFReport() {
         const filename = `TruthLens-Report-${sourceShort}-${timestamp}.pdf`;
         
         doc.save(filename);
-        console.log('[PDF v11.1.0] ✓ Generated:', filename);
+        console.log('[PDF v11.2.0] ✓ Generated:', filename);
         
     } catch (error) {
-        console.error('[PDF v11.1.0] Error:', error);
+        console.error('[PDF v11.2.0] Error:', error);
         alert('Error generating PDF. Please try again.');
     }
 }
@@ -96,10 +95,9 @@ function generateProfessionalPDF(doc, data) {
         lightGray: [243, 244, 246],
         darkGray: [31, 41, 55],
         white: [255, 255, 255],
-        // Political spectrum colors
-        leftColor: [59, 130, 246],    // Blue
-        centerColor: [168, 85, 247],  // Purple
-        rightColor: [239, 68, 68]     // Red
+        leftColor: [59, 130, 246],
+        centerColor: [168, 85, 247],
+        rightColor: [239, 68, 68]
     };
     
     const scoreColor = trustScore >= 70 ? colors.success :
@@ -142,7 +140,7 @@ function generateProfessionalPDF(doc, data) {
 }
 
 // ============================================================================
-// COVER PAGE (Same as before)
+// COVER PAGE
 // ============================================================================
 
 function generateCoverPage(doc, data, trustScore, scoreColor, colors) {
@@ -233,7 +231,7 @@ function generateCoverPage(doc, data, trustScore, scoreColor, colors) {
 }
 
 // ============================================================================
-// EXECUTIVE SUMMARY (Same as before)
+// EXECUTIVE SUMMARY
 // ============================================================================
 
 function generateExecutiveSummary(doc, data, trustScore, scoreColor, colors) {
@@ -338,7 +336,7 @@ function generateExecutiveSummary(doc, data, trustScore, scoreColor, colors) {
 }
 
 // ============================================================================
-// ENHANCED SERVICE PAGE - WITH GRAPHICS
+// ENHANCED SERVICE PAGE
 // ============================================================================
 
 function generateEnhancedServicePage(doc, service, serviceData, colors, fullData) {
@@ -357,12 +355,11 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     
     let yPos = 35;
     
-    // ========== SCORE DISPLAY - FIXED OVERLAP ==========
+    // ========== SCORE DISPLAY ==========
     
     doc.setFillColor(...colors.lightGray);
     doc.roundedRect(15, yPos, 180, 30, 3, 3, 'F');
     
-    // Left: Score number (FIXED positioning)
     doc.setFontSize(36);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...scoreColor);
@@ -372,7 +369,6 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     doc.setTextColor(...colors.gray);
     doc.text('/100', 50, yPos + 20);
     
-    // Right: Score bar
     const barX = 70;
     const barY = yPos + 10;
     const barWidth = 115;
@@ -385,7 +381,6 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     doc.setFillColor(...scoreColor);
     doc.roundedRect(barX, barY, fillWidth, barHeight, 2, 2, 'F');
     
-    // Label
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.darkGray);
@@ -397,7 +392,11 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     
     yPos += 38;
     
-    // ========== SPECIAL GRAPHICS FOR SPECIFIC SERVICES ==========
+    // ========== SPECIAL GRAPHICS ==========
+    
+    if (service.key === 'source_credibility') {
+        yPos = drawThirdPartyRatings(doc, serviceData, yPos, colors);
+    }
     
     if (service.key === 'bias_detector') {
         yPos = drawPoliticalBiasDial(doc, serviceData, yPos, colors);
@@ -429,7 +428,7 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     
     yPos += 36;
     
-    // ========== KEY FINDINGS - WITH REAL DATA ==========
+    // ========== KEY FINDINGS ==========
     
     const findingsHeight = service.key === 'fact_checker' || service.key === 'transparency_analyzer' ? 85 : 50;
     
@@ -445,16 +444,11 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.darkGray);
     
-    // Special handling for fact_checker - show claims
     if (service.key === 'fact_checker') {
         yPos = displayFactCheckClaims(doc, serviceData, fullData, yPos, colors);
-    }
-    // Special handling for transparency - show sources
-    else if (service.key === 'transparency_analyzer') {
+    } else if (service.key === 'transparency_analyzer') {
         yPos = displayTransparencySources(doc, serviceData, yPos, colors);
-    }
-    // Regular findings for other services
-    else {
+    } else {
         let findingsText = '';
         if (serviceData.analysis?.what_we_found && !isGenericPlaceholder(serviceData.analysis.what_we_found)) {
             findingsText = cleanText(serviceData.analysis.what_we_found);
@@ -518,6 +512,146 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
 }
 
 // ============================================================================
+// THIRD-PARTY RATING SERVICES DISPLAY - NEW IN v11.2.0
+// ============================================================================
+
+function drawThirdPartyRatings(doc, serviceData, yPos, colors) {
+    const thirdParty = serviceData.third_party_ratings || {};
+    
+    // Check if we have any ratings
+    if (!thirdParty.newsguard && !thirdParty.mediabiasfactcheck && !thirdParty.allsides) {
+        return yPos;
+    }
+    
+    doc.setFillColor(250, 250, 255);
+    doc.roundedRect(15, yPos, 180, 70, 2, 2, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.primary);
+    doc.text('Third-Party Rating Services', 20, yPos + 8);
+    
+    let barY = yPos + 16;
+    
+    // NewsGuard
+    if (thirdParty.newsguard) {
+        const ng = thirdParty.newsguard;
+        const ngScore = ng.score || 0;
+        const ngRating = ng.rating || 'Unknown';
+        
+        // Determine color based on rating
+        let ngColor;
+        if (ngRating === 'Green') {
+            ngColor = colors.success;
+        } else if (ngRating === 'Yellow') {
+            ngColor = colors.warning;
+        } else if (ngRating === 'Red') {
+            ngColor = colors.danger;
+        } else {
+            ngColor = colors.gray;
+        }
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.darkGray);
+        doc.text('NewsGuard', 20, barY);
+        
+        doc.setFontSize(9);
+        doc.setTextColor(...ngColor);
+        doc.text(`${ngScore}/100`, 175, barY, { align: 'right' });
+        
+        barY += 4;
+        
+        doc.setFillColor(220, 220, 220);
+        doc.rect(20, barY - 2, 155, 4, 'F');
+        
+        const ngBarWidth = (ngScore / 100) * 155;
+        doc.setFillColor(...ngColor);
+        doc.rect(20, barY - 2, ngBarWidth, 4, 'F');
+        
+        barY += 8;
+    }
+    
+    // Media Bias/Fact Check
+    if (thirdParty.mediabiasfactcheck) {
+        const mbfc = thirdParty.mediabiasfactcheck;
+        const factual = mbfc.factual || 'Unknown';
+        
+        // Map factual rating to score
+        const factualScores = {
+            'Very High': 95,
+            'High': 80,
+            'Mixed': 50,
+            'Low': 30,
+            'Very Low': 10,
+            'Unknown': 50
+        };
+        const mbfcScore = factualScores[factual] || 50;
+        const mbfcColor = mbfcScore >= 70 ? colors.success :
+                          mbfcScore >= 50 ? colors.warning : colors.danger;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.darkGray);
+        doc.text('Media Bias/Fact Check', 20, barY);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(...mbfcColor);
+        doc.text(factual, 175, barY, { align: 'right' });
+        
+        barY += 4;
+        
+        doc.setFillColor(220, 220, 220);
+        doc.rect(20, barY - 2, 155, 4, 'F');
+        
+        const mbfcBarWidth = (mbfcScore / 100) * 155;
+        doc.setFillColor(...mbfcColor);
+        doc.rect(20, barY - 2, mbfcBarWidth, 4, 'F');
+        
+        barY += 8;
+    }
+    
+    // AllSides
+    if (thirdParty.allsides) {
+        const as = thirdParty.allsides;
+        const reliability = as.reliability || 'Unknown';
+        
+        // Map reliability to score
+        const reliabilityScores = {
+            'High': 90,
+            'Mixed': 60,
+            'Low': 30,
+            'Unknown': 50
+        };
+        const asScore = reliabilityScores[reliability] || 50;
+        const asColor = asScore >= 70 ? colors.success :
+                        asScore >= 50 ? colors.warning : colors.danger;
+        
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.darkGray);
+        doc.text('AllSides', 20, barY);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(...asColor);
+        doc.text(reliability, 175, barY, { align: 'right' });
+        
+        barY += 4;
+        
+        doc.setFillColor(220, 220, 220);
+        doc.rect(20, barY - 2, 155, 4, 'F');
+        
+        const asBarWidth = (asScore / 100) * 155;
+        doc.setFillColor(...asColor);
+        doc.rect(20, barY - 2, asBarWidth, 4, 'F');
+        
+        barY += 8;
+    }
+    
+    return yPos + 78;
+}
+
+// ============================================================================
 // POLITICAL BIAS DIAL GRAPHIC
 // ============================================================================
 
@@ -526,19 +660,13 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
     const centerY = yPos + 30;
     const radius = 25;
     
-    // Draw semi-circle arc (political spectrum)
-    // Left is blue (liberal), center is purple, right is red (conservative)
-    
-    // Draw color spectrum arc
     const segments = 50;
     for (let i = 0; i < segments; i++) {
         const angle = Math.PI + (i / segments) * Math.PI;
         const nextAngle = Math.PI + ((i + 1) / segments) * Math.PI;
         
-        // Interpolate color from blue to purple to red
         let color;
         if (i < segments / 2) {
-            // Blue to Purple
             const t = (i / (segments / 2));
             color = [
                 59 + (168 - 59) * t,
@@ -546,7 +674,6 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
                 246 + (247 - 246) * t
             ];
         } else {
-            // Purple to Red
             const t = ((i - segments / 2) / (segments / 2));
             color = [
                 168 + (239 - 168) * t,
@@ -566,31 +693,26 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
         doc.line(x1, y1, x2, y2);
     }
     
-    // Draw needle pointing to political position
     const politicalLabel = cleanText(biasData.political_label || biasData.political_leaning || 'Center');
     
-    // Map political position to angle
     let needleAngle;
     if (politicalLabel.toLowerCase().includes('left')) {
         needleAngle = Math.PI + Math.PI * 0.25;
     } else if (politicalLabel.toLowerCase().includes('right')) {
         needleAngle = Math.PI + Math.PI * 0.75;
     } else {
-        needleAngle = Math.PI + Math.PI * 0.5; // Center
+        needleAngle = Math.PI + Math.PI * 0.5;
     }
     
-    // Draw needle
     doc.setDrawColor(31, 41, 55);
     doc.setLineWidth(2);
     const needleX = centerX + Math.cos(needleAngle) * (radius - 5);
     const needleY = centerY + Math.sin(needleAngle) * (radius - 5);
     doc.line(centerX, centerY, needleX, needleY);
     
-    // Draw center circle
     doc.setFillColor(31, 41, 55);
     doc.circle(centerX, centerY, 3, 'F');
     
-    // Labels
     doc.setFontSize(8);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(59, 130, 246);
@@ -602,7 +724,6 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
     doc.setTextColor(239, 68, 68);
     doc.text('RIGHT', centerX + 25, centerY + 10);
     
-    // Current position label
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(31, 41, 55);
@@ -631,13 +752,9 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
             const claimText = typeof claim === 'string' ? claim :
                             claim.claim || claim.text || 'Claim analyzed';
             
-            const verdict = claim.verdict || 'unverified';
-            
-            // Bullet
             doc.setFillColor(...colors.success);
             doc.circle(22, fy - 1, 1, 'F');
             
-            // Claim text
             const cleaned = cleanText(claimText).substring(0, 80);
             const lines = doc.splitTextToSize(cleaned, 155);
             doc.text(lines[0], 25, fy);
@@ -663,7 +780,6 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
 // ============================================================================
 
 function displayTransparencySources(doc, serviceData, yPos, colors) {
-    // Extract sources from backend data
     const sourcesCount = serviceData.sources_cited || serviceData.sources_count || 12;
     const quotesCount = serviceData.quote_count || serviceData.quotes_used || 13;
     
@@ -673,7 +789,6 @@ function displayTransparencySources(doc, serviceData, yPos, colors) {
     
     let fy = yPos + 16;
     
-    // Summary line
     doc.text(`Found ${sourcesCount} source citations, author identified. For a news report, multiple sources, clear attribution, balance.`, 20, fy);
     fy += 8;
     
@@ -702,7 +817,7 @@ function displayTransparencySources(doc, serviceData, yPos, colors) {
 }
 
 // ============================================================================
-// CONTENT GENERATORS (same as before)
+// CONTENT GENERATORS
 // ============================================================================
 
 function getWhatWeAnalyzed(serviceKey, data) {
@@ -980,4 +1095,6 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
     doc.text(`Page ${pageNum} of ${totalPages}`, 190, 287, { align: 'right' });
 }
 
-console.log('[PDF v11.1.0] Enhanced PDF with graphics + real data loaded');
+console.log('[PDF v11.2.0] Enhanced PDF with third-party rating services loaded');
+
+// This file is not truncated
