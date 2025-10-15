@@ -1,7 +1,12 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 5.0.0 - PREMIUM MARKETING-QUALITY PDF GENERATOR
+ * VERSION: 5.0.1 - PREMIUM MARKETING-QUALITY PDF GENERATOR
  * DATE: October 15, 2025
+ * 
+ * CHANGELOG:
+ * - October 15, 2025 (v5.0.1): Fixed setGlobalAlpha error by using setGState with opacity
+ * - October 15, 2025 (v5.0.1): Fixed triangle helper function scope issue
+ * - October 15, 2025 (v5.0.1): Added proper opacity handling for decorative elements
  * 
  * MAJOR ENHANCEMENTS FROM v3.6.0:
  * ✅ PREMIUM DESIGN: Rich gradients, vibrant colors, professional layout
@@ -20,7 +25,7 @@
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[Premium PDF Generator v5.0.0] Starting enhanced PDF generation...');
+    console.log('[Premium PDF Generator v5.0.1] Starting enhanced PDF generation...');
     
     if (typeof window.jspdf === 'undefined') {
         console.error('[PDF Generator] jsPDF library not loaded');
@@ -36,12 +41,17 @@ function downloadPDFReport() {
     }
     
     const analysisMode = data.analysis_mode || 'news';
-    console.log('[Premium PDF v5.0.0] Analysis mode:', analysisMode);
-    console.log('[Premium PDF v5.0.0] Full data:', data);
+    console.log('[Premium PDF v5.0.1] Analysis mode:', analysisMode);
+    console.log('[Premium PDF v5.0.1] Full data:', data);
     
     try {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
+        
+        // Add triangle helper function to the doc instance
+        doc.triangle = function(x1, y1, x2, y2, x3, y3, style) {
+            this.lines([[x2-x1, y2-y1], [x3-x2, y3-y2], [x1-x3, y1-y3]], x1, y1, null, style || 'S');
+        };
         
         generatePremiumPDFContent(doc, data);
         
@@ -50,7 +60,7 @@ function downloadPDFReport() {
         
         doc.save(filename);
         
-        console.log('[Premium PDF v5.0.0] ✓ Premium PDF generated successfully:', filename);
+        console.log('[Premium PDF v5.0.1] ✓ Premium PDF generated successfully:', filename);
     } catch (error) {
         console.error('[PDF Generator] Error generating PDF:', error);
         console.error(error.stack);
@@ -149,12 +159,22 @@ function generatePremiumCoverPage(doc, data, trustScore, analysisMode, colors) {
     doc.setFillColor(...colors.secondary);
     doc.rect(0, 100, 210, 20, 'F');
     
-    // Decorative circles
+    // Decorative circles with transparency
+    // Note: jsPDF doesn't support setGlobalAlpha, so we'll use lighter colors instead
+    // This creates a similar visual effect without requiring transparency
     doc.setFillColor(255, 255, 255);
-    doc.setGlobalAlpha(0.1);
-    doc.circle(180, 30, 40, 'F');
-    doc.circle(30, 90, 30, 'F');
-    doc.setGlobalAlpha(1);
+    // Use setGState for opacity if available, otherwise use lighter fill
+    try {
+        doc.setGState(new doc.GState({ opacity: 0.1 }));
+        doc.circle(180, 30, 40, 'F');
+        doc.circle(30, 90, 30, 'F');
+        doc.setGState(new doc.GState({ opacity: 1.0 }));
+    } catch (e) {
+        // Fallback: use very light fill color to simulate transparency
+        doc.setFillColor(255, 255, 255, 25); // Very light white (if RGBA is supported)
+        doc.circle(180, 30, 40, 'F');
+        doc.circle(30, 90, 30, 'F');
+    }
     
     // TruthLens Logo and Title
     doc.setFontSize(42);
@@ -1147,9 +1167,4 @@ function addPremiumFooter(doc, pageNum, totalPages, colors) {
     doc.text('TruthLens Premium Report - Confidential', 105, 285, { align: 'center' });
 }
 
-// Helper function to draw triangles (for pie chart approximation)
-doc.triangle = function(x1, y1, x2, y2, x3, y3, style) {
-    this.lines([[x2-x1, y2-y1], [x3-x2, y3-y2], [x1-x3, y1-y3]], x1, y1, null, style || 'S');
-};
-
-console.log('[Premium PDF Generator v5.0.0] Loaded - MARKETING-QUALITY REPORTS');
+console.log('[Premium PDF Generator v5.0.1] Loaded - MARKETING-QUALITY REPORTS');
