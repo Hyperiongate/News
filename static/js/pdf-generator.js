@@ -1,9 +1,12 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 5.0.1 - PREMIUM MARKETING-QUALITY PDF GENERATOR
+ * VERSION: 5.0.2 - PREMIUM MARKETING-QUALITY PDF GENERATOR
  * DATE: October 15, 2025
  * 
  * CHANGELOG:
+ * - October 15, 2025 (v5.0.2): Improved rendering quality for all service sections
+ * - October 15, 2025 (v5.0.2): Removed all opacity/transparency that caused rendering issues
+ * - October 15, 2025 (v5.0.2): Increased line weights and font weights for better visibility
  * - October 15, 2025 (v5.0.1): Fixed setGlobalAlpha error by using setGState with opacity
  * - October 15, 2025 (v5.0.1): Fixed triangle helper function scope issue
  * - October 15, 2025 (v5.0.1): Added proper opacity handling for decorative elements
@@ -25,7 +28,7 @@
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[Premium PDF Generator v5.0.1] Starting enhanced PDF generation...');
+    console.log('[Premium PDF Generator v5.0.2] Starting enhanced PDF generation...');
     
     if (typeof window.jspdf === 'undefined') {
         console.error('[PDF Generator] jsPDF library not loaded');
@@ -41,8 +44,8 @@ function downloadPDFReport() {
     }
     
     const analysisMode = data.analysis_mode || 'news';
-    console.log('[Premium PDF v5.0.1] Analysis mode:', analysisMode);
-    console.log('[Premium PDF v5.0.1] Full data:', data);
+    console.log('[Premium PDF v5.0.2] Analysis mode:', analysisMode);
+    console.log('[Premium PDF v5.0.2] Full data:', data);
     
     try {
         const { jsPDF } = window.jspdf;
@@ -60,7 +63,7 @@ function downloadPDFReport() {
         
         doc.save(filename);
         
-        console.log('[Premium PDF v5.0.1] ✓ Premium PDF generated successfully:', filename);
+        console.log('[Premium PDF v5.0.2] ✓ Premium PDF generated successfully:', filename);
     } catch (error) {
         console.error('[PDF Generator] Error generating PDF:', error);
         console.error(error.stack);
@@ -343,13 +346,13 @@ function generatePremiumExecutiveSummary(doc, data, insights, trustScore, colors
     stats.forEach((stat, index) => {
         const x = statX + (index * (statWidth + 5));
         
-        // Stat card
+        // Stat card with better borders
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(x, yPos, statWidth, 30, 3, 3, 'F');
         
-        // Colored top border
+        // Colored top border - thicker for visibility
         doc.setFillColor(...stat.color);
-        doc.rect(x, yPos, statWidth, 3, 'F');
+        doc.rect(x, yPos, statWidth, 4, 'F');  // Increased from 3 to 4
         
         // Stat value
         doc.setFontSize(16);
@@ -393,9 +396,9 @@ function generatePremiumExecutiveSummary(doc, data, insights, trustScore, colors
                 bulletColor = colors.danger;
             }
             
-            // Draw colored bullet
+            // Draw colored bullet with better visibility
             doc.setFillColor(...bulletColor);
-            doc.circle(27, yPos - 1, 1.5, 'F');
+            doc.circle(27, yPos - 1, 2, 'F');  // Increased from 1.5 to 2 for better visibility
             
             // Draw finding text
             doc.setTextColor(...colors.text);
@@ -498,19 +501,19 @@ function generateScoreBreakdownPage(doc, detailed, trustScore, colors) {
     // Create pie chart effect for score contribution
     const contributions = calculateContributions(detailed);
     
-    // Draw pie chart
+    // Draw pie chart with thicker lines
     let startAngle = -Math.PI / 2;
     const radius = 35;
     
     contributions.forEach(contrib => {
         const angle = (contrib.percentage / 100) * Math.PI * 2;
         
-        // Draw pie segment (simplified - using rectangles to approximate)
+        // Draw pie segment with better visibility
         doc.setFillColor(...contrib.color);
         const endAngle = startAngle + angle;
         
-        // Draw wedge (approximated with triangles)
-        const steps = 20;
+        // Draw wedge (approximated with triangles) - increased steps for smoother rendering
+        const steps = 30;  // Increased from 20 for smoother edges
         for (let i = 0; i < steps; i++) {
             const a1 = startAngle + (angle * i / steps);
             const a2 = startAngle + (angle * (i + 1) / steps);
@@ -526,9 +529,12 @@ function generateScoreBreakdownPage(doc, detailed, trustScore, colors) {
         startAngle = endAngle;
     });
     
-    // Center circle with score
+    // Center circle with score - add border for definition
     doc.setFillColor(255, 255, 255);
     doc.circle(centerX, centerY, 20, 'F');
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.5);
+    doc.circle(centerX, centerY, 20, 'S');
     
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
@@ -550,9 +556,9 @@ function generateScoreBreakdownPage(doc, detailed, trustScore, colors) {
     yPos += 10;
     
     contributions.forEach(contrib => {
-        // Color box
+        // Color box - larger for better visibility
         doc.setFillColor(...contrib.color);
-        doc.rect(25, yPos - 3, 10, 6, 'F');
+        doc.rect(25, yPos - 4, 12, 8, 'F');  // Increased size from 10x6 to 12x8
         
         // Service name
         doc.setFontSize(9);
@@ -602,6 +608,9 @@ function generateScoreBreakdownPage(doc, detailed, trustScore, colors) {
             doc.rect(25, yPos - 3, 160, 14, 'F');
             doc.setTextColor(255, 255, 255);
         } else {
+            // Add subtle background for non-current ranges for better visibility
+            doc.setFillColor(250, 250, 250);
+            doc.rect(25, yPos - 3, 160, 14, 'F');
             doc.setTextColor(...colors.text);
         }
         
@@ -637,12 +646,17 @@ function generatePremiumServicePage(doc, service, data, colors) {
     // Service Score Display
     const score = extractServiceScore(service.key, data);
     
-    // Score card
+    // Score card with enhanced visibility
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(20, yPos, 50, 40, 5, 5, 'F');
     
+    // Add border to score card for definition
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(20, yPos, 50, 40, 5, 5, 'S');
+    
     doc.setFillColor(...service.color);
-    doc.rect(20, yPos, 50, 4, 'F');
+    doc.rect(20, yPos, 50, 5, 'F');  // Increased from 4 to 5
     
     doc.setFontSize(28);
     doc.setFont('helvetica', 'bold');
@@ -749,8 +763,13 @@ function generatePremiumFactCheckPage(doc, data, colors) {
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(x, yPos, statWidth, 35, 3, 3, 'F');
         
+        // Add subtle border for definition
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(x, yPos, statWidth, 35, 3, 3, 'S');
+        
         doc.setFillColor(...stat.color);
-        doc.rect(x, yPos, statWidth, 3, 'F');
+        doc.rect(x, yPos, statWidth, 4, 'F');  // Increased from 3 to 4
         
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
@@ -783,13 +802,18 @@ function generatePremiumFactCheckPage(doc, data, colors) {
             const verdict = check.verdict || 'unverified';
             const verdictColor = getVerdictColor(verdict, colors);
             
-            // Finding card
+            // Finding card with better visibility
             doc.setFillColor(248, 250, 252);
             doc.roundedRect(20, yPos, 170, 35, 3, 3, 'F');
             
-            // Verdict badge
+            // Add subtle border for definition
+            doc.setDrawColor(220, 220, 220);
+            doc.setLineWidth(0.3);
+            doc.roundedRect(20, yPos, 170, 35, 3, 3, 'S');
+            
+            // Verdict badge - larger and bolder
             doc.setFillColor(...verdictColor);
-            doc.roundedRect(25, yPos + 3, 40, 8, 2, 2, 'F');
+            doc.roundedRect(25, yPos + 3, 45, 10, 2, 2, 'F');  // Increased from 40x8 to 45x10
             
             doc.setFontSize(7);
             doc.setFont('helvetica', 'bold');
@@ -862,13 +886,18 @@ function generateInsightsPage(doc, data, insights, colors) {
             yPos = 25;
         }
         
-        // Section card
+        // Section card with enhanced borders
         doc.setFillColor(248, 250, 252);
         doc.roundedRect(20, yPos, 170, 45, 5, 5, 'F');
         
-        // Colored accent
+        // Add subtle border for better definition
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(20, yPos, 170, 45, 5, 5, 'S');
+        
+        // Colored accent - thicker for visibility
         doc.setFillColor(...section.color);
-        doc.rect(20, yPos, 4, 45, 'F');
+        doc.rect(20, yPos, 5, 45, 'F');  // Increased from 4 to 5
         
         // Title
         doc.setFontSize(11);
@@ -914,9 +943,14 @@ function generateClosingPage(doc, trustScore, analysisMode, colors) {
     
     let yPos = 120;
     
-    // Summary box
+    // Summary box with border
     doc.setFillColor(248, 250, 252);
     doc.roundedRect(30, yPos, 150, 60, 5, 5, 'F');
+    
+    // Add border for better definition
+    doc.setDrawColor(220, 220, 220);
+    doc.setLineWidth(0.5);
+    doc.roundedRect(30, yPos, 150, 60, 5, 5, 'S');
     
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
@@ -1162,4 +1196,4 @@ function addPremiumFooter(doc, pageNum, totalPages, colors) {
     doc.text('TruthLens Premium Report - Confidential', 105, 285, { align: 'center' });
 }
 
-console.log('[Premium PDF Generator v5.0.1] Loaded - MARKETING-QUALITY REPORTS');
+console.log('[Premium PDF Generator v5.0.2] Loaded - MARKETING-QUALITY REPORTS');
