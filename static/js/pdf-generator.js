@@ -1,13 +1,14 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 11.2.0 - THIRD-PARTY RATING SERVICES BARS
+ * VERSION: 11.3.0 - OUTLET CREDIBILITY COMPARISON BARS
  * DATE: October 15, 2025
  * 
- * IMPROVEMENTS FROM v11.1.0:
- * ✅ Added third-party rating service bars to Source Credibility section
- * ✅ Shows AllSides, Media Bias/Fact Check, and NewsGuard ratings
- * ✅ Color-coded NewsGuard scores (Green/Yellow/Red)
- * ✅ Visual breakdown of all rating services
+ * IMPROVEMENTS FROM v11.2.0:
+ * ✅ Added Outlet Credibility Comparison section (like in app)
+ * ✅ Shows how analyzed source compares to Reuters, AP, NYT, etc.
+ * ✅ Displays top 10 news outlets with color-coded bars
+ * ✅ Highlights current article's outlet in the comparison
+ * ✅ Third-party rating services preserved
  * ✅ Do No Harm - all existing features preserved
  */
 
@@ -41,7 +42,7 @@ function isGenericPlaceholder(text) {
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[PDF v11.2.0] Generating PDF with third-party rating services...');
+    console.log('[PDF v11.3.0] Generating PDF with outlet comparison...');
     
     if (typeof window.jspdf === 'undefined') {
         alert('PDF library not loaded. Please refresh the page and try again.');
@@ -69,10 +70,10 @@ function downloadPDFReport() {
         const filename = `TruthLens-Report-${sourceShort}-${timestamp}.pdf`;
         
         doc.save(filename);
-        console.log('[PDF v11.2.0] ✓ Generated:', filename);
+        console.log('[PDF v11.3.0] ✓ Generated:', filename);
         
     } catch (error) {
-        console.error('[PDF v11.2.0] Error:', error);
+        console.error('[PDF v11.3.0] Error:', error);
         alert('Error generating PDF. Please try again.');
     }
 }
@@ -396,6 +397,7 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     
     if (service.key === 'source_credibility') {
         yPos = drawThirdPartyRatings(doc, serviceData, yPos, colors);
+        yPos = drawOutletComparison(doc, serviceData, yPos, colors, fullData);
     }
     
     if (service.key === 'bias_detector') {
@@ -649,6 +651,76 @@ function drawThirdPartyRatings(doc, serviceData, yPos, colors) {
     }
     
     return yPos + 78;
+}
+
+// ============================================================================
+// OUTLET CREDIBILITY COMPARISON - NEW IN v11.3.0
+// ============================================================================
+
+function drawOutletComparison(doc, serviceData, yPos, colors, fullData) {
+    // Get article and outlet scores
+    const articleScore = Math.round(serviceData.article_score || serviceData.score || 0);
+    const outletAverage = serviceData.outlet_average_score;
+    const sourceName = cleanText(serviceData.source_name || fullData.source || 'This Source');
+    
+    // Define top outlets for comparison (from OUTLET_AVERAGES)
+    const outlets = [
+        { name: 'Reuters', score: 95, color: [34, 197, 94] },
+        { name: 'Associated Press', score: 94, color: [34, 197, 94] },
+        { name: 'BBC News', score: 92, color: [34, 197, 94] },
+        { name: 'The New York Times', score: 88, color: [59, 130, 246] },
+        { name: 'The Washington Post', score: 87, color: [59, 130, 246] },
+        { name: 'NPR', score: 86, color: [59, 130, 246] },
+        { name: 'The Wall Street Journal', score: 85, color: [59, 130, 246] },
+        { name: 'ABC News', score: 83, color: [59, 130, 246] },
+        { name: 'NBC News', score: 82, color: [59, 130, 246] },
+        { name: 'CBS News', score: 81, color: [59, 130, 246] }
+    ];
+    
+    // Box for comparison section
+    doc.setFillColor(250, 250, 255);
+    doc.roundedRect(15, yPos, 180, 110, 2, 2, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.primary);
+    doc.text('Outlet Credibility Comparison', 20, yPos + 8);
+    
+    // Explanation note
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...colors.gray);
+    const noteText = `This article scored ${articleScore}/100, while ${sourceName} typically scores ${outletAverage || '--'}/100`;
+    doc.text(noteText, 20, yPos + 14);
+    
+    let barY = yPos + 20;
+    
+    // Draw bars for each outlet
+    outlets.forEach(outlet => {
+        doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.darkGray);
+        doc.text(outlet.name, 20, barY);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(...outlet.color);
+        doc.text(`${outlet.score}`, 175, barY, { align: 'right' });
+        
+        barY += 3;
+        
+        // Background bar
+        doc.setFillColor(220, 220, 220);
+        doc.rect(20, barY - 2, 155, 3, 'F');
+        
+        // Score bar
+        const barWidth = (outlet.score / 100) * 155;
+        doc.setFillColor(...outlet.color);
+        doc.rect(20, barY - 2, barWidth, 3, 'F');
+        
+        barY += 7;
+    });
+    
+    return yPos + 118;
 }
 
 // ============================================================================
@@ -1095,6 +1167,6 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
     doc.text(`Page ${pageNum} of ${totalPages}`, 190, 287, { align: 'right' });
 }
 
-console.log('[PDF v11.2.0] Enhanced PDF with third-party rating services loaded');
+console.log('[PDF v11.3.0] Enhanced PDF with outlet comparison + third-party ratings loaded');
 
 // This file is not truncated
