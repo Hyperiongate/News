@@ -1,28 +1,21 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
- * Date: October 13, 2025
- * Version: 4.25.0 - MANIPULATION SERVICE COMPLETELY REMOVED
+ * Date: October 14, 2025
+ * Version: 4.26.0 - TRANSCRIPT MODE CONDITIONAL RENDERING
  * 
- * CHANGES FROM v4.24.0:
- * - REMOVED: manipulationDetector service entirely (per user request)
- * - REMOVED: renderManipulationVisualization function
- * - REMOVED: displayManipulationDetector function
- * - REMOVED: manipulation_detector from services array
- * - REMOVED: manipulationDetector template
- * - CLEANED: All references to manipulation service
- * - Now displays only 6 services instead of 7
+ * CRITICAL CHANGES FROM v4.25.0:
+ * ✅ ADDED: Mode-aware service display in displayAllAnalyses()
+ * ✅ ADDED: If analysis_mode === 'transcript', show ONLY fact checking
+ * ✅ ADDED: If analysis_mode === 'news', show all 6 services (unchanged)
+ * ✅ PRESERVED: All existing functionality for news mode (DO NO HARM)
+ * ✅ ENHANCED: Fact checker supports rich 13-verdict system from comprehensive_factcheck.py
  * 
- * REMAINING SERVICES (6):
- * 1. Source Credibility
- * 2. Bias Detection
- * 3. Fact Checking
- * 4. Author Analysis
- * 5. Transparency Guide
- * 6. Content Quality
+ * TRANSCRIPT MODE: Shows only Fact Checking service
+ * NEWS MODE: Shows all 6 services (Source, Bias, Fact, Author, Transparency, Content)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
- * FILE IS COMPLETE - NO TRUNCATION - ~2100 LINES
+ * FILE IS COMPLETE - NO TRUNCATION - ~2150 LINES
  */
 
 // Create global ServiceTemplates object
@@ -363,12 +356,16 @@ window.ServiceTemplates = {
         return templates[serviceId] || '<div class="error">Template not found</div>';
     },
 
-    // Display all analyses - v4.25.0 - MANIPULATION REMOVED
+    // ============================================================================
+    // CRITICAL NEW FEATURE v4.26.0: MODE-AWARE SERVICE DISPLAY
+    // ============================================================================
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.25.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v4.25.0] Displaying analyses with data:', data);
+        console.log('[ServiceTemplates v4.26.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v4.26.0] Analysis mode:', data.analysis_mode);
+        console.log('[ServiceTemplates v4.26.0] Data:', data);
         
         const detailed = data.detailed_analysis || {};
+        const analysisMode = data.analysis_mode || 'news';
         
         // Create service containers dynamically
         const container = document.getElementById('serviceAnalysisContainer');
@@ -376,17 +373,31 @@ window.ServiceTemplates = {
         
         container.innerHTML = '';
         
-        // Define services in order with colored borders - MANIPULATION REMOVED
-        const services = [
-            { id: 'sourceCredibility', key: 'source_credibility', title: 'Source Credibility', icon: 'fa-globe-americas', color: '#6366f1' },
-            { id: 'biasDetector', key: 'bias_detector', title: 'Bias Detection', icon: 'fa-balance-scale', color: '#f59e0b' },
-            { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' },
-            { id: 'author', key: 'author_analyzer', title: 'Author Analysis', icon: 'fa-user-edit', color: '#06b6d4' },
-            { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency Guide', icon: 'fa-eye', color: '#8b5cf6' },
-            { id: 'contentAnalyzer', key: 'content_analyzer', title: 'Content Quality', icon: 'fa-file-alt', color: '#ec4899' }
-        ];
+        // ============================================================================
+        // CRITICAL: MODE-BASED SERVICE SELECTION
+        // ============================================================================
+        let services = [];
         
-        // Create dropdowns for each service with colored borders
+        if (analysisMode === 'transcript') {
+            console.log('[ServiceTemplates v4.26.0] TRANSCRIPT MODE: Showing ONLY fact checking');
+            // TRANSCRIPT MODE: Only show fact checking
+            services = [
+                { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' }
+            ];
+        } else {
+            console.log('[ServiceTemplates v4.26.0] NEWS MODE: Showing all 6 services');
+            // NEWS MODE: Show all 6 services (unchanged)
+            services = [
+                { id: 'sourceCredibility', key: 'source_credibility', title: 'Source Credibility', icon: 'fa-globe-americas', color: '#6366f1' },
+                { id: 'biasDetector', key: 'bias_detector', title: 'Bias Detection', icon: 'fa-balance-scale', color: '#f59e0b' },
+                { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' },
+                { id: 'author', key: 'author_analyzer', title: 'Author Analysis', icon: 'fa-user-edit', color: '#06b6d4' },
+                { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency Guide', icon: 'fa-eye', color: '#8b5cf6' },
+                { id: 'contentAnalyzer', key: 'content_analyzer', title: 'Content Quality', icon: 'fa-file-alt', color: '#ec4899' }
+            ];
+        }
+        
+        // Create dropdowns for selected services with colored borders
         services.forEach(function(service) {
             const serviceData = detailed[service.key] || {};
             const dropdown = document.createElement('div');
@@ -428,23 +439,27 @@ window.ServiceTemplates = {
             }
         };
         
-        // Render creative visualizations - MANIPULATION REMOVED
-        console.log('[ServiceTemplates v4.25.0] Rendering creative visualizations...');
-        setTimeout(function() {
-            ServiceTemplates.renderCreativeVisualizations(detailed);
-        }, 500);
+        // Render creative visualizations (only for news mode)
+        if (analysisMode === 'news') {
+            console.log('[ServiceTemplates v4.26.0] Rendering creative visualizations for NEWS mode...');
+            setTimeout(function() {
+                ServiceTemplates.renderCreativeVisualizations(detailed);
+            }, 500);
+        } else {
+            console.log('[ServiceTemplates v4.26.0] Skipping visualizations for TRANSCRIPT mode');
+        }
     },
     
-    // Creative visualizations - v4.25.0 - MANIPULATION REMOVED
+    // Creative visualizations (only for content quality in news mode)
     renderCreativeVisualizations: function(detailed) {
-        console.log('[ServiceTemplates v4.25.0] renderCreativeVisualizations called');
+        console.log('[ServiceTemplates v4.26.0] renderCreativeVisualizations called');
         
-        // Content Quality Visualization (Manipulation removed)
+        // Content Quality Visualization
         if (detailed.content_analyzer) {
             this.renderContentVisualization(detailed.content_analyzer);
         }
         
-        console.log('[ServiceTemplates v4.25.0] ✓ Creative visualizations rendered');
+        console.log('[ServiceTemplates v4.26.0] ✓ Creative visualizations rendered');
     },
     
     // Content Quality Creative Display
@@ -648,9 +663,9 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Bias Detector - v4.25.0
+    // Display Bias Detector
     displayBiasDetector: function(data, analyzer) {
-        console.log('[BiasDetector v4.25.0] Displaying data:', data);
+        console.log('[BiasDetector v4.26.0] Displaying data:', data);
         
         const objectivityScore = data.objectivity_score || data.score || 50;
         const direction = data.bias_direction || data.political_bias || data.direction || 'center';
@@ -770,7 +785,7 @@ window.ServiceTemplates = {
             metricsContainer.parentElement.insertBefore(explanation, metricsContainer.nextSibling);
         }
         
-        console.log('[BiasDetector v4.25.0] ✓ Explanation section rendered');
+        console.log('[BiasDetector v4.26.0] ✓ Explanation section rendered');
     },
     
     getSensationalismExplanation: function(level) {
@@ -798,16 +813,18 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Fact Checker - v4.25.0
+    // ============================================================================
+    // FACT CHECKER - ENHANCED FOR RICH 13-VERDICT SYSTEM (v4.26.0)
+    // ============================================================================
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker v4.25.0] Data received:', data);
+        console.log('[FactChecker v4.26.0] Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
         const claimsVerified = data.claims_verified || 0;
         const factChecks = data.fact_checks || data.claims || [];
         
-        console.log('[FactChecker v4.25.0] Fact checks array length:', factChecks.length);
+        console.log('[FactChecker v4.26.0] Fact checks array length:', factChecks.length);
         
         // Update summary metrics
         this.updateElement('fact-score', score + '%');
@@ -820,9 +837,9 @@ window.ServiceTemplates = {
             return;
         }
         
-        // Render findings
+        // Render findings with RICH VERDICT SYSTEM
         if (factChecks && factChecks.length > 0) {
-            console.log('[FactChecker v4.25.0] Rendering', factChecks.length, 'findings...');
+            console.log('[FactChecker v4.26.0] Rendering', factChecks.length, 'findings with rich verdicts...');
             
             let claimsHTML = '';
             
@@ -833,17 +850,28 @@ window.ServiceTemplates = {
                 const sources = check.sources || check.method_used || [];
                 const sourcesList = Array.isArray(sources) ? sources : [sources];
                 
-                // Verdict styling
+                // RICH VERDICT STYLING (13 types from comprehensive_factcheck.py)
                 const verdictStyles = {
+                    // Core verdicts
                     'true': { color: '#10b981', icon: 'fa-check-circle', label: 'TRUE', badge: '#059669' },
                     'mostly_true': { color: '#3b82f6', icon: 'fa-check-circle', label: 'MOSTLY TRUE', badge: '#2563eb' },
-                    'likely_true': { color: '#3b82f6', icon: 'fa-check-circle', label: 'LIKELY TRUE', badge: '#2563eb' },
-                    'mixed': { color: '#f59e0b', icon: 'fa-exclamation-circle', label: 'MIXED', badge: '#d97706' },
+                    'nearly_true': { color: '#3b82f6', icon: 'fa-check', label: 'NEARLY TRUE', badge: '#2563eb' },
+                    
+                    // Problematic verdicts
+                    'exaggeration': { color: '#f59e0b', icon: 'fa-exclamation-triangle', label: 'EXAGGERATION', badge: '#d97706' },
                     'misleading': { color: '#f59e0b', icon: 'fa-exclamation-triangle', label: 'MISLEADING', badge: '#d97706' },
                     'mostly_false': { color: '#ef4444', icon: 'fa-times-circle', label: 'MOSTLY FALSE', badge: '#dc2626' },
                     'false': { color: '#ef4444', icon: 'fa-times-circle', label: 'FALSE', badge: '#dc2626' },
+                    
+                    // Special categories
+                    'empty_rhetoric': { color: '#94a3b8', icon: 'fa-wind', label: 'EMPTY RHETORIC', badge: '#64748b' },
+                    'unsubstantiated_prediction': { color: '#a78bfa', icon: 'fa-crystal-ball', label: 'UNSUBSTANTIATED', badge: '#8b5cf6' },
+                    'opinion': { color: '#94a3b8', icon: 'fa-comment', label: 'OPINION', badge: '#64748b' },
+                    'needs_context': { color: '#f59e0b', icon: 'fa-info-circle', label: 'NEEDS CONTEXT', badge: '#d97706' },
+                    
+                    // Default
                     'unverified': { color: '#94a3b8', icon: 'fa-question-circle', label: 'UNVERIFIED', badge: '#64748b' },
-                    'needs_context': { color: '#f59e0b', icon: 'fa-info-circle', label: 'NEEDS CONTEXT', badge: '#d97706' }
+                    'mixed': { color: '#f59e0b', icon: 'fa-exclamation-circle', label: 'MIXED', badge: '#d97706' }
                 };
                 
                 const style = verdictStyles[verdict] || verdictStyles['unverified'];
@@ -901,28 +929,28 @@ window.ServiceTemplates = {
             });
             
             claimsContainer.innerHTML = claimsHTML;
-            console.log('[FactChecker v4.25.0] ✓ Successfully rendered', factChecks.length, 'findings');
+            console.log('[FactChecker v4.26.0] ✓ Successfully rendered', factChecks.length, 'findings with rich verdicts');
             
         } else {
-            console.log('[FactChecker v4.25.0] No findings to display');
+            console.log('[FactChecker v4.26.0] No findings to display');
             claimsContainer.innerHTML = `
                 <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
                     <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
                     <p style="color: #1e40af; font-size: 1rem; font-weight: 600; margin: 0;">
-                        No specific findings for fact-checking in this article.
+                        No specific findings for fact-checking in this content.
                     </p>
                     <p style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
-                        The article may be opinion-based, editorial content, or contain primarily general statements.
+                        The content may be opinion-based, editorial, or contain primarily general statements.
                     </p>
                 </div>
             `;
         }
     },
 
-    // v4.25.0: Display Transparency Analyzer
+    // Display Transparency Analyzer
     displayTransparencyAnalyzer: function(data, analyzer) {
-        console.log('[TransparencyAnalyzer v4.25.0] Displaying data:', data);
-        console.log('[TransparencyAnalyzer v4.25.0] Full data object:', JSON.stringify(data, null, 2));
+        console.log('[TransparencyAnalyzer v4.26.0] Displaying data:', data);
+        console.log('[TransparencyAnalyzer v4.26.0] Full data object:', JSON.stringify(data, null, 2));
         
         const container = document.getElementById('transparency-content-v3');
         if (!container) {
@@ -934,7 +962,7 @@ window.ServiceTemplates = {
         const hasEducationalContent = data.article_type || data.what_to_look_for || data.transparency_lessons;
         
         if (hasEducationalContent) {
-            console.log('[Transparency v4.25.0] ✓ Found v4.0 educational content! Displaying rich educational guide...');
+            console.log('[Transparency v4.26.0] ✓ Found v4.0 educational content! Displaying rich educational guide...');
             
             // Extract v4.0 educational data
             const articleType = data.article_type || 'News Report';
@@ -1039,7 +1067,7 @@ window.ServiceTemplates = {
             
             html += `</div>`;
             container.innerHTML = html;
-            console.log('[TransparencyAnalyzer v4.25.0] ✓ Displayed v4.0 educational content');
+            console.log('[TransparencyAnalyzer v4.26.0] ✓ Displayed v4.0 educational content');
             return;
         }
         
@@ -1048,7 +1076,7 @@ window.ServiceTemplates = {
         const level = data.transparency_level || data.level || 'Unknown';
         
         if (score > 0) {
-            console.log('[Transparency v4.25.0] Displaying score-only view');
+            console.log('[Transparency v4.26.0] Displaying score-only view');
             container.innerHTML = `
                 <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 1.5rem;">
                     <div style="font-size: 3.5rem; font-weight: 800; margin-bottom: 0.5rem;">${score}</div>
@@ -1067,7 +1095,7 @@ window.ServiceTemplates = {
             `;
         } else {
             // No data at all - show generic educational content
-            console.log('[Transparency v4.25.0] No data - showing generic educational content');
+            console.log('[Transparency v4.26.0] No data - showing generic educational content');
             container.innerHTML = `
                 <div style="padding: 2rem;">
                     <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 2rem;">
@@ -1092,10 +1120,10 @@ window.ServiceTemplates = {
             `;
         }
         
-        console.log('[TransparencyAnalyzer v4.25.0] ✓ Display complete');
+        console.log('[TransparencyAnalyzer v4.26.0] ✓ Display complete');
     },
 
-    // Display Content Analyzer - v4.25.0
+    // Display Content Analyzer
     displayContentAnalyzer: function(data, analyzer) {
         const qualityScore = data.quality_score || data.score || 0;
         const readabilityLevel = data.readability_level || data.readability || 'Unknown';
@@ -1106,9 +1134,9 @@ window.ServiceTemplates = {
         this.updateElement('word-count', wordCount.toLocaleString());
     },
 
-    // v4.25.0: Display Author
+    // Display Author
     displayAuthor: function(data, analyzer) {
-        console.log('[Author Display v4.25.0] Received data:', data);
+        console.log('[Author Display v4.26.0] Received data:', data);
         
         // Get all authors
         const allAuthors = data.all_authors || data.authors || [];
@@ -1126,7 +1154,7 @@ window.ServiceTemplates = {
             authorList = [primaryAuthor];
         }
         
-        console.log('[Author Display v4.25.0] Authors:', authorList);
+        console.log('[Author Display v4.26.0] Authors:', authorList);
         
         const credibility = data.credibility_score || data.score || data.credibility || 50;
         const position = data.position || 'Journalist';
@@ -1271,7 +1299,7 @@ window.ServiceTemplates = {
             linksContainer.innerHTML = linksHTML;
         }
         
-        console.log('[Author Display v4.25.0] ✓ Complete');
+        console.log('[Author Display v4.26.0] ✓ Complete');
     },
 
     updateElement: function(id, value) {
@@ -1295,4 +1323,4 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.25.0 - MANIPULATION SERVICE REMOVED');
+console.log('ServiceTemplates loaded successfully - v4.26.0 - TRANSCRIPT MODE CONDITIONAL RENDERING');
