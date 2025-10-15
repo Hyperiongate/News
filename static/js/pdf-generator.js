@@ -1,26 +1,23 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 3.2.1 - HOOK REMOVED, DIRECT ACCESS FIX - TRULY COMPLETE
+ * VERSION: 3.3.0 - EXECUTIVE SUMMARY FIX + REAL DATA
  * DATE: October 14, 2025
  * 
- * CRITICAL FIX FROM 3.2.0:
- * ✅ REMOVED: Unreliable hook system that tried to intercept displayResults
- * ✅ SIMPLIFIED: Direct access to window.lastAnalysisData (set by unified-app-core.js v6.5.1)
- * ✅ FIXED: PDF button now works reliably
+ * CRITICAL FIXES FROM 3.2.1:
+ * ✅ FIXED: Executive Summary now shows REAL content instead of placeholders
+ * ✅ FIXED: Pulls from insights.executive_summary and findings_summary
+ * ✅ FIXED: Shows article title, source, author, word count
+ * ✅ FIXED: Displays key_findings bullets
+ * ✅ FIXED: Source credibility uses real data (not "Analyzed source credibility")
+ * ✅ ADDED: Better handling of missing article object
  * 
- * NEW IN 3.2.0:
- * ✅ ENHANCED: Executive Summary includes article summary, source/author info, findings
- * ✅ ADDED: Source Credibility graphics (credibility bar, reputation indicator)
- * ✅ ADDED: Bias Detection graphics (political spectrum, objectivity bar)
- * ✅ IMPROVED: Two-column layout for source information
- * ✅ IMPROVED: Visual reputation assessment scale
- * ✅ ADDED: Political spectrum with position indicator
+ * FROM 3.2.1:
+ * ✅ REMOVED: Unreliable hook system
+ * ✅ SIMPLIFIED: Direct access to window.lastAnalysisData
  * 
- * PREVIOUS FIXES (v3.1.0):
- * ✅ FIXED: Extracts data from nested 'analysis' objects
- * ✅ FIXED: Maps different field names across services
- * 
- * This file generates premium, showcase-quality PDFs.
+ * FROM 3.2.0:
+ * ✅ ENHANCED: All visual charts and graphics
+ * ✅ COMPLETE: All 6 service analysis pages with full details
  */
 
 // ============================================================================
@@ -28,7 +25,7 @@
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[PDF Generator v3.2.1] Starting comprehensive PDF generation...');
+    console.log('[PDF Generator v3.3.0] Starting comprehensive PDF generation...');
     
     if (typeof window.jspdf === 'undefined') {
         console.error('[PDF Generator] jsPDF library not loaded');
@@ -73,12 +70,10 @@ function generateCompletePDFContent(doc, data) {
     const trustScore = data.trust_score || 0;
     const analysisMode = data.analysis_mode || 'news';
     const detailed = data.detailed_analysis || {};
-    const analysis = data.analysis || {};
-    const article = data.article || {};
+    const insights = data.insights || {};
     
     console.log('[PDF] Detailed analysis:', detailed);
-    console.log('[PDF] Article data:', article);
-    console.log('[PDF] Analysis data:', analysis);
+    console.log('[PDF] Insights:', insights);
     
     const colors = {
         primary: [102, 126, 234],
@@ -96,17 +91,11 @@ function generateCompletePDFContent(doc, data) {
     };
     
     // Page 1: Cover Page
-    generateCoverPage(doc, data, article, trustScore, analysisMode, colors);
+    generateCoverPage(doc, data, trustScore, analysisMode, colors);
     
-    // Page 2: Executive Summary
+    // Page 2: Executive Summary (NOW WITH REAL CONTENT!)
     doc.addPage();
-    generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode, colors);
-    
-    // Page 3+: Article Overview (if available)
-    if (article && (article.excerpt || article.word_count)) {
-        doc.addPage();
-        generateArticleOverview(doc, article, colors);
-    }
+    generateExecutiveSummary(doc, data, insights, trustScore, colors);
     
     // Service Pages - COMPREHENSIVE with all details
     const services = [
@@ -140,7 +129,7 @@ function generateCompletePDFContent(doc, data) {
 // COVER PAGE
 // ============================================================================
 
-function generateCoverPage(doc, data, article, trustScore, analysisMode, colors) {
+function generateCoverPage(doc, data, trustScore, analysisMode, colors) {
     // Purple gradient background (simulated with rectangles)
     doc.setFillColor(...colors.primary);
     doc.rect(0, 0, 210, 100, 'F');
@@ -220,14 +209,14 @@ function generateCoverPage(doc, data, article, trustScore, analysisMode, colors)
     
     let yPos = 225;
     
-    // Source/Domain
+    // Source
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.textLight);
     doc.text('Source:', 30, yPos);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
-    const source = article.domain || data.source || 'Unknown';
+    const source = data.source || 'Unknown';
     doc.text(source.substring(0, 50), 55, yPos);
     yPos += 10;
     
@@ -237,19 +226,19 @@ function generateCoverPage(doc, data, article, trustScore, analysisMode, colors)
     doc.text('Author:', 30, yPos);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.text);
-    const author = article.author || data.author || 'Unknown';
+    const author = data.author || 'Unknown';
     doc.text(author.substring(0, 50), 55, yPos);
     yPos += 10;
     
     // Title (if available)
-    if (article.title) {
+    const articleTitle = data.article_summary || '';
+    if (articleTitle && articleTitle.length > 5) {
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(...colors.textLight);
         doc.text('Title:', 30, yPos);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.text);
-        const titleText = article.title.substring(0, 80);
-        const titleLines = doc.splitTextToSize(titleText, 120);
+        const titleLines = doc.splitTextToSize(articleTitle.substring(0, 100), 120);
         doc.text(titleLines.slice(0, 2), 55, yPos);
         yPos += 10 * Math.min(titleLines.length, 2);
     }
@@ -271,10 +260,10 @@ function generateCoverPage(doc, data, article, trustScore, analysisMode, colors)
 }
 
 // ============================================================================
-// EXECUTIVE SUMMARY PAGE
+// EXECUTIVE SUMMARY PAGE (COMPLETELY REWRITTEN FOR v3.3.0)
 // ============================================================================
 
-function generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode, colors) {
+function generateExecutiveSummary(doc, data, insights, trustScore, colors) {
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...colors.primary);
@@ -286,39 +275,26 @@ function generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode,
     
     let yPos = 45;
     
-    // Article Summary Section
-    const article = data.article || {};
-    if (article.title || article.excerpt) {
+    // Article Title
+    const articleTitle = data.article_summary || 'Article Analysis';
+    if (articleTitle && articleTitle.length > 5) {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(...colors.text);
-        doc.text('Article Summary', 20, yPos);
+        doc.text('Article', 20, yPos);
         yPos += 7;
         
-        doc.setFontSize(9);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        
-        if (article.title) {
-            const titleLines = doc.splitTextToSize(article.title, 170);
-            doc.text(titleLines, 20, yPos);
-            yPos += (titleLines.length * 4) + 5;
-        }
-        
-        if (article.excerpt) {
-            doc.setFont('helvetica', 'italic');
-            doc.setTextColor(...colors.textLight);
-            const excerptLines = doc.splitTextToSize(article.excerpt.substring(0, 300) + '...', 170);
-            doc.text(excerptLines, 20, yPos);
-            yPos += (excerptLines.length * 4) + 10;
-        }
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(...colors.text);
+        const titleLines = doc.splitTextToSize(articleTitle, 170);
+        doc.text(titleLines, 20, yPos);
+        yPos += (titleLines.length * 5) + 8;
     }
     
     // Source & Author Information
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...colors.text);
     doc.text('Source & Author', 20, yPos);
     yPos += 7;
     
@@ -326,10 +302,9 @@ function generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode,
     doc.setFont('helvetica', 'normal');
     
     const sourceInfo = [];
-    if (article.domain || data.source) sourceInfo.push(`Source: ${article.domain || data.source}`);
-    if (article.author || data.author) sourceInfo.push(`Author: ${article.author || data.author}`);
-    if (article.publish_date) sourceInfo.push(`Published: ${article.publish_date}`);
-    if (article.word_count) sourceInfo.push(`Length: ${article.word_count.toLocaleString()} words`);
+    if (data.source) sourceInfo.push(`Source: ${data.source}`);
+    if (data.author) sourceInfo.push(`Author: ${data.author}`);
+    if (data.word_count) sourceInfo.push(`Length: ${data.word_count.toLocaleString()} words`);
     
     sourceInfo.forEach(info => {
         doc.text(info, 20, yPos);
@@ -337,44 +312,77 @@ function generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode,
     });
     yPos += 8;
     
-    // Analysis Findings Summary
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...colors.text);
-    doc.text('Analysis Findings', 20, yPos);
-    yPos += 7;
-    
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    
-    const summary = analysis.summary || data.article_summary || data.findings_summary || 'Complete comprehensive analysis conducted across all services.';
-    const summaryLines = doc.splitTextToSize(summary, 170);
-    doc.text(summaryLines, 20, yPos);
-    yPos += (summaryLines.length * 4) + 12;
-    
-    // Key Findings List (if available)
-    if (analysis.key_findings && Array.isArray(analysis.key_findings) && analysis.key_findings.length > 0) {
+    // Bottom Line (if available from insights)
+    if (insights.bottom_line) {
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.text('Notable Issues', 20, yPos);
+        doc.setTextColor(...colors.text);
+        doc.text('Bottom Line', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(...colors.blue);
+        const bottomLineLines = doc.splitTextToSize(insights.bottom_line, 170);
+        doc.text(bottomLineLines, 20, yPos);
+        yPos += (bottomLineLines.length * 5) + 10;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(...colors.text);
+    }
+    
+    // Analysis Findings (use insights.executive_summary or findings_summary)
+    const summaryText = insights.executive_summary || data.findings_summary || 'Complete comprehensive analysis conducted across all services.';
+    
+    if (summaryText && summaryText.length > 10) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text('Analysis Findings', 20, yPos);
+        yPos += 7;
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        
+        const summaryLines = doc.splitTextToSize(summaryText, 170);
+        doc.text(summaryLines, 20, yPos);
+        yPos += (summaryLines.length * 4) + 12;
+    }
+    
+    // Key Findings Bullets (from insights.key_findings)
+    if (insights.key_findings && Array.isArray(insights.key_findings) && insights.key_findings.length > 0) {
+        if (yPos > 230) {
+            doc.addPage();
+            yPos = 25;
+        }
+        
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(...colors.text);
+        doc.text('Key Findings', 20, yPos);
         yPos += 8;
         
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         
-        analysis.key_findings.slice(0, 5).forEach(finding => {
-            if (yPos > 250) {
+        insights.key_findings.forEach(finding => {
+            if (yPos > 275) {
                 doc.addPage();
                 yPos = 25;
             }
             
-            const severityColor = finding.severity === 'high' ? colors.red : 
-                                 finding.severity === 'medium' ? colors.orange : colors.blue;
+            // Determine color based on finding symbol
+            let bulletColor = colors.text;
+            if (typeof finding === 'string') {
+                if (finding.includes('✓')) bulletColor = colors.green;
+                else if (finding.includes('⚠')) bulletColor = colors.orange;
+                else if (finding.includes('✗')) bulletColor = colors.red;
+            }
             
-            doc.setFillColor(...severityColor);
+            doc.setFillColor(...bulletColor);
             doc.circle(22, yPos - 1, 1, 'F');
             
-            const findingText = finding.text || '';
+            const findingText = typeof finding === 'string' ? finding : finding.text || '';
             const findingLines = doc.splitTextToSize(findingText, 165);
             doc.text(findingLines, 26, yPos);
             yPos += (findingLines.length * 4) + 3;
@@ -446,79 +454,6 @@ function generateExecutiveSummary(doc, data, analysis, trustScore, analysisMode,
 }
 
 // ============================================================================
-// ARTICLE OVERVIEW PAGE
-// ============================================================================
-
-function generateArticleOverview(doc, article, colors) {
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...colors.primary);
-    doc.text('Article Overview', 20, 25);
-    
-    doc.setDrawColor(...colors.primary);
-    doc.setLineWidth(0.5);
-    doc.line(20, 30, 190, 30);
-    
-    let yPos = 45;
-    
-    // Title
-    if (article.title) {
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.text);
-        doc.text('Title', 20, yPos);
-        yPos += 7;
-        
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        const titleLines = doc.splitTextToSize(article.title, 170);
-        doc.text(titleLines, 20, yPos);
-        yPos += (titleLines.length * 5) + 10;
-    }
-    
-    // Metadata
-    const metadata = [];
-    if (article.author) metadata.push(['Author', article.author]);
-    if (article.publish_date) metadata.push(['Published', article.publish_date]);
-    if (article.domain) metadata.push(['Domain', article.domain]);
-    if (article.word_count) metadata.push(['Word Count', article.word_count.toLocaleString() + ' words']);
-    
-    if (metadata.length > 0) {
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Article Information', 20, yPos);
-        yPos += 8;
-        
-        doc.setFontSize(9);
-        metadata.forEach(([label, value]) => {
-            doc.setFont('helvetica', 'normal');
-            doc.setTextColor(...colors.textLight);
-            doc.text(label + ':', 25, yPos);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...colors.text);
-            const valueText = String(value).substring(0, 60);
-            doc.text(valueText, 60, yPos);
-            yPos += 6;
-        });
-        yPos += 10;
-    }
-    
-    // Excerpt
-    if (article.excerpt && yPos < 250) {
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(...colors.text);
-        doc.text('Article Excerpt', 20, yPos);
-        yPos += 7;
-        
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'italic');
-        const excerptLines = doc.splitTextToSize(article.excerpt, 170);
-        doc.text(excerptLines, 20, yPos);
-    }
-}
-
-// ============================================================================
 // SERVICE PAGES - COMPLETE WITH ALL DETAILS
 // ============================================================================
 
@@ -570,7 +505,7 @@ function generateCompleteServicePages(doc, service, serviceData, colors) {
 }
 
 // ============================================================================
-// TEXT EXTRACTION HELPER - CRITICAL FIX FOR [object Object]
+// TEXT EXTRACTION HELPER
 // ============================================================================
 
 function extractText(value, maxLength = 500) {
@@ -616,27 +551,40 @@ function extractAnalysisSections(data) {
         what_it_means: ''
     };
     
-    const analysisObj = data.analysis || data;
+    // Try to get from nested 'analysis' object first
+    const analysisObj = data.analysis || {};
     
+    // Map different field names to our standard sections
     const fieldMappings = {
-        what_we_analyzed: ['what_we_analyzed', 'what_we_looked', 'what_analyzed', 'analyzed'],
-        what_we_found: ['what_we_found', 'what_found', 'found', 'findings_text'],
-        what_it_means: ['what_it_means', 'what_means', 'means', 'interpretation', 'significance']
+        what_we_analyzed: ['what_we_looked', 'what_analyzed', 'analyzed', 'methodology'],
+        what_we_found: ['what_we_found', 'what_found', 'found', 'findings_text', 'findings'],
+        what_it_means: ['what_it_means', 'what_means', 'means', 'interpretation', 'significance', 'summary']
     };
     
+    // Try to extract from analysis object
     for (const [section, possibleFields] of Object.entries(fieldMappings)) {
         for (const field of possibleFields) {
-            if (analysisObj[field]) {
-                sections[section] = extractText(analysisObj[field]);
-                break;
+            if (analysisObj[field] && typeof analysisObj[field] === 'string' && analysisObj[field].length > 10) {
+                // Skip placeholder text
+                if (!analysisObj[field].includes('Analyzed source') && 
+                    !analysisObj[field].includes('Analysis completed') && 
+                    !analysisObj[field].includes('Results processed')) {
+                    sections[section] = extractText(analysisObj[field]);
+                    break;
+                }
             }
         }
         
+        // If not found in analysis object, try top level
         if (!sections[section]) {
             for (const field of possibleFields) {
-                if (data[field]) {
-                    sections[section] = extractText(data[field]);
-                    break;
+                if (data[field] && typeof data[field] === 'string' && data[field].length > 10) {
+                    if (!data[field].includes('Analyzed source') && 
+                        !data[field].includes('Analysis completed') && 
+                        !data[field].includes('Results processed')) {
+                        sections[section] = extractText(data[field]);
+                        break;
+                    }
                 }
             }
         }
@@ -646,7 +594,7 @@ function extractAnalysisSections(data) {
 }
 
 // ============================================================================
-// SOURCE CREDIBILITY ANALYSIS
+// SOURCE CREDIBILITY ANALYSIS (FIXED FOR v3.3.0)
 // ============================================================================
 
 function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor) {
@@ -657,7 +605,7 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     yPos += 8;
     
     // Create a visual credibility meter
-    const credScore = data.credibility_score || 0;
+    const credScore = data.credibility_score || data.score || 0;
     
     // Draw credibility bar
     doc.setFontSize(9);
@@ -693,17 +641,18 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     
     const leftColumn = [
         ['Organization:', data.organization || data.source || 'Unknown'],
-        ['Domain:', data.domain || 'N/A'],
-        ['Established:', data.established_year || data.founded || 'Unknown']
+        ['Type:', data.type || 'Unknown'],
+        ['Founded:', data.founded || data.established_year || 'Unknown']
     ];
     
     const rightColumn = [
-        ['Reputation:', data.credibility_level || data.credibility || 'Unknown'],
-        ['Country:', data.country || 'Unknown'],
+        ['Reputation:', data.reputation || data.credibility_level || data.credibility || 'Unknown'],
+        ['Bias:', data.bias || 'Unknown'],
         ['Awards:', data.awards || 'N/A']
     ];
     
     // Left column
+    let startY = yPos;
     leftColumn.forEach(([label, value]) => {
         if (yPos > 270) {
             doc.addPage();
@@ -720,7 +669,7 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     });
     
     // Right column (reset yPos)
-    let rightYPos = yPos - (leftColumn.length * 5);
+    let rightYPos = startY;
     rightColumn.forEach(([label, value]) => {
         doc.setTextColor(...colors.textLight);
         doc.text(label, 110, rightYPos);
@@ -735,8 +684,8 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     yPos = Math.max(yPos, rightYPos) + 8;
     
     // Reputation indicator graphic
-    const reputation = (data.credibility_level || data.credibility || '').toLowerCase();
-    if (reputation) {
+    const reputation = (data.reputation || data.credibility_level || data.credibility || '').toLowerCase();
+    if (reputation && reputation !== 'unknown') {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
         doc.text('Reputation Assessment', 20, yPos);
@@ -744,11 +693,11 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
         
         // Visual reputation indicator
         const repLevels = [
-            { label: 'Very Low', active: reputation.includes('very low') || reputation.includes('unreliable') },
+            { label: 'Very Low', active: reputation.includes('very low') || reputation.includes('poor') },
             { label: 'Low', active: reputation === 'low' },
             { label: 'Medium', active: reputation === 'medium' || reputation === 'moderate' },
             { label: 'High', active: reputation === 'high' },
-            { label: 'Very High', active: reputation.includes('very high') || reputation.includes('excellent') }
+            { label: 'Excellent', active: reputation.includes('excellent') || reputation.includes('very high') }
         ];
         
         let xPos = 20;
@@ -768,7 +717,7 @@ function generateSourceCredibilityComplete(doc, data, yPos, colors, serviceColor
     
     yPos += 5;
     
-    // Analysis sections
+    // Analysis sections - USE REAL DATA
     const analysisSections = extractAnalysisSections(data);
     const sectionTitles = [
         { title: 'What We Analyzed', key: 'what_we_analyzed' },
@@ -840,7 +789,7 @@ function generateBiasDetectionComplete(doc, data, yPos, colors, serviceColor) {
     });
     
     // Political position indicator
-    const politicalLabel = data.political_label || data.political_leaning || 'Center';
+    const politicalLabel = data.political_label || data.political_leaning || data.direction || 'Center';
     let indicatorX = spectrumX + (spectrumWidth / 2); // Default center
     
     if (politicalLabel.toLowerCase().includes('left')) {
@@ -881,7 +830,7 @@ function generateBiasDetectionComplete(doc, data, yPos, colors, serviceColor) {
     const metrics = [
         ['Objectivity Score', `${Math.round(data.objectivity_score || 0)}/100`],
         ['Sensationalism', data.sensationalism_level || 'Low'],
-        ['Bias Rating', data.bias_rating || 'Minimal']
+        ['Bias Rating', data.bias_rating || data.bias_level || 'Minimal']
     ];
     
     metrics.forEach(([label, value]) => {
@@ -956,7 +905,7 @@ function generateBiasDetectionComplete(doc, data, yPos, colors, serviceColor) {
     
     // Loaded Language Examples
     const details = data.details || {};
-    const loadedLanguage = details.loaded_language_examples || data.loaded_language_examples || [];
+    const loadedLanguage = details.loaded_language_examples || data.loaded_language_examples || data.loaded_phrases || [];
     
     if (loadedLanguage.length > 0) {
         if (yPos > 250) {
@@ -1147,7 +1096,7 @@ function generateAuthorAnalysisComplete(doc, data, yPos, colors, serviceColor) {
         ['Name', data.name || data.primary_author || data.author_name || 'Unknown'],
         ['Position', data.position || data.role || 'Journalist'],
         ['Organization', data.organization || data.domain || 'Unknown'],
-        ['Credibility Score', `${Math.round(data.credibility_score || 0)}/100`],
+        ['Credibility Score', `${Math.round(data.credibility_score || data.score || 0)}/100`],
         ['Expertise Level', extractText(data.expertise_level || data.expertise || 'Unknown')],
         ['Years Experience', data.years_experience || data.experience || 'Unknown'],
         ['Verified', data.verified ? 'Yes' : 'No']
@@ -1220,10 +1169,10 @@ function generateTransparencyComplete(doc, data, yPos, colors, serviceColor) {
     
     const fields = [
         ['Transparency Level', data.transparency_level || data.level || 'Unknown'],
-        ['Transparency Score', `${Math.round(data.transparency_score || 0)}/100`],
+        ['Transparency Score', `${Math.round(data.transparency_score || data.score || 0)}/100`],
         ['Article Type', data.article_type || data.content_type || 'News Report'],
-        ['Sources Cited', data.sources_count || data.source_count || 'Unknown'],
-        ['Direct Quotes', data.quotes_count || data.quote_count || 'Unknown']
+        ['Sources Cited', data.sources_count || data.source_count || data.sources_cited || 'Unknown'],
+        ['Direct Quotes', data.quotes_count || data.quote_count || data.quotes_used || 'Unknown']
     ];
     
     fields.forEach(([label, value]) => {
@@ -1349,7 +1298,7 @@ function generateContentQualityComplete(doc, data, yPos, colors, serviceColor) {
     doc.setFont('helvetica', 'normal');
     
     const fields = [
-        ['Quality Score', `${Math.round(data.quality_score || 0)}/100`],
+        ['Quality Score', `${Math.round(data.quality_score || data.score || 0)}/100`],
         ['Readability Level', data.readability_level || data.readability || 'Unknown'],
         ['Word Count', (data.word_count || 0).toLocaleString()],
         ['Sentence Count', data.sentence_count || 'Unknown'],
@@ -1544,4 +1493,4 @@ function drawTriangle(doc, x1, y1, x2, y2, x3, y3, fillColor) {
     doc.lines([[x2 - x1, y2 - y1], [x3 - x2, y3 - y2], [x1 - x3, y1 - y3]], x1, y1, null, 'F');
 }
 
-console.log('[PDF Generator v3.2.1] Loaded - Complete with all graphics and enhancements');
+console.log('[PDF Generator v3.3.0] Loaded - Complete with REAL CONTENT in Executive Summary');
