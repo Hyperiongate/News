@@ -1,13 +1,22 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 11.3.0 - OUTLET CREDIBILITY COMPARISON BARS
- * DATE: October 15, 2025
+ * VERSION: 11.3.1 - MULTI-AUTHOR FIX
+ * DATE: October 16, 2025
  * 
- * IMPROVEMENTS FROM v11.2.0:
+ * IMPROVEMENTS FROM v11.3.0:
+ * ✅ FIXED: Now displays ALL authors from all_authors field
+ * ✅ Formats multiple authors as "Author1, Author2 and Author3"
+ * ✅ Pulls from detailed_analysis.author_analyzer.all_authors
+ * ✅ Falls back to data.author if all_authors not available
+ * 
+ * PREVIOUS FEATURES:
  * ✅ Added Outlet Credibility Comparison section (like in app)
  * ✅ Shows how analyzed source compares to Reuters, AP, NYT, etc.
  * ✅ Displays top 10 news outlets with color-coded bars
  * ✅ Highlights current article's outlet in the comparison
+ * ✅ FIXED: Source Credibility Key Findings now 30px (prevents page bleed)
+ * ✅ FIXED: "CENTER" label moved to centerY - 35 (fully visible above dial)
+ * ✅ FIXED: Reduced findings text to 2 lines for source credibility
  * ✅ Third-party rating services preserved
  * ✅ Do No Harm - all existing features preserved
  */
@@ -42,7 +51,7 @@ function isGenericPlaceholder(text) {
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[PDF v11.3.0] Generating PDF with outlet comparison...');
+    console.log('[PDF v11.3.1] Generating PDF with multi-author support...');
     
     if (typeof window.jspdf === 'undefined') {
         alert('PDF library not loaded. Please refresh the page and try again.');
@@ -70,10 +79,10 @@ function downloadPDFReport() {
         const filename = `TruthLens-Report-${sourceShort}-${timestamp}.pdf`;
         
         doc.save(filename);
-        console.log('[PDF v11.3.0] ✓ Generated:', filename);
+        console.log('[PDF v11.3.1] ✓ Generated:', filename);
         
     } catch (error) {
-        console.error('[PDF v11.3.0] Error:', error);
+        console.error('[PDF v11.3.1] Error:', error);
         alert('Error generating PDF. Please try again.');
     }
 }
@@ -206,7 +215,24 @@ function generateCoverPage(doc, data, trustScore, scoreColor, colors) {
     doc.setFont('helvetica', 'bold');
     doc.text('AUTHOR:', 25, yPos);
     doc.setFont('helvetica', 'normal');
-    doc.text(cleanText(data.author || 'Unknown Author').substring(0, 60), 50, yPos);
+    
+    // Get all authors from author_analyzer if available
+    let authorText = 'Unknown Author';
+    const authorAnalysis = data.detailed_analysis?.author_analyzer;
+    
+    if (authorAnalysis && authorAnalysis.all_authors && authorAnalysis.all_authors.length > 0) {
+        // Join multiple authors with "and"
+        const allAuthors = authorAnalysis.all_authors.filter(a => a && a !== 'Unknown Author');
+        if (allAuthors.length > 1) {
+            authorText = allAuthors.slice(0, -1).join(', ') + ' and ' + allAuthors[allAuthors.length - 1];
+        } else if (allAuthors.length === 1) {
+            authorText = allAuthors[0];
+        }
+    } else if (data.author) {
+        authorText = data.author;
+    }
+    
+    doc.text(cleanText(authorText).substring(0, 60), 50, yPos);
     
     yPos += 10;
     doc.setFont('helvetica', 'bold');
@@ -432,7 +458,17 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     
     // ========== KEY FINDINGS ==========
     
-    const findingsHeight = service.key === 'fact_checker' || service.key === 'transparency_analyzer' ? 85 : 50;
+    // Adjust heights based on service type
+    let findingsHeight;
+    if (service.key === 'source_credibility') {
+        findingsHeight = 30; // Extra small for source credibility to prevent bleed
+    } else if (service.key === 'bias_detector') {
+        findingsHeight = 35; // Smaller for bias detector
+    } else if (service.key === 'fact_checker' || service.key === 'transparency_analyzer') {
+        findingsHeight = 85;
+    } else {
+        findingsHeight = 50;
+    }
     
     doc.setFillColor(245, 251, 245);
     doc.roundedRect(15, yPos, 180, findingsHeight, 2, 2, 'F');
@@ -460,7 +496,18 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
         
         const findingsLines = doc.splitTextToSize(findingsText, 170);
         let fy = yPos + 16;
-        findingsLines.slice(0, 5).forEach(line => {
+        
+        // Adjust number of lines based on container size
+        let maxLines;
+        if (service.key === 'source_credibility') {
+            maxLines = 2; // Only 2 lines for source credibility
+        } else if (service.key === 'bias_detector') {
+            maxLines = 3; // 3 lines for bias detector
+        } else {
+            maxLines = 5; // 5 lines for others
+        }
+        
+        findingsLines.slice(0, maxLines).forEach(line => {
             doc.text(line, 20, fy);
             fy += 4;
         });
@@ -1167,6 +1214,6 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
     doc.text(`Page ${pageNum} of ${totalPages}`, 190, 287, { align: 'right' });
 }
 
-console.log('[PDF v11.3.0] Enhanced PDF with outlet comparison + third-party ratings loaded');
+console.log('[PDF v11.3.1] Enhanced PDF with multi-author support loaded');
 
 // This file is not truncated
