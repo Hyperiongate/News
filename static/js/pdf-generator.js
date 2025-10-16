@@ -1,15 +1,14 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 12.1 - CLAIMS TEXT FIX
+ * VERSION: 12.0 - PROFESSIONAL QUALITY FIX
  * DATE: October 16, 2025
- * Last Updated: October 16, 2025 - Fixed claim text extraction
+ * Last Updated: October 16, 2025 - 6:30 PM
  * 
- * CRITICAL FIXES IN v12.1:
- * ✅ FIXED: "Claim analyzed" now shows ACTUAL claim text/findings
- * ✅ FIXED: Proper extraction from fact_checks array structure
+ * CRITICAL FIXES IN v12.0:
  * ✅ FIXED: Footer overlap - moved from y=287 to y=292 (more breathing room)
  * ✅ FIXED: "CENTER" label obscured - moved from centerY-20 to centerY-30 (fully above dial)
  * ✅ FIXED: Double "100" rendering - moved "/100" from x=50 to x=65 (no overlap)
+ * ✅ FIXED: "Claim analyzed" placeholders - now shows ACTUAL claims with verification status
  * ✅ FIXED: Excessive white space - dynamic heights based on content length
  * ✅ FIXED: Content bleeding into footer - all sections stop at y=275 max
  * 
@@ -52,7 +51,7 @@ function isGenericPlaceholder(text) {
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[PDF v12.1] Generating professional PDF report...');
+    console.log('[PDF v12.0] Generating professional PDF report...');
     
     if (typeof window.jspdf === 'undefined') {
         alert('PDF library not loaded. Please refresh the page and try again.');
@@ -80,10 +79,10 @@ function downloadPDFReport() {
         const filename = `TruthLens-Report-${sourceShort}-${timestamp}.pdf`;
         
         doc.save(filename);
-        console.log('[PDF v12.1] ✓ Professional report generated:', filename);
+        console.log('[PDF v12.0] ✓ Professional report generated:', filename);
         
     } catch (error) {
-        console.error('[PDF v12.1] Error:', error);
+        console.error('[PDF v12.0] Error:', error);
         alert('Error generating PDF. Please try again.');
     }
 }
@@ -851,18 +850,11 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
 }
 
 // ============================================================================
-// DISPLAY FACT CHECK CLAIMS - FIXED v12.1
+// DISPLAY FACT CHECK CLAIMS - FIXED v12.0
 // ============================================================================
 
 function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
-    // Try multiple possible locations for fact check data
-    const factChecks = serviceData.fact_checks || 
-                       serviceData.claims || 
-                       fullData.detailed_analysis?.fact_checker?.fact_checks ||
-                       fullData.detailed_analysis?.fact_checker?.claims ||
-                       [];
-    
-    console.log('[PDF v12.1] Fact checks found:', factChecks.length);
+    const claims = serviceData.claims || fullData.detailed_analysis?.fact_checker?.claims || [];
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -870,52 +862,31 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
     
     let fy = yPos + 16;
     
-    if (factChecks.length > 0) {
-        const displayClaims = factChecks.slice(0, 6);
+    if (claims.length > 0) {
+        const displayClaims = claims.slice(0, 6);
         
-        displayClaims.forEach((check, index) => {
-            // FIXED v12.1: Extract the actual analysis/explanation text
-            let claimText = '';
+        displayClaims.forEach((claim, index) => {
+            // FIXED v12.0: Extract actual claim data
+            let claimText = 'Claim analyzed';
             let status = 'unknown';
             
-            // The analysis/explanation field contains the actual finding text
-            if (check.explanation) {
-                claimText = check.explanation;
-            } else if (check.analysis) {
-                claimText = check.analysis;
-            } else if (check.finding) {
-                claimText = check.finding;
-            } else if (check.text) {
-                claimText = check.text;
-            } else if (check.claim) {
-                claimText = check.claim;
-            } else if (typeof check === 'string') {
-                claimText = check;
-            } else {
-                // Fallback to any text we can find
-                claimText = JSON.stringify(check);
+            if (typeof claim === 'object') {
+                claimText = claim.claim || claim.text || claim.statement || 'Claim analyzed';
+                status = claim.status || claim.verdict || claim.result || 'unknown';
+            } else if (typeof claim === 'string') {
+                claimText = claim;
             }
             
-            // Get the verdict/status
-            status = check.verdict || check.status || check.result || 'unknown';
-            
-            // FIXED v12.1: Show verification status with symbols
+            // FIXED v12.0: Show verification status with symbols
             let statusSymbol = '?';
             let statusColor = colors.gray;
             
-            const verdict = status.toLowerCase();
-            if (verdict.includes('true') || verdict.includes('accurate') || verdict.includes('verified')) {
+            if (status.toLowerCase().includes('true') || status.toLowerCase().includes('accurate') || status.toLowerCase().includes('verified')) {
                 statusSymbol = '✓';
                 statusColor = colors.success;
-            } else if (verdict.includes('false') || verdict.includes('inaccurate')) {
+            } else if (status.toLowerCase().includes('false') || status.toLowerCase().includes('inaccurate')) {
                 statusSymbol = '✗';
                 statusColor = colors.danger;
-            } else if (verdict.includes('misleading') || verdict.includes('exaggeration') || verdict.includes('context')) {
-                statusSymbol = '⚠';
-                statusColor = colors.warning;
-            } else if (verdict.includes('opinion') || verdict.includes('rhetoric')) {
-                statusSymbol = '○';
-                statusColor = colors.purple;
             }
             
             // Draw status indicator
@@ -923,27 +894,27 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
             doc.setTextColor(...statusColor);
             doc.text(statusSymbol, 20, fy);
             
-            // Draw the actual finding text
+            // Draw claim text
             doc.setFontSize(8);
             doc.setTextColor(...colors.darkGray);
-            const cleaned = cleanText(claimText).substring(0, 120);
+            const cleaned = cleanText(claimText).substring(0, 100);
             const lines = doc.splitTextToSize(cleaned, 150);
             doc.text(lines[0], 25, fy);
             
             fy += 6;
             
-            if (fy > yPos + 72) break;
+            if (fy > yPos + 72) return;
         });
         
         fy += 3;
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(...colors.gray);
-        doc.text(`Total findings analyzed: ${factChecks.length}`, 20, fy);
+        doc.text(`Total claims analyzed: ${claims.length}`, 20, fy);
     } else {
         // Fallback if no claims data
         const sourcesCount = serviceData.sources_cited || fullData.sources_count || 0;
-        doc.text(`${sourcesCount} source(s) cited in this article. Fact checking analysis pending.`, 20, fy);
+        doc.text(`${sourcesCount} source(s) cited in this article. Claims analysis pending.`, 20, fy);
     }
     
     return yPos + 88;
@@ -998,7 +969,7 @@ function getWhatWeAnalyzed(serviceKey, data, fullData) {
     const sourceName = cleanText(data.source_name || fullData?.source || 'this source');
     const authorName = cleanText(data.author_name || fullData?.author || 'the author');
     const wordCount = data.word_count || fullData?.word_count || 0;
-    const claimsCount = data.claims?.length || data.fact_checks?.length || 0;
+    const claimsCount = data.claims?.length || 0;
     const sourcesCount = data.sources_cited || fullData?.sources_count || 0;
     const quotesCount = data.quote_count || fullData?.quotes_count || 0;
     
@@ -1006,7 +977,7 @@ function getWhatWeAnalyzed(serviceKey, data, fullData) {
         source_credibility: `We analyzed the reputation, history, and reliability of ${sourceName}. Our AI examined ownership transparency, fact-checking track record, corrections policy, and editorial standards to determine credibility.`,
         bias_detector: `We examined the article for political lean, loaded language, sensationalism, and framing bias. We analyzed word choice, tone, source selection, and how the story is presented to identify any partisan slant or emotional manipulation.`,
         fact_checker: claimsCount > 0 ?
-            `We identified ${claimsCount} key findings in the article and analyzed them using AI verification and pattern analysis. We also examined the article's sourcing quality (${sourcesCount} sources cited, ${quotesCount} quotes) and author attribution.` :
+            `We extracted ${claimsCount} factual claims from the article and verified them using AI verification and pattern analysis. We also analyzed the article's sourcing quality (${sourcesCount} sources cited, ${quotesCount} quotes) and author attribution.` :
             `We analyzed the article's sourcing quality (${sourcesCount} sources cited, ${quotesCount} quotes) and examined factual claims for verification. Claims analysis is ongoing.`,
         author_analyzer: `We researched ${authorName} using Wikipedia and other sources to verify credentials, expertise, and track record.`,
         transparency_analyzer: `We analyzed this news report (${wordCount} words) for transparency indicators. For this article type, we expect: 3-5 (standard practice) sources, 2-4 (multiple perspectives) quotes, and methodology disclosure.`,
@@ -1026,8 +997,8 @@ function getDetailedFindings(serviceKey, score, data) {
             `Objectivity score: ${score}/100. Balanced reporting with minimal loaded language. Political lean: ${cleanText(data.political_label || 'center')}. Sensationalism: ${cleanText(data.sensationalism_level || 'low')}.` :
             `Objectivity score: ${score}/100. Some bias indicators detected. Political lean: ${cleanText(data.political_label || 'varies')}. Loaded language present. Sensationalism: ${cleanText(data.sensationalism_level || 'moderate')}.`,
         
-        fact_checker: (data.fact_checks && data.fact_checks.length > 0) || (data.claims && data.claims.length > 0) ?
-            `Analyzed ${data.fact_checks?.length || data.claims?.length || 0} key findings. Verification results available above. Sources cited: ${data.sources_cited || 0}.` :
+        fact_checker: data.claims && data.claims.length > 0 ?
+            `Analyzed ${data.claims.length} factual claims. Verification results available above. Sources cited: ${data.sources_cited || 0}.` :
             `Analysis examined sourcing quality and attribution. ${data.sources_cited || 0} sources cited in article.`,
         
         author_analyzer: `${cleanText(data.author_name || 'Author')} has ${data.years_experience || 5} years of experience with ${data.articles_count || 50}+ articles. ${score >= 70 ? 'Established' : 'Limited verification of'} credentials.`,
@@ -1051,8 +1022,8 @@ function getWhatItMeans(serviceKey, score, data) {
             `This content shows signs of bias. Be aware that the framing and language choices may influence how you perceive the information. Seek out additional perspectives to get the full picture.`,
         
         fact_checker: score >= 70 ?
-            `This article demonstrates strong factual accuracy. The findings we analyzed were well-supported, and the article provides adequate sourcing. Readers can generally trust the information presented.` :
-            `Some findings in this article lack strong verification. Don't rely solely on this source for important facts. Cross-reference key information with authoritative sources before making decisions.`,
+            `This article demonstrates strong factual accuracy. The claims we verified were accurate, and the article provides adequate sourcing. Readers can generally trust the information presented.` :
+            `Some claims in this article lack strong verification. Don't rely solely on this source for important facts. Cross-reference key information with authoritative sources before making decisions.`,
         
         author_analyzer: score >= 70 ?
             `Credible author with ${data.years_experience || 5}+ years of established experience. Generally reliable.` :
@@ -1180,16 +1151,6 @@ function extractRealKeyFindings(data) {
     const findings = [];
     const detailed = data.detailed_analysis || {};
     
-    // Try to extract fact checker findings first
-    if (detailed.fact_checker && detailed.fact_checker.fact_checks && detailed.fact_checker.fact_checks.length > 0) {
-        detailed.fact_checker.fact_checks.slice(0, 3).forEach(check => {
-            if (check.explanation) {
-                findings.push(cleanText(check.explanation).substring(0, 120));
-            }
-        });
-    }
-    
-    // Then other service findings
     Object.keys(detailed).forEach(serviceKey => {
         const service = detailed[serviceKey];
         if (service && service.analysis && service.analysis.what_we_found) {
@@ -1292,6 +1253,6 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
     doc.text(`Page ${pageNum} of ${totalPages}`, 190, 292, { align: 'right' });
 }
 
-console.log('[PDF v12.1] Professional quality PDF generator loaded - Claims display fixed');
+console.log('[PDF v12.0] Professional quality PDF generator loaded - All layout issues fixed');
 
 // This file is not truncated
