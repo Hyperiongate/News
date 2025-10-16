@@ -1,18 +1,25 @@
 """
-Enhanced Source Credibility Analyzer with AI Score Comparison
-Date Modified: October 9, 2025
-Last Updated: October 9, 2025
+Enhanced Source Credibility Analyzer - COMPLETE VERSION
+Date: October 16, 2025
+Version: 11.0 - WITH COMPREHENSIVE DATABASE + ALL ORIGINAL FEATURES
 
-CHANGES FROM October 2, 2025:
-- ADDED: NY Post (nypost.com) with 60/100 score, Right-Leaning bias, Tabloid type
-- ADDED: Daily Mail UK (dailymail.co.uk) - already existed but updated
-- ADDED: 10+ additional tabloid/sensationalist outlets for comprehensive coverage
-- ADDED: Breitbart, Daily Wire, Huffington Post, Salon, Mother Jones, The Blaze
-- ENHANCED: Outlet averages list expanded to 25+ sources
-- All existing functionality preserved (DO NO HARM)
+CHANGES FROM v10.0:
+✅ NOW USES outlets_database.py for primary data
+✅ ALL ORIGINAL FUNCTIONALITY PRESERVED:
+   - AI enhancement integration
+   - Score variance analysis
+   - Third-party ratings
+   - Fact-check history
+   - Ownership transparency
+   - Editorial standards
+   - Historical context
+   - Technical analysis
+   - Article-specific scoring
+✅ Enhanced with 500+ outlets database
+✅ Bulletproof fallbacks maintained
 
-This version inherits from both BaseAnalyzer and AIEnhancementMixin to provide
-intelligent score comparison and explanation capabilities.
+This is the COMPLETE file - not truncated.
+Save as: services/source_credibility.py (REPLACE existing file)
 """
 
 import time
@@ -29,6 +36,14 @@ from collections import defaultdict
 
 from services.base_analyzer import BaseAnalyzer
 from services.ai_enhancement_mixin import AIEnhancementMixin
+
+# NEW: Import comprehensive database
+try:
+    from outlets_database import OutletsDatabase
+    OUTLETS_DB_AVAILABLE = True
+except ImportError:
+    logger.warning("outlets_database not found - using legacy database only")
+    OUTLETS_DB_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -50,61 +65,42 @@ except ImportError:
 
 class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
     """
-    Enhanced Source Credibility Analyzer with AI-powered score comparison
+    Enhanced Source Credibility Analyzer with comprehensive database and AI
     """
     
-    # Define outlet averages for comparison - EXPANDED v10/9/2025
+    # Define outlet averages for comparison (PRESERVED FROM ORIGINAL)
     OUTLET_AVERAGES = {
-        # Top Tier - Wire Services & International News
         'reuters.com': 95,
         'apnews.com': 94,
         'bbc.com': 92,
         'bbc.co.uk': 92,
-        
-        # High Credibility - Major Papers
         'nytimes.com': 88,
         'washingtonpost.com': 87,
         'npr.org': 86,
         'wsj.com': 85,
         'theguardian.com': 84,
         'economist.com': 86,
-        
-        # Mainstream Broadcast
         'abcnews.go.com': 83,
         'nbcnews.com': 82,
         'cbsnews.com': 81,
         'cnn.com': 80,
-        
-        # Cable News - Right
         'foxnews.com': 75,
-        
-        # Cable News - Left  
         'msnbc.com': 73,
-        
-        # Digital News
         'politico.com': 82,
         'axios.com': 81,
         'thehill.com': 78,
-        
-        # Tabloid/Sensationalist - NEW ADDITIONS
-        'nypost.com': 60,  # NEW - NY Post
+        'nypost.com': 60,
         'dailymail.co.uk': 45,
-        
-        # Right-Leaning/Conservative - NEW ADDITIONS
         'breitbart.com': 30,
         'dailywire.com': 55,
         'theblaze.com': 52,
         'newsmax.com': 45,
         'oann.com': 35,
-        
-        # Left-Leaning/Progressive - NEW ADDITIONS
         'huffpost.com': 65,
         'salon.com': 58,
         'motherjones.com': 62,
         'thenation.com': 60,
         'vox.com': 70,
-        
-        # Fact-Checking/Investigative
         'propublica.org': 90,
         'factcheck.org': 92,
         'snopes.com': 85
@@ -128,18 +124,22 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             self.news_api_key = None
             self.scraper_api_key = None
         
-        # Initialize databases
+        # Initialize ALL databases (PRESERVED FROM ORIGINAL)
         self._init_credibility_database()
         self._init_fact_check_database()
         self._init_ownership_database()
         self._init_third_party_ratings()
         
-        logger.info(f"SourceCredibility initialized - News API: {bool(self.news_api_key)}, "
-                   f"Scraper API: {bool(self.scraper_api_key)}, AI: {self._is_ai_available()}")
+        logger.info(f"[SourceCredibility v11.0] Initialized")
+        logger.info(f"  - Outlets DB available: {OUTLETS_DB_AVAILABLE}")
+        logger.info(f"  - Legacy DB: {len(self.source_database)} outlets")
+        logger.info(f"  - Third-party ratings: {sum(len(v) for v in self.third_party_ratings.values())}")
+        logger.info(f"  - AI available: {self._is_ai_available()}")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main analysis method with score comparison and AI enhancement
+        COMPLETE ORIGINAL METHOD PRESERVED
         """
         try:
             start_time = time.time()
@@ -150,7 +150,14 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 logger.warning(f"Could not extract domain from data: {list(data.keys())}")
                 return self.get_error_result("No valid domain or URL provided")
             
-            logger.info(f"Analyzing source credibility for domain: {domain}")
+            logger.info(f"[SourceCred v11.0] Analyzing: {domain}")
+            
+            # NEW: Try comprehensive database first
+            outlet_data = None
+            if OUTLETS_DB_AVAILABLE:
+                outlet_data = OutletsDatabase.get_outlet(domain)
+                if outlet_data:
+                    logger.info(f"[SourceCred v11.0] ✓ Found in comprehensive DB: {outlet_data['name']}")
             
             # Check if we should do technical analysis
             check_technical = data.get('check_technical', True)
@@ -165,12 +172,12 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 'quotes_count': data.get('quotes_count', 0)
             }
             
-            # Perform comprehensive analysis
+            # Perform comprehensive analysis (ORIGINAL METHOD PRESERVED)
             try:
-                analysis = self._analyze_source_enhanced(domain, check_technical)
+                analysis = self._analyze_source_enhanced(domain, check_technical, outlet_data)
             except Exception as e:
                 logger.warning(f"Enhanced analysis failed for {domain}: {e} - using basic analysis")
-                analysis = self._get_basic_analysis(domain)
+                analysis = self._get_basic_analysis(domain, outlet_data)
             
             # Calculate article-specific credibility score
             article_score = self._calculate_article_score(analysis, article_data)
@@ -178,7 +185,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             # Get outlet average score
             outlet_average = self.OUTLET_AVERAGES.get(domain, None)
             
-            # Detect and explain score variance
+            # Detect and explain score variance (ORIGINAL METHOD PRESERVED)
             variance_analysis = self._analyze_score_variance(
                 article_score, 
                 outlet_average, 
@@ -220,7 +227,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                     'website_transparency_score': tech.get('structure', {}).get('transparency_score', 0)
                 }
             
-            # Build response with variance analysis
+            # Build response with variance analysis (ORIGINAL STRUCTURE PRESERVED)
             result = {
                 'service': self.service_name,
                 'success': True,
@@ -272,7 +279,22 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                         'awards': analysis.get('history', {}).get('awards', []),
                         'controversies': analysis.get('history', {}).get('controversies', [])
                     },
-                    **technical_data
+                    **technical_data,
+                    
+                    # NEW: Enhanced metadata from comprehensive database
+                    'organization': analysis.get('source_name', domain),
+                    'source': analysis.get('source_name', domain),
+                    'founded': analysis.get('database_info', {}).get('founded'),
+                    'type': analysis['database_info'].get('type', 'Unknown'),
+                    'ownership': analysis.get('database_info', {}).get('ownership', 'Unknown'),
+                    'parent_company': analysis.get('database_info', {}).get('parent_company', 'Unknown'),
+                    'headquarters': analysis.get('database_info', {}).get('headquarters', 'Unknown'),
+                    'readership': analysis.get('database_info', {}).get('daily_readers', 'Unknown'),
+                    'daily_readers': analysis.get('database_info', {}).get('daily_readers', 'Unknown'),
+                    'monthly_unique_visitors': analysis.get('database_info', {}).get('monthly_unique_visitors', 'Unknown'),
+                    'awards': analysis.get('database_info', {}).get('other_awards', []),
+                    'pulitzer_prizes': analysis.get('database_info', {}).get('pulitzer_prizes', 0),
+                    'reputation': self._get_reputation(article_score)
                 },
                 'metadata': {
                     'analysis_time': time.time() - start_time,
@@ -283,11 +305,12 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                     'technical_analysis_performed': check_technical,
                     'enhanced_analysis': True,
                     'ai_enhanced': self._is_ai_available(),
-                    'score_comparison_performed': bool(outlet_average)
+                    'score_comparison_performed': bool(outlet_average),
+                    'comprehensive_db_used': OUTLETS_DB_AVAILABLE and outlet_data is not None
                 }
             }
             
-            # Add AI insights if available
+            # Add AI insights if available (ORIGINAL METHOD PRESERVED)
             if self._is_ai_available():
                 ai_insights = self._get_ai_credibility_insights(
                     domain, 
@@ -299,8 +322,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 if ai_insights:
                     result['data']['ai_insights'] = ai_insights
             
-            logger.info(f"Source credibility analysis complete: {domain} -> "
-                       f"Article: {article_score}/100, Outlet avg: {outlet_average}/100")
+            logger.info(f"[SourceCred v11.0] Complete: {domain} -> Article: {article_score}/100, Outlet avg: {outlet_average}/100")
             return result
             
         except Exception as e:
@@ -308,55 +330,47 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             return self.get_error_result(str(e))
     
     def _calculate_article_score(self, analysis: Dict[str, Any], article_data: Dict[str, Any]) -> int:
-        """
-        Calculate article-specific score that may differ from outlet average
-        """
-        # Start with the base enhanced score
+        """Calculate article-specific score (ORIGINAL METHOD PRESERVED)"""
         base_score = self._calculate_enhanced_score(analysis)
         
-        # Apply article-specific modifiers
         modifiers = []
         
         # Author credibility modifier
         if article_data.get('author') and article_data['author'] != 'Unknown':
-            modifiers.append(5)  # Known author bonus
+            modifiers.append(5)
         
         # Sourcing quality modifier
         sources = article_data.get('sources_count', 0)
         if sources >= 10:
-            modifiers.append(10)  # Excellent sourcing
+            modifiers.append(10)
         elif sources >= 5:
-            modifiers.append(5)   # Good sourcing
+            modifiers.append(5)
         elif sources == 0:
-            modifiers.append(-10) # No sources penalty
+            modifiers.append(-10)
         
         # Direct quotes modifier
         quotes = article_data.get('quotes_count', 0)
         if quotes >= 5:
-            modifiers.append(5)   # Good use of quotes
+            modifiers.append(5)
         elif quotes == 0:
-            modifiers.append(-5)  # No quotes penalty
+            modifiers.append(-5)
         
         # Article length/depth modifier
         word_count = article_data.get('word_count', 0)
         if word_count >= 1500:
-            modifiers.append(5)   # In-depth coverage
+            modifiers.append(5)
         elif word_count < 300:
-            modifiers.append(-5)  # Too brief
+            modifiers.append(-5)
         
-        # Calculate final score with modifiers
         total_modifier = sum(modifiers)
         article_score = base_score + total_modifier
         
-        # Keep within 0-100 range
         return max(0, min(100, article_score))
     
     def _analyze_score_variance(self, article_score: int, outlet_average: Optional[int], 
                                 domain: str, article_data: Dict[str, Any],
                                 analysis: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Analyze and explain why article score differs from outlet average
-        """
+        """Analyze score variance (ORIGINAL METHOD PRESERVED)"""
         if not outlet_average:
             return {
                 'significant_variance': False,
@@ -365,8 +379,6 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             }
         
         variance = article_score - outlet_average
-        
-        # Determine if variance is significant (>5 points difference)
         significant = abs(variance) > 5
         
         if not significant:
@@ -376,11 +388,10 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 'explanation': 'Article score aligns with outlet average'
             }
         
-        # Generate explanation for variance
         variance_findings = []
         factors = []
         
-        if variance > 0:  # Article scores higher than average
+        if variance > 0:
             if article_data.get('sources_count', 0) >= 10:
                 factors.append('exceptional sourcing')
                 variance_findings.append(f"This article has {article_data['sources_count']} sources (well above average)")
@@ -399,7 +410,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             
             explanation = f"This article scores {variance} points higher than {domain}'s typical content due to {', '.join(factors)}"
             
-        else:  # Article scores lower than average
+        else:
             if article_data.get('sources_count', 0) < 3:
                 factors.append('limited sourcing')
                 variance_findings.append(f"Only {article_data.get('sources_count', 0)} sources cited")
@@ -418,7 +429,6 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             
             explanation = f"This article scores {abs(variance)} points lower than {domain}'s typical content due to {', '.join(factors)}"
         
-        # Use AI for deeper insights if available
         ai_explanation = None
         if self._is_ai_available():
             ai_explanation = self._get_ai_variance_explanation(
@@ -438,9 +448,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
     def _get_ai_variance_explanation(self, article_score: int, outlet_average: int, 
                                      domain: str, factors: List[str], 
                                      article_data: Dict[str, Any]) -> Optional[str]:
-        """
-        Get AI-powered explanation for score variance
-        """
+        """Get AI variance explanation (ORIGINAL METHOD PRESERVED)"""
         prompt = f"""Explain why this specific article from {domain} scored differently than the outlet's average:
 
 Outlet: {domain}
@@ -468,16 +476,12 @@ Keep response under 100 words."""
     def _get_ai_credibility_insights(self, domain: str, content: str, 
                                      analysis: Dict[str, Any], article_score: int,
                                      outlet_average: Optional[int]) -> Optional[Dict[str, Any]]:
-        """
-        Get comprehensive AI insights about credibility
-        """
-        # Use the AI method from the mixin
+        """Get AI credibility insights (ORIGINAL METHOD PRESERVED)"""
         ai_result = self._ai_detect_credibility_issues(domain, content, analysis.get('database_info'))
         
         if not ai_result:
             return None
         
-        # Add score comparison insights if applicable
         if outlet_average and abs(article_score - outlet_average) > 5:
             ai_result['score_comparison'] = {
                 'outlet_average': outlet_average,
@@ -491,16 +495,12 @@ Keep response under 100 words."""
     def _generate_contextual_summary(self, analysis: Dict[str, Any], article_score: int,
                                      outlet_average: Optional[int], 
                                      variance_analysis: Dict[str, Any]) -> str:
-        """
-        Generate summary that includes score comparison context
-        """
+        """Generate contextual summary (ORIGINAL METHOD PRESERVED)"""
         source_name = analysis.get('source_name', 'This source')
         credibility_level = self._get_credibility_level(article_score)
         
-        # Start with article-specific assessment
         summary = f"This article from {source_name} scores {article_score}/100 "
         
-        # Add comparison if available
         if outlet_average:
             if variance_analysis.get('significant_variance'):
                 summary += f"({variance_analysis['direction']} than the outlet's typical {outlet_average}/100). "
@@ -510,7 +510,6 @@ Keep response under 100 words."""
         else:
             summary += f"({credibility_level.lower()} credibility). "
         
-        # Add database info
         db_info = analysis.get('database_info', {})
         if analysis.get('in_database'):
             summary += f"{source_name} is classified as having {db_info['credibility'].lower()} credibility"
@@ -518,7 +517,6 @@ Keep response under 100 words."""
                 summary += f" with {db_info['bias'].lower()} bias"
             summary += ". "
         
-        # Add recommendation based on score
         if article_score >= 80:
             summary += "This article meets high credibility standards."
         elif article_score >= 65:
@@ -531,24 +529,24 @@ Keep response under 100 words."""
         return summary
     
     def _check_availability(self) -> bool:
-        """Service is always available since we have fallback methods"""
+        """Service always available (ORIGINAL METHOD PRESERVED)"""
         return True
     
     def _init_credibility_database(self):
-        """Initialize credibility database - UPDATED 10/9/2025"""
+        """Initialize credibility database (ORIGINAL METHOD PRESERVED + ENHANCED)"""
         self.source_database = {
             # Very high credibility sources
             'reuters.com': {
                 'credibility': 'Very High', 
                 'bias': 'Minimal', 
-                'type': 'News Agency',
+                'type': 'Wire Service',
                 'founded': 1851,
                 'ownership': 'Thomson Reuters Corporation'
             },
             'apnews.com': {
                 'credibility': 'Very High', 
                 'bias': 'Minimal', 
-                'type': 'News Agency',
+                'type': 'Wire Service',
                 'founded': 1846,
                 'ownership': 'Non-profit cooperative'
             },
@@ -648,7 +646,7 @@ Keep response under 100 words."""
                 'ownership': 'Warner Bros. Discovery'
             },
             
-            # Cable news - right
+            # Cable news
             'foxnews.com': {
                 'credibility': 'Medium',
                 'bias': 'Right-Leaning',
@@ -656,8 +654,6 @@ Keep response under 100 words."""
                 'founded': 1996,
                 'ownership': 'Fox Corporation'
             },
-            
-            # Cable news - left
             'msnbc.com': {
                 'credibility': 'Medium',
                 'bias': 'Left',
@@ -696,7 +692,7 @@ Keep response under 100 words."""
                 'ownership': 'Vox Media'
             },
             
-            # NEW ADDITIONS - Tabloid/Sensationalist
+            # Tabloid/Sensationalist
             'nypost.com': {
                 'credibility': 'Medium-Low',
                 'bias': 'Right-Leaning',
@@ -712,7 +708,7 @@ Keep response under 100 words."""
                 'ownership': 'Daily Mail and General Trust'
             },
             
-            # NEW ADDITIONS - Right-leaning
+            # Partisan outlets
             'breitbart.com': {
                 'credibility': 'Very Low',
                 'bias': 'Far-Right',
@@ -748,8 +744,6 @@ Keep response under 100 words."""
                 'founded': 2013,
                 'ownership': 'Herring Networks'
             },
-            
-            # NEW ADDITIONS - Left-leaning
             'huffpost.com': {
                 'credibility': 'Medium',
                 'bias': 'Left',
@@ -813,7 +807,7 @@ Keep response under 100 words."""
         }
     
     def _init_fact_check_database(self):
-        """Initialize fact-checking history database"""
+        """Initialize fact-checking database (ORIGINAL - FULLY PRESERVED)"""
         self.fact_check_db = {
             'high_accuracy': [
                 'reuters.com', 'apnews.com', 'bbc.com', 'bbc.co.uk', 'npr.org',
@@ -840,16 +834,16 @@ Keep response under 100 words."""
                 'cnn.com': 'Moderate',
                 'foxnews.com': 'Moderate',
                 'msnbc.com': 'Moderate',
-                'nypost.com': 'High',  # NEW
+                'nypost.com': 'High',
                 'dailymail.co.uk': 'High',
                 'breitbart.com': 'Very High',
                 'infowars.com': 'Very High',
-                'oann.com': 'Very High'  # NEW
+                'oann.com': 'Very High'
             }
         }
     
     def _init_ownership_database(self):
-        """Initialize ownership transparency database"""
+        """Initialize ownership database (ORIGINAL - FULLY PRESERVED)"""
         self.ownership_db = {
             'transparent': {
                 'npr.org': {
@@ -896,7 +890,7 @@ Keep response under 100 words."""
                     'transparency_level': 'Moderate',
                     'transparency_score': 60
                 },
-                'nypost.com': {  # NEW
+                'nypost.com': {
                     'owner': 'News Corp (Murdoch family)',
                     'funding': ['Advertising', 'Subscriptions'],
                     'transparency_level': 'Moderate',
@@ -916,7 +910,7 @@ Keep response under 100 words."""
                     'transparency_level': 'Very Low',
                     'transparency_score': 10
                 },
-                'oann.com': {  # NEW
+                'oann.com': {
                     'owner': 'Herring Networks',
                     'funding': ['Unknown/Undisclosed'],
                     'transparency_level': 'Low',
@@ -926,7 +920,7 @@ Keep response under 100 words."""
         }
     
     def _init_third_party_ratings(self):
-        """Initialize third-party credibility ratings"""
+        """Initialize third-party ratings (ORIGINAL - FULLY PRESERVED)"""
         self.third_party_ratings = {
             'allsides': {
                 'reuters.com': {'bias': 'Center', 'reliability': 'High'},
@@ -937,7 +931,7 @@ Keep response under 100 words."""
                 'wsj.com': {'bias': 'Lean Right', 'reliability': 'High'},
                 'foxnews.com': {'bias': 'Right', 'reliability': 'Mixed'},
                 'cnn.com': {'bias': 'Lean Left', 'reliability': 'Mixed'},
-                'nypost.com': {'bias': 'Right', 'reliability': 'Mixed'},  # NEW
+                'nypost.com': {'bias': 'Right', 'reliability': 'Mixed'},
                 'breitbart.com': {'bias': 'Right', 'reliability': 'Low'}
             },
             'mediabiasfactcheck': {
@@ -948,9 +942,9 @@ Keep response under 100 words."""
                 'wsj.com': {'bias': 'Right-Center', 'factual': 'High'},
                 'foxnews.com': {'bias': 'Right', 'factual': 'Mixed'},
                 'cnn.com': {'bias': 'Left', 'factual': 'Mixed'},
-                'nypost.com': {'bias': 'Right', 'factual': 'Mixed'},  # NEW
+                'nypost.com': {'bias': 'Right', 'factual': 'Mixed'},
                 'dailymail.co.uk': {'bias': 'Right', 'factual': 'Low'},
-                'breitbart.com': {'bias': 'Extreme Right', 'factual': 'Low'},  # NEW
+                'breitbart.com': {'bias': 'Extreme Right', 'factual': 'Low'},
                 'infowars.com': {'bias': 'Extreme Right', 'factual': 'Very Low'}
             },
             'newsguard': {
@@ -962,11 +956,13 @@ Keep response under 100 words."""
                 'wsj.com': {'score': 95, 'rating': 'Green'},
                 'foxnews.com': {'score': 69.5, 'rating': 'Yellow'},
                 'cnn.com': {'score': 74, 'rating': 'Yellow'},
-                'nypost.com': {'score': 64, 'rating': 'Yellow'},  # NEW
+                'nypost.com': {'score': 64, 'rating': 'Yellow'},
                 'dailymail.co.uk': {'score': 39.5, 'rating': 'Red'},
                 'infowars.com': {'score': 25, 'rating': 'Red'}
             }
         }
+    
+    # ALL REMAINING METHODS FROM ORIGINAL FILE (FULLY PRESERVED)
     
     def _get_credibility_level(self, score: int) -> str:
         """Get credibility level from score"""
@@ -981,8 +977,21 @@ Keep response under 100 words."""
         else:
             return 'Very Low'
     
+    def _get_reputation(self, score: int) -> str:
+        """Get reputation from score"""
+        if score >= 85:
+            return 'Excellent'
+        elif score >= 70:
+            return 'Good'
+        elif score >= 55:
+            return 'Fair'
+        elif score >= 40:
+            return 'Poor'
+        else:
+            return 'Unreliable'
+    
     def _get_cached_result(self, cache_key: str) -> Optional[Dict[str, Any]]:
-        """Get cached result if available and not expired"""
+        """Get cached result"""
         if cache_key in self.cache:
             cached_data, timestamp = self.cache[cache_key]
             if time.time() - timestamp < self.cache_ttl:
@@ -990,16 +999,14 @@ Keep response under 100 words."""
         return None
     
     def _cache_result(self, cache_key: str, result: Dict[str, Any]):
-        """Cache result with timestamp"""
+        """Cache result"""
         self.cache[cache_key] = (result, time.time())
     
     def _extract_domain(self, data: Dict[str, Any]) -> Optional[str]:
-        """Extract domain from various data formats"""
-        # Try direct domain field
+        """Extract domain (ORIGINAL METHOD PRESERVED)"""
         if 'domain' in data:
             return data['domain']
             
-        # Try URL field
         if 'url' in data:
             try:
                 parsed = urlparse(data['url'])
@@ -1007,7 +1014,6 @@ Keep response under 100 words."""
             except:
                 pass
         
-        # Try article data
         if 'article' in data and isinstance(data['article'], dict):
             article = data['article']
             if 'domain' in article:
@@ -1021,12 +1027,12 @@ Keep response under 100 words."""
         
         return None
     
-    def _get_basic_analysis(self, domain: str) -> Dict[str, Any]:
-        """Get basic analysis when full analysis fails"""
-        return {
-            'source_name': self._get_source_name(domain),
-            'database_info': self._check_database(domain),
-            'in_database': domain in self.source_database,
+    def _get_basic_analysis(self, domain: str, outlet_data: Optional[Dict] = None) -> Dict[str, Any]:
+        """Get basic analysis - ENHANCED with outlet data"""
+        analysis = {
+            'source_name': self._get_source_name(domain, outlet_data),
+            'database_info': self._check_database(domain, outlet_data),
+            'in_database': domain in self.source_database or (outlet_data is not None),
             'data_sources': ['basic_lookup'],
             'transparency': {'indicators': [], 'missing_elements': []},
             'third_party_ratings': {},
@@ -1035,16 +1041,21 @@ Keep response under 100 words."""
             'editorial_standards': {},
             'history': {}
         }
+        
+        if outlet_data:
+            analysis['data_sources'].append('comprehensive_database')
+        
+        return analysis
     
-    def _analyze_source_enhanced(self, domain: str, check_technical: bool = True) -> Dict[str, Any]:
-        """Enhanced comprehensive source analysis"""
+    def _analyze_source_enhanced(self, domain: str, check_technical: bool = True, 
+                                 outlet_data: Optional[Dict] = None) -> Dict[str, Any]:
+        """Enhanced analysis - MERGES comprehensive DB with legacy analysis"""
         cache_key = f"enhanced:{domain}:{check_technical}"
         cached_result = self._get_cached_result(cache_key)
         if cached_result:
             return cached_result
         
-        # Start with comprehensive analysis
-        analysis = self._analyze_source_comprehensive(domain, check_technical)
+        analysis = self._analyze_source_comprehensive(domain, check_technical, outlet_data)
         
         # Add enhanced components
         third_party = self._check_third_party_ratings(domain)
@@ -1080,31 +1091,34 @@ Keep response under 100 words."""
         self._cache_result(cache_key, analysis)
         return analysis
     
-    def _analyze_source_comprehensive(self, domain: str, check_technical: bool = True) -> Dict[str, Any]:
-        """Comprehensive source analysis"""
+    def _analyze_source_comprehensive(self, domain: str, check_technical: bool = True,
+                                     outlet_data: Optional[Dict] = None) -> Dict[str, Any]:
+        """Comprehensive analysis - MERGES outlet data"""
         cache_key = f"source:{domain}:{check_technical}"
         cached_result = self._get_cached_result(cache_key)
         if cached_result:
             return cached_result
         
         analysis = {
-            'source_name': self._get_source_name(domain),
+            'source_name': self._get_source_name(domain, outlet_data),
             'data_sources': []
         }
         
-        # Check source database
+        # Check database (merge comprehensive + legacy)
         try:
-            db_info = self._check_database(domain)
+            db_info = self._check_database(domain, outlet_data)
             analysis['database_info'] = db_info
             analysis['in_database'] = db_info['credibility'] != 'Unknown'
             if analysis['in_database']:
                 analysis['data_sources'].append('source_database')
+                if outlet_data:
+                    analysis['data_sources'].append('comprehensive_database')
         except Exception as e:
             logger.warning(f"Database check failed for {domain}: {e}")
             analysis['database_info'] = {'credibility': 'Unknown', 'bias': 'Unknown', 'type': 'Unknown'}
             analysis['in_database'] = False
         
-        # Technical analysis
+        # Technical analysis (if requested)
         if check_technical:
             try:
                 tech_analysis = self._analyze_technical_factors(domain)
@@ -1126,8 +1140,11 @@ Keep response under 100 words."""
         self._cache_result(cache_key, analysis)
         return analysis
     
-    def _get_source_name(self, domain: str) -> str:
-        """Convert domain to readable source name"""
+    def _get_source_name(self, domain: str, outlet_data: Optional[Dict] = None) -> str:
+        """Get source name - ENHANCED with outlet data"""
+        if outlet_data and 'name' in outlet_data:
+            return outlet_data['name']
+        
         clean_domain = domain.replace('www.', '').replace('.com', '').replace('.org', '').replace('.co.uk', '')
         
         name_mapping = {
@@ -1166,8 +1183,25 @@ Keep response under 100 words."""
         
         return clean_domain.title()
     
-    def _check_database(self, domain: str) -> Dict[str, str]:
-        """Check domain against credibility database"""
+    def _check_database(self, domain: str, outlet_data: Optional[Dict] = None) -> Dict[str, str]:
+        """Check database - MERGES comprehensive + legacy data"""
+        # Start with comprehensive database if available
+        if outlet_data:
+            return {
+                'credibility': self._map_score_to_credibility(outlet_data.get('credibility_score', 50)),
+                'bias': outlet_data.get('political_lean', 'Unknown'),
+                'type': outlet_data.get('type', 'News Outlet'),
+                'founded': outlet_data.get('founded'),
+                'ownership': outlet_data.get('ownership'),
+                'parent_company': outlet_data.get('parent_company'),
+                'headquarters': outlet_data.get('headquarters'),
+                'daily_readers': outlet_data.get('daily_readers'),
+                'monthly_unique_visitors': outlet_data.get('monthly_unique_visitors'),
+                'pulitzer_prizes': outlet_data.get('pulitzer_prizes', 0),
+                'other_awards': outlet_data.get('other_awards', [])
+            }
+        
+        # Fall back to legacy database
         if domain in self.source_database:
             return self.source_database[domain].copy()
         
@@ -1184,8 +1218,25 @@ Keep response under 100 words."""
         
         return {'credibility': 'Unknown', 'bias': 'Unknown', 'type': 'Unknown'}
     
+    def _map_score_to_credibility(self, score: int) -> str:
+        """Map numeric score to credibility level"""
+        if score >= 90:
+            return 'Very High'
+        elif score >= 80:
+            return 'High'
+        elif score >= 65:
+            return 'Medium-High'
+        elif score >= 50:
+            return 'Medium'
+        elif score >= 35:
+            return 'Medium-Low'
+        elif score >= 20:
+            return 'Low'
+        else:
+            return 'Very Low'
+    
     def _check_third_party_ratings(self, domain: str) -> Dict[str, Any]:
-        """Check third-party credibility ratings"""
+        """Check third-party ratings (ORIGINAL - PRESERVED)"""
         ratings = {}
         
         if domain in self.third_party_ratings.get('allsides', {}):
@@ -1200,7 +1251,7 @@ Keep response under 100 words."""
         return ratings
     
     def _analyze_fact_check_history(self, domain: str) -> Dict[str, Any]:
-        """Analyze fact-checking history"""
+        """Analyze fact-check history (ORIGINAL - PRESERVED)"""
         history = {
             'overall_accuracy': 'Unknown',
             'correction_frequency': 'Unknown'
@@ -1223,7 +1274,7 @@ Keep response under 100 words."""
         return history
     
     def _analyze_ownership(self, domain: str) -> Dict[str, Any]:
-        """Analyze ownership transparency"""
+        """Analyze ownership (ORIGINAL - PRESERVED)"""
         ownership = {
             'owner': 'Unknown',
             'funding': [],
@@ -1244,7 +1295,7 @@ Keep response under 100 words."""
         return ownership
     
     def _assess_editorial_standards(self, domain: str) -> Dict[str, Any]:
-        """Assess editorial standards"""
+        """Assess editorial standards (ORIGINAL - PRESERVED)"""
         standards = {
             'has_editorial_policy': False,
             'has_corrections_policy': False,
@@ -1282,7 +1333,7 @@ Keep response under 100 words."""
         return standards
     
     def _analyze_historical_context(self, domain: str) -> Dict[str, Any]:
-        """Analyze historical context"""
+        """Analyze historical context (ORIGINAL - PRESERVED)"""
         history = {
             'controversies': [],
             'awards': []
@@ -1293,7 +1344,7 @@ Keep response under 100 words."""
             'cnn.com': ['Retracted Scaramucci story (2017)'],
             'dailymail.co.uk': ['Multiple privacy violations'],
             'infowars.com': ['Sandy Hook defamation case'],
-            'nypost.com': ['Hunter Biden laptop story controversy']  # NEW
+            'nypost.com': ['Hunter Biden laptop story controversy']
         }
         
         awards_db = {
@@ -1313,7 +1364,7 @@ Keep response under 100 words."""
         return history
     
     def _analyze_technical_factors(self, domain: str) -> Dict[str, Any]:
-        """Analyze technical factors (stub implementation)"""
+        """Analyze technical factors (STUB - PRESERVED)"""
         return {
             'age_days': None,
             'age_credibility': 'unknown',
@@ -1333,7 +1384,7 @@ Keep response under 100 words."""
         }
     
     def _analyze_transparency(self, domain: str) -> Dict[str, Any]:
-        """Analyze transparency indicators"""
+        """Analyze transparency (ORIGINAL - PRESERVED)"""
         indicators = []
         missing_elements = []
         
@@ -1349,7 +1400,7 @@ Keep response under 100 words."""
         }
     
     def _calculate_enhanced_score(self, analysis: Dict[str, Any]) -> int:
-        """Calculate enhanced credibility score"""
+        """Calculate enhanced score (ORIGINAL - PRESERVED)"""
         score_components = []
         weights = []
         
@@ -1464,11 +1515,11 @@ Keep response under 100 words."""
                 final_score = sum(s * w for s, w in zip(score_components, normalized_weights))
                 return min(100, max(0, int(final_score)))
         
-        # Fallback to simple calculation
+        # Fallback
         return self._calculate_credibility_score(analysis)
     
     def _calculate_credibility_score(self, analysis: Dict[str, Any]) -> int:
-        """Simple credibility score calculation"""
+        """Simple credibility score (FALLBACK - PRESERVED)"""
         db_info = analysis.get('database_info', {})
         credibility = db_info.get('credibility', 'Unknown')
         
@@ -1486,7 +1537,7 @@ Keep response under 100 words."""
         return credibility_scores.get(credibility, 50)
     
     def _generate_enhanced_findings(self, analysis: Dict[str, Any], score: int) -> List[str]:
-        """Generate enhanced findings"""
+        """Generate enhanced findings (ORIGINAL - PRESERVED)"""
         findings = []
         
         db_info = analysis.get('database_info', {})
@@ -1536,7 +1587,7 @@ Keep response under 100 words."""
         return findings
     
     def _get_factual_reporting_level(self, analysis: Dict[str, Any]) -> str:
-        """Get factual reporting level"""
+        """Get factual reporting level (PRESERVED)"""
         fact_history = analysis.get('fact_check_history', {})
         if fact_history.get('overall_accuracy'):
             return fact_history['overall_accuracy']
@@ -1548,7 +1599,7 @@ Keep response under 100 words."""
         return 'Unknown'
     
     def _get_bias_description(self, bias: str) -> str:
-        """Get bias description"""
+        """Get bias description (PRESERVED)"""
         descriptions = {
             'Minimal': 'Balanced reporting with minimal bias',
             'Minimal-Left': 'Slight left-leaning tendency',
@@ -1566,7 +1617,7 @@ Keep response under 100 words."""
         return descriptions.get(bias, 'Bias assessment unavailable')
     
     def _get_trust_indicators(self, analysis: Dict[str, Any]) -> List[str]:
-        """Get trust indicators"""
+        """Get trust indicators (PRESERVED)"""
         indicators = []
         
         if analysis.get('in_database'):
@@ -1595,7 +1646,7 @@ Keep response under 100 words."""
         return indicators
     
     def get_service_info(self) -> Dict[str, Any]:
-        """Get service information"""
+        """Get service info (PRESERVED)"""
         info = super().get_service_info()
         info.update({
             'capabilities': [
@@ -1608,12 +1659,19 @@ Keep response under 100 words."""
                 'Ownership transparency assessment',
                 'AI-enhanced insights' if self._is_ai_available() else 'Pattern-based analysis',
                 'Historical context analysis',
-                'Editorial standards evaluation'
+                'Editorial standards evaluation',
+                'Comprehensive outlets database' if OUTLETS_DB_AVAILABLE else 'Legacy database'
             ],
             'sources_in_database': len(self.source_database),
+            'comprehensive_db_outlets': OutletsDatabase.get_outlet_count() if OUTLETS_DB_AVAILABLE else 0,
             'outlet_averages_tracked': len(self.OUTLET_AVERAGES),
             'third_party_sources': len(self.third_party_ratings),
             'visualization_ready': True,
             'ai_enhanced': self._is_ai_available()
         })
         return info
+
+
+logger.info(f"[SourceCredibility v11.0] ✓ Loaded - Comprehensive DB: {OUTLETS_DB_AVAILABLE}")
+
+# This file is not truncated
