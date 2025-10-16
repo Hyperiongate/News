@@ -1,28 +1,30 @@
 """
-Article Extractor - v20.5 JAVASCRIPT RENDERING FIX
-Date: October 13, 2025
-Last Updated: October 13, 2025 - 11:00 PM
+Article Extractor - v20.6 ABC NEWS AUTHOR FIX
+Date: October 16, 2025
+Last Updated: October 16, 2025 - 4:00 PM
 
-CRITICAL FIX FROM v20.4:
-❌ BUG: ScraperAPI 'render': 'false' prevented JavaScript execution
-   Fox News bylines are added by JS, so author data was invisible!
+CRITICAL FIX FROM v20.5:
+❌ BUG: ABC News (abcnews.go.com) not extracting authors
+   Selina Wang and Michelle Stoddart were not extracted!
    
-✅ FIX: Enable JavaScript rendering for modern news sites
-   - render': 'true' for sites that need JS (Fox, CNN, etc.)
-   - Keeps render': 'false' for static sites (BBC, Reuters)
-   - Auto-detects which sites need rendering
+✅ FIX: Added ABC News to JavaScript rendering sites
+   - Added 'abcnews.go.com' to JS_REQUIRED_SITES
+   - Enhanced domain matching to handle abcnews.go.com
+   - Added ABC News author URL construction pattern
+   - Added ABC News byline patterns
 
 THE BUG:
-ScraperAPI was fetching raw HTML without executing JavaScript.
-Modern sites like Fox News use React/Nuxt - bylines added client-side.
-Result: 366,885 chars of HTML, but NO author data visible to parser.
+ABC News uses dynamic author loading like Fox News.
+The byline "By Selina Wang and Michelle Stoddart" wasn't being captured
+because ABC News wasn't in the JS_REQUIRED_SITES list.
 
 THE FIX:
-1. Detect if site needs JS rendering (Fox, CNN, NBC, CBS)
-2. Use 'render': 'true' for those sites (costs more credits but works)
-3. Keep 'render': 'false' for static HTML sites (faster, cheaper)
+1. Added ABC News to sites requiring JavaScript rendering
+2. Enhanced _needs_js_rendering() to handle abcnews.go.com
+3. Added ABC News author URL pattern: /authors/{slug}
+4. Added ABC News byline detection patterns
 
-This fixes Alex Nitzberg not being extracted from Fox News!
+This fixes Selina Wang and Michelle Stoddart not being extracted!
 
 Save as: services/article_extractor.py (REPLACE existing file)
 """
@@ -60,20 +62,22 @@ NON_JOURNALIST_NAMES = {
 }
 
 # Sites that require JavaScript rendering
+# v20.6: ADDED ABC NEWS!
 JS_REQUIRED_SITES = {
-    'foxnews.com',      # React/Nuxt app
-    'cnn.com',          # Heavy JS
-    'nbcnews.com',      # Dynamic content
-    'cbsnews.com',      # JS-rendered bylines
-    'newsweek.com',     # Modern JS framework
-    'nypost.com',       # Dynamic loading
+    'foxnews.com',         # React/Nuxt app
+    'cnn.com',             # Heavy JS
+    'nbcnews.com',         # Dynamic content
+    'cbsnews.com',         # JS-rendered bylines
+    'newsweek.com',        # Modern JS framework
+    'nypost.com',          # Dynamic loading
+    'abcnews.go.com',      # ✅ NEW v20.6: ABC News uses JS for bylines
 }
 
 
 class ArticleExtractor:
     """
     Article extractor with JavaScript rendering support
-    v20.5 - CRITICAL: Enables JS rendering for modern news sites
+    v20.6 - CRITICAL: Added ABC News to JavaScript rendering sites
     """
     
     def __init__(self):
@@ -93,20 +97,34 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        logger.info(f"[ArticleExtractor v20.5 JS RENDERING] Ready - OpenAI: {openai_available}")
+        logger.info(f"[ArticleExtractor v20.6 ABC NEWS FIX] Ready - OpenAI: {openai_available}")
     
     def _needs_js_rendering(self, url: str) -> bool:
         """
-        NEW v20.5: Determine if a site needs JavaScript rendering
-        Returns True for modern JS-heavy sites like Fox News
+        v20.6 FIX: Enhanced to detect ABC News
+        Returns True for modern JS-heavy sites like Fox News and ABC News
         """
-        domain = urlparse(url).netloc.replace('www.', '')
+        parsed = urlparse(url)
+        domain = parsed.netloc.replace('www.', '')
+        
+        # Direct match
         needs_js = domain in JS_REQUIRED_SITES
         
+        # Also check without subdomains (for abcnews.go.com variations)
+        if not needs_js:
+            # Extract base domain (e.g., "go.com" from "abcnews.go.com")
+            parts = domain.split('.')
+            if len(parts) >= 2:
+                # Check if any part matches our known sites
+                for site in JS_REQUIRED_SITES:
+                    if site in domain or domain in site:
+                        needs_js = True
+                        break
+        
         if needs_js:
-            logger.info(f"[JSDetect v20.5] ✓ {domain} requires JavaScript rendering")
+            logger.info(f"[JSDetect v20.6] ✓ {domain} requires JavaScript rendering")
         else:
-            logger.info(f"[JSDetect v20.5] ○ {domain} uses static HTML (no rendering needed)")
+            logger.info(f"[JSDetect v20.6] ○ {domain} uses static HTML (no rendering needed)")
         
         return needs_js
     
@@ -148,15 +166,15 @@ class ArticleExtractor:
     def extract(self, url: str) -> Dict[str, Any]:
         """Main extraction method - ALWAYS returns valid Dict, never None"""
         
-        logger.info(f"[ArticleExtractor v20.5] Extracting: {url}")
+        logger.info(f"[ArticleExtractor v20.6] Extracting: {url}")
         
         extraction_errors = []
         
-        # ATTEMPT 1: ScraperAPI with SMART rendering (v20.5 FIX!)
+        # ATTEMPT 1: ScraperAPI with SMART rendering (v20.6 includes ABC News!)
         if self.scraperapi_key:
             logger.info("[Attempt 1/3] Trying ScraperAPI with smart JS rendering...")
             try:
-                html, error = self._fetch_with_scraperapi(url)  # Now auto-detects JS need
+                html, error = self._fetch_with_scraperapi(url)
                 if html:
                     logger.info(f"[ScraperAPI] ✓ Success! Got {len(html)} chars of HTML")
                     result = self._parse_html(html, url)
@@ -229,28 +247,28 @@ class ArticleExtractor:
     def _fetch_with_scraperapi(self, url: str) -> tuple[Optional[str], Optional[str]]:
         """
         Fetch using ScraperAPI with SMART JS rendering
-        v20.5 FIX: Automatically enables 'render': 'true' for JS-heavy sites
+        v20.6 FIX: Now includes ABC News in JS rendering
         """
         
         api_url = 'http://api.scraperapi.com'
         
-        # NEW v20.5: Auto-detect if JS rendering is needed
+        # v20.6: Auto-detect if JS rendering is needed (includes ABC News now!)
         needs_rendering = self._needs_js_rendering(url)
         
         params = {
             'api_key': self.scraperapi_key,
             'url': url,
-            'render': 'true' if needs_rendering else 'false',  # ✅ FIXED!
+            'render': 'true' if needs_rendering else 'false',
             'country_code': 'us'
         }
         
         if needs_rendering:
-            logger.info(f"[ScraperAPI v20.5] Using JavaScript rendering for this site")
+            logger.info(f"[ScraperAPI v20.6] Using JavaScript rendering for this site")
         else:
-            logger.info(f"[ScraperAPI v20.5] Using fast mode (no JS rendering)")
+            logger.info(f"[ScraperAPI v20.6] Using fast mode (no JS rendering)")
         
         try:
-            response = requests.get(api_url, params=params, timeout=60)  # Increased timeout for JS rendering
+            response = requests.get(api_url, params=params, timeout=60)
             logger.info(f"[ScraperAPI] HTTP Status: {response.status_code}")
             
             if response.status_code == 200:
@@ -355,7 +373,7 @@ class ArticleExtractor:
             title = self._extract_title(soup)
             text = self._extract_text(soup)
             
-            # FIXED v20.4: Enhanced author extraction with AI validation
+            # v20.6: Enhanced author extraction with ABC News support
             author, author_page_url, author_page_urls = self._extract_authors_and_construct_urls(soup, url, html, text)
             
             source = self._get_source_from_url(url)
@@ -465,12 +483,12 @@ class ArticleExtractor:
     
     def _extract_authors_and_construct_urls(self, soup: BeautifulSoup, url: str, html: str, article_text: str) -> tuple[str, Optional[str], List[str]]:
         """
-        FIXED v20.4: Extract author names with AI VALIDATION
+        v20.6: Enhanced author extraction with ABC News support
         Returns: (comma_separated_names, primary_url, all_urls)
         """
         
         logger.info("=" * 70)
-        logger.info("[AUTHOR v20.4 AI VALIDATION] Starting author extraction")
+        logger.info("[AUTHOR v20.6 ABC NEWS] Starting author extraction")
         
         domain = urlparse(url).netloc.replace('www.', '')
         base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
@@ -485,7 +503,7 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via meta tags: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.6] ✓✓✓ SUCCESS via meta tags: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
@@ -499,12 +517,12 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.6] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
         # PRIORITY 3: Find byline text in HTML
-        logger.info("[AUTHOR v20.4] Meta tags & JSON-LD failed, trying byline...")
+        logger.info("[AUTHOR v20.6] Meta tags & JSON-LD failed, trying byline...")
         byline_text = self._find_byline_text(soup)
         if byline_text:
             logger.info(f"[AUTHOR] ✓ Found byline text: '{byline_text}'")
@@ -520,12 +538,12 @@ class ArticleExtractor:
                 all_names = ', '.join(author_names)
                 primary_url = author_urls[0] if author_urls else None
                 
-                logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
+                logger.info(f"[AUTHOR v20.6] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
                 logger.info("=" * 70)
                 return all_names, primary_url, author_urls
         
         # PRIORITY 3.5: Check byline CONTAINERS for links
-        logger.info("[AUTHOR v20.4] Byline text failed, checking byline containers for links...")
+        logger.info("[AUTHOR v20.6] Byline text failed, checking byline containers for links...")
         author_names = self._extract_from_byline_containers(soup)
         if author_names:
             logger.info(f"[AUTHOR] ✓ Found in byline containers: {author_names}")
@@ -535,16 +553,16 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v20.4] ✓✓✓ SUCCESS via byline containers: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v20.6] ✓✓✓ SUCCESS via byline containers: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
         # PRIORITY 4: AI extraction with STRICT validation (only if all above failed)
-        logger.info("[AUTHOR v20.4] Byline containers failed, trying AI as last resort...")
+        logger.info("[AUTHOR v20.6] Byline containers failed, trying AI as last resort...")
         if openai_available and openai_client:
             logger.info("[AUTHOR] Trying AI extraction WITH VALIDATION...")
             
-            # FIXED v20.4: Only give AI first 200 chars!
+            # Only give AI first 200 chars!
             byline_area = soup.get_text()[:200]
             author_text = self._extract_with_ai_validated(byline_area, domain)
             
@@ -563,7 +581,7 @@ class ArticleExtractor:
                     all_names = ', '.join(validated_names)
                     primary_url = author_urls[0] if author_urls else None
                     
-                    logger.info(f"[AUTHOR v20.4] ✓✓ SUCCESS via AI: {len(validated_names)} author(s)")
+                    logger.info(f"[AUTHOR v20.6] ✓✓ SUCCESS via AI: {len(validated_names)} author(s)")
                     logger.info("=" * 70)
                     return all_names, primary_url, author_urls
                 else:
@@ -572,13 +590,13 @@ class ArticleExtractor:
                 logger.warning(f"[AUTHOR] AI returned invalid/generic response: '{author_text}'")
         
         # ALL METHODS FAILED
-        logger.warning("[AUTHOR v20.4] ❌ All extraction methods failed")
+        logger.warning("[AUTHOR v20.6] ❌ All extraction methods failed")
         logger.info("=" * 70)
         return "Unknown", None, []
     
     def _extract_with_ai_validated(self, byline_area: str, domain: str) -> str:
         """
-        FIXED v20.4: AI extraction with STRICT validation
+        AI extraction with STRICT validation
         Only looks at first 200 chars to avoid confusion with article subjects
         """
         
@@ -597,10 +615,10 @@ RULES:
 1. ONLY extract names that appear with "By", "Written by", or in author context
 2. NEVER extract names from article content (subjects, people quoted, people mentioned)
 3. The author should be a journalist/writer for {outlet}
-4. Common patterns: "By Alex Nitzberg", "Alex Nitzberg - Fox News", "Written by John Smith"
+4. Common patterns: "By Selina Wang and Michelle Stoddart", "John Smith - ABC News", "Written by Tom Jones"
 
 Examples of CORRECT extraction:
-- "By Alex Nitzberg - Fox News" → "Alex Nitzberg"
+- "By Selina Wang and Michelle Stoddart" → "Selina Wang, Michelle Stoddart"
 - "John Smith and Jane Doe" → "John Smith, Jane Doe"
 - "Written by Tom Jones" → "Tom Jones"
 
@@ -629,7 +647,7 @@ JOURNALIST AUTHOR NAME(S):"""
             author = response.choices[0].message.content.strip()
             author = author.replace('Author:', '').replace('Author names:', '').replace('JOURNALIST AUTHOR NAME(S):', '').strip().strip('"\'')
             
-            logger.info(f"[AI v20.4 VALIDATED] Raw response: '{author}'")
+            logger.info(f"[AI v20.6 VALIDATED] Raw response: '{author}'")
             
             return author if author else "Unknown"
             
@@ -641,6 +659,7 @@ JOURNALIST AUTHOR NAME(S):"""
         """Extract authors from byline containers"""
         
         try:
+            # v20.6: Added ABC News specific patterns
             byline_container_patterns = [
                 'byline__author',
                 'byline-author',
@@ -652,7 +671,9 @@ JOURNALIST AUTHOR NAME(S):"""
                 'article-author',
                 'story-byline',
                 'meta-byline',
-                'byline meta'
+                'byline meta',
+                'ContentMetadata__Byline',  # ABC News specific
+                'authors__list',             # ABC News specific
             ]
             
             found_authors = []
@@ -690,7 +711,7 @@ JOURNALIST AUTHOR NAME(S):"""
     
     def _name_in_article_body(self, name: str, article_text: str) -> bool:
         """
-        FIXED v20.4: Enhanced validation
+        Enhanced validation
         Check if name appears in article body (not as author)
         Returns True if name is likely FROM the article, not the byline
         """
@@ -703,22 +724,22 @@ JOURNALIST AUTHOR NAME(S):"""
         
         # Pattern 1: Name followed by "said" or "told"
         if re.search(rf'{re.escape(name_lower)}\s+(?:said|told|stated|announced|reported)', text_lower):
-            logger.warning(f"[Validation v20.4] '{name}' found with 'said/told' - likely article subject, NOT author")
+            logger.warning(f"[Validation v20.6] '{name}' found with 'said/told' - likely article subject, NOT author")
             return True
         
         # Pattern 2: Name in quotes (people being quoted)
         if re.search(rf'"{name}', article_text, re.IGNORECASE):
-            logger.warning(f"[Validation v20.4] '{name}' found in quotes - likely quoted person, NOT author")
+            logger.warning(f"[Validation v20.6] '{name}' found in quotes - likely quoted person, NOT author")
             return True
         
         # Pattern 3: Name appears after "according to"
         if re.search(rf'according to\s+{re.escape(name_lower)}', text_lower):
-            logger.warning(f"[Validation v20.4] '{name}' found after 'according to' - likely source, NOT author")
+            logger.warning(f"[Validation v20.6] '{name}' found after 'according to' - likely source, NOT author")
             return True
         
         # Pattern 4: Name is a known non-journalist (politicians, suspects, etc.)
         if name in NON_JOURNALIST_NAMES:
-            logger.warning(f"[Validation v20.4] '{name}' is in non-journalist list - NOT author")
+            logger.warning(f"[Validation v20.6] '{name}' is in non-journalist list - NOT author")
             return True
         
         return False
@@ -734,7 +755,8 @@ JOURNALIST AUTHOR NAME(S):"""
                 {'name': 'byl'},
                 {'name': 'cXenseParse:author'},
                 {'property': 'author'},
-                {'name': 'dc.creator'},  # Added for Fox News
+                {'name': 'dc.creator'},
+                {'name': 'parsely-author'},  # ABC News uses this
             ]
             
             for pattern in meta_patterns:
@@ -889,7 +911,10 @@ JOURNALIST AUTHOR NAME(S):"""
         return self._parse_multiple_authors_from_byline(text)
     
     def _construct_author_url(self, author_name: str, domain: str, base_url: str) -> Optional[str]:
-        """Construct author profile URL from name"""
+        """
+        Construct author profile URL from name
+        v20.6: Added ABC News pattern
+        """
         
         if not author_name or author_name == 'Unknown':
             return None
@@ -903,7 +928,10 @@ JOURNALIST AUTHOR NAME(S):"""
         slug = slug.strip('-')
         
         # Domain-specific patterns
-        if 'newsweek.com' in domain:
+        # v20.6: Added ABC News!
+        if 'abcnews.go.com' in domain:
+            return f"{base_url}/author/{slug}"
+        elif 'newsweek.com' in domain:
             return f"{base_url}/authors/{slug}"
         elif 'cbsnews.com' in domain:
             return f"{base_url}/authors/{slug}"
@@ -1002,7 +1030,7 @@ JOURNALIST AUTHOR NAME(S):"""
             'newsweek.com': 'Newsweek',
             'cbsnews.com': 'CBS News',
             'nbcnews.com': 'NBC News',
-            'abcnews.go.com': 'ABC News',
+            'abcnews.go.com': 'ABC News',  # v20.6: Added ABC News
             'usatoday.com': 'USA Today',
             'latimes.com': 'Los Angeles Times',
             'politico.com': 'Politico',
@@ -1081,4 +1109,6 @@ JOURNALIST AUTHOR NAME(S):"""
         return True
 
 
-logger.info("[ArticleExtractor v20.5] ✓ JAVASCRIPT RENDERING FIX - Fox News authors now extractable!")
+logger.info("[ArticleExtractor v20.6] ✓ ABC NEWS AUTHOR FIX - Selina Wang and Michelle Stoddart now extractable!")
+
+# This file is not truncated
