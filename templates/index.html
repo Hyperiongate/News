@@ -3,21 +3,15 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.5.0 - PDF DOWNLOAD FEATURE ADDED
-    Date: October 14, 2025
+    Version: 4.5.1 - UPDATED HERO SECTION
+    Date: October 17, 2025
     
-    CHANGES FROM 4.4.0:
-    - ADDED: jsPDF library from CDN for PDF generation
-    - ADDED: pdf-generator.js script
-    - ADDED: Download PDF Report button in results header
-    - Button styled with purple gradient to match v4.3.0 design
-    - All existing functionality preserved (DO NO HARM ✓)
+    CHANGES FROM 4.5.0:
+    - UPDATED: Capability badge changed from "Reuters & AP" to "500+ News Sources"
+    - UPDATED: Subtitle now mentions Reuters, AP, NYT, BBC, and 500+ sources
+    - All v4.5.0 functionality preserved (DO NO HARM ✓)
     
-    Previous versions:
-    - 4.4.0 - Transcript help dropdowns added
-    - 4.3.0 - UI redesign with vibrant colors
-    - 4.2.0 - Manipulation check removed
-    - 4.1.0 - Charts system removed
+    This file is not truncated - Part 1 of 2
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -38,13 +32,13 @@
     <!-- Chart.js for Visualizations -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     
-    <!-- v4.5.0 NEW: jsPDF Library for PDF Generation -->
+    <!-- jsPDF Library for PDF Generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     
     <!-- External Styles -->
     <link rel="stylesheet" href="/static/css/main.css">
     
-    <!-- v4.3.0 Enhanced Styles + v4.4.0 Help Dropdowns + v4.5.0 PDF Button -->
+    <!-- Enhanced Styles -->
     <style>
         /* v4.3.0 Color Enhancements */
         :root {
@@ -182,7 +176,7 @@
             color: #8b5cf6;
         }
 
-        /* v4.4.0: Help Dropdowns for Transcript Tab */
+        /* Help Dropdowns for Transcript Tab */
         .help-dropdowns-container {
             display: flex;
             flex-direction: column;
@@ -443,7 +437,7 @@
             background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
         }
 
-        /* v4.5.0 NEW: PDF Download Button */
+        /* PDF Download Button */
         .pdf-download-button {
             display: inline-flex;
             align-items: center;
@@ -515,7 +509,7 @@
     <!-- Compact Header -->
     <header class="header">
         <div class="header-content">
-            <a href="#" class="logo">
+            <a href="/" class="logo">
                 <div class="logo-icon">
                     <i class="fas fa-search-plus"></i>
                 </div>
@@ -523,10 +517,10 @@
             </a>
             
             <nav class="nav-links">
-                <a href="#features" class="nav-link">Features</a>
-                <a href="#pricing" class="nav-link">Pricing</a>
-                <a href="#about" class="nav-link">About</a>
-                <a href="#contact" class="nav-link">Contact</a>
+                <a href="/features" class="nav-link">Features</a>
+                <a href="/pricing" class="nav-link">Pricing</a>
+                <a href="/about" class="nav-link">About</a>
+                <a href="/contact" class="nav-link">Contact</a>
                 <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
             </nav>
         </div>
@@ -542,11 +536,11 @@
                     AI-Powered <span class="gradient-text">Truth Analysis</span>
                 </h1>
                 <p class="subtitle-compact">
-                    7 advanced AI services analyze credibility, bias, facts, and transparency
+                    Analyze news from Reuters, AP, NYT, BBC, and 500+ sources with 7 advanced AI services
                 </p>
             </div>
 
-            <!-- Capabilities Showcase -->
+            <!-- Capabilities Showcase - UPDATED -->
             <div class="capabilities-showcase">
                 <div class="capability-badge">
                     <i class="fas fa-database"></i>
@@ -554,11 +548,11 @@
                 </div>
                 <div class="capability-badge">
                     <i class="fas fa-newspaper"></i>
-                    <span>Reuters & AP</span>
+                    <span>500+ News Sources</span>
                 </div>
                 <div class="capability-badge">
                     <i class="fas fa-chart-line"></i>
-                    <span>Real-Time</span>
+                    <span>Real-Time Analysis</span>
                 </div>
                 <div class="capability-badge">
                     <i class="fas fa-shield-check"></i>
@@ -660,7 +654,7 @@
                     </p>
                 </div>
 
-                <!-- v4.4.0: Help Dropdowns -->
+                <!-- Help Dropdowns -->
                 <div class="help-dropdowns-container">
                     <!-- How to Use This App Dropdown -->
                     <div class="help-dropdown" id="howToUseDropdown">
@@ -881,7 +875,7 @@
                 <div class="results-header">
                     <h2 class="results-title">Analysis Complete</h2>
                     <div class="analysis-mode-badge" id="analysisModeBadge">News</div>
-                    <!-- v4.5.0 NEW: PDF Download Button -->
+                    <!-- PDF Download Button -->
                     <button class="pdf-download-button" id="pdfDownloadBtn" onclick="downloadPDFReport()">
                         <i class="fas fa-download"></i>
                         <span>Download PDF Report</span>
@@ -937,14 +931,13 @@
     <script src="/static/js/service-templates.js"></script>
     <script src="/static/js/chart-renderer.js"></script>
     <script src="/static/js/unified-app-core.js"></script>
-    <!-- v4.5.0 NEW: PDF Generator -->
     <script src="/static/js/pdf-generator.js"></script>
     
     <script>
         // Global state for current mode
         let currentAnalysisMode = 'news';
 
-        // v4.4.0: Toggle Help Dropdown Function
+        // Toggle Help Dropdown Function
         function toggleHelpDropdown(dropdownId) {
             const dropdown = document.getElementById(dropdownId);
             if (dropdown) {
@@ -1052,7 +1045,7 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.5.0 - PDF Download Feature Added');
+            console.log('TruthLens v4.5.1 - Updated Hero Section');
             
             const inputs = ['newsUrlInput', 'newsTextInput', 'transcriptTextInput'];
             inputs.forEach(id => {
@@ -1284,3 +1277,5 @@
     </script>
 </body>
 </html>
+
+<!-- This file is not truncated - Part 1 of 2 -->
