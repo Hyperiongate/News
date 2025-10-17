@@ -1,24 +1,26 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 12.1.1 - FULL TEXT + NO OVERLAP FIX
+ * VERSION: 12.2.0 - 13-POINT SCALE INTEGRATION
  * DATE: October 16, 2025
- * Last Updated: October 16, 2025 - 8:45 PM
+ * Last Updated: October 16, 2025 - 9:00 PM
  * 
- * CRITICAL FIXES IN v12.1.1:
- * ✅ FIXED: Key findings now show FULL TEXT (3 lines per claim instead of truncated 1 line)
- * ✅ FIXED: Score overlap eliminated (94/100 properly spaced on both cover and service pages)
- * ✅ FIXED: Dynamic spacing based on score text width (works for any score 0-100)
- * ✅ PRESERVED: All v12.1 claim extraction enhancements
- * ✅ PRESERVED: All v12.0 layout fixes (footer, dial, spacing)
- * ✅ PRESERVED: downloadPDFReport global function accessibility
+ * CRITICAL UPGRADE FROM v12.1.1:
+ * ✅ NEW: Integrated 13-point fact checking scale
+ * ✅ NEW: Shows verdict icons (✅, ❌, ⚠️, 💨, 🔮, ❓, 💭)
+ * ✅ NEW: Color-coded verdicts matching fact checker service
+ * ✅ NEW: Verdict labels (True, Mostly True, Exaggerated, etc.)
+ * ✅ ENHANCED: Fact checker claims display uses full 13-point metadata
+ * ✅ PRESERVED: All v12.1.1 fixes (full text, no overlap, global function)
  * 
- * IMPROVEMENTS FROM v12.1:
- * ✅ Claims show up to 3 lines of text (not truncated at 120 chars)
- * ✅ Score numbers never overlap with "/100" text
- * ✅ Proper mathematical spacing calculation for all scores
- * ✅ Better use of available space in Key Findings section
+ * 13-POINT SCALE:
+ * - true (✅ green), mostly_true (✅ light green)
+ * - partially_true (⚠️ yellow), exaggerated (📈 orange)
+ * - misleading (⚠️ dark orange), mostly_false (❌ red-orange)
+ * - false (❌ red), empty_rhetoric (💨 gray)
+ * - unsubstantiated_prediction (🔮 purple), needs_context (❓ purple)
+ * - opinion (💭 blue), mixed (◐ orange), unverified (? gray)
  * 
- * This version creates professional PDFs with complete information display!
+ * This version provides comprehensive, informative fact checking display!
  */
 
 // ============================================================================
@@ -863,11 +865,11 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
 }
 
 // ============================================================================
-// DISPLAY FACT CHECK CLAIMS - ENHANCED v12.1.1 FULL TEXT
+// DISPLAY FACT CHECK CLAIMS - ENHANCED v12.2.0 WITH 13-POINT SCALE
 // ============================================================================
 
 function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
-    console.log('[PDF v12.1.1] Extracting fact checker claims...');
+    console.log('[PDF v12.2.0] Extracting fact checker claims with 13-point scale...');
     
     // STRATEGY 1: Try serviceData.claims first
     let claims = serviceData.claims || [];
@@ -887,12 +889,17 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
         claims = serviceData.analysis?.claims || [];
     }
     
-    // STRATEGY 5: Try fullData.claims
+    // STRATEGY 5: Try serviceData.fact_checks
+    if (!claims || claims.length === 0) {
+        claims = serviceData.fact_checks || [];
+    }
+    
+    // STRATEGY 6: Try fullData.claims
     if (!claims || claims.length === 0) {
         claims = fullData.claims || [];
     }
     
-    console.log(`[PDF v12.1.1] Found ${claims.length} claims`);
+    console.log(`[PDF v12.2.0] Found ${claims.length} claims with 13-point verdict metadata`);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -904,22 +911,36 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
         const displayClaims = claims.slice(0, 6);
         
         displayClaims.forEach((claim, index) => {
-            // ENHANCED v12.1: Extract actual claim data with multiple fallbacks
+            // ENHANCED v12.2.0: Extract claim data with 13-point scale metadata
             let claimText = '';
-            let status = 'unknown';
+            let verdict = 'unverified';
+            let verdictIcon = '?';
+            let verdictLabel = 'Unverified';
+            let verdictColor = colors.gray;
             
             if (typeof claim === 'object' && claim !== null) {
                 // Try multiple property names for claim text
                 claimText = claim.claim || claim.text || claim.statement || 
                            claim.content || claim.description || '';
                 
-                // Try multiple property names for status
-                status = claim.status || claim.verdict || claim.result || 
-                        claim.rating || claim.verification || 'unknown';
+                // NEW v12.2.0: Get verdict with 13-point scale metadata
+                verdict = claim.verdict || claim.status || claim.result || 
+                         claim.rating || claim.verification || 'unverified';
+                
+                // NEW v12.2.0: Use verdict metadata if available (from fact_checker v12.0)
+                if (claim.verdict_icon) {
+                    verdictIcon = claim.verdict_icon;
+                }
+                if (claim.verdict_label) {
+                    verdictLabel = claim.verdict_label;
+                }
+                if (claim.verdict_color) {
+                    // Convert hex color to RGB
+                    verdictColor = hexToRgb(claim.verdict_color) || colors.gray;
+                }
                 
                 // If still no claim text, try stringifying the object
                 if (!claimText || claimText.length < 10) {
-                    // Maybe it's a simple object with just the claim as value
                     const values = Object.values(claim).filter(v => typeof v === 'string' && v.length > 10);
                     if (values.length > 0) {
                         claimText = values[0];
@@ -934,50 +955,95 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
             
             // If still empty or generic, skip this claim
             if (!claimText || claimText.length < 10 || isGenericPlaceholder(claimText)) {
-                console.log(`[PDF v12.1.1] Skipping generic/empty claim ${index + 1}`);
+                console.log(`[PDF v12.2.0] Skipping generic/empty claim ${index + 1}`);
                 return;
             }
             
-            console.log(`[PDF v12.1.1] Claim ${index + 1}: "${claimText.substring(0, 50)}..." Status: ${status}`);
+            console.log(`[PDF v12.2.0] Claim ${index + 1}: "${claimText.substring(0, 50)}..." Verdict: ${verdict} (${verdictLabel})`);
             
-            // ENHANCED v12.1: Better status detection
-            let statusSymbol = '?';
-            let statusColor = colors.gray;
-            
-            const statusLower = status.toString().toLowerCase();
-            
-            if (statusLower.includes('true') || statusLower.includes('accurate') || 
-                statusLower.includes('verified') || statusLower.includes('correct') ||
-                statusLower.includes('confirmed')) {
-                statusSymbol = '✓';
-                statusColor = colors.success;
-            } else if (statusLower.includes('false') || statusLower.includes('inaccurate') || 
-                      statusLower.includes('incorrect') || statusLower.includes('debunked')) {
-                statusSymbol = '✗';
-                statusColor = colors.danger;
-            } else if (statusLower.includes('partial') || statusLower.includes('mixed') ||
-                      statusLower.includes('mostly')) {
-                statusSymbol = '◐';
-                statusColor = colors.warning;
+            // ENHANCED v12.2.0: 13-point scale status detection with fallback
+            if (!claim.verdict_icon) {
+                // Fallback if metadata not present - map verdict to 13-point scale
+                const verdictLower = verdict.toString().toLowerCase();
+                
+                if (verdictLower === 'true') {
+                    verdictIcon = '✅';
+                    verdictLabel = 'True';
+                    verdictColor = [16, 185, 129]; // green
+                } else if (verdictLower === 'mostly_true' || verdictLower.includes('mostly true')) {
+                    verdictIcon = '✓';
+                    verdictLabel = 'Mostly True';
+                    verdictColor = [52, 211, 153]; // light green
+                } else if (verdictLower === 'partially_true' || verdictLower.includes('partially true')) {
+                    verdictIcon = '⚠️';
+                    verdictLabel = 'Partially True';
+                    verdictColor = [251, 191, 36]; // yellow
+                } else if (verdictLower === 'exaggerated') {
+                    verdictIcon = '📈';
+                    verdictLabel = 'Exaggerated';
+                    verdictColor = [245, 158, 11]; // orange
+                } else if (verdictLower === 'misleading') {
+                    verdictIcon = '⚠️';
+                    verdictLabel = 'Misleading';
+                    verdictColor = [249, 115, 22]; // dark orange
+                } else if (verdictLower === 'mostly_false' || verdictLower.includes('mostly false')) {
+                    verdictIcon = '❌';
+                    verdictLabel = 'Mostly False';
+                    verdictColor = [248, 113, 113]; // red-orange
+                } else if (verdictLower === 'false' || verdictLower.includes('incorrect')) {
+                    verdictIcon = '❌';
+                    verdictLabel = 'False';
+                    verdictColor = [239, 68, 68]; // red
+                } else if (verdictLower === 'empty_rhetoric') {
+                    verdictIcon = '💨';
+                    verdictLabel = 'Empty Rhetoric';
+                    verdictColor = [148, 163, 184]; // gray
+                } else if (verdictLower === 'unsubstantiated_prediction') {
+                    verdictIcon = '🔮';
+                    verdictLabel = 'Prediction';
+                    verdictColor = [167, 139, 250]; // purple
+                } else if (verdictLower === 'needs_context') {
+                    verdictIcon = '❓';
+                    verdictLabel = 'Needs Context';
+                    verdictColor = [139, 92, 246]; // purple
+                } else if (verdictLower === 'opinion') {
+                    verdictIcon = '💭';
+                    verdictLabel = 'Opinion';
+                    verdictColor = [99, 102, 241]; // blue
+                } else if (verdictLower === 'mixed') {
+                    verdictIcon = '◐';
+                    verdictLabel = 'Mixed';
+                    verdictColor = [245, 158, 11]; // orange
+                } else {
+                    verdictIcon = '?';
+                    verdictLabel = 'Unverified';
+                    verdictColor = [156, 163, 175]; // gray
+                }
             }
             
-            // Draw status indicator
+            // Draw verdict icon
             doc.setFontSize(10);
-            doc.setTextColor(...statusColor);
-            doc.text(statusSymbol, 20, fy);
+            doc.setTextColor(...verdictColor);
+            doc.text(verdictIcon, 20, fy);
             
-            // FIXED v12.1.1: Show FULL claim text, not truncated
+            // FIXED v12.1.1: Show FULL claim text (up to 3 lines)
             doc.setFontSize(8);
             doc.setTextColor(...colors.darkGray);
-            // Allow up to 3 lines per claim instead of 1
             const lines = doc.splitTextToSize(claimText, 165);
-            const linesToShow = Math.min(lines.length, 3); // Show up to 3 lines
+            const linesToShow = Math.min(lines.length, 3);
             
             for (let i = 0; i < linesToShow; i++) {
                 doc.text(lines[i], 25, fy + (i * 4));
             }
             
-            fy += (linesToShow * 4) + 2; // Dynamic spacing based on lines used
+            // NEW v12.2.0: Add verdict label on the right
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...verdictColor);
+            doc.text(verdictLabel.toUpperCase(), 175, fy, { align: 'right' });
+            doc.setFont('helvetica', 'normal');
+            
+            fy += (linesToShow * 4) + 2;
             
             if (fy > yPos + 70) return;
         });
@@ -986,15 +1052,36 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
         doc.setFontSize(7);
         doc.setFont('helvetica', 'italic');
         doc.setTextColor(...colors.gray);
-        doc.text(`Total claims analyzed: ${claims.length}`, 20, fy);
+        doc.text(`Total claims analyzed: ${claims.length} (using 13-point grading scale)`, 20, fy);
     } else {
         // Fallback if no claims data
-        console.log('[PDF v12.1.1] No claims found, using fallback display');
+        console.log('[PDF v12.2.0] No claims found, using fallback display');
         const sourcesCount = serviceData.sources_cited || fullData.sources_count || 0;
         doc.text(`${sourcesCount} source(s) cited in this article. Detailed claim analysis in progress.`, 20, fy);
     }
     
     return yPos + 88;
+}
+
+// NEW v12.2.0: Helper function to convert hex color to RGB array
+function hexToRgb(hex) {
+    if (!hex || typeof hex !== 'string') return null;
+    
+    // Remove # if present
+    hex = hex.replace('#', '');
+    
+    // Parse hex values
+    if (hex.length === 6) {
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+        
+        if (!isNaN(r) && !isNaN(g) && !isNaN(b)) {
+            return [r, g, b];
+        }
+    }
+    
+    return null;
 }
 
 // ============================================================================
@@ -1330,6 +1417,6 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
     doc.text(`Page ${pageNum} of ${totalPages}`, 190, 292, { align: 'right' });
 }
 
-console.log('[PDF v12.1.1] Professional quality PDF generator loaded - FULL TEXT + NO OVERLAP FIXED');
+console.log('[PDF v12.2.0] Professional quality PDF generator loaded - 13-POINT SCALE INTEGRATED');
 
 // This file is not truncated
