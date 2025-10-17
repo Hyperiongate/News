@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- 
+    TruthLens Features Page
+    Version: 1.0.0
+    Date: October 17, 2025
+    
+    Shows all analysis capabilities and data sources
+    Lists features with beta pricing information
+    
+    This file is not truncated.
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Features - TruthLens AI Analysis</title>
+    <meta name="description" content="Comprehensive AI-powered news and transcript analysis features. Free during beta testing.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1.5rem 0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: white;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .logo-text {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover {
+            color: white;
+        }
+
+        .nav-link.active {
+            color: white;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+
+        .beta-banner {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            text-align: center;
+            padding: 1.5rem 2rem;
+            margin: -3rem -2rem 3rem;
+            border-radius: 0 0 16px 16px;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+        }
+
+        .beta-banner h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+
+        .beta-banner p {
+            font-size: 1.125rem;
+            opacity: 0.95;
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 1rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .page-subtitle {
+            text-align: center;
+            font-size: 1.25rem;
+            color: #64748b;
+            margin-bottom: 3rem;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 2rem;
+            margin-bottom: 4rem;
+        }
+
+        .feature-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            border-color: #667eea;
+        }
+
+        .feature-icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon.source { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        .feature-icon.bias { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
+        .feature-icon.facts { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+        .feature-icon.author { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+        .feature-icon.transparency { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
+        .feature-icon.content { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+        .feature-icon.transcript { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.75rem;
+        }
+
+        .feature-card p {
+            color: #64748b;
+            line-height: 1.7;
+            margin-bottom: 1rem;
+        }
+
+        .feature-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: #059669;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .feature-badge.pro {
+            background: rgba(139, 92, 246, 0.1);
+            color: #7c3aed;
+        }
+
+        .sources-section {
+            background: white;
+            border-radius: 16px;
+            padding: 3rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            margin-bottom: 4rem;
+        }
+
+        .sources-section h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            text-align: center;
+            margin-bottom: 2rem;
+            color: #1e293b;
+        }
+
+        .sources-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .source-item {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            border-radius: 12px;
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+
+        .source-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        }
+
+        .source-name {
+            font-weight: 700;
+            color: #1e293b;
+            font-size: 1.125rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .source-name i {
+            color: #667eea;
+        }
+
+        .source-type {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
+
+        .source-founded {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .cta-section {
+            text-align: center;
+            padding: 3rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            color: white;
+        }
+
+        .cta-section h2 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+        }
+
+        .cta-section p {
+            font-size: 1.125rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 1rem 2.5rem;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 700;
+            font-size: 1.125rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 1rem;
+            }
+
+            .page-title {
+                font-size: 2rem;
+            }
+
+            .beta-banner h2 {
+                font-size: 1.5rem;
+            }
+
+            .features-grid,
+            .sources-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .sources-section {
+                padding: 2rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <a href="/" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-search-plus"></i>
+                </div>
+                <span class="logo-text">TruthLens</span>
+            </a>
+            
+            <nav class="nav-links">
+                <a href="/features" class="nav-link active">Features</a>
+                <a href="/pricing" class="nav-link">Pricing</a>
+                <a href="/about" class="nav-link">About</a>
+                <a href="/contact" class="nav-link">Contact</a>
+                <a href="/" class="nav-link" style="background: rgba(255, 255, 255, 0.2); padding: 0.5rem 1.25rem; border-radius: 8px;">Try It Free</a>
+            </nav>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="beta-banner">
+            <h2>🎉 Everything FREE During Beta Testing</h2>
+            <p>All features are completely free while we're in beta. Test everything, give feedback, help us improve!</p>
+        </div>
+
+        <h1 class="page-title">Powerful AI Analysis Features</h1>
+        <p class="page-subtitle">
+            Comprehensive news credibility and transcript fact-checking powered by advanced AI and trusted data sources
+        </p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon source">
+                    <i class="fas fa-shield-check"></i>
+                </div>
+                <h3>Source Credibility Analysis</h3>
+                <p>Evaluates the reputation, history, and reliability of news sources. Checks founding dates, ownership, awards, and track record of over 500 news outlets.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon bias">
+                    <i class="fas fa-balance-scale"></i>
+                </div>
+                <h3>Advanced Bias Detection</h3>
+                <p>Multi-dimensional analysis detects political lean, sensationalism, loaded language, and controversial figure amplification. Provides objectivity scores and political classification.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon facts">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <h3>Fact-Checking & Claims Verification</h3>
+                <p>AI-powered extraction of factual claims with verification against trusted databases. Shows verified vs unverified claims with confidence scores.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon author">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <h3>Author Credibility Assessment</h3>
+                <p>Analyzes journalist credentials, experience, expertise areas, awards, and track record. Provides outlet-based scores even when author is unknown.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon transparency">
+                    <i class="fas fa-eye"></i>
+                </div>
+                <h3>Transparency Scoring</h3>
+                <p>Measures article transparency by analyzing source citations, direct quotes, author attribution, and verifiable information. Identifies gaps in accountability.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon content">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+                <h3>Content Quality Analysis</h3>
+                <p>Evaluates article depth, readability, structure, and completeness. Assesses word count, sentence complexity, and information density.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon transcript">
+                    <i class="fas fa-microphone"></i>
+                </div>
+                <h3>Transcript Fact-Checking</h3>
+                <p>Specialized analysis for speeches, interviews, podcasts, and video transcripts. Extracts and verifies claims from spoken content.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
+        </div>
+
+        <div class="sources-section">
+            <h2><i class="fas fa-database"></i> Our Comprehensive Data Sources</h2>
+            <p style="text-align: center; color: #64748b; margin-bottom: 2rem;">
+                We analyze news from hundreds of trusted outlets and cross-reference against authoritative sources
+            </p>
+
+            <div class="sources-grid">
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        Reuters
+                    </div>
+                    <div class="source-type">Wire Service</div>
+                    <div class="source-founded">Founded 1851 | 95/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        Associated Press
+                    </div>
+                    <div class="source-type">Wire Service</div>
+                    <div class="source-founded">Founded 1846 | 94/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-broadcast-tower"></i>
+                        BBC
+                    </div>
+                    <div class="source-type">Public Broadcaster</div>
+                    <div class="source-founded">Founded 1922 | 92/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        The New York Times
+                    </div>
+                    <div class="source-type">Newspaper</div>
+                    <div class="source-founded">Founded 1851 | 90/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        The Washington Post
+                    </div>
+                    <div class="source-type">Newspaper</div>
+                    <div class="source-founded">Founded 1877 | 88/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-radio"></i>
+                        NPR
+                    </div>
+                    <div class="source-type">Public Radio</div>
+                    <div class="source-founded">Founded 1970 | 88/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        The Wall Street Journal
+                    </div>
+                    <div class="source-type">Newspaper</div>
+                    <div class="source-founded">Founded 1889 | 87/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-tv"></i>
+                        ABC News
+                    </div>
+                    <div class="source-type">Television Network</div>
+                    <div class="source-founded">Founded 1943 | 85/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-tv"></i>
+                        CBS News
+                    </div>
+                    <div class="source-type">Television Network</div>
+                    <div class="source-founded">Founded 1927 | 84/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-tv"></i>
+                        NBC News
+                    </div>
+                    <div class="source-type">Television Network</div>
+                    <div class="source-founded">Founded 1940 | 83/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        Politico
+                    </div>
+                    <div class="source-type">Digital/Print</div>
+                    <div class="source-founded">Founded 2007 | 82/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        Axios
+                    </div>
+                    <div class="source-type">Digital Media</div>
+                    <div class="source-founded">Founded 2016 | 81/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-satellite-dish"></i>
+                        CNN
+                    </div>
+                    <div class="source-type">Cable News</div>
+                    <div class="source-founded">Founded 1980 | 80/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-newspaper"></i>
+                        The Hill
+                    </div>
+                    <div class="source-type">Digital/Print</div>
+                    <div class="source-founded">Founded 1994 | 78/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-satellite-dish"></i>
+                        Fox News
+                    </div>
+                    <div class="source-type">Cable News</div>
+                    <div class="source-founded">Founded 1996 | 75/100 Credibility</div>
+                </div>
+
+                <div class="source-item">
+                    <div class="source-name">
+                        <i class="fas fa-plus"></i>
+                        500+ More Sources
+                    </div>
+                    <div class="source-type">Comprehensive Database</div>
+                    <div class="source-founded">Continuously updated</div>
+                </div>
+            </div>
+
+            <p style="text-align: center; color: #64748b; margin-top: 2rem; font-size: 0.95rem;">
+                <i class="fas fa-info-circle"></i> We maintain detailed metadata on over 500 news outlets including founding dates, ownership, political lean, credibility scores, and awards.
+            </p>
+        </div>
+
+        <div class="cta-section">
+            <h2>Ready to Start Analyzing?</h2>
+            <p>Everything is free during our beta testing phase. Try it now!</p>
+            <a href="/" class="cta-button">
+                <i class="fas fa-arrow-right"></i> Start Free Analysis
+            </a>
+        </div>
+    </div>
+</body>
+</html>
+
+<!-- This file is not truncated -->
