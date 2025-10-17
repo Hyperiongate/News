@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!--
+    TruthLens Contact Page - Email Button Version
+    Version: 1.1.0
+    Date: October 17, 2025
+    
+    CHANGES FROM 1.0.0:
+    - Changed from contact form to simple email button
+    - Email opens in user's default email client
+    - Contact: hyperiogate@gmail.com
+    
+    This file is not truncated.
+    -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Contact - TruthLens</title>
@@ -32,23 +44,34 @@
             We'd love to hear your feedback, questions, or suggestions!
         </p>
 
-        <div style="background: white; border-radius: 16px; padding: 2.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 2rem;">
-            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; color: #1e293b; text-align: center;">
-                <i class="fas fa-envelope" style="color: #667eea;"></i> Send Us A Message
-            </h2>
-            
-            <p style="text-align: center; color: #64748b; margin-bottom: 2rem; line-height: 1.6;">
-                For now, please email us directly at:<br>
-                <a href="mailto:feedback@factsandfakes.ai" style="color: #667eea; font-weight: 600; font-size: 1.125rem; text-decoration: none;">
-                    feedback@factsandfakes.ai
+        <div style="background: white; border-radius: 16px; padding: 3rem 2.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 2rem;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);">
+                    <i class="fas fa-envelope" style="font-size: 2rem; color: white;"></i>
+                </div>
+                <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b;">
+                    Send Us A Message
+                </h2>
+                <p style="color: #64748b; line-height: 1.6; margin-bottom: 2rem;">
+                    Click the button below to open your email client and send us a message. We typically respond within 24 hours.
+                </p>
+                
+                <a href="mailto:hyperiogate@gmail.com?subject=TruthLens%20Beta%20Feedback&body=Hi%20TruthLens%20Team,%0D%0A%0D%0AI%20wanted%20to%20share%20my%20feedback:%0D%0A%0D%0A" 
+                   style="display: inline-block; padding: 1.25rem 3rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
+                    <i class="fas fa-paper-plane" style="margin-right: 0.75rem;"></i>
+                    Send Email to TruthLens
                 </a>
-            </p>
+                
+                <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 1.5rem; font-style: italic;">
+                    <i class="fas fa-info-circle"></i> Opens in your default email application
+                </p>
+            </div>
 
-            <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.02) 100%); border-radius: 12px; padding: 1.5rem; border: 2px dashed #667eea;">
-                <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b;">
+            <div style="border-top: 2px solid #f1f5f9; padding-top: 2rem; margin-top: 2rem;">
+                <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b; text-align: center;">
                     <i class="fas fa-comments" style="color: #667eea;"></i> What We Want To Hear About:
                 </h3>
-                <ul style="color: #475569; line-height: 2; padding-left: 1.5rem; margin: 0;">
+                <ul style="color: #475569; line-height: 2; padding-left: 1.5rem; margin: 0; max-width: 500px; margin-left: auto; margin-right: auto;">
                     <li>Bug reports or technical issues</li>
                     <li>Feature suggestions and improvements</li>
                     <li>Feedback on analysis accuracy</li>
@@ -74,6 +97,18 @@
             </a>
         </div>
     </div>
+
+    <style>
+        /* Hover effect for email button */
+        a[href^="mailto"]:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(102, 126, 234, 0.5) !important;
+        }
+        
+        a[href^="mailto"]:active {
+            transform: translateY(-1px);
+        }
+    </style>
 </body>
 </html>
 
