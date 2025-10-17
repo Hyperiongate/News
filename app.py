@@ -1,7 +1,14 @@
 """
-TruthLens News Analyzer - Complete with Enhanced Author + Bias Detection
-Version: 8.4.0
-Date: October 9, 2025
+TruthLens News Analyzer - Complete with Enhanced Author + Bias Detection + New Pages
+Version: 8.5.0
+Date: October 17, 2025
+
+CHANGES FROM 8.4.0:
+1. ADDED: /features route - Comprehensive features showcase page
+2. ADDED: /pricing route - Beta pricing information page
+3. ADDED: /about route - About/mission page
+4. ADDED: /contact route - Contact/feedback page
+5. All v8.4.0 functionality preserved (DO NO HARM ✓)
 
 CHANGES FROM 8.3.0:
 1. ENHANCED: Bias detection now catches outlet patterns and sensationalism
@@ -9,11 +16,6 @@ CHANGES FROM 8.3.0:
 3. ENHANCED: Identifies pseudoscience indicators
 4. ENHANCED: Multi-dimensional bias analysis
 5. All v8.3.0 unknown author enhancements preserved
-
-CHANGES FROM 8.2.0:
-1. ENHANCED: Unknown author handler provides outlet-based analysis
-2. ENHANCED: Author analyzer gives meaningful scores without author name
-3. All previous functionality preserved
 
 DO NO HARM: All existing functionality maintained, only improvements added
 
@@ -1524,13 +1526,47 @@ class AuthorAnalyzer:
 
 @app.route('/')
 def index():
+    """Main application page"""
     return render_template('index.html')
+
+
+# ============================================================================
+# NEW PAGE ROUTES - v8.5.0
+# ============================================================================
+
+@app.route('/features')
+def features():
+    """Features page - Shows all analysis capabilities and data sources"""
+    return render_template('features.html')
+
+
+@app.route('/pricing')
+def pricing():
+    """Pricing page - Beta pricing information"""
+    return render_template('pricing.html')
+
+
+@app.route('/about')
+def about():
+    """About page - Mission and technology explanation"""
+    return render_template('about.html')
+
+
+@app.route('/contact')
+def contact():
+    """Contact page - Feedback and inquiries"""
+    return render_template('contact.html')
+
+
+# ============================================================================
+# API AND DIAGNOSTIC ROUTES
+# ============================================================================
 
 @app.route('/health')
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '8.4.0',
+        'version': '8.5.0',
         'services': {
             'openai': 'connected' if openai_client else 'not configured',
             'author_analyzer': 'enhanced with unknown author support',
@@ -1546,13 +1582,11 @@ def health():
         },
         'enhancements': {
             'unknown_author': 'v8.3.0 - outlet-based credibility',
-            'bias_detection': 'v8.4.0 - multi-dimensional analysis'
+            'bias_detection': 'v8.4.0 - multi-dimensional analysis',
+            'new_pages': 'v8.5.0 - features, pricing, about, contact'
         }
     })
 
-# ============================================================================
-# NEW: STATIC FILE DEBUG ENDPOINT
-# ============================================================================
 @app.route('/debug/static-files')
 def debug_static_files():
     """Debug endpoint to check static file configuration"""
@@ -1582,9 +1616,6 @@ def debug_static_files():
         'all_js_files': list(files_info.keys()) if files_info else []
     })
 
-# ============================================================================
-# EXPLICIT STATIC FILE ROUTE (BACKUP)
-# ============================================================================
 @app.route('/static/<path:filename>')
 def serve_static(filename):
     """Explicit static file serving as backup"""
@@ -1605,8 +1636,8 @@ def analyze():
         text = data.get('text')
         
         logger.info("=" * 80)
-        logger.info("API /analyze endpoint called - Version 8.4.0")
-        logger.info("ENHANCEMENTS: Unknown Author + Enhanced Bias Detection")
+        logger.info("API /analyze endpoint called - Version 8.5.0")
+        logger.info("ENHANCEMENTS: Unknown Author + Enhanced Bias Detection + New Pages")
         logger.info(f"URL provided: {bool(url)}")
         logger.info(f"Text provided: {bool(text)} ({len(text) if text else 0} chars)")
         
@@ -1858,7 +1889,7 @@ def debug_test_apis():
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS v8.4.0 - ENHANCED AUTHOR + BIAS DETECTION")
+    logger.info("TRUTHLENS v8.5.0 - NEW PAGE ROUTES ADDED FOR BETA LAUNCH")
     logger.info(f"OpenAI API: {'✓ READY' if openai_client else '✗ NOT CONFIGURED'}")
     logger.info(f"ScraperAPI: {'✓ CONFIGURED' if os.getenv('SCRAPERAPI_KEY') else '✗ NOT CONFIGURED'}")
     logger.info(f"MEDIASTACK API: {'✓ CONFIGURED' if os.getenv('MEDIASTACK_API_KEY') else '✗ NOT CONFIGURED'}")
@@ -1871,8 +1902,15 @@ if __name__ == '__main__':
     logger.info(f"NewsAnalyzer: ✓ ACTIVE")
     logger.info(f"DataTransformer: ✓ ACTIVE")
     logger.info("")
-    logger.info("NEW IN v8.4.0:")
-    logger.info("  ✓ Bias detection now catches outlet patterns (NY Post, Fox News, etc.)")
+    logger.info("NEW IN v8.5.0:")
+    logger.info("  ✓ /features route - Comprehensive features showcase page")
+    logger.info("  ✓ /pricing route - Beta pricing ($0/month) information")
+    logger.info("  ✓ /about route - Mission and technology explanation")
+    logger.info("  ✓ /contact route - Feedback form (feedback@factsandfakes.ai)")
+    logger.info("  ✓ Navigation menu fully functional across all pages")
+    logger.info("")
+    logger.info("FROM v8.4.0:")
+    logger.info("  ✓ Bias detection catches outlet patterns (NY Post, Fox News, etc.)")
     logger.info("  ✓ Detects sensationalist language and clickbait")
     logger.info("  ✓ Identifies controversial figure amplification (RFK Jr., etc.)")
     logger.info("  ✓ Flags pseudoscience indicators")
@@ -1894,7 +1932,11 @@ if __name__ == '__main__':
     logger.info(f"  static_folder: {app.static_folder}")
     logger.info(f"  static_url_path: {app.static_url_path}")
     logger.info("  Explicit routes: /static/<path:filename>")
+    logger.info("")
+    logger.info("✅ READY FOR BETA TESTING!")
     logger.info("=" * 80)
     
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+# This file is not truncated
