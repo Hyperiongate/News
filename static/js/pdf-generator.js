@@ -1,24 +1,24 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 12.0 - PROFESSIONAL QUALITY FIX
+ * VERSION: 12.1 - CLAIMS DISPLAY FIX + GLOBAL FUNCTION PRESERVED
  * DATE: October 16, 2025
- * Last Updated: October 16, 2025 - 6:30 PM
+ * Last Updated: October 16, 2025 - 8:15 PM
  * 
- * CRITICAL FIXES IN v12.0:
- * ✅ FIXED: Footer overlap - moved from y=287 to y=292 (more breathing room)
- * ✅ FIXED: "CENTER" label obscured - moved from centerY-20 to centerY-30 (fully above dial)
- * ✅ FIXED: Double "100" rendering - moved "/100" from x=50 to x=65 (no overlap)
- * ✅ FIXED: "Claim analyzed" placeholders - now shows ACTUAL claims with verification status
- * ✅ FIXED: Excessive white space - dynamic heights based on content length
- * ✅ FIXED: Content bleeding into footer - all sections stop at y=275 max
+ * CRITICAL FIXES IN v12.1:
+ * ✅ FIXED: "Claim analyzed" placeholders - now extracts ACTUAL claim text from multiple data structures
+ * ✅ FIXED: Enhanced claim extraction with 5 fallback strategies
+ * ✅ FIXED: Proper verification status display (✓ for verified, ✗ for false, ? for unknown)
+ * ✅ PRESERVED: downloadPDFReport global function accessibility (DO NO HARM)
+ * ✅ PRESERVED: All layout fixes from v12.0 (footer, dial, spacing)
  * 
- * IMPROVEMENTS FROM v11.3.1:
- * ✅ Multi-author support preserved
- * ✅ Outlet credibility comparison preserved
- * ✅ Third-party ratings preserved
- * ✅ All existing features maintained (Do No Harm)
+ * IMPROVEMENTS FROM v12.0:
+ * ✅ Claims now show actual text from fact checker data
+ * ✅ Better handling of various claim data structures
+ * ✅ Enhanced extraction from nested objects
+ * ✅ Multiple fallback strategies for claim text
+ * ✅ Proper status symbols with color coding
  * 
- * This version creates a professional, clean PDF report suitable for business use.
+ * This version maintains all professional quality features while showing real claims!
  */
 
 // ============================================================================
@@ -41,17 +41,17 @@ function cleanText(text) {
 
 function isGenericPlaceholder(text) {
     if (!text) return true;
-    const placeholders = ['analysis completed', 'results processed', 'analyzed', 'processing complete'];
+    const placeholders = ['analysis completed', 'results processed', 'analyzed', 'processing complete', 'claim analyzed'];
     const cleaned = text.toLowerCase().trim();
     return placeholders.some(p => cleaned === p || cleaned.includes(p)) && cleaned.length < 30;
 }
 
 // ============================================================================
-// MAIN ENTRY POINT
+// MAIN ENTRY POINT - GLOBAL FUNCTION (v12.1 PRESERVED)
 // ============================================================================
 
 function downloadPDFReport() {
-    console.log('[PDF v12.0] Generating professional PDF report...');
+    console.log('[PDF v12.1] Generating professional PDF report with REAL claims...');
     
     if (typeof window.jspdf === 'undefined') {
         alert('PDF library not loaded. Please refresh the page and try again.');
@@ -79,10 +79,10 @@ function downloadPDFReport() {
         const filename = `TruthLens-Report-${sourceShort}-${timestamp}.pdf`;
         
         doc.save(filename);
-        console.log('[PDF v12.0] ✓ Professional report generated:', filename);
+        console.log('[PDF v12.1] ✓ Professional report generated with real claims:', filename);
         
     } catch (error) {
-        console.error('[PDF v12.0] Error:', error);
+        console.error('[PDF v12.1] Error:', error);
         alert('Error generating PDF. Please try again.');
     }
 }
@@ -460,7 +460,7 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     
     yPos += 36;
     
-    // ========== KEY FINDINGS - FIXED v12.0 DYNAMIC HEIGHTS ==========
+    // ========== KEY FINDINGS - FIXED v12.1 ENHANCED CLAIMS ==========
     
     // FIXED v12.0: Calculate height dynamically based on content
     let findingsHeight;
@@ -489,7 +489,7 @@ function generateEnhancedServicePage(doc, service, serviceData, colors, fullData
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...colors.darkGray);
     
-    // FIXED v12.0: Enhanced fact checker and transparency displays
+    // FIXED v12.1: Enhanced fact checker and transparency displays
     if (service.key === 'fact_checker') {
         yPos = displayFactCheckClaims(doc, serviceData, fullData, yPos, colors);
     } else if (service.key === 'transparency_analyzer') {
@@ -850,11 +850,36 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
 }
 
 // ============================================================================
-// DISPLAY FACT CHECK CLAIMS - FIXED v12.0
+// DISPLAY FACT CHECK CLAIMS - ENHANCED v12.1
 // ============================================================================
 
 function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
-    const claims = serviceData.claims || fullData.detailed_analysis?.fact_checker?.claims || [];
+    console.log('[PDF v12.1] Extracting fact checker claims...');
+    
+    // STRATEGY 1: Try serviceData.claims first
+    let claims = serviceData.claims || [];
+    
+    // STRATEGY 2: Try fullData.detailed_analysis.fact_checker.claims
+    if (!claims || claims.length === 0) {
+        claims = fullData.detailed_analysis?.fact_checker?.claims || [];
+    }
+    
+    // STRATEGY 3: Try serviceData.verified_claims
+    if (!claims || claims.length === 0) {
+        claims = serviceData.verified_claims || [];
+    }
+    
+    // STRATEGY 4: Try serviceData.analysis.claims
+    if (!claims || claims.length === 0) {
+        claims = serviceData.analysis?.claims || [];
+    }
+    
+    // STRATEGY 5: Try fullData.claims
+    if (!claims || claims.length === 0) {
+        claims = fullData.claims || [];
+    }
+    
+    console.log(`[PDF v12.1] Found ${claims.length} claims`);
     
     doc.setFontSize(8);
     doc.setFont('helvetica', 'normal');
@@ -866,27 +891,61 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
         const displayClaims = claims.slice(0, 6);
         
         displayClaims.forEach((claim, index) => {
-            // FIXED v12.0: Extract actual claim data
-            let claimText = 'Claim analyzed';
+            // ENHANCED v12.1: Extract actual claim data with multiple fallbacks
+            let claimText = '';
             let status = 'unknown';
             
-            if (typeof claim === 'object') {
-                claimText = claim.claim || claim.text || claim.statement || 'Claim analyzed';
-                status = claim.status || claim.verdict || claim.result || 'unknown';
+            if (typeof claim === 'object' && claim !== null) {
+                // Try multiple property names for claim text
+                claimText = claim.claim || claim.text || claim.statement || 
+                           claim.content || claim.description || '';
+                
+                // Try multiple property names for status
+                status = claim.status || claim.verdict || claim.result || 
+                        claim.rating || claim.verification || 'unknown';
+                
+                // If still no claim text, try stringifying the object
+                if (!claimText || claimText.length < 10) {
+                    // Maybe it's a simple object with just the claim as value
+                    const values = Object.values(claim).filter(v => typeof v === 'string' && v.length > 10);
+                    if (values.length > 0) {
+                        claimText = values[0];
+                    }
+                }
             } else if (typeof claim === 'string') {
                 claimText = claim;
             }
             
-            // FIXED v12.0: Show verification status with symbols
+            // Clean up the claim text
+            claimText = cleanText(claimText);
+            
+            // If still empty or generic, skip this claim
+            if (!claimText || claimText.length < 10 || isGenericPlaceholder(claimText)) {
+                console.log(`[PDF v12.1] Skipping generic/empty claim ${index + 1}`);
+                return;
+            }
+            
+            console.log(`[PDF v12.1] Claim ${index + 1}: "${claimText.substring(0, 50)}..." Status: ${status}`);
+            
+            // ENHANCED v12.1: Better status detection
             let statusSymbol = '?';
             let statusColor = colors.gray;
             
-            if (status.toLowerCase().includes('true') || status.toLowerCase().includes('accurate') || status.toLowerCase().includes('verified')) {
+            const statusLower = status.toString().toLowerCase();
+            
+            if (statusLower.includes('true') || statusLower.includes('accurate') || 
+                statusLower.includes('verified') || statusLower.includes('correct') ||
+                statusLower.includes('confirmed')) {
                 statusSymbol = '✓';
                 statusColor = colors.success;
-            } else if (status.toLowerCase().includes('false') || status.toLowerCase().includes('inaccurate')) {
+            } else if (statusLower.includes('false') || statusLower.includes('inaccurate') || 
+                      statusLower.includes('incorrect') || statusLower.includes('debunked')) {
                 statusSymbol = '✗';
                 statusColor = colors.danger;
+            } else if (statusLower.includes('partial') || statusLower.includes('mixed') ||
+                      statusLower.includes('mostly')) {
+                statusSymbol = '◐';
+                statusColor = colors.warning;
             }
             
             // Draw status indicator
@@ -897,8 +956,8 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
             // Draw claim text
             doc.setFontSize(8);
             doc.setTextColor(...colors.darkGray);
-            const cleaned = cleanText(claimText).substring(0, 100);
-            const lines = doc.splitTextToSize(cleaned, 150);
+            const truncated = claimText.substring(0, 120);
+            const lines = doc.splitTextToSize(truncated, 150);
             doc.text(lines[0], 25, fy);
             
             fy += 6;
@@ -913,8 +972,9 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
         doc.text(`Total claims analyzed: ${claims.length}`, 20, fy);
     } else {
         // Fallback if no claims data
+        console.log('[PDF v12.1] No claims found, using fallback display');
         const sourcesCount = serviceData.sources_cited || fullData.sources_count || 0;
-        doc.text(`${sourcesCount} source(s) cited in this article. Claims analysis pending.`, 20, fy);
+        doc.text(`${sourcesCount} source(s) cited in this article. Detailed claim analysis in progress.`, 20, fy);
     }
     
     return yPos + 88;
@@ -1253,6 +1313,6 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
     doc.text(`Page ${pageNum} of ${totalPages}`, 190, 292, { align: 'right' });
 }
 
-console.log('[PDF v12.0] Professional quality PDF generator loaded - All layout issues fixed');
+console.log('[PDF v12.1] Professional quality PDF generator loaded - Claims display FIXED + Global function PRESERVED');
 
 // This file is not truncated
