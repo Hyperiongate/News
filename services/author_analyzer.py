@@ -1,29 +1,22 @@
 """
-Author Analyzer - v5.0 UNIVERSAL SOLUTION WITH COMPREHENSIVE OUTLET DATABASE
+Author Analyzer - v5.1 AWARDS REMOVED (Issue #2 Fix)
 Date: October 16, 2025
-Last Updated: October 16, 2025
+Last Updated: October 20, 2025
 
-MAJOR UPGRADE FROM v4.1:
+CHANGES FROM v5.0:
+✅ ISSUE #2 FIX: Removed ALL awards references (~35-40 lines)
+✅ Removed 'awards' from known_journalists database
+✅ Removed awards from all _build_result methods
+✅ Removed awards from _extract_awards_from_text
+✅ Removed awards parameter from _get_author_meaning
+✅ Updated all trust_indicators to not reference awards
+✅ PRESERVED: All other v5.0 functionality
+
+MAJOR FEATURES (PRESERVED FROM v5.0):
 ✅ COMPREHENSIVE OUTLET DATABASE: 100+ news outlets with complete metadata
 ✅ UNIVERSAL SOLUTION: No more whack-a-mole site-specific fixes
 ✅ COMPLETE METADATA: Founding dates, readership, ownership for ALL major outlets
-✅ ALL v4.1 FEATURES PRESERVED: Multi-author, scraping, Wikipedia, OpenAI
-
-NEW IN v5.0:
-- Massive outlet database with 100+ outlets (expandable to 500+)
-- ABC News (1943, 8M daily readers, Disney ownership)
-- NYT (1851), WaPo (1877), WSJ (1889), etc.
-- Readership numbers, ownership info, founding dates
-- Universal outlet detection system
-- Smart fallbacks when outlet not in database
-
-PRESERVED FROM v4.1:
-- Multi-author support (critical fix from v4.1)
-- Author page scraping (NEW in v4.0)
-- Wikipedia lookup
-- OpenAI research
-- Social media detection
-- All analysis methods
+✅ Multi-author support, scraping, Wikipedia, OpenAI
 
 Save as: services/author_analyzer.py (REPLACE existing file)
 """
@@ -54,19 +47,18 @@ logger = logging.getLogger(__name__)
 class AuthorAnalyzer(BaseAnalyzer):
     """
     Comprehensive author analysis with universal outlet database
-    v5.0 - UNIVERSAL: Works for any outlet with comprehensive metadata
+    v5.1 - Awards removed per Issue #2 fix
     """
     
     def __init__(self):
         super().__init__('author_analyzer')
         
-        # Known journalists database (expanded from v4.1)
+        # Known journalists database (awards removed)
         self.known_journalists = {
             'maggie haberman': {
                 'credibility': 90,
                 'expertise': ['Politics', 'Trump Administration', 'New York Politics'],
                 'years_experience': 20,
-                'awards': ['Pulitzer Prize'],
                 'position': 'Senior Political Correspondent',
                 'organization': 'The New York Times',
                 'articles_found': 500,
@@ -76,7 +68,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'credibility': 92,
                 'expertise': ['Fact-checking', 'Politics', 'Government'],
                 'years_experience': 25,
-                'awards': ['Truth-O-Meter Award'],
                 'position': 'Editor and Chief Writer',
                 'organization': 'The Washington Post',
                 'articles_found': 1000,
@@ -86,7 +77,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'credibility': 88,
                 'expertise': ['National Security', 'Legal Affairs'],
                 'years_experience': 18,
-                'awards': ['Pulitzer Prize'],
                 'position': 'Washington Correspondent',
                 'organization': 'The New York Times',
                 'articles_found': 400,
@@ -96,7 +86,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'credibility': 95,
                 'expertise': ['Investigative Journalism', 'Politics', 'Presidential History'],
                 'years_experience': 50,
-                'awards': ['Pulitzer Prize (2x)', 'George Polk Award'],
                 'position': 'Associate Editor',
                 'organization': 'The Washington Post',
                 'articles_found': 2000,
@@ -106,7 +95,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'credibility': 89,
                 'expertise': ['Investigative Reporting', 'Politics', 'Nonprofit Organizations'],
                 'years_experience': 20,
-                'awards': ['Pulitzer Prize'],
                 'position': 'Reporter',
                 'organization': 'The New York Times',
                 'articles_found': 600,
@@ -693,7 +681,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
         }
         
-        logger.info(f"[AuthorAnalyzer v5.0] Initialized with {len(self.outlet_database)} outlets in database")
+        logger.info(f"[AuthorAnalyzer v5.1] Initialized with {len(self.outlet_database)} outlets in database")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -702,11 +690,11 @@ class AuthorAnalyzer(BaseAnalyzer):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main analysis method with comprehensive outlet support
-        v5.0 - ENHANCED: Now with full outlet database
+        v5.1 - Awards removed
         """
         try:
             logger.info("=" * 60)
-            logger.info("[AuthorAnalyzer v5.0] Starting comprehensive analysis")
+            logger.info("[AuthorAnalyzer v5.1] Starting comprehensive analysis")
             
             # Extract author and domain
             author_text = data.get('author', '') or data.get('authors', '')
@@ -723,7 +711,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             # NEW v5.0: Get comprehensive outlet info
             outlet_info = self._get_outlet_info(domain)
             if outlet_info:
-                logger.info(f"[AuthorAnalyzer v5.0] Found outlet in database: {outlet_info.get('name')}")
+                logger.info(f"[AuthorAnalyzer v5.1] Found outlet in database: {outlet_info.get('name')}")
                 logger.info(f"  - Founded: {outlet_info.get('founded')}")
                 logger.info(f"  - Daily readers: {outlet_info.get('readership_daily'):,}")
                 logger.info(f"  - Ownership: {outlet_info.get('ownership')}")
@@ -744,7 +732,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             
             # NEW v5.0: Check if "author" is actually the outlet name
             if not authors or (author_text and self._is_outlet_name(author_text)):
-                logger.warning("[AuthorAnalyzer v5.0] No author/outlet as author - using outlet analysis")
+                logger.warning("[AuthorAnalyzer v5.1] No author/outlet as author - using outlet analysis")
                 return self.get_success_result(
                     self._build_outlet_only_result(domain, outlet_score, text, outlet_info)
                 )
@@ -754,7 +742,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             all_authors = authors
             
             logger.info(f"[AuthorAnalyzer] Primary author: {primary_author}")
-            logger.info(f"[AuthorAnalyzer v5.0] ALL AUTHORS: {all_authors}")
+            logger.info(f"[AuthorAnalyzer v5.1] ALL AUTHORS: {all_authors}")
             
             # Get source credibility as baseline
             org_name = outlet_info.get('name') if outlet_info else self._get_org_name(domain)
@@ -905,8 +893,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             'years_experience': 5,
             'expertise': expertise,
             'expertise_areas': expertise,
-            'awards': [],
-            'awards_count': 0,
             'wikipedia_url': None,
             'social_profiles': [],
             'social_media': {},
@@ -964,7 +950,7 @@ class AuthorAnalyzer(BaseAnalyzer):
     # === ENHANCED BUILD METHODS WITH OUTLET INFO ===
     
     def _build_result_from_author_page(self, author: str, all_authors: List[str], domain: str, page_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.0: Build result with outlet database info"""
+        """v5.1: Build result with outlet database info (awards removed)"""
         
         bio = page_data.get('bio', '')
         article_count = page_data.get('article_count', 0)
@@ -1002,8 +988,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             'years_experience': years_exp,
             'expertise': expertise,
             'expertise_areas': expertise,
-            'awards': [],
-            'awards_count': 0,
             'wikipedia_url': None,
             'author_page_url': author_page_url,
             'social_profiles': self._build_social_profiles_from_links(social_links),
@@ -1047,16 +1031,15 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['analysis'] = {
                 'what_we_looked': f'We found and analyzed {author}\'s official author profile page.',
                 'what_we_found': f'{author} is a verified journalist at {org_name} with {article_count} published articles.',
-                'what_it_means': self._get_author_meaning(credibility_score, years_exp, 0)
+                'what_it_means': self._get_author_meaning(credibility_score, years_exp)
             }
         
         return result
     
     def _build_result_from_database(self, author: str, all_authors: List[str], domain: str, db_data: Dict, outlet_info: Optional[Dict]) -> Dict:
-        """v5.0: Enhanced with outlet info"""
+        """v5.1: Enhanced with outlet info (awards removed)"""
         
         credibility = db_data.get('credibility', 75)
-        awards = db_data.get('awards', [])
         years_exp = db_data.get('years_experience', 5)
         articles_count = db_data.get('articles_found', 100)
         employer = db_data.get('organization', outlet_info['name'] if outlet_info else self._get_org_name(domain))
@@ -1080,8 +1063,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             'years_experience': years_exp,
             'expertise': db_data.get('expertise', []),
             'expertise_areas': db_data.get('expertise', []),
-            'awards': awards,
-            'awards_count': len(awards),
             'wikipedia_url': None,
             'social_profiles': [],
             'social_media': {},
@@ -1093,7 +1074,8 @@ class AuthorAnalyzer(BaseAnalyzer):
             'trust_indicators': [
                 f'Works for {employer}',
                 f'{years_exp} years experience',
-                f'{articles_count}+ articles published'
+                f'{articles_count}+ articles published',
+                'Established journalist'
             ],
             'red_flags': [],
             'articles_found': articles_count,
@@ -1113,16 +1095,15 @@ class AuthorAnalyzer(BaseAnalyzer):
         result['analysis'] = {
             'what_we_looked': f'We verified {author} in our journalist database.',
             'what_we_found': f'{author} has {years_exp} years experience at {employer} with {articles_count}+ articles.',
-            'what_it_means': self._get_author_meaning(credibility, years_exp, len(awards))
+            'what_it_means': self._get_author_meaning(credibility, years_exp)
         }
         
         return result
     
     def _build_result_from_wikipedia(self, author: str, all_authors: List[str], domain: str, wiki_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.0: Enhanced with outlet info"""
+        """v5.1: Enhanced with outlet info (awards removed)"""
         
         brief_history = wiki_data.get('extract', '')[:300]
-        awards = wiki_data.get('awards', [])
         years_exp = wiki_data.get('years_experience', 10)
         
         if not isinstance(years_exp, (int, float)):
@@ -1149,8 +1130,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             'years_experience': int(years_exp),
             'expertise': self._infer_expertise_from_bio(brief_history),
             'expertise_areas': self._infer_expertise_from_bio(brief_history),
-            'awards': awards,
-            'awards_count': len(awards),
             'wikipedia_url': wiki_data.get('url'),
             'social_profiles': [],
             'social_media': {},
@@ -1163,7 +1142,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             'trust_explanation': f'Verified journalist with Wikipedia page.',
             'trust_indicators': [
                 'Wikipedia page exists',
-                f'{len(awards)} awards' if awards else 'Established journalist',
+                'Established journalist',
                 f'Estimated {articles_count}+ articles'
             ],
             'red_flags': [],
@@ -1184,16 +1163,15 @@ class AuthorAnalyzer(BaseAnalyzer):
         result['analysis'] = {
             'what_we_looked': f'We verified {author} through Wikipedia.',
             'what_we_found': f'{author} is an established journalist with {int(years_exp)} years experience.',
-            'what_it_means': self._get_author_meaning(credibility_score, years_exp, len(awards))
+            'what_it_means': self._get_author_meaning(credibility_score, years_exp)
         }
         
         return result
     
     def _build_result_from_ai(self, author: str, all_authors: List[str], domain: str, ai_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.0: Enhanced with outlet info"""
+        """v5.1: Enhanced with outlet info (awards removed)"""
         
         brief_history = ai_data.get('brief_history', 'No detailed history available')
-        awards = ai_data.get('awards', [])
         
         years_exp = ai_data.get('years_experience')
         if not isinstance(years_exp, (int, float)):
@@ -1235,8 +1213,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             'years_experience': years_exp,
             'expertise': expertise,
             'expertise_areas': expertise,
-            'awards': awards,
-            'awards_count': len(awards),
             'wikipedia_url': None,
             'social_profiles': [],
             'social_media': {},
@@ -1268,13 +1244,13 @@ class AuthorAnalyzer(BaseAnalyzer):
         result['analysis'] = {
             'what_we_looked': f'We researched {author} using AI analysis.',
             'what_we_found': f'{author} has {years_exp} years of experience with {articles_count}+ articles.',
-            'what_it_means': self._get_author_meaning(credibility_score, years_exp, len(awards))
+            'what_it_means': self._get_author_meaning(credibility_score, years_exp)
         }
         
         return result
     
     def _build_basic_result(self, author: str, all_authors: List[str], domain: str, outlet_score: int, text: str, outlet_info: Optional[Dict]) -> Dict:
-        """v5.0: Enhanced with outlet info"""
+        """v5.1: Enhanced with outlet info (awards removed)"""
         
         credibility_score = self._calculate_credibility(author, outlet_score, text)
         
@@ -1303,8 +1279,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             'years_experience': years_experience,
             'expertise': expertise,
             'expertise_areas': expertise,
-            'awards': [],
-            'awards_count': 0,
             'wikipedia_url': None,
             'social_profiles': [],
             'social_media': {},
@@ -1586,7 +1560,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                     'title': data.get('title'),
                     'extract': data.get('extract', ''),
                     'url': data.get('content_urls', {}).get('desktop', {}).get('page', ''),
-                    'awards': self._extract_awards_from_text(data.get('extract', '')),
                     'years_experience': self._extract_career_years(data.get('extract', '')),
                     'employer': self._extract_employer_from_text(data.get('extract', ''))
                 }
@@ -1612,7 +1585,6 @@ Provide accurate, factual information in JSON format:
   "years_experience": <number between 1-40>,
   "estimated_articles": <estimated count: 10-50 for new, 50-200 for established, 200+ for veteran>,
   "expertise": ["area1", "area2", "area3"],
-  "awards": ["Award Name 1"] or [],
   "position": "Job title",
   "credibility_score": <60-95>,
   "verified": true/false
@@ -1621,7 +1593,7 @@ Provide accurate, factual information in JSON format:
 REQUIREMENTS:
 - years_experience MUST be number 1-40
 - estimated_articles based on career length
-- Conservative with awards and scores"""
+- Conservative with scores"""
 
             response = openai_client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -1641,26 +1613,6 @@ REQUIREMENTS:
         except Exception as e:
             logger.error(f"[OpenAI] Research error: {e}")
             return None
-    
-    def _extract_awards_from_text(self, text: str) -> List[str]:
-        """Extract awards from text"""
-        awards = []
-        award_patterns = {
-            'pulitzer prize': 'Pulitzer Prize',
-            'peabody award': 'Peabody Award',
-            'emmy': 'Emmy Award',
-            'murrow': 'Edward R. Murrow Award',
-            'polk award': 'George Polk Award',
-            'dupont': 'duPont-Columbia Award',
-            'investigative reporters': 'IRE Award'
-        }
-        
-        text_lower = text.lower()
-        for pattern, award_name in award_patterns.items():
-            if pattern in text_lower and award_name not in awards:
-                awards.append(award_name)
-        
-        return awards
     
     def _extract_career_years(self, text: str) -> int:
         """Extract years of experience"""
@@ -1757,8 +1709,8 @@ REQUIREMENTS:
         """Get source credibility"""
         return default
     
-    def _get_author_meaning(self, score: int, years: int, awards: int) -> str:
-        """Generate meaning text for author credibility"""
+    def _get_author_meaning(self, score: int, years: int) -> str:
+        """Generate meaning text for author credibility (awards parameter removed)"""
         if score >= 85:
             return f"Highly credible author with {years} years of experience. You can trust their reporting."
         elif score >= 70:
@@ -1782,6 +1734,6 @@ REQUIREMENTS:
             return f"Author at {outlet_name}. {years} years experience. Verify important claims."
 
 
-logger.info("[AuthorAnalyzer] v5.0 loaded - UNIVERSAL OUTLET DATABASE COMPLETE!")
+logger.info("[AuthorAnalyzer] v5.1 loaded - AWARDS REMOVED (Issue #2 Fix Complete)")
 
 # This file is not truncated
