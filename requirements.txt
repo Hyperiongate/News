@@ -1,15 +1,15 @@
 # TruthLens Unified News & Transcript Analyzer
-# WITH DEBATE ARENA FEATURE
-# Complete requirements with database support
+# WITH DEBATE ARENA AND LIVE STREAMING FEATURES
+# Complete requirements with database support and live streaming
 # Date: October 20, 2025
-# Version: 9.0.0 - Added Debate Arena Phase 1
+# Version: 10.0.0 - Added Live Stream Analysis
 
 # Core Framework
 Flask==2.3.3
 flask-cors==4.0.0
 flask-limiter==3.5.0
 
-# NEW: Database Support for Debate Arena
+# Database Support for Debate Arena
 Flask-SQLAlchemy==3.0.5
 Flask-Migrate==4.0.5
 psycopg2-binary==2.9.9
@@ -35,10 +35,13 @@ selenium==4.15.2
 webdriver-manager==4.0.1
 playwright==1.40.0
 
+# NEW: Live Stream Analysis Dependencies
+yt-dlp==2024.3.10
+assemblyai==0.17.0
+
 # YouTube Transcript Extraction
 youtube-transcript-api==0.6.1
 pytube==15.0.0
-yt-dlp==2023.9.24
 
 # Data Processing
 pandas==2.0.3
@@ -111,14 +114,14 @@ psutil==5.9.6
 langdetect==1.0.9
 textstat==0.7.3
 
-# Audio/Video Processing Support (optional)
+# Audio/Video Processing Support
 moviepy==1.0.3
 
 # Enhanced Web Scraping
 httpx[http2]==0.26.0
 playwright-stealth==1.0.6
 
-# NEW: Email Support for Debate Arena (Phase 1 uses fake emails for dev)
+# Email Support for Debate Arena (Phase 1 uses fake emails for dev)
 # Uncomment when ready for production email:
 # sendgrid==6.10.0
 # python-sendgrid==6.10.0
