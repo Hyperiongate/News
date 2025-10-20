@@ -1452,6 +1452,10 @@ def about():
 def contact():
     return render_template('contact.html')
 
+@app.route('/debate-arena')
+def debate_arena():
+    return render_template('debate-arena.html')
+
 @app.route('/health')
 def health():
     return jsonify({
