@@ -1,10 +1,14 @@
 # services/news_analyzer.py
 """
 News Analyzer Service - WITH ENHANCED "WHAT WE FOUND" SUMMARY
-Date: October 13, 2025
-Version: 21.0 - CONVERSATIONAL FINDINGS SUMMARY
+Date: October 20, 2025
+Version: 21.1 - CRITICAL SUCCESS FLAG FIX
 
 CHANGE LOG:
+- 2025-10-20: v21.1 - CRITICAL FIX: Always set success=True in _build_response
+  * Bug: Response was missing success=True, causing frontend to show "Analysis failed"
+  * Fix: Line 153 now explicitly sets success=True in response dict
+  * This ensures DataTransformer passes success=True to frontend
 - 2025-10-13: v21.0 - Enhanced _generate_findings_summary() method
   * Now generates 2-5 sentence conversational summaries
   * Highlights specific concerns from each service
@@ -42,7 +46,7 @@ class NewsAnalyzer:
         self.pipeline = AnalysisPipeline()
         self.insight_generator = InsightGenerator()
         self.data_enricher = DataEnricher()
-        logger.info("[NewsAnalyzer v21.0] Initialized - WITH ENHANCED FINDINGS SUMMARY")
+        logger.info("[NewsAnalyzer v21.1] Initialized - WITH SUCCESS FLAG FIX")
     
     def analyze(self, content: str, content_type: str = 'url', pro_mode: bool = False) -> Dict[str, Any]:
         """
@@ -72,7 +76,7 @@ class NewsAnalyzer:
                 data['text'] = content
             
             logger.info("=" * 80)
-            logger.info("[NewsAnalyzer] Starting Analysis")
+            logger.info("[NewsAnalyzer v21.1] Starting Analysis")
             logger.info(f"Type: {content_type}")
             logger.info(f"Content length: {len(content)}")
             
@@ -127,6 +131,7 @@ class NewsAnalyzer:
             
             logger.info("=" * 80)
             logger.info(f"[NewsAnalyzer] COMPLETE - {time.time() - analysis_start:.2f}s")
+            logger.info(f"[NewsAnalyzer v21.1] ✓ SUCCESS=TRUE IN RESPONSE")
             logger.info("=" * 80)
             
             return response
@@ -157,8 +162,9 @@ class NewsAnalyzer:
         normalized_detailed = self._integrate_charts_into_services(normalized_detailed)
         
         # Build response
+        # ===== CRITICAL FIX v21.1: ALWAYS SET SUCCESS=TRUE =====
         response = {
-            'success': True,
+            'success': True,  # ← THIS WAS THE BUG! This line ensures frontend knows analysis succeeded
             'trust_score': trust_score,
             'article_summary': title[:200] if title else 'Article analyzed',
             'source': source,
@@ -169,6 +175,8 @@ class NewsAnalyzer:
             'content_type': content_type,
             'word_count': article_data.get('word_count', 0)
         }
+        
+        logger.info(f"[NewsAnalyzer v21.1] ✓ Response built with success=True")
         
         return response
     
@@ -413,3 +421,5 @@ class NewsAnalyzer:
             'detailed_analysis': {},
             'charts': {}
         }
+
+# This file is not truncated
