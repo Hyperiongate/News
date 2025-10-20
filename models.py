@@ -2,7 +2,7 @@
 TruthLens Debate Arena - Database Models
 File: models.py
 Date: October 20, 2025
-Version: 1.0.0
+Version: 1.0.1
 
 PURPOSE:
 Database models for the Debate Arena feature - Phase 1 (Text-Only)
@@ -15,6 +15,8 @@ MODELS:
 - Challenge: Open challenges waiting for opponents
 
 CHANGES:
+- v1.0.1 (Oct 20, 2025): FIXED - AmbiguousForeignKeysError in User.challenges relationship
+  Added foreign_keys parameter to specify challenger_id for the relationship
 - Initial creation for Debate Arena Phase 1
 - Text-only arguments (video/audio in Phase 2)
 - PostgreSQL compatible
@@ -69,7 +71,10 @@ class User(db.Model):
                              foreign_keys='Debate.creator_id')
     arguments = db.relationship('Argument', back_populates='author', lazy='dynamic')
     votes = db.relationship('Vote', back_populates='user', lazy='dynamic')
-    challenges = db.relationship('Challenge', back_populates='challenger', lazy='dynamic')
+    
+    # FIXED: Specify which foreign key to use for challenges relationship
+    challenges = db.relationship('Challenge', back_populates='challenger', lazy='dynamic',
+                                foreign_keys='Challenge.challenger_id')
     
     def generate_verification_code(self):
         """Generate a 6-digit verification code"""
@@ -364,8 +369,9 @@ class Challenge(db.Model):
     expires_at = db.Column(db.DateTime, nullable=False, index=True)  # Auto-expire after 7 days
     accepted_at = db.Column(db.DateTime)
     
-    # Relationships
-    challenger = db.relationship('User', back_populates='challenges', foreign_keys=[challenger_id])
+    # Relationships - FIXED: Specify foreign_keys explicitly
+    challenger = db.relationship('User', back_populates='challenges', 
+                                foreign_keys=[challenger_id])
     debate = db.relationship('Debate', foreign_keys=[debate_id])
     acceptor = db.relationship('User', foreign_keys=[accepted_by_id])
     
