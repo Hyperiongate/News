@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens Debate Arena</title>
+    <title>TruthLens Debate Arena v2.0</title>
     <style>
         * {
             margin: 0;
@@ -56,13 +56,32 @@
             gap: 15px;
         }
 
-        .header-icon {
-            font-size: 2.5rem;
+        .version-badge {
+            background: var(--secondary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
         }
 
         .header p {
             color: var(--text-light);
             font-size: 1.1rem;
+        }
+
+        .user-info {
+            background: var(--light);
+            padding: 15px 20px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .user-info strong {
+            color: var(--dark);
         }
 
         .nav-tabs {
@@ -156,13 +175,76 @@
             flex: 1;
         }
 
-        .debate-category {
-            background: var(--primary);
-            color: white;
+        .status-badge {
             padding: 5px 15px;
             border-radius: 20px;
             font-size: 0.85rem;
             font-weight: 600;
+        }
+
+        .status-waiting {
+            background: var(--warning);
+            color: white;
+        }
+
+        .status-ready {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .status-live {
+            background: var(--danger);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+
+        .status-closed {
+            background: var(--text-light);
+            color: white;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .timer {
+            background: var(--danger);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1.1rem;
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .share-code-box {
+            background: #fef3c7;
+            border: 2px dashed var(--warning);
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .share-code {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--dark);
+            letter-spacing: 3px;
+            margin: 10px 0;
+        }
+
+        .copy-btn {
+            background: var(--warning);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
         }
 
         .battle-meter {
@@ -218,18 +300,13 @@
             border-radius: 12px;
             padding: 20px;
             border: 2px solid var(--border);
-            cursor: pointer;
-            transition: all 0.3s;
         }
 
-        .argument-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        }
-
-        .argument-card.selected {
-            border-color: var(--primary);
-            background: rgba(37, 99, 235, 0.05);
+        .argument-card.hidden {
+            background: #f9fafb;
+            border-style: dashed;
+            text-align: center;
+            padding: 40px 20px;
         }
 
         .argument-position {
@@ -252,37 +329,37 @@
             margin-bottom: 15px;
         }
 
-        .argument-author {
-            color: var(--text-light);
-            font-size: 0.85rem;
-            margin-bottom: 10px;
-        }
-
-        .vote-btn {
-            width: 100%;
-            padding: 12px;
+        .btn {
+            padding: 12px 30px;
             border: none;
             border-radius: 8px;
+            font-size: 1rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
         }
 
-        .vote-btn-for {
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
             background: var(--secondary);
             color: white;
         }
 
-        .vote-btn-against {
+        .btn-danger {
             background: var(--danger);
             color: white;
         }
 
-        .vote-btn:hover {
-            transform: scale(1.05);
-        }
-
-        .vote-btn:disabled {
+        .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
@@ -324,39 +401,19 @@
             margin-top: 5px;
         }
 
-        .btn {
-            padding: 12px 30px;
-            border: none;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
+        .word-count {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            text-align: right;
+            margin-top: 5px;
         }
 
-        .btn-primary {
-            background: var(--primary);
-            color: white;
+        .word-count.warning {
+            color: var(--warning);
         }
 
-        .btn-primary:hover {
-            background: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
-        }
-
-        .btn-secondary {
-            background: var(--secondary);
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            background: #059669;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .word-count.error {
+            color: var(--danger);
         }
 
         .auth-modal {
@@ -383,11 +440,6 @@
             max-width: 500px;
             width: 90%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-
-        .auth-modal h2 {
-            margin-bottom: 20px;
-            color: var(--dark);
         }
 
         .alert {
@@ -426,11 +478,6 @@
             opacity: 0.5;
         }
 
-        .empty-state h3 {
-            color: var(--dark);
-            margin-bottom: 10px;
-        }
-
         .loading {
             text-align: center;
             padding: 40px;
@@ -452,23 +499,67 @@
             100% { transform: rotate(360deg); }
         }
 
-        .user-info {
-            background: var(--light);
-            padding: 15px 20px;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 20px;
+        .ready-section {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: center;
         }
 
-        .user-info strong {
-            color: var(--dark);
+        .ready-status {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+        }
+
+        .ready-indicator {
+            text-align: center;
+        }
+
+        .ready-indicator.ready {
+            color: var(--secondary);
+        }
+
+        .ready-indicator.not-ready {
+            color: var(--text-light);
+        }
+
+        .handshake-section {
+            background: #fef3c7;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: center;
         }
 
         .challenge-card {
             background: #fef3c7;
             border-left: 4px solid var(--warning);
+        }
+
+        .vote-btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .vote-btn-for {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .vote-btn-against {
+            background: var(--danger);
+            color: white;
+        }
+
+        .vote-btn:hover {
+            transform: scale(1.05);
         }
 
         @media (max-width: 768px) {
@@ -488,21 +579,6 @@
                 width: 100%;
             }
         }
-
-        .word-count {
-            font-size: 0.85rem;
-            color: var(--text-light);
-            text-align: right;
-            margin-top: 5px;
-        }
-
-        .word-count.warning {
-            color: var(--warning);
-        }
-
-        .word-count.error {
-            color: var(--danger);
-        }
     </style>
 </head>
 <body>
@@ -510,13 +586,14 @@
         <!-- Header -->
         <div class="header">
             <h1>
-                <span class="header-icon">⚖️</span>
+                <span>⚖️</span>
                 TruthLens Debate Arena
+                <span class="version-badge">v2.0 - Blind Arguments</span>
             </h1>
-            <p>Where opinions clash and the best argument wins</p>
+            <p>Where opinions clash, arguments stay hidden until both are ready</p>
         </div>
 
-        <!-- User Info (shown when logged in) -->
+        <!-- User Info -->
         <div id="userInfo" style="display: none;" class="user-info">
             <span>👤</span>
             <strong id="userName"></strong>
@@ -525,30 +602,33 @@
 
         <!-- Navigation -->
         <div class="nav-tabs">
-            <button class="nav-tab active" onclick="switchTab('debates')">
-                🗣️ Active Debates
+            <button class="nav-tab active" onclick="switchTab('live')">
+                🔴 Live Debates
             </button>
-            <button class="nav-tab" onclick="switchTab('create')">
-                ✍️ Create Debate
+            <button class="nav-tab" onclick="switchTab('partner')">
+                🤝 Partner Mode
             </button>
-            <button class="nav-tab" onclick="switchTab('challenges')">
+            <button class="nav-tab" onclick="switchTab('pickfight')">
                 🔥 Pick-a-Fight
+            </button>
+            <button class="nav-tab" onclick="switchTab('my-debates')">
+                👤 My Debates
             </button>
         </div>
 
-        <!-- Stats Section -->
+        <!-- Stats -->
         <div id="statsSection" class="stats-grid">
             <div class="stat-card">
-                <div class="stat-value" id="statDebates">0</div>
-                <div class="stat-label">Active Debates</div>
+                <div class="stat-value" id="statLive">0</div>
+                <div class="stat-label">Live Debates</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="statWaiting">0</div>
+                <div class="stat-label">Waiting for Partner</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="statVotes">0</div>
                 <div class="stat-label">Total Votes</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="statUsers">0</div>
-                <div class="stat-label">Participants</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value" id="statChallenges">0</div>
@@ -556,78 +636,139 @@
             </div>
         </div>
 
-        <!-- Debates Section -->
-        <div id="debatesSection" class="section active">
-            <h2 style="margin-bottom: 20px;">Active Debates</h2>
-            <div id="debatesList"></div>
+        <!-- Live Debates Section -->
+        <div id="liveSection" class="section active">
+            <h2 style="margin-bottom: 20px;">🔴 Live Debates - Vote Now!</h2>
+            <div id="liveList"></div>
         </div>
 
-        <!-- Create Debate Section -->
-        <div id="createSection" class="section">
-            <h2 style="margin-bottom: 20px;">Create New Debate</h2>
-            <div id="createAlert"></div>
+        <!-- Partner Mode Section -->
+        <div id="partnerSection" class="section">
+            <h2 style="margin-bottom: 20px;">🤝 Partner Mode - Debate with a Friend</h2>
+            <div id="partnerAlert"></div>
             
-            <form id="createDebateForm" onsubmit="createDebate(event)">
+            <div style="margin-bottom: 30px;">
+                <h3>Join Using Code</h3>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="text" class="form-input" id="joinCode" placeholder="Enter 8-digit code" 
+                           style="flex: 1; text-transform: uppercase;" maxlength="8">
+                    <button onclick="joinByCode()" class="btn btn-primary">Join Debate</button>
+                </div>
+            </div>
+
+            <hr style="margin: 30px 0; border: none; border-top: 2px solid var(--border);">
+
+            <h3 style="margin-bottom: 20px;">Create Partner Debate</h3>
+            <form id="partnerForm" onsubmit="createPartnerDebate(event)">
                 <div class="form-group">
                     <label class="form-label">Debate Topic *</label>
-                    <input type="text" class="form-input" id="debateTopic" required minlength="10" 
-                           placeholder="e.g., Should AI be regulated by governments?">
-                    <div class="form-helper">Minimum 10 characters</div>
+                    <input type="text" class="form-input" id="partnerTopic" required minlength="10">
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Description (optional)</label>
-                    <textarea class="form-textarea" id="debateDescription" 
-                              placeholder="Provide context or background for this debate..."></textarea>
+                    <textarea class="form-textarea" id="partnerDescription"></textarea>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Category *</label>
-                    <select class="form-select" id="debateCategory" required>
+                    <select class="form-select" id="partnerCategory" required>
                         <option value="Politics">Politics</option>
                         <option value="Technology">Technology</option>
                         <option value="Science">Science</option>
                         <option value="Social">Social Issues</option>
-                        <option value="Economics">Economics</option>
-                        <option value="Environment">Environment</option>
-                        <option value="Education">Education</option>
                         <option value="General">General</option>
                     </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Argument FOR *</label>
-                    <textarea class="form-textarea" id="argumentFor" required 
-                              oninput="updateWordCount('argumentFor', 'wordCountFor')"
-                              placeholder="Present the strongest case FOR this position..."></textarea>
-                    <div id="wordCountFor" class="word-count">0 / 500 words</div>
-                    <div class="form-helper">50-500 words required</div>
+                    <label class="form-label">Your Position *</label>
+                    <select class="form-select" id="partnerPosition" required>
+                        <option value="for">FOR (Supporting)</option>
+                        <option value="against">AGAINST (Opposing)</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Argument AGAINST *</label>
-                    <textarea class="form-textarea" id="argumentAgainst" required
-                              oninput="updateWordCount('argumentAgainst', 'wordCountAgainst')"
-                              placeholder="Present the strongest case AGAINST this position..."></textarea>
-                    <div id="wordCountAgainst" class="word-count">0 / 500 words</div>
+                    <label class="form-label">Your Argument * (Hidden until both ready)</label>
+                    <textarea class="form-textarea" id="partnerArgument" required
+                              oninput="updateWordCount('partnerArgument', 'partnerWordCount')"></textarea>
+                    <div id="partnerWordCount" class="word-count">0 / 500 words</div>
                     <div class="form-helper">50-500 words required</div>
                 </div>
 
-                <button type="submit" class="btn btn-primary">Create Debate</button>
+                <button type="submit" class="btn btn-primary">Create & Get Share Code</button>
             </form>
         </div>
 
-        <!-- Challenges Section -->
-        <div id="challengesSection" class="section">
-            <h2 style="margin-bottom: 20px;">Open Challenges - Pick Your Fight!</h2>
+        <!-- Pick-a-Fight Section -->
+        <div id="pickfightSection" class="section">
+            <h2 style="margin-bottom: 20px;">🔥 Pick-a-Fight - Public Challenges</h2>
+            <div id="pickfightAlert"></div>
+
+            <button onclick="toggleCreateChallenge()" class="btn btn-primary" style="margin-bottom: 20px;">
+                ✍️ Post New Challenge
+            </button>
+
+            <div id="createChallengeForm" style="display: none; margin-bottom: 30px; padding: 20px; background: var(--light); border-radius: 12px;">
+                <h3>Post Your Challenge</h3>
+                <form onsubmit="createChallenge(event)">
+                    <div class="form-group">
+                        <label class="form-label">Challenge Topic *</label>
+                        <input type="text" class="form-input" id="challengeTopic" required minlength="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description (optional)</label>
+                        <textarea class="form-textarea" id="challengeDescription"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Category *</label>
+                        <select class="form-select" id="challengeCategory" required>
+                            <option value="Politics">Politics</option>
+                            <option value="Technology">Technology</option>
+                            <option value="Science">Science</option>
+                            <option value="Social">Social Issues</option>
+                            <option value="General">General</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Your Position *</label>
+                        <select class="form-select" id="challengePosition" required>
+                            <option value="for">FOR (Supporting)</option>
+                            <option value="against">AGAINST (Opposing)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Your Argument * (Hidden until accepted)</label>
+                        <textarea class="form-textarea" id="challengeArgument" required
+                                  oninput="updateWordCount('challengeArgument', 'challengeWordCount')"></textarea>
+                        <div id="challengeWordCount" class="word-count">0 / 500 words</div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Post Challenge</button>
+                    <button type="button" onclick="toggleCreateChallenge()" class="btn" style="background: var(--light);">Cancel</button>
+                </form>
+            </div>
+
+            <h3>Open Challenges</h3>
             <div id="challengesList"></div>
+        </div>
+
+        <!-- My Debates Section -->
+        <div id="myDebatesSection" class="section">
+            <h2 style="margin-bottom: 20px;">👤 My Debates</h2>
+            <div id="myDebatesList"></div>
         </div>
     </div>
 
     <!-- Auth Modal -->
     <div id="authModal" class="auth-modal">
         <div class="auth-modal-content">
-            <h2 id="authTitle">Login to Vote</h2>
+            <h2 id="authTitle">Login Required</h2>
             <div id="authAlert"></div>
             
             <div id="emailStep">
@@ -647,20 +788,17 @@
             <div id="codeStep" style="display: none;">
                 <div class="form-group">
                     <label class="form-label">Verification Code</label>
-                    <input type="text" class="form-input" id="authCode" maxlength="6" 
-                           placeholder="Enter 6-digit code">
+                    <input type="text" class="form-input" id="authCode" maxlength="6">
                 </div>
                 <button onclick="verifyCode()" class="btn btn-primary" style="width: 100%;">
                     Verify & Login
                 </button>
-                <button onclick="backToEmail()" class="btn" 
-                        style="width: 100%; margin-top: 10px; background: var(--light);">
+                <button onclick="backToEmail()" class="btn" style="width: 100%; margin-top: 10px; background: var(--light);">
                     Back
                 </button>
             </div>
 
-            <button onclick="closeAuthModal()" class="btn" 
-                    style="width: 100%; margin-top: 15px; background: var(--light);">
+            <button onclick="closeAuthModal()" class="btn" style="width: 100%; margin-top: 15px; background: var(--light);">
                 Cancel
             </button>
         </div>
@@ -670,49 +808,59 @@
         // Global state
         let currentUser = null;
         let sessionToken = null;
-        let debates = [];
+        let liveDebates = [];
         let challenges = [];
-        let pendingVote = null;
+        let myDebates = [];
 
-        // API base URL
         const API_BASE = '/api/debate';
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             checkSession();
             loadStats();
-            loadDebates();
-            loadChallenges();
+            loadLiveDebates();
+            
+            // Check for code in URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            if (code) {
+                document.getElementById('joinCode').value = code;
+                switchTab('partner');
+                setTimeout(() => joinByCode(), 500);
+            }
             
             // Refresh every 30 seconds
             setInterval(() => {
                 loadStats();
-                if (document.getElementById('debatesSection').classList.contains('active')) {
-                    loadDebates();
-                }
-                if (document.getElementById('challengesSection').classList.contains('active')) {
-                    loadChallenges();
-                }
+                const activeTab = document.querySelector('.section.active').id;
+                if (activeTab === 'liveSection') loadLiveDebates();
+                if (activeTab === 'pickfightSection') loadChallenges();
+                if (activeTab === 'myDebatesSection') loadMyDebates();
             }, 30000);
         });
 
         // Tab switching
         function switchTab(tab) {
-            // Update nav tabs
             document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
 
-            // Update sections
             document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
             
-            if (tab === 'debates') {
-                document.getElementById('debatesSection').classList.add('active');
-                loadDebates();
-            } else if (tab === 'create') {
-                document.getElementById('createSection').classList.add('active');
-            } else if (tab === 'challenges') {
-                document.getElementById('challengesSection').classList.add('active');
+            if (tab === 'live') {
+                document.getElementById('liveSection').classList.add('active');
+                loadLiveDebates();
+            } else if (tab === 'partner') {
+                document.getElementById('partnerSection').classList.add('active');
+            } else if (tab === 'pickfight') {
+                document.getElementById('pickfightSection').classList.add('active');
                 loadChallenges();
+            } else if (tab === 'my-debates') {
+                if (!sessionToken) {
+                    openAuthModal('Please login to view your debates');
+                    return;
+                }
+                document.getElementById('myDebatesSection').classList.add('active');
+                loadMyDebates();
             }
         }
 
@@ -721,9 +869,7 @@
             sessionToken = localStorage.getItem('sessionToken');
             if (sessionToken) {
                 fetch(`${API_BASE}/auth/me`, {
-                    headers: {
-                        'X-Session-Token': sessionToken
-                    }
+                    headers: { 'X-Session-Token': sessionToken }
                 })
                 .then(r => r.json())
                 .then(data => {
@@ -751,16 +897,13 @@
             if (sessionToken) {
                 fetch(`${API_BASE}/auth/logout`, {
                     method: 'POST',
-                    headers: {
-                        'X-Session-Token': sessionToken
-                    }
+                    headers: { 'X-Session-Token': sessionToken }
                 });
             }
             localStorage.removeItem('sessionToken');
             sessionToken = null;
             currentUser = null;
             updateUserUI();
-            showAlert('authAlert', 'Logged out successfully', 'success');
         }
 
         // Load stats
@@ -769,43 +912,50 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        document.getElementById('statDebates').textContent = data.stats.total_debates;
+                        document.getElementById('statLive').textContent = data.stats.total_live;
+                        document.getElementById('statWaiting').textContent = data.stats.total_waiting;
                         document.getElementById('statVotes').textContent = data.stats.total_votes;
-                        document.getElementById('statUsers').textContent = data.stats.total_users;
                         document.getElementById('statChallenges').textContent = data.stats.open_challenges;
                     }
                 });
         }
 
-        // Load debates
-        function loadDebates() {
-            const container = document.getElementById('debatesList');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading debates...</p></div>';
+        // Load live debates
+        function loadLiveDebates() {
+            const container = document.getElementById('liveList');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading...</p></div>';
 
-            fetch(`${API_BASE}/debates`)
+            fetch(`${API_BASE}/debates/live`)
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
-                        debates = data.debates;
-                        if (debates.length === 0) {
+                        liveDebates = data.debates;
+                        if (liveDebates.length === 0) {
                             container.innerHTML = `
                                 <div class="empty-state">
                                     <div class="empty-state-icon">🗣️</div>
-                                    <h3>No debates yet</h3>
-                                    <p>Be the first to create one!</p>
+                                    <h3>No live debates yet</h3>
+                                    <p>Create one or wait for debates to go live!</p>
                                 </div>
                             `;
                         } else {
-                            container.innerHTML = debates.map(debate => renderDebateCard(debate)).join('');
+                            container.innerHTML = liveDebates.map(renderLiveDebate).join('');
+                            // Start timers
+                            liveDebates.forEach(d => {
+                                if (d.time_remaining > 0) {
+                                    startTimer(d.id, d.time_remaining);
+                                }
+                            });
                         }
                     }
                 });
         }
 
-        // Render debate card
-        function renderDebateCard(debate) {
-            const argFor = debate.arguments.find(a => a.position === 'for');
-            const argAgainst = debate.arguments.find(a => a.position === 'against');
+        // Render live debate
+        function renderLiveDebate(debate) {
+            const args = debate.arguments || [];
+            const argFor = args.find(a => a.position === 'for');
+            const argAgainst = args.find(a => a.position === 'against');
             
             const totalVotes = debate.total_votes || 0;
             const forVotes = argFor ? argFor.vote_count : 0;
@@ -818,10 +968,12 @@
                 <div class="debate-card">
                     <div class="debate-header">
                         <div class="debate-topic">${escapeHtml(debate.topic)}</div>
-                        <div class="debate-category">${escapeHtml(debate.category)}</div>
+                        <span class="status-badge status-live">🔴 LIVE</span>
                     </div>
                     
-                    ${debate.description ? `<p style="color: var(--text-light); margin-bottom: 15px;">${escapeHtml(debate.description)}</p>` : ''}
+                    <div class="timer" id="timer-${debate.id}">
+                        ⏰ Time Remaining: Calculating...
+                    </div>
                     
                     <div class="battle-meter">
                         <div class="battle-meter-bar">
@@ -839,38 +991,61 @@
                     </div>
 
                     <div class="arguments-grid">
-                        ${argFor ? renderArgumentCard(argFor, debate.id) : ''}
-                        ${argAgainst ? renderArgumentCard(argAgainst, debate.id) : ''}
+                        ${argFor ? renderArgument(argFor, debate.id) : ''}
+                        ${argAgainst ? renderArgument(argAgainst, debate.id) : ''}
                     </div>
                 </div>
             `;
         }
 
-        // Render argument card
-        function renderArgumentCard(argument, debateId) {
-            const isFor = argument.position === 'for';
+        // Render argument
+        function renderArgument(arg, debateId) {
+            const isFor = arg.position === 'for';
             const btnClass = isFor ? 'vote-btn-for' : 'vote-btn-against';
             
             return `
-                <div class="argument-card argument-${argument.position}">
+                <div class="argument-card argument-${arg.position}">
                     <div class="argument-position">
                         ${isFor ? '👍 FOR' : '👎 AGAINST'}
                     </div>
-                    <div class="argument-text">${escapeHtml(argument.text_content.substring(0, 200))}${argument.text_content.length > 200 ? '...' : ''}</div>
-                    <div class="argument-author">
-                        By ${escapeHtml(argument.author.display_name)} • ${argument.word_count} words
+                    <div class="argument-text">${escapeHtml(arg.text_content.substring(0, 200))}${arg.text_content.length > 200 ? '...' : ''}</div>
+                    <div style="color: var(--text-light); font-size: 0.85rem; margin-bottom: 10px;">
+                        By ${escapeHtml(arg.author.display_name)} • ${arg.word_count} words
                     </div>
-                    <button class="vote-btn ${btnClass}" onclick="vote(${debateId}, ${argument.id})">
+                    <button class="vote-btn ${btnClass}" onclick="vote(${debateId}, ${arg.id})">
                         Vote ${isFor ? 'FOR' : 'AGAINST'}
                     </button>
                 </div>
             `;
         }
 
-        // Voting
+        // Timer
+        function startTimer(debateId, seconds) {
+            const timerEl = document.getElementById(`timer-${debateId}`);
+            if (!timerEl) return;
+
+            function update() {
+                if (seconds <= 0) {
+                    timerEl.textContent = '⏰ Voting Ended - Results Final';
+                    timerEl.style.background = 'var(--text-light)';
+                    return;
+                }
+
+                const hours = Math.floor(seconds / 3600);
+                const mins = Math.floor((seconds % 3600) / 60);
+                const secs = seconds % 60;
+
+                timerEl.textContent = `⏰ Time Remaining: ${hours}h ${mins}m ${secs}s`;
+                seconds--;
+                setTimeout(update, 1000);
+            }
+
+            update();
+        }
+
+        // Vote
         function vote(debateId, argumentId) {
             if (!sessionToken) {
-                pendingVote = { debateId, argumentId };
                 openAuthModal('Please login to vote');
                 return;
             }
@@ -886,93 +1061,186 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('debatesSection', 'Vote recorded!', 'success');
-                    loadDebates();
-                    loadStats();
+                    showAlert('liveSection', 'Vote recorded!', 'success');
+                    loadLiveDebates();
                 } else {
-                    showAlert('debatesSection', data.error || 'Failed to vote', 'error');
+                    showAlert('liveSection', data.error, 'error');
                 }
-            })
-            .catch(err => {
-                showAlert('debatesSection', 'Failed to vote', 'error');
             });
         }
 
-        // Create debate
-        function createDebate(event) {
-            event.preventDefault();
+        // Partner Mode - Create
+        function createPartnerDebate(e) {
+            e.preventDefault();
 
             if (!sessionToken) {
-                openAuthModal('Please login to create a debate');
+                openAuthModal('Please login to create debates');
                 return;
             }
 
-            const topic = document.getElementById('debateTopic').value;
-            const description = document.getElementById('debateDescription').value;
-            const category = document.getElementById('debateCategory').value;
-            const argumentFor = document.getElementById('argumentFor').value;
-            const argumentAgainst = document.getElementById('argumentAgainst').value;
+            const topic = document.getElementById('partnerTopic').value;
+            const description = document.getElementById('partnerDescription').value;
+            const category = document.getElementById('partnerCategory').value;
+            const position = document.getElementById('partnerPosition').value;
+            const argument = document.getElementById('partnerArgument').value;
 
-            // Validate word counts
-            const forWords = argumentFor.trim().split(/\s+/).length;
-            const againstWords = argumentAgainst.trim().split(/\s+/).length;
-
-            if (forWords < 50 || forWords > 500) {
-                showAlert('createAlert', 'FOR argument must be 50-500 words', 'error');
-                return;
-            }
-
-            if (againstWords < 50 || againstWords > 500) {
-                showAlert('createAlert', 'AGAINST argument must be 50-500 words', 'error');
-                return;
-            }
-
-            const btn = event.target.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            btn.textContent = 'Creating...';
-
-            fetch(`${API_BASE}/debates`, {
+            fetch(`${API_BASE}/debates/partner`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-Session-Token': sessionToken
                 },
-                body: JSON.stringify({
-                    topic,
-                    description,
-                    category,
-                    argument_for: argumentFor,
-                    argument_against: argumentAgainst
-                })
+                body: JSON.stringify({ topic, description, category, position, argument })
             })
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('createAlert', 'Debate created successfully!', 'success');
-                    document.getElementById('createDebateForm').reset();
-                    updateWordCount('argumentFor', 'wordCountFor');
-                    updateWordCount('argumentAgainst', 'wordCountAgainst');
-                    loadStats();
-                    setTimeout(() => {
-                        switchTab('debates');
-                    }, 1500);
+                    showShareCode(data.share_code, data.share_url);
+                    document.getElementById('partnerForm').reset();
+                    updateWordCount('partnerArgument', 'partnerWordCount');
                 } else {
-                    showAlert('createAlert', data.error || 'Failed to create debate', 'error');
+                    showAlert('partnerAlert', data.error, 'error');
                 }
-            })
-            .catch(err => {
-                showAlert('createAlert', 'Failed to create debate', 'error');
-            })
-            .finally(() => {
-                btn.disabled = false;
-                btn.textContent = 'Create Debate';
             });
         }
 
-        // Load challenges
+        function showShareCode(code, url) {
+            const fullUrl = window.location.origin + url;
+            const html = `
+                <div class="share-code-box">
+                    <h3>✅ Debate Created!</h3>
+                    <p>Share this code with your partner:</p>
+                    <div class="share-code">${code}</div>
+                    <button onclick="copyToClipboard('${code}')" class="copy-btn">📋 Copy Code</button>
+                    <button onclick="copyToClipboard('${fullUrl}')" class="copy-btn">🔗 Copy Link</button>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: var(--text-light);">
+                        Once your partner joins, both click "Ready" to reveal arguments!
+                    </p>
+                </div>
+            `;
+            showAlert('partnerAlert', html, 'info');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Copied to clipboard!');
+            });
+        }
+
+        // Partner Mode - Join
+        function joinByCode() {
+            const code = document.getElementById('joinCode').value.trim().toUpperCase();
+            
+            if (!code || code.length !== 8) {
+                showAlert('partnerAlert', 'Please enter a valid 8-digit code', 'error');
+                return;
+            }
+
+            fetch(`${API_BASE}/debates/code/${code}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showJoinForm(data.debate, data.your_position);
+                    } else {
+                        showAlert('partnerAlert', data.error, 'error');
+                    }
+                });
+        }
+
+        function showJoinForm(debate, position) {
+            const opposite = position === 'for' ? 'FOR' : 'AGAINST';
+            const html = `
+                <div style="background: var(--light); padding: 20px; border-radius: 12px; margin: 20px 0;">
+                    <h3>Join Debate</h3>
+                    <p><strong>Topic:</strong> ${escapeHtml(debate.topic)}</p>
+                    <p><strong>Your Position:</strong> ${opposite}</p>
+                    <form onsubmit="submitJoin(event, ${debate.id})">
+                        <div class="form-group">
+                            <label class="form-label">Your Argument (Hidden until both ready)</label>
+                            <textarea class="form-textarea" id="joinArgument" required
+                                      oninput="updateWordCount('joinArgument', 'joinWordCount')"></textarea>
+                            <div id="joinWordCount" class="word-count">0 / 500 words</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Join Debate</button>
+                    </form>
+                </div>
+            `;
+            document.getElementById('partnerAlert').innerHTML = html;
+        }
+
+        function submitJoin(e, debateId) {
+            e.preventDefault();
+
+            if (!sessionToken) {
+                openAuthModal('Please login to join debates');
+                return;
+            }
+
+            const argument = document.getElementById('joinArgument').value;
+
+            fetch(`${API_BASE}/debates/${debateId}/join`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken
+                },
+                body: JSON.stringify({ argument })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('partnerAlert', 'Joined! Both click "Ready" to reveal arguments.', 'success');
+                    document.getElementById('joinCode').value = '';
+                    loadMyDebates();
+                } else {
+                    showAlert('partnerAlert', data.error, 'error');
+                }
+            });
+        }
+
+        // Pick-a-Fight
+        function toggleCreateChallenge() {
+            const form = document.getElementById('createChallengeForm');
+            form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function createChallenge(e) {
+            e.preventDefault();
+
+            if (!sessionToken) {
+                openAuthModal('Please login to create challenges');
+                return;
+            }
+
+            const topic = document.getElementById('challengeTopic').value;
+            const description = document.getElementById('challengeDescription').value;
+            const category = document.getElementById('challengeCategory').value;
+            const position = document.getElementById('challengePosition').value;
+            const argument = document.getElementById('challengeArgument').value;
+
+            fetch(`${API_BASE}/challenges`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken
+                },
+                body: JSON.stringify({ topic, description, category, position, argument })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('pickfightAlert', 'Challenge posted!', 'success');
+                    toggleCreateChallenge();
+                    loadChallenges();
+                } else {
+                    showAlert('pickfightAlert', data.error, 'error');
+                }
+            });
+        }
+
         function loadChallenges() {
             const container = document.getElementById('challengesList');
-            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading challenges...</p></div>';
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
 
             fetch(`${API_BASE}/challenges`)
                 .then(r => r.json())
@@ -980,78 +1248,165 @@
                     if (data.success) {
                         challenges = data.challenges;
                         if (challenges.length === 0) {
-                            container.innerHTML = `
-                                <div class="empty-state">
-                                    <div class="empty-state-icon">🔥</div>
-                                    <h3>No open challenges</h3>
-                                    <p>Create your own challenge and wait for an opponent!</p>
-                                </div>
-                            `;
+                            container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔥</div><h3>No open challenges</h3></div>';
                         } else {
-                            container.innerHTML = challenges.map(renderChallengeCard).join('');
+                            container.innerHTML = challenges.map(renderChallenge).join('');
                         }
                     }
                 });
         }
 
-        // Render challenge card
-        function renderChallengeCard(challenge) {
+        function renderChallenge(challenge) {
             const isFor = challenge.challenger_position === 'for';
             return `
                 <div class="debate-card challenge-card">
                     <div class="debate-header">
                         <div class="debate-topic">${escapeHtml(challenge.topic)}</div>
-                        <div class="debate-category">${escapeHtml(challenge.category)}</div>
+                        <span class="status-badge status-waiting">🔥 Open</span>
                     </div>
-                    
-                    ${challenge.description ? `<p style="color: var(--text-light); margin-bottom: 15px;">${escapeHtml(challenge.description)}</p>` : ''}
-                    
-                    <div style="background: white; padding: 20px; border-radius: 12px; margin: 20px 0;">
-                        <div style="font-weight: bold; color: ${isFor ? 'var(--secondary)' : 'var(--danger)'}; margin-bottom: 10px;">
-                            ${isFor ? '👍 Challenger argues FOR' : '👎 Challenger argues AGAINST'}
-                        </div>
-                        <div style="color: var(--text); line-height: 1.6;">
-                            ${escapeHtml(challenge.challenger_argument.substring(0, 300))}${challenge.challenger_argument.length > 300 ? '...' : ''}
-                        </div>
-                        <div style="color: var(--text-light); font-size: 0.85rem; margin-top: 10px;">
-                            By ${escapeHtml(challenge.challenger.display_name)}
-                        </div>
-                    </div>
-
-                    <button class="btn btn-primary" onclick="acceptChallenge(${challenge.id})">
-                        🔥 Accept Challenge & Argue ${isFor ? 'AGAINST' : 'FOR'}
+                    ${challenge.description ? `<p style="margin: 10px 0;">${escapeHtml(challenge.description)}</p>` : ''}
+                    <p><strong>Challenger argues:</strong> ${isFor ? '👍 FOR' : '👎 AGAINST'}</p>
+                    <p style="color: var(--text-light); margin: 10px 0;">By ${escapeHtml(challenge.challenger.display_name)}</p>
+                    <button onclick="acceptChallenge(${challenge.id})" class="btn btn-danger">
+                        Accept & Argue ${isFor ? 'AGAINST' : 'FOR'}
                     </button>
                 </div>
             `;
         }
 
-        // Accept challenge (placeholder - would open a modal to enter counter-argument)
         function acceptChallenge(challengeId) {
-            alert('Challenge acceptance coming soon! This would open a form to enter your counter-argument.');
+            if (!sessionToken) {
+                openAuthModal('Please login to accept challenges');
+                return;
+            }
+
+            const argument = prompt('Enter your counter-argument (50-500 words):');
+            if (!argument || argument.length < 50) {
+                alert('Argument must be at least 50 characters');
+                return;
+            }
+
+            fetch(`${API_BASE}/challenges/${challengeId}/accept`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-Token': sessionToken
+                },
+                body: JSON.stringify({ argument })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Challenge accepted! Both click "Ready" to reveal.');
+                    loadChallenges();
+                    loadMyDebates();
+                } else {
+                    alert(data.error);
+                }
+            });
         }
 
-        // Authentication functions
+        // My Debates
+        function loadMyDebates() {
+            const container = document.getElementById('myDebatesList');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            fetch(`${API_BASE}/debates/live`, {
+                headers: { 'X-Session-Token': sessionToken }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const mine = data.debates.filter(d => 
+                        d.partner_a && d.partner_a.id === currentUser.id || 
+                        d.partner_b && d.partner_b.id === currentUser.id
+                    );
+                    
+                    if (mine.length === 0) {
+                        container.innerHTML = '<div class="empty-state"><p>No debates yet</p></div>';
+                    } else {
+                        container.innerHTML = mine.map(d => renderMyDebate(d)).join('');
+                    }
+                }
+            });
+        }
+
+        function renderMyDebate(debate) {
+            const isPartnerA = debate.partner_a && debate.partner_a.id === currentUser.id;
+            const userReady = isPartnerA ? debate.partner_a_ready : debate.partner_b_ready;
+            const partnerReady = isPartnerA ? debate.partner_b_ready : debate.partner_a_ready;
+
+            let actionBtn = '';
+            if (debate.status === 'waiting_opponent') {
+                actionBtn = `<p>⏳ Waiting for partner to join...</p>`;
+            } else if (debate.status === 'both_ready' && !userReady) {
+                actionBtn = `<button onclick="markReady(${debate.id})" class="btn btn-secondary">✅ Click Ready</button>`;
+            } else if (debate.status === 'both_ready') {
+                actionBtn = `<p>⏳ Waiting for partner to click Ready...</p>`;
+            } else if (debate.status === 'closed' && !debate.partner_a_handshake && !debate.partner_b_handshake) {
+                const userHandshake = isPartnerA ? debate.partner_a_handshake : debate.partner_b_handshake;
+                if (!userHandshake) {
+                    actionBtn = `<button onclick="giveHandshake(${debate.id})" class="btn btn-primary">🤝 Give Handshake</button>`;
+                }
+            }
+
+            return `
+                <div class="debate-card">
+                    <div class="debate-header">
+                        <div class="debate-topic">${escapeHtml(debate.topic)}</div>
+                        <span class="status-badge status-${debate.status}">${debate.status.toUpperCase()}</span>
+                    </div>
+                    ${actionBtn}
+                </div>
+            `;
+        }
+
+        function markReady(debateId) {
+            fetch(`${API_BASE}/debates/${debateId}/ready`, {
+                method: 'POST',
+                headers: { 'X-Session-Token': sessionToken }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    loadMyDebates();
+                    if (data.both_ready) loadLiveDebates();
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+
+        function giveHandshake(debateId) {
+            fetch(`${API_BASE}/debates/${debateId}/handshake`, {
+                method: 'POST',
+                headers: { 'X-Session-Token': sessionToken }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    loadMyDebates();
+                } else {
+                    alert(data.error);
+                }
+            });
+        }
+
+        // Auth
         function openAuthModal(title = 'Login') {
             document.getElementById('authTitle').textContent = title;
             document.getElementById('authModal').classList.add('show');
-            document.getElementById('emailStep').style.display = 'block';
-            document.getElementById('codeStep').style.display = 'none';
-            document.getElementById('authAlert').innerHTML = '';
         }
 
         function closeAuthModal() {
             document.getElementById('authModal').classList.remove('show');
-            pendingVote = null;
         }
 
         function requestCode() {
             const email = document.getElementById('authEmail').value;
             const displayName = document.getElementById('authDisplayName').value;
-
-            if (!email || !displayName) {
-                showAlert('authAlert', 'Please fill in all fields', 'error');
-                return;
-            }
 
             fetch(`${API_BASE}/auth/request-code`, {
                 method: 'POST',
@@ -1061,31 +1416,21 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showAlert('authAlert', 'Verification code sent to your email!', 'success');
+                    showAlert('authAlert', 'Code sent! Check email.', 'success');
                     document.getElementById('emailStep').style.display = 'none';
                     document.getElementById('codeStep').style.display = 'block';
-                    
-                    // DEV ONLY: Show code in alert
                     if (data.code) {
-                        showAlert('authAlert', `Development mode - Your code is: ${data.code}`, 'info');
+                        showAlert('authAlert', `DEV: ${data.code}`, 'info');
                     }
                 } else {
-                    showAlert('authAlert', data.error || 'Failed to send code', 'error');
+                    showAlert('authAlert', data.error, 'error');
                 }
-            })
-            .catch(err => {
-                showAlert('authAlert', 'Failed to send code', 'error');
             });
         }
 
         function verifyCode() {
             const email = document.getElementById('authEmail').value;
             const code = document.getElementById('authCode').value;
-
-            if (!code) {
-                showAlert('authAlert', 'Please enter the verification code', 'error');
-                return;
-            }
 
             fetch(`${API_BASE}/auth/verify-code`, {
                 method: 'POST',
@@ -1100,19 +1445,9 @@
                     localStorage.setItem('sessionToken', sessionToken);
                     updateUserUI();
                     closeAuthModal();
-                    showAlert('debatesSection', 'Logged in successfully!', 'success');
-                    
-                    // Execute pending vote if any
-                    if (pendingVote) {
-                        vote(pendingVote.debateId, pendingVote.argumentId);
-                        pendingVote = null;
-                    }
                 } else {
-                    showAlert('authAlert', data.error || 'Invalid code', 'error');
+                    showAlert('authAlert', data.error, 'error');
                 }
-            })
-            .catch(err => {
-                showAlert('authAlert', 'Verification failed', 'error');
             });
         }
 
@@ -1121,7 +1456,7 @@
             document.getElementById('codeStep').style.display = 'none';
         }
 
-        // Word count
+        // Helpers
         function updateWordCount(textareaId, countId) {
             const textarea = document.getElementById(textareaId);
             const countEl = document.getElementById(countId);
@@ -1140,26 +1475,20 @@
             }
         }
 
-        // Alert helper
         function showAlert(containerId, message, type) {
             const container = document.getElementById(containerId);
             if (container) {
                 const alertDiv = document.createElement('div');
                 alertDiv.className = `alert alert-${type}`;
-                alertDiv.textContent = message;
+                alertDiv.innerHTML = message;
                 
-                if (container.classList.contains('section')) {
-                    container.insertBefore(alertDiv, container.firstChild);
-                } else {
-                    container.innerHTML = '';
-                    container.appendChild(alertDiv);
-                }
+                container.innerHTML = '';
+                container.appendChild(alertDiv);
                 
                 setTimeout(() => alertDiv.remove(), 5000);
             }
         }
 
-        // HTML escape
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
