@@ -338,7 +338,7 @@ NON_JOURNALIST_NAMES = {
 
 # ============================================================================
 # ARTICLE EXTRACTOR CLASS - ENHANCED v8.5.1
-# (Complete implementation - unchanged from v9.0.0)
+# (Complete implementation from your original file - unchanged)
 # ============================================================================
 class ArticleExtractor:
     """
@@ -715,7 +715,7 @@ class ArticleExtractor:
 
 # ============================================================================
 # TRUTHLENS ANALYZER CLASS - ALL ORIGINAL METHODS PRESERVED
-# (Complete implementation - unchanged from v9.0.0)
+# (Complete implementation from your original file - unchanged)
 # ============================================================================
 class TruthLensAnalyzer:
     """Main analyzer with proper AI enhancement - ALL ORIGINAL METHODS PRESERVED"""
@@ -1238,7 +1238,6 @@ class TruthLensAnalyzer:
 
 # ============================================================================
 # AUTHOR ANALYZER CLASS - PRESERVED FROM v8.5.0
-# (Complete implementation - unchanged from v9.0.0)
 # ============================================================================
 class AuthorAnalyzer:
     """Rich author analysis with journalist database AND enhanced unknown author handling"""
@@ -1466,6 +1465,56 @@ def debate_arena():
 @app.route('/health')
 def health():
     return jsonify({
+        'status': 'healthy',
+        'version': '10.0.0',
+        'services': {
+            'openai': 'connected' if openai_client else 'not configured',
+            'author_analyzer': 'enhanced with author profile URL extraction',
+            'bias_detector': 'enhanced with outlet awareness',
+            'manipulation_detector': 'loaded' if manipulation_detector else 'using fallback',
+            'scraperapi': 'configured' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
+            'news_analyzer': 'active with data transformer',
+            'track_record_system': 'available' if author_analyzer else 'not available',
+            'debate_arena': 'active' if database_url else 'disabled',
+            'database': 'connected' if database_url else 'not configured',
+            'transcript_analyzer': 'active',
+            'live_streaming': 'enabled' if os.getenv('ASSEMBLYAI_API_KEY') else 'disabled',
+            'assemblyai': 'configured' if os.getenv('ASSEMBLYAI_API_KEY') else 'not configured'
+        },
+        'static_config': {
+            'static_folder': app.static_folder,
+            'static_url_path': app.static_url_path
+        },
+        'enhancements': {
+            'unknown_author': 'v8.3.0 - outlet-based credibility',
+            'bias_detection': 'v8.4.0 - multi-dimensional analysis',
+            'new_pages': 'v8.5.0 - features, pricing, about, contact',
+            'author_profile_urls': 'v8.5.1 - automatic extraction and scraping',
+            'debate_arena': 'v9.0.0 - Phase 1 text-based debates',
+            'live_streaming': 'v10.0.0 - YouTube Live analysis with AssemblyAI'
+        }
+    })
+
+@app.route('/debug/static-files')
+def debug_static_files():
+    import os
+    
+    static_folder = app.static_folder
+    js_folder = os.path.join(static_folder, 'js')
+    
+    files_info = {}
+    
+    if os.path.exists(js_folder):
+        js_files = os.listdir(js_folder)
+        for filename in js_files:
+            filepath = os.path.join(js_folder, filename)
+            files_info[filename] = {
+                'exists': os.path.exists(filepath),
+                'size': os.path.getsize(filepath) if os.path.exists(filepath) else 0,
+                'readable': os.access(filepath, os.R_OK) if os.path.exists(filepath) else False
+            }
+    
+    return jsonify({
         'static_folder': static_folder,
         'static_url_path': app.static_url_path,
         'js_folder_exists': os.path.exists(js_folder),
@@ -1600,15 +1649,20 @@ if __name__ == '__main__':
     logger.info(f"Database: {'✓ READY' if database_url else '✗ NOT CONFIGURED'}")
     logger.info(f"Debate Arena: {'✓ ENABLED' if database_url else '✗ DISABLED'}")
     logger.info(f"AssemblyAI: {'✓ READY' if os.getenv('ASSEMBLYAI_API_KEY') else '✗ NOT CONFIGURED'}")
+    logger.info(f"Live Streaming: {'✓ ENABLED' if os.getenv('ASSEMBLYAI_API_KEY') else '✗ DISABLED'}")
     logger.info("")
     logger.info("FEATURES:")
     logger.info("  ✓ News Analysis - 7 AI Services")
     logger.info("  ✓ Transcript Fact-Checking")
     
     if os.getenv('ASSEMBLYAI_API_KEY'):
-        logger.info("  ✓ Live Stream Analysis - YouTube Live ($0/month for 100 hours)")
+        logger.info("  ✓ Live Stream Analysis - YouTube Live with real-time transcription")
+        logger.info("    - Real-time audio transcription (AssemblyAI)")
+        logger.info("    - Automatic claim extraction")
+        logger.info("    - Live fact-checking")
+        logger.info("    - Server-Sent Events for updates")
     else:
-        logger.info("  ⚠️  Live Stream Analysis - Disabled (set ASSEMBLYAI_API_KEY to enable)")
+        logger.info("  ✗ Live Streaming - Disabled (set ASSEMBLYAI_API_KEY to enable)")
     
     if database_url:
         logger.info("  ✓ Debate Arena - Challenge Mode & Pick-a-Fight")
@@ -1619,19 +1673,7 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arena - Disabled (set DATABASE_URL to enable)")
     
     logger.info("")
-    logger.info("NEW IN v10.0.0:")
-    logger.info("  ✓ YouTube Live stream transcript analysis")
-    logger.info("  ✓ Real-time audio transcription (AssemblyAI)")
-    logger.info("  ✓ Server-Sent Events for live updates")
-    logger.info("  ✓ Automatic claim extraction from live streams")
-    logger.info("  ✓ Live fact-checking as speech happens")
-    logger.info("")
-    logger.info("FROM v9.0.0:")
-    logger.info("  ✓ Debate Arena backend (Phase 1)")
-    logger.info("  ✓ PostgreSQL database integration")
-    logger.info("  ✓ Email verification system")
-    logger.info("  ✓ Voting and challenge system")
-    logger.info("")
+    logger.info("VERSION HISTORY:")
     logger.info("FROM v8.5.1:")
     logger.info("  ✓ Author profile URL extraction")
     logger.info("FROM v8.5.0:")
@@ -1640,59 +1682,20 @@ if __name__ == '__main__':
     logger.info("  ✓ Enhanced bias detection with outlet awareness")
     logger.info("FROM v8.3.0:")
     logger.info("  ✓ Unknown author support with outlet-based credibility")
+    logger.info("FROM v9.0.0:")
+    logger.info("  ✓ Debate Arena backend (Phase 1)")
+    logger.info("  ✓ PostgreSQL database integration")
+    logger.info("")
+    logger.info("NEW IN v10.0.0:")
+    logger.info("  ✓ Live Stream transcript analysis")
+    logger.info("  ✓ YouTube Live support with yt-dlp")
+    logger.info("  ✓ Real-time transcription with AssemblyAI")
+    logger.info("  ✓ Live fact-checking as speech happens")
+    logger.info("  ✓ Server-Sent Events for frontend updates")
+    logger.info("  ✓ Cost: $0/month with AssemblyAI free tier (100 hours)")
     logger.info("=" * 80)
     
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # This file is not truncated
-        'status': 'healthy',
-        'version': '10.0.0',
-        'services': {
-            'openai': 'connected' if openai_client else 'not configured',
-            'author_analyzer': 'enhanced with author profile URL extraction',
-            'bias_detector': 'enhanced with outlet awareness',
-            'manipulation_detector': 'loaded' if manipulation_detector else 'using fallback',
-            'scraperapi': 'configured' if os.getenv('SCRAPERAPI_KEY') else 'not configured',
-            'news_analyzer': 'active with data transformer',
-            'track_record_system': 'available' if author_analyzer else 'not available',
-            'debate_arena': 'active' if database_url else 'disabled',
-            'database': 'connected' if database_url else 'not configured',
-            'transcript_analyzer': 'active',
-            'live_streaming': 'enabled' if os.getenv('ASSEMBLYAI_API_KEY') else 'disabled',
-            'assemblyai': 'configured' if os.getenv('ASSEMBLYAI_API_KEY') else 'not configured'
-        },
-        'static_config': {
-            'static_folder': app.static_folder,
-            'static_url_path': app.static_url_path
-        },
-        'enhancements': {
-            'unknown_author': 'v8.3.0 - outlet-based credibility',
-            'bias_detection': 'v8.4.0 - multi-dimensional analysis',
-            'new_pages': 'v8.5.0 - features, pricing, about, contact',
-            'author_profile_urls': 'v8.5.1 - automatic extraction and scraping',
-            'debate_arena': 'v9.0.0 - Phase 1 text-based debates',
-            'live_streaming': 'v10.0.0 - YouTube Live transcript analysis'
-        }
-    })
-
-@app.route('/debug/static-files')
-def debug_static_files():
-    import os
-    
-    static_folder = app.static_folder
-    js_folder = os.path.join(static_folder, 'js')
-    
-    files_info = {}
-    
-    if os.path.exists(js_folder):
-        js_files = os.listdir(js_folder)
-        for filename in js_files:
-            filepath = os.path.join(js_folder, filename)
-            files_info[filename] = {
-                'exists': os.path.exists(filepath),
-                'size': os.path.getsize(filepath) if os.path.exists(filepath) else 0,
-                'readable': os.access(filepath, os.R_OK) if os.path.exists(filepath) else False
-            }
-    
-    return jsonify({
