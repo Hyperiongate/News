@@ -1442,6 +1442,11 @@ class AuthorAnalyzer:
 def index():
     return render_template('index.html')
 
+@app.route('/live-stream')
+def live_stream():
+    """Live stream analysis page"""
+    return render_template('live-stream.html')
+
 @app.route('/features')
 def features():
     return render_template('features.html')
