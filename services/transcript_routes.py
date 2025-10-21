@@ -1,14 +1,17 @@
 """
 File: transcript_routes.py
-Last Updated: October 14, 2025
-Description: Flask routes for transcript fact-checking functionality
+Last Updated: October 21, 2025
+Description: Flask routes for transcript fact-checking AND live streaming
 Changes:
-- Created as new file for news repository
-- Removed all video URL processing capabilities
-- Supports only: text input, file upload, microphone transcription
-- Clean separation from news analysis routes
-- Uses threading for background processing
-- Job-based system for tracking analysis progress
+- ADDED: Live streaming routes for YouTube Live analysis
+- ADDED: Server-Sent Events endpoint for real-time updates
+- PRESERVED: All existing transcript functionality (DO NO HARM ✓)
+- NEW: /api/transcript/live/start - Start live stream analysis
+- NEW: /api/transcript/live/events/<stream_id> - SSE endpoint
+- NEW: /api/transcript/live/stop/<stream_id> - Stop stream
+
+This file is complete and ready to deploy.
+Last modified: October 21, 2025 - Added live streaming support
 """
 
 import os
@@ -17,14 +20,22 @@ import threading
 import traceback
 from datetime import datetime
 from typing import Dict, List, Optional
-from flask import Blueprint, render_template, request, jsonify, send_file
+from flask import Blueprint, render_template, request, jsonify, send_file, Response, stream_with_context
 from werkzeug.utils import secure_filename
 
-# Import services (these will need to be created)
+# Import services
 from services.claims import ClaimExtractor
 from services.comprehensive_factcheck import ComprehensiveFactChecker
 from services.transcript import TranscriptProcessor
 from services.export import ExportService
+
+# NEW: Import live stream analyzer
+try:
+    from services.live_stream_analyzer import LiveStreamAnalyzer
+    LIVE_STREAMING_AVAILABLE = True
+except ImportError:
+    LIVE_STREAMING_AVAILABLE = False
+    logging.warning("LiveStreamAnalyzer not available - live streaming disabled")
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +45,16 @@ transcript_bp = Blueprint('transcript', __name__)
 # In-memory job storage
 jobs = {}
 job_lock = threading.Lock()
+
+# NEW: Live stream analyzer instance
+live_stream_analyzer = None
+if LIVE_STREAMING_AVAILABLE:
+    try:
+        live_stream_analyzer = LiveStreamAnalyzer()
+        logger.info("✓ Live Stream Analyzer initialized")
+    except Exception as e:
+        logger.error(f"✗ Failed to initialize Live Stream Analyzer: {e}")
+        LIVE_STREAMING_AVAILABLE = False
 
 # Verdict categories for consistency
 VERDICT_CATEGORIES = {
@@ -325,7 +346,7 @@ def generate_summary(fact_checks: List[Dict], claims: List[Dict]) -> str:
 
 
 # ============================================================================
-# ROUTES
+# EXISTING TRANSCRIPT ROUTES (PRESERVED)
 # ============================================================================
 
 @transcript_bp.route('/transcript')
@@ -582,6 +603,172 @@ def generate_text_report(results: Dict) -> str:
     return "\n".join(report)
 
 
+# ============================================================================
+# NEW: LIVE STREAMING ROUTES
+# ============================================================================
+
+@transcript_bp.route('/api/transcript/live/validate', methods=['POST'])
+def validate_live_stream():
+    """Validate YouTube Live stream URL"""
+    if not LIVE_STREAMING_AVAILABLE or not live_stream_analyzer:
+        return jsonify({
+            'success': False,
+            'error': 'Live streaming not available',
+            'reason': 'AssemblyAI API key not configured'
+        }), 503
+    
+    try:
+        data = request.get_json()
+        youtube_url = data.get('url', '').strip()
+        
+        if not youtube_url:
+            return jsonify({'error': 'No URL provided'}), 400
+        
+        # Validate URL
+        validation = live_stream_analyzer.validate_youtube_url(youtube_url)
+        
+        if not validation['valid']:
+            return jsonify({
+                'success': False,
+                'error': validation.get('error', 'Invalid URL')
+            }), 400
+        
+        return jsonify({
+            'success': True,
+            'stream_info': {
+                'video_id': validation.get('video_id'),
+                'title': validation.get('title'),
+                'channel': validation.get('channel'),
+                'is_live': validation.get('is_live'),
+                'url': youtube_url
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Validation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@transcript_bp.route('/api/transcript/live/start', methods=['POST'])
+def start_live_stream():
+    """Start live stream analysis"""
+    if not LIVE_STREAMING_AVAILABLE or not live_stream_analyzer:
+        return jsonify({
+            'success': False,
+            'error': 'Live streaming not available',
+            'reason': 'AssemblyAI API key not configured'
+        }), 503
+    
+    try:
+        from flask import current_app
+        config = current_app.config
+        
+        data = request.get_json()
+        youtube_url = data.get('url', '').strip()
+        
+        if not youtube_url:
+            return jsonify({'error': 'No URL provided'}), 400
+        
+        # Generate stream ID
+        stream_id = datetime.now().strftime('%Y%m%d%H%M%S') + str(threading.get_ident())
+        
+        # Initialize services
+        claim_extractor = ClaimExtractor(config)
+        fact_checker = ComprehensiveFactChecker(config)
+        
+        # Start analysis
+        success = live_stream_analyzer.start_stream_analysis(
+            stream_id,
+            youtube_url,
+            claim_extractor,
+            fact_checker
+        )
+        
+        if not success:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to start stream analysis'
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'stream_id': stream_id,
+            'message': 'Live stream analysis started'
+        })
+        
+    except Exception as e:
+        logger.error(f"Start stream error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@transcript_bp.route('/api/transcript/live/events/<stream_id>')
+def stream_events(stream_id: str):
+    """Server-Sent Events endpoint for live updates"""
+    if not LIVE_STREAMING_AVAILABLE or not live_stream_analyzer:
+        return jsonify({'error': 'Live streaming not available'}), 503
+    
+    def generate():
+        try:
+            for event in live_stream_analyzer.stream_events(stream_id):
+                yield event
+        except Exception as e:
+            logger.error(f"SSE error: {e}")
+            yield f"data: {{'error': '{str(e)}'}}\n\n"
+    
+    return Response(
+        stream_with_context(generate()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no'
+        }
+    )
+
+
+@transcript_bp.route('/api/transcript/live/stop/<stream_id>', methods=['POST'])
+def stop_live_stream(stream_id: str):
+    """Stop live stream analysis"""
+    if not LIVE_STREAMING_AVAILABLE or not live_stream_analyzer:
+        return jsonify({'error': 'Live streaming not available'}), 503
+    
+    try:
+        live_stream_analyzer.stop_stream_analysis(stream_id)
+        
+        return jsonify({
+            'success': True,
+            'message': 'Stream analysis stopped'
+        })
+        
+    except Exception as e:
+        logger.error(f"Stop stream error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@transcript_bp.route('/api/transcript/live/status/<stream_id>')
+def get_stream_status(stream_id: str):
+    """Get current status of live stream"""
+    if not LIVE_STREAMING_AVAILABLE or not live_stream_analyzer:
+        return jsonify({'error': 'Live streaming not available'}), 503
+    
+    status = live_stream_analyzer.get_stream_status(stream_id)
+    
+    if not status:
+        return jsonify({'error': 'Stream not found'}), 404
+    
+    return jsonify({
+        'success': True,
+        'status': status.get('status'),
+        'transcript_chunks': len(status.get('transcript_chunks', [])),
+        'claims': len(status.get('claims', [])),
+        'fact_checks': len(status.get('fact_checks', [])),
+        'error': status.get('error')
+    })
+
+
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
+
 @transcript_bp.route('/api/transcript/health')
 def health_check():
     """Health check endpoint for transcript service"""
@@ -593,7 +780,13 @@ def health_check():
             'text_input': True,
             'file_upload': True,
             'microphone_transcription': True,
-            'video_analysis': False
+            'video_analysis': False,
+            'live_streaming': LIVE_STREAMING_AVAILABLE and os.getenv('ASSEMBLYAI_API_KEY') is not None
+        },
+        'live_streaming_details': {
+            'available': LIVE_STREAMING_AVAILABLE,
+            'api_key_configured': os.getenv('ASSEMBLYAI_API_KEY') is not None,
+            'analyzer_initialized': live_stream_analyzer is not None
         }
     })
 
@@ -610,3 +803,6 @@ def not_found(error):
 @transcript_bp.errorhandler(500)
 def server_error(error):
     return jsonify({'error': 'Internal server error'}), 500
+
+
+# This file is not truncated
