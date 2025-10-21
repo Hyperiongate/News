@@ -1442,11 +1442,6 @@ class AuthorAnalyzer:
 def index():
     return render_template('index.html')
 
-@app.route('/live-stream')
-def live_stream():
-    """Live stream analysis page"""
-    return render_template('live-stream.html')
-
 @app.route('/features')
 def features():
     return render_template('features.html')
@@ -1466,6 +1461,11 @@ def contact():
 @app.route('/debate-arena')
 def debate_arena():
     return render_template('debate-arena.html')
+
+@app.route('/live-stream')
+def live_stream():
+    """Live stream analysis page"""
+    return render_template('live-stream.html')
 
 @app.route('/health')
 def health():
