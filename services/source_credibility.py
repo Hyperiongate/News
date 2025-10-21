@@ -1,8 +1,16 @@
 """
 Enhanced Source Credibility Analyzer - COMPLETE VERSION  
 Date: October 16, 2025
-Last Updated: October 21, 2025
-Version: 12.0 - SMART OUTLET KNOWLEDGE WITH AI ENHANCEMENT
+Last Updated: October 21, 2025 - CRITICAL FIX
+Version: 12.1 - LOGGER INITIALIZATION FIX
+
+CHANGES FROM v12.0:
+✅ CRITICAL FIX: Moved logger initialization BEFORE import attempts
+✅ This prevents silent import failures
+✅ Import errors now properly logged with full details
+✅ ALL v12.0 FUNCTIONALITY PRESERVED (no other changes)
+
+ORIGINAL v12.0 FEATURES (ALL PRESERVED):
 
 CHANGES FROM v11.0:
 ✅ NOW USES outlet_knowledge.py for smart outlet data
@@ -42,16 +50,23 @@ from services.base_analyzer import BaseAnalyzer
 from services.ai_enhancement_mixin import AIEnhancementMixin
 
 
-# NEW: Import smart outlet knowledge
+# CRITICAL FIX v12.1: Initialize logger FIRST, before any imports that might fail
+logger = logging.getLogger(__name__)
+
+# NEW: Import smart outlet knowledge - NOW WITH WORKING LOGGER
 try:
     from outlet_knowledge import get_outlet_knowledge
     OUTLET_KNOWLEDGE_AVAILABLE = True
-    logger.info("Smart outlet knowledge service loaded")
-except ImportError:
+    logger.info("[SourceCred v12.1] ✓ Smart outlet knowledge service imported")
+except ImportError as e:
     OUTLET_KNOWLEDGE_AVAILABLE = False
-    logger.warning("outlet_knowledge not found - using legacy database only")
-
-logger = logging.getLogger(__name__)
+    logger.error(f"[SourceCred v12.1] ✗ outlet_knowledge import failed: {e}")
+    logger.error("[SourceCred v12.1] Make sure outlet_knowledge.py is in project root")
+except Exception as e:
+    OUTLET_KNOWLEDGE_AVAILABLE = False
+    logger.error(f"[SourceCred v12.1] ✗ outlet_knowledge error: {e}")
+    import traceback
+    logger.error(traceback.format_exc())
 
 # Optional imports with graceful degradation
 WHOIS_AVAILABLE = False
@@ -141,12 +156,17 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
         if OUTLET_KNOWLEDGE_AVAILABLE:
             try:
                 self.outlet_knowledge = get_outlet_knowledge()
-                logger.info("  - Outlet Knowledge service initialized")
+                logger.info("[SourceCred v12.1] ✓ Outlet Knowledge service initialized")
             except Exception as e:
-                logger.warning(f"Could not initialize outlet knowledge: {e}")
+                logger.error(f"[SourceCred v12.1] ✗ Could not initialize outlet knowledge: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+        else:
+            logger.warning("[SourceCred v12.1] ⚠ Outlet Knowledge not available - using legacy database only")
         
-        logger.info(f"[SourceCredibility v12.0] Initialized")
+        logger.info(f"[SourceCredibility v12.1] Initialized")
         logger.info(f"  - Outlet Knowledge available: {OUTLET_KNOWLEDGE_AVAILABLE}")
+        logger.info(f"  - Outlet Knowledge instance: {self.outlet_knowledge is not None}")
         logger.info(f"  - Legacy DB: {len(self.source_database)} outlets")
         logger.info(f"  - Third-party ratings: {sum(len(v) for v in self.third_party_ratings.values())}")
         logger.info(f"  - AI available: {self._is_ai_available()}")
@@ -165,14 +185,14 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 logger.warning(f"Could not extract domain from data: {list(data.keys())}")
                 return self.get_error_result("No valid domain or URL provided")
             
-            logger.info(f"[SourceCred v12.0] Analyzing: {domain}")
+            logger.info(f"[SourceCred v12.1] Analyzing: {domain}")
             
             # NEW: Get outlet information from smart knowledge service
             outlet_info = None
             if self.outlet_knowledge:
                 try:
                     outlet_info = self.outlet_knowledge.get_outlet_info(domain)
-                    logger.info(f"[SourceCred v12.0] ✓ Outlet info: {outlet_info['name']}")
+                    logger.info(f"[SourceCred v12.1] ✓ Outlet info: {outlet_info['name']}")
                 except Exception as e:
                     logger.warning(f"Outlet knowledge lookup failed: {e}")
             
@@ -339,7 +359,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 if ai_insights:
                     result['data']['ai_insights'] = ai_insights
             
-            logger.info(f"[SourceCred v11.0] Complete: {domain} -> Article: {article_score}/100, Outlet avg: {outlet_average}/100")
+            logger.info(f"[SourceCred v12.1] Complete: {domain} -> Article: {article_score}/100, Outlet avg: {outlet_average}/100")
             return result
             
         except Exception as e:
