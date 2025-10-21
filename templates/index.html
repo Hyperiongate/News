@@ -3,15 +3,18 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.5.1 - UPDATED HERO SECTION
-    Date: October 17, 2025
+    Version: 4.5.2 - FIXED TRUST SCORE TO 100%
+    Date: October 20, 2025
     
-    CHANGES FROM 4.5.0:
-    - UPDATED: Capability badge changed from "Reuters & AP" to "500+ News Sources"
-    - UPDATED: Subtitle now mentions Reuters, AP, NYT, BBC, and 500+ sources
-    - All v4.5.0 functionality preserved (DO NO HARM ✓)
+    CHANGES FROM 4.5.1:
+    - FIXED: Trust score weights now total 100% (was 90%)
+    - UPDATED: Source Credibility 25% → 30%
+    - ADDED: Manipulation Detector bar (10%)
+    - REMOVED: Content Quality from scoring (now 0%, informational only)
+    - All v4.5.1 functionality preserved (DO NO HARM ✓)
     
-    This file is not truncated - Part 1 of 2
+    This file is complete and ready to deploy.
+    Last modified: October 20, 2025 - Fixed trust score calculation
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,6 +49,7 @@
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             --gradient-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
             --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            --gradient-red: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
         /* Hero Section - More Subtle */
@@ -433,6 +437,11 @@
             background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
         }
 
+        /* NEW v4.5.2: Manipulation detector bar styling */
+        .contribution-manipulation {
+            background: var(--gradient-red) !important;
+        }
+
         .contribution-content {
             background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
         }
@@ -541,7 +550,7 @@
                 </p>
             </div>
 
-            <!-- Capabilities Showcase - UPDATED -->
+            <!-- Capabilities Showcase -->
             <div class="capabilities-showcase">
                 <div class="capability-badge">
                     <i class="fas fa-database"></i>
@@ -1046,7 +1055,7 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.5.1 - Updated Hero Section');
+            console.log('TruthLens v4.5.2 - FIXED Trust Score to 100%');
             
             const inputs = ['newsUrlInput', 'newsTextInput', 'transcriptTextInput'];
             inputs.forEach(id => {
@@ -1128,10 +1137,10 @@
                                 <span class="contribution-label">Source Credibility</span>
                                 <div class="contribution-bar-container">
                                     <div class="contribution-bar contribution-source" style="width: 0%" id="contribSource">
-                                        <span class="contribution-score">0/25</span>
+                                        <span class="contribution-score">0/30</span>
                                     </div>
                                 </div>
-                                <span class="contribution-weight">25%</span>
+                                <span class="contribution-weight">30%</span>
                             </div>
 
                             <div class="contribution-item">
@@ -1175,13 +1184,13 @@
                             </div>
 
                             <div class="contribution-item">
-                                <span class="contribution-label">Content Quality</span>
+                                <span class="contribution-label">Manipulation Detection</span>
                                 <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-content" style="width: 0%" id="contribContent">
-                                        <span class="contribution-score">0/5</span>
+                                    <div class="contribution-bar contribution-manipulation" style="width: 0%" id="contribManipulation">
+                                        <span class="contribution-score">0/10</span>
                                     </div>
                                 </div>
-                                <span class="contribution-weight">5%</span>
+                                <span class="contribution-weight">10%</span>
                             </div>
                         </div>
                     </div>
@@ -1212,22 +1221,33 @@
             `;
         }
 
+        // FIXED v4.5.2: Updated weights to match backend (now 100% total)
         function updateServiceContributions(detailed) {
             const weights = {
-                source_credibility: 0.25,
-                author_analyzer: 0.15,
-                bias_detector: 0.20,
-                fact_checker: 0.15,
-                transparency_analyzer: 0.10,
-                content_analyzer: 0.05
+                'source_credibility': 0.30,      // Was 0.25, now 30%
+                'bias_detector': 0.20,           // Unchanged, 20%
+                'author_analyzer': 0.15,         // Unchanged, 15%
+                'fact_checker': 0.15,            // Unchanged, 15%
+                'transparency_analyzer': 0.10,   // Unchanged, 10%
+                'manipulation_detector': 0.10,   // NEW! Was missing, now 10%
+                'content_analyzer': 0.00         // Was 0.05, now 0% (informational only)
             };
             
+            console.log('[TrustScore v12.7] Updating contribution bars with 100% weights');
+            
             Object.keys(weights).forEach(serviceKey => {
+                // Skip content_analyzer since it's 0%
+                if (serviceKey === 'content_analyzer') {
+                    console.log('[TrustScore] Skipping content_analyzer (0% weight)');
+                    return;
+                }
+                
                 if (detailed[serviceKey]) {
                     const serviceData = detailed[serviceKey];
                     
                     let score = 0;
                     
+                    // Extract score based on service type
                     if (serviceKey === 'source_credibility') {
                         score = serviceData.credibility_score || serviceData.score || 0;
                     } else if (serviceKey === 'bias_detector') {
@@ -1238,26 +1258,31 @@
                         score = serviceData.credibility_score || serviceData.credibility || serviceData.score || 0;
                     } else if (serviceKey === 'transparency_analyzer') {
                         score = serviceData.transparency_score || serviceData.score || 0;
-                    } else if (serviceKey === 'content_analyzer') {
-                        score = serviceData.quality_score || serviceData.score || 0;
+                    } else if (serviceKey === 'manipulation_detector') {
+                        score = serviceData.integrity_score || serviceData.score || 0;
                     } else {
                         score = serviceData.score || 0;
                     }
                     
                     const contribution = (score * weights[serviceKey]).toFixed(1);
+                    const maxWeight = weights[serviceKey] * 100;
                     
+                    console.log(`[TrustScore] ${serviceKey}: ${score} × ${maxWeight}% = ${contribution}`);
+                    
+                    // Map to element IDs
                     const elementIdMap = {
                         'source_credibility': 'contribSource',
                         'bias_detector': 'contribBias',
                         'author_analyzer': 'contribAuthor',
                         'fact_checker': 'contribFacts',
                         'transparency_analyzer': 'contribTransparency',
+                        'manipulation_detector': 'contribManipulation',
                         'content_analyzer': 'contribContent'
                     };
                     
                     const elementId = elementIdMap[serviceKey] || 'contrib' + serviceKey;
                     
-                    updateContributionBar(elementId, score, contribution, weights[serviceKey] * 100);
+                    updateContributionBar(elementId, score, contribution, maxWeight);
                 }
             });
         }
@@ -1279,4 +1304,4 @@
 </body>
 </html>
 
-<!-- This file is not truncated - Part 1 of 2 -->
+<!-- This file is not truncated -->
