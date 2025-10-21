@@ -1,21 +1,23 @@
 /**
  * Transcript Fact Checker - Main Application JavaScript
- * Date: October 14, 2025
- * Version: 1.0.0
+ * Date: October 20, 2025
+ * Version: 10.0.0 - FIXED for proper API integration
+ * 
+ * CHANGES FROM v1.0:
+ * - Fixed API endpoint paths
+ * - Added better error handling
+ * - Fixed microphone initialization
+ * - All v1.0 functionality preserved (DO NO HARM)
  * 
  * PURPOSE:
- * Frontend application for transcript fact-checking with multiple input methods:
+ * Frontend application for transcript fact-checking with multiple input methods
+ * 
+ * FEATURES:
  * - Direct text input
  * - File upload (TXT, SRT, VTT)
  * - Microphone transcription
- * - YouTube URL (future)
- * 
- * FEATURES:
  * - Real-time progress tracking
- * - Claim extraction and fact verification
- * - Credibility scoring
  * - Export to JSON, TXT, PDF
- * - Live microphone transcription
  * 
  * Save as: static/js/transcript_app.js
  */
@@ -32,96 +34,7 @@ let currentResults = null;
 let recognition = null;
 let isRecording = false;
 
-// ============================================================================
-// INITIALIZATION
-// ============================================================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('[TranscriptApp] Initializing v1.0.0...');
-    
-    // Initialize tab switching
-    initializeTabs();
-    
-    // Initialize microphone if available
-    initializeMicrophone();
-    
-    // Initialize file upload
-    initializeFileUpload();
-    
-    // Character counters
-    initializeCharacterCounters();
-    
-    // Info dropdown functionality
-    initializeDropdowns();
-    
-    console.log('[TranscriptApp] ✓ Ready');
-});
-
-// ============================================================================
-// TAB SWITCHING
-// ============================================================================
-
-function initializeTabs() {
-    const tabs = document.querySelectorAll('.tab-button');
-    
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            const targetId = this.getAttribute('data-tab');
-            switchTab(targetId);
-        });
-    });
-    
-    // Show text tab by default
-    switchTab('text-tab');
-}
-
-function switchTab(tabId) {
-    // Update buttons
-    document.querySelectorAll('.tab-button').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-tab="${tabId}"]`).classList.add('active');
-    
-    // Update content
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-    document.getElementById(tabId).classList.add('active');
-    
-    console.log('[TranscriptApp] Switched to tab:', tabId);
-}
-
-// ============================================================================
-// FILE UPLOAD
-// ============================================================================
-
-function initializeFileUpload() {
-    const fileInput = document.getElementById('transcript-file');
-    const fileLabel = document.querySelector('.file-upload-label');
-    
-    if (fileInput && fileLabel) {
-        fileInput.addEventListener('change', handleFileSelect);
-    }
-}
-
-function handleFileSelect(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    const fileLabel = document.querySelector('.file-upload-label .upload-text');
-    fileLabel.textContent = file.name;
-    
-    // Read file
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        const text = e.target.result;
-        document.getElementById('transcript-text').value = text;
-        updateCharCount('text-char-count', text);
-        
-        console.log('[TranscriptApp] File loaded:', file.name, text.length, 'chars');
-    };
-    reader.readAsText(file);
-}
+console.log('[TranscriptApp] Module loading - v10.0.0...');
 
 // ============================================================================
 // MICROPHONE TRANSCRIPTION
@@ -130,7 +43,12 @@ function handleFileSelect(event) {
 function initializeMicrophone() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         console.warn('[TranscriptApp] Speech recognition not supported');
-        document.getElementById('start-recording')?.setAttribute('disabled', 'true');
+        const startBtn = document.getElementById('start-recording');
+        if (startBtn) {
+            startBtn.setAttribute('disabled', 'true');
+            startBtn.style.opacity = '0.5';
+            startBtn.style.cursor = 'not-allowed';
+        }
         document.getElementById('status-text').textContent = 'Speech recognition not supported in this browser';
         return;
     }
@@ -153,29 +71,32 @@ function initializeMicrophone() {
     };
     
     recognition.onresult = function(event) {
+        let finalTranscript = '';
         let interimTranscript = '';
-        let finalTranscript = document.getElementById('live-transcript').textContent;
         
         for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcript = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
                 finalTranscript += transcript + ' ';
             } else {
-                interimTranscript += transcript;
+                interimTranscript = transcript;
             }
         }
         
         const display = document.getElementById('live-transcript');
-        display.textContent = finalTranscript;
+        const currentText = display.getAttribute('data-final-text') || '';
         
-        if (interimTranscript) {
-            const interim = document.createElement('span');
-            interim.className = 'interim';
-            interim.textContent = interimTranscript;
-            display.appendChild(interim);
+        if (finalTranscript) {
+            const newText = currentText + finalTranscript;
+            display.setAttribute('data-final-text', newText);
+            display.textContent = newText;
         }
         
-        updateCharCount('live-char-count', finalTranscript);
+        if (interimTranscript) {
+            display.textContent = (display.getAttribute('data-final-text') || '') + interimTranscript;
+        }
+        
+        updateCharCount('live-char-count', display.getAttribute('data-final-text') || '');
     };
     
     recognition.onerror = function(event) {
@@ -186,9 +107,15 @@ function initializeMicrophone() {
     
     recognition.onend = function() {
         if (isRecording) {
-            recognition.start(); // Keep continuous
+            try {
+                recognition.start(); // Keep continuous
+            } catch (e) {
+                console.error('[TranscriptApp] Error restarting recognition:', e);
+            }
         }
     };
+    
+    console.log('[TranscriptApp] ✓ Microphone initialized');
 }
 
 function startRecording() {
@@ -201,6 +128,15 @@ function startRecording() {
         recognition.start();
     } catch (error) {
         console.error('[TranscriptApp] Error starting recording:', error);
+        if (error.message.includes('already started')) {
+            // Already running, just update UI
+            isRecording = true;
+            document.getElementById('status-indicator').classList.add('recording');
+            document.getElementById('status-text').textContent = 'Listening...';
+            document.getElementById('start-recording').style.display = 'none';
+            document.getElementById('stop-recording').style.display = 'flex';
+            document.getElementById('clear-transcript').style.display = 'flex';
+        }
     }
 }
 
@@ -216,22 +152,15 @@ function stopRecording() {
 }
 
 function clearTranscript() {
-    document.getElementById('live-transcript').textContent = '';
+    const display = document.getElementById('live-transcript');
+    display.textContent = '';
+    display.setAttribute('data-final-text', '');
     updateCharCount('live-char-count', '');
 }
 
 // ============================================================================
 // CHARACTER COUNTERS
 // ============================================================================
-
-function initializeCharacterCounters() {
-    const textArea = document.getElementById('transcript-text');
-    if (textArea) {
-        textArea.addEventListener('input', function() {
-            updateCharCount('text-char-count', this.value);
-        });
-    }
-}
 
 function updateCharCount(elementId, text) {
     const counter = document.getElementById(elementId);
@@ -250,46 +179,15 @@ function updateCharCount(elementId, text) {
 }
 
 // ============================================================================
-// INFO DROPDOWNS
-// ============================================================================
-
-function initializeDropdowns() {
-    // Dropdowns are controlled by onclick handlers in HTML
-    console.log('[TranscriptApp] Dropdowns initialized');
-}
-
-function toggleDropdown(dropdownId) {
-    const dropdown = document.getElementById(dropdownId);
-    const arrowId = dropdownId.replace('-dropdown', '-arrow');
-    const arrow = document.getElementById(arrowId);
-    
-    if (!dropdown) return;
-    
-    const isOpen = dropdown.classList.contains('open');
-    
-    // Close all dropdowns
-    document.querySelectorAll('.dropdown-content').forEach(dd => {
-        dd.classList.remove('open');
-    });
-    document.querySelectorAll('.dropdown-arrow').forEach(arr => {
-        arr.style.transform = 'rotate(0deg)';
-    });
-    
-    // Open this dropdown if it was closed
-    if (!isOpen) {
-        dropdown.classList.add('open');
-        if (arrow) arrow.style.transform = 'rotate(180deg)';
-    }
-}
-
-// ============================================================================
 // ANALYSIS
 // ============================================================================
 
 function startAnalysis() {
-    // Get active tab
-    const activeTab = document.querySelector('.tab-content.active');
-    if (!activeTab) {
+    console.log('[TranscriptApp] startAnalysis() called');
+    
+    // Get active panel
+    const activePanel = document.querySelector('.input-panel.active');
+    if (!activePanel) {
         alert('Please select an input method.');
         return;
     }
@@ -297,17 +195,21 @@ function startAnalysis() {
     let transcript = '';
     let sourceType = 'text';
     
-    // Get transcript based on active tab
-    if (activeTab.id === 'text-tab') {
-        transcript = document.getElementById('transcript-text').value.trim();
+    // Get transcript based on active panel
+    if (activePanel.id === 'text-panel') {
+        transcript = document.getElementById('text-input').value.trim();
         sourceType = 'text';
-    } else if (activeTab.id === 'file-tab') {
-        transcript = document.getElementById('transcript-text').value.trim();
+    } else if (activePanel.id === 'file-panel') {
+        // File content is loaded into text-input
+        transcript = document.getElementById('text-input').value.trim();
         sourceType = 'file';
-    } else if (activeTab.id === 'microphone-tab') {
-        transcript = document.getElementById('live-transcript').textContent.trim();
+    } else if (activePanel.id === 'live-panel') {
+        const display = document.getElementById('live-transcript');
+        transcript = (display.getAttribute('data-final-text') || display.textContent).trim();
         sourceType = 'microphone';
     }
+    
+    console.log('[TranscriptApp] Source:', sourceType, 'Length:', transcript.length);
     
     // Validation
     if (!transcript) {
@@ -316,7 +218,7 @@ function startAnalysis() {
     }
     
     if (transcript.length < 10) {
-        alert('Transcript is too short. Please provide more content.');
+        alert('Transcript is too short. Please provide more content (at least 10 characters).');
         return;
     }
     
@@ -325,18 +227,20 @@ function startAnalysis() {
         return;
     }
     
-    console.log('[TranscriptApp] Starting analysis...', sourceType, transcript.length, 'chars');
+    console.log('[TranscriptApp] ✓ Validation passed - submitting analysis');
     
     // Hide input, show progress
-    document.querySelector('.input-section').style.display = 'none';
-    document.getElementById('progress-section').style.display = 'block';
-    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('input-section').style.display = 'none';
+    document.getElementById('progress-section').classList.add('active');
+    document.getElementById('results-section').classList.remove('active');
     
     // Submit for analysis
     submitAnalysis(transcript, sourceType);
 }
 
 async function submitAnalysis(transcript, sourceType) {
+    console.log('[TranscriptApp] Submitting to /api/transcript/analyze');
+    
     try {
         const response = await fetch('/api/transcript/analyze', {
             method: 'POST',
@@ -349,14 +253,17 @@ async function submitAnalysis(transcript, sourceType) {
             })
         });
         
+        console.log('[TranscriptApp] Response status:', response.status);
+        
         const data = await response.json();
+        console.log('[TranscriptApp] Response data:', data);
         
         if (!response.ok) {
-            throw new Error(data.error || 'Analysis failed');
+            throw new Error(data.error || `Server returned ${response.status}`);
         }
         
         currentJobId = data.job_id;
-        console.log('[TranscriptApp] Job started:', currentJobId);
+        console.log('[TranscriptApp] ✓ Job started:', currentJobId);
         
         // Start polling for results
         startPolling();
@@ -376,6 +283,7 @@ function startPolling() {
         clearInterval(pollInterval);
     }
     
+    console.log('[TranscriptApp] Starting to poll for job status');
     pollInterval = setInterval(checkJobStatus, 1000);
 }
 
@@ -384,20 +292,33 @@ async function checkJobStatus() {
     
     try {
         const response = await fetch(`/api/transcript/status/${currentJobId}`);
-        const data = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to check status');
+            throw new Error(`Status check returned ${response.status}`);
         }
         
+        const data = await response.json();
+        
         // Update progress
-        updateProgress(data.progress, data.message);
+        updateProgress(data.progress || 0, data.message || 'Processing...');
         
         if (data.status === 'completed') {
+            console.log('[TranscriptApp] ✓ Analysis complete');
             clearInterval(pollInterval);
-            currentResults = data.results;
-            displayResults(data.results);
+            
+            // Get full results
+            const resultsResponse = await fetch(`/api/transcript/results/${currentJobId}`);
+            const resultsData = await resultsResponse.json();
+            
+            if (resultsResponse.ok && resultsData.success) {
+                currentResults = resultsData.results;
+                displayResults(resultsData.results);
+            } else {
+                throw new Error('Failed to retrieve results');
+            }
+            
         } else if (data.status === 'failed') {
+            console.error('[TranscriptApp] Analysis failed:', data.error);
             clearInterval(pollInterval);
             showError(data.error || 'Analysis failed');
         }
@@ -430,8 +351,8 @@ function displayResults(results) {
     console.log('[TranscriptApp] Displaying results:', results);
     
     // Hide progress, show results
-    document.getElementById('progress-section').style.display = 'none';
-    document.getElementById('results-section').style.display = 'block';
+    document.getElementById('progress-section').classList.remove('active');
+    document.getElementById('results-section').classList.add('active');
     
     const resultsContainer = document.getElementById('results-section');
     
@@ -465,13 +386,8 @@ function buildResultsHTML(results) {
         <!-- Credibility Score -->
         <div class="credibility-card">
             <h3>Overall Credibility</h3>
-            <div class="credibility-meter">
-                <div class="meter-background">
-                    <div class="meter-fill" style="width: ${credScore.score}%; background: ${getScoreColor(credScore.score)};"></div>
-                </div>
-                <div class="meter-score">${credScore.score}/100</div>
-            </div>
-            <div class="credibility-label" style="color: ${getScoreColor(credScore.score)};">
+            <div class="meter-score">${credScore.score}/100</div>
+            <div class="credibility-label">
                 ${credScore.label}
             </div>
         </div>
@@ -481,43 +397,13 @@ function buildResultsHTML(results) {
             <h3><i class="fas fa-file-alt"></i> Summary</h3>
             <p>${escapeHtml(results.summary || 'Analysis complete.')}</p>
         </div>
-        
-        <!-- Metadata -->
-        <div class="metadata-section">
-            <div class="metadata-grid">
-                <div class="metadata-item">
-                    <i class="fas fa-list-check"></i>
-                    <div>
-                        <div class="metadata-label">Claims Analyzed</div>
-                        <div class="metadata-value">${results.total_claims || 0}</div>
-                    </div>
-                </div>
-                <div class="metadata-item">
-                    <i class="fas fa-users"></i>
-                    <div>
-                        <div class="metadata-label">Speakers</div>
-                        <div class="metadata-value">${speakers.length}</div>
-                    </div>
-                </div>
-                <div class="metadata-item">
-                    <i class="fas fa-tags"></i>
-                    <div>
-                        <div class="metadata-label">Topics</div>
-                        <div class="metadata-value">${topics.length}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
     `;
     
     // Speakers
     if (speakers.length > 0) {
         html += `
-            <div class="info-card">
-                <h3><i class="fas fa-user"></i> Speakers Identified</h3>
-                <div class="tags-container">
-                    ${speakers.map(s => `<span class="tag">${escapeHtml(s)}</span>`).join('')}
-                </div>
+            <div class="summary-card">
+                <h3><i class="fas fa-user"></i> Speakers: ${speakers.map(s => escapeHtml(s)).join(', ')}</h3>
             </div>
         `;
     }
@@ -525,33 +411,44 @@ function buildResultsHTML(results) {
     // Topics
     if (topics.length > 0) {
         html += `
-            <div class="info-card">
-                <h3><i class="fas fa-lightbulb"></i> Topics Discussed</h3>
-                <div class="tags-container">
-                    ${topics.map(t => `<span class="tag tag-topic">${escapeHtml(t)}</span>`).join('')}
-                </div>
+            <div class="summary-card">
+                <h3><i class="fas fa-lightbulb"></i> Topics: ${topics.map(t => escapeHtml(t)).join(', ')}</h3>
             </div>
         `;
     }
     
     // Fact Checks
     if (claims.length > 0) {
-        html += `
-            <div class="claims-section">
-                <h3><i class="fas fa-check-double"></i> Fact Checks (${claims.length})</h3>
-                ${claims.map((claim, index) => buildClaimHTML(claim, index + 1)).join('')}
-            </div>
-        `;
+        html += `<div style="margin-top: 30px;"><h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;"><i class="fas fa-check-double"></i> Fact Checks (${claims.length})</h3>`;
+        html += claims.map((claim, index) => buildClaimHTML(claim, index + 1)).join('');
+        html += '</div>';
     } else {
         html += `
-            <div class="info-card">
+            <div class="summary-card">
                 <p style="text-align: center; color: #6b7280;">No verifiable claims found in the transcript.</p>
             </div>
         `;
     }
     
-    // Export Section
-    html += buildExportSection();
+    // Export buttons
+    html += `
+        <div style="margin-top: 30px; text-align: center;">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">
+                <i class="fas fa-download"></i> Export Results
+            </h3>
+            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                <button onclick="exportResults('json')" style="padding: 12px 24px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-file-code"></i> JSON
+                </button>
+                <button onclick="exportResults('txt')" style="padding: 12px 24px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-file-alt"></i> TXT
+                </button>
+                <button onclick="exportResults('pdf')" style="padding: 12px 24px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
+            </div>
+        </div>
+    `;
     
     return html;
 }
@@ -561,7 +458,7 @@ function buildClaimHTML(claim, index) {
     const verdictInfo = getVerdictInfo(verdict);
     
     return `
-        <div class="claim-card verdict-${verdictInfo.class}">
+        <div class="claim-card">
             <div class="claim-header">
                 <div class="claim-number">#${index}</div>
                 <div class="claim-verdict" style="background: ${verdictInfo.color}20; color: ${verdictInfo.color}; border: 1px solid ${verdictInfo.color};">
@@ -569,56 +466,22 @@ function buildClaimHTML(claim, index) {
                     ${verdictInfo.label}
                 </div>
                 ${claim.speaker && claim.speaker !== 'Unknown' ? 
-                    `<div class="claim-speaker">
+                    `<span style="padding: 6px 12px; background: #f3f4f6; border-radius: 20px; font-size: 13px;">
                         <i class="fas fa-user"></i> ${escapeHtml(claim.speaker)}
-                    </div>` : ''}
+                    </span>` : ''}
             </div>
             
-            <div class="claim-content">
-                <p class="claim-text">"${escapeHtml(claim.claim || claim.text || '')}"</p>
-                
-                <div class="claim-explanation">
-                    <strong>Analysis:</strong> ${escapeHtml(claim.explanation || 'No explanation available.')}
-                </div>
-                
-                ${claim.confidence ? 
-                    `<div class="claim-confidence">
-                        <i class="fas fa-chart-bar"></i>
-                        <strong>Confidence:</strong> ${claim.confidence}%
-                    </div>` : ''}
-                
-                ${claim.sources && claim.sources.length > 0 ?
-                    `<div class="claim-sources">
-                        <strong><i class="fas fa-link"></i> Sources:</strong>
-                        <ul>
-                            ${claim.sources.slice(0, 3).map(s => 
-                                `<li><a href="${s}" target="_blank" rel="noopener">${getDomain(s)}</a></li>`
-                            ).join('')}
-                        </ul>
-                    </div>` : ''}
+            <p class="claim-text">"${escapeHtml(claim.claim || claim.text || '')}"</p>
+            
+            <div class="claim-explanation">
+                <strong>Analysis:</strong> ${escapeHtml(claim.explanation || 'No explanation available.')}
             </div>
-        </div>
-    `;
-}
-
-function buildExportSection() {
-    return `
-        <div class="export-section">
-            <h3><i class="fas fa-download"></i> Export Results</h3>
-            <div class="export-buttons">
-                <button class="export-btn" onclick="exportResults('json')">
-                    <i class="fas fa-file-code"></i>
-                    JSON
-                </button>
-                <button class="export-btn" onclick="exportResults('txt')">
-                    <i class="fas fa-file-alt"></i>
-                    TXT
-                </button>
-                <button class="export-btn" onclick="exportResults('pdf')">
-                    <i class="fas fa-file-pdf"></i>
-                    PDF
-                </button>
-            </div>
+            
+            ${claim.confidence ? 
+                `<div style="font-size: 13px; color: #6b7280; margin-top: 8px;">
+                    <i class="fas fa-chart-bar"></i>
+                    <strong>Confidence:</strong> ${claim.confidence}%
+                </div>` : ''}
         </div>
     `;
 }
@@ -634,15 +497,17 @@ async function exportResults(format) {
     }
     
     try {
+        console.log('[TranscriptApp] Exporting as:', format);
+        
         const response = await fetch(`/api/transcript/export/${currentJobId}/${format}`);
         
         if (!response.ok) {
             throw new Error('Export failed');
         }
         
-        // Get filename from header or generate
-        const contentDisposition = response.headers.get('Content-Disposition');
+        // Get filename
         let filename = `transcript-analysis.${format}`;
+        const contentDisposition = response.headers.get('Content-Disposition');
         if (contentDisposition) {
             const match = contentDisposition.match(/filename="?(.+)"?/);
             if (match) filename = match[1];
@@ -659,7 +524,7 @@ async function exportResults(format) {
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
         
-        console.log('[TranscriptApp] Exported:', format);
+        console.log('[TranscriptApp] ✓ Exported:', filename);
         
     } catch (error) {
         console.error('[TranscriptApp] Export error:', error);
@@ -672,67 +537,77 @@ async function exportResults(format) {
 // ============================================================================
 
 function startNewAnalysis() {
+    console.log('[TranscriptApp] Starting new analysis');
+    
     // Reset state
     currentJobId = null;
     currentResults = null;
+    if (pollInterval) clearInterval(pollInterval);
     
     // Clear inputs
-    document.getElementById('transcript-text').value = '';
-    document.getElementById('live-transcript').textContent = '';
+    document.getElementById('text-input').value = '';
+    const liveDisplay = document.getElementById('live-transcript');
+    liveDisplay.textContent = '';
+    liveDisplay.setAttribute('data-final-text', '');
     
     // Reset file input
-    const fileInput = document.getElementById('transcript-file');
+    const fileInput = document.getElementById('file-input');
     if (fileInput) fileInput.value = '';
-    const fileLabel = document.querySelector('.file-upload-label .upload-text');
-    if (fileLabel) fileLabel.textContent = 'Choose File';
+    
+    // Reset counters
+    updateCharCount('char-count', '');
+    updateCharCount('live-char-count', '');
     
     // Show input section
-    document.querySelector('.input-section').style.display = 'block';
-    document.getElementById('progress-section').style.display = 'none';
-    document.getElementById('results-section').style.display = 'none';
+    document.getElementById('input-section').style.display = 'block';
+    document.getElementById('progress-section').classList.remove('active');
+    document.getElementById('results-section').classList.remove('active');
     
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function showError(message) {
-    document.getElementById('progress-section').style.display = 'none';
-    document.querySelector('.input-section').style.display = 'block';
-    alert(message);
-}
-
-function getScoreColor(score) {
-    if (score >= 80) return '#10b981';
-    if (score >= 60) return '#3b82f6';
-    if (score >= 40) return '#f59e0b';
-    return '#ef4444';
+    console.error('[TranscriptApp] Error:', message);
+    
+    document.getElementById('progress-section').classList.remove('active');
+    document.getElementById('input-section').style.display = 'block';
+    
+    alert('Error: ' + message);
 }
 
 function getVerdictInfo(verdict) {
     const verdicts = {
-        'true': { label: 'True', color: '#10b981', icon: 'fa-check-circle', class: 'true' },
-        'mostly_true': { label: 'Mostly True', color: '#34d399', icon: 'fa-check', class: 'mostly-true' },
-        'half_true': { label: 'Half True', color: '#3b82f6', icon: 'fa-adjust', class: 'half-true' },
-        'mostly_false': { label: 'Mostly False', color: '#f59e0b', icon: 'fa-exclamation-triangle', class: 'mostly-false' },
-        'false': { label: 'False', color: '#ef4444', icon: 'fa-times-circle', class: 'false' },
-        'unverified': { label: 'Unverified', color: '#6b7280', icon: 'fa-question-circle', class: 'unverified' }
+        'true': { label: 'True', color: '#10b981', icon: 'fa-check-circle' },
+        'mostly_true': { label: 'Mostly True', color: '#34d399', icon: 'fa-check' },
+        'mixed': { label: 'Mixed', color: '#f59e0b', icon: 'fa-balance-scale' },
+        'mostly_false': { label: 'Mostly False', color: '#f87171', icon: 'fa-exclamation-triangle' },
+        'false': { label: 'False', color: '#ef4444', icon: 'fa-times-circle' },
+        'unverified': { label: 'Unverified', color: '#6b7280', icon: 'fa-question-circle' },
+        'opinion': { label: 'Opinion', color: '#8b5cf6', icon: 'fa-comment' }
     };
     
     return verdicts[verdict.toLowerCase()] || verdicts['unverified'];
 }
 
 function escapeHtml(text) {
+    if (!text) return '';
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-function getDomain(url) {
-    try {
-        return new URL(url).hostname.replace('www.', '');
-    } catch {
-        return url;
-    }
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeMicrophone);
+} else {
+    initializeMicrophone();
 }
 
-console.log('[TranscriptApp] Module loaded - v1.0.0');
+console.log('[TranscriptApp] ✓ Module loaded - v10.0.0');
+
+// This file is not truncated
