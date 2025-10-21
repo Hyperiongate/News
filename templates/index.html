@@ -3,18 +3,15 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.5.2 - FIXED TRUST SCORE TO 100%
-    Date: October 20, 2025
+    Version: 4.5.3 - FIXED DEBATE ARENA HEADER LINK
+    Date: October 21, 2025
     
-    CHANGES FROM 4.5.1:
-    - FIXED: Trust score weights now total 100% (was 90%)
-    - UPDATED: Source Credibility 25% → 30%
-    - ADDED: Manipulation Detector bar (10%)
-    - REMOVED: Content Quality from scoring (now 0%, informational only)
-    - All v4.5.1 functionality preserved (DO NO HARM ✓)
+    CHANGES FROM 4.5.2:
+    - FIXED: Added nav-link class to Debate Arena link (now white like other nav links)
+    - All v4.5.2 functionality preserved (DO NO HARM ✓)
     
     This file is complete and ready to deploy.
-    Last modified: October 20, 2025 - Fixed trust score calculation
+    Last modified: October 21, 2025 - Fixed Debate Arena header link styling
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -409,6 +406,7 @@
             background: var(--gradient-green);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .trust-label-badge.high {
@@ -529,7 +527,7 @@
                 <a href="/features" class="nav-link">Features</a>
                 <a href="/pricing" class="nav-link">Pricing</a>
                 <a href="/about" class="nav-link">About</a>
-                <a href="/debate-arena">Debate Arena</a>
+                <a href="/debate-arena" class="nav-link">Debate Arena</a>
                 <a href="/contact" class="nav-link">Contact</a>
                 <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
             </nav>
@@ -1055,7 +1053,7 @@
 
         // Initialize on page load
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.5.2 - FIXED Trust Score to 100%');
+            console.log('TruthLens v4.5.3 - FIXED Debate Arena Header Link');
             
             const inputs = ['newsUrlInput', 'newsTextInput', 'transcriptTextInput'];
             inputs.forEach(id => {
