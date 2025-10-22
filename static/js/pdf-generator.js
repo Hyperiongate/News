@@ -1,6 +1,6 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 12.2.2 - VERDICT BADGE FIX 
+ * VERSION: 12.2.2 - VERDICT BADGE FIX
  * DATE: October 22, 2025
  * Last Updated: October 22, 2025 - 8:45 PM
  * 
