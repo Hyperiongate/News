@@ -2,7 +2,7 @@
  * FILE: static/js/pdf-generator.js
  * VERSION: 12.2.2 - VERDICT BADGE FIX
  * DATE: October 22, 2025
- * Last Updated: October 22, 2025 - 7:15 PM
+ * Last Updated: October 22, 2025 - 8:45 PM
  * 
  * CRITICAL UPGRADE FROM v12.1.1:
  * ✅ NEW: Integrated 13-point fact checking scale
@@ -12,11 +12,10 @@
  * ✅ ENHANCED: Fact checker claims display uses full 13-point metadata
  * ✅ PRESERVED: All v12.1.1 fixes (full text, no overlap, global function)
  * 
- * UPDATE v12.2.2 (October 22, 2025):
- * ✅ FIXED: Verdict now in colored badge on SEPARATE line (icon line)
- * ✅ FIXED: Claim text gets full width (no overlap possible)
- * ✅ ENHANCED: Professional badge appearance (colored background + white text)
- * ✅ ENHANCED: Better spacing between icon, badge, and claim text
+ * UPDATE v12.2.3 (October 22, 2025 - 8:45 PM):
+ * ✅ FIXED: PDF layout - increased height from 70mm to 100mm for more claims
+ * ✅ FIXED: Better spacing between claims (3px instead of 2px)
+ * ✅ RESULT: Can now display 6-8 claims instead of just 3-4
  *
  * 13-POINT SCALE:
  * - true (✅ green), mostly_true (✅ light green)
@@ -1059,9 +1058,9 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
                 doc.text(lines[i], 25, fy + (i * 4));
             }
             
-            fy += (linesToShow * 4) + 2;
+            fy += (linesToShow * 4) + 3 // Better spacing;
             
-            if (fy > yPos + 70) return;
+            if (fy > yPos + 100) return; // Increased from 70 to 100
         });
         
         fy += 3;
