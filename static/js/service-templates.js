@@ -1,26 +1,24 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
- * Date: October 21, 2025
- * Version: 4.27.0 - FACT-CHECKING DISPLAY REDESIGN
- * Last Updated: October 21, 2025
+ * Date: October 22, 2025
+ * Version: 4.28.0 - MULTI-AUTHOR DISPLAY + AWARDS REMOVED
+ * Last Updated: October 22, 2025 - 2:00 PM
  * 
- * CRITICAL CHANGES FROM v4.26.0:
- * ✅ REDESIGNED: Fact-checking claim layout (displayFactChecker function)
- * ✅ NEW LAYOUT: 1. THE CLAIM (first, verbatim, in quotes)
- *               2. OUR ANALYSIS (second, with 13-point indicator)
- *               3. VERIFICATION METHOD (third, shows ALL resources)
- * ✅ ENHANCED: Verification section now shows all methods (AI + Google + Pattern)
- * ✅ ENHANCED: Verdict includes description explaining what it means
- * ✅ ENHANCED: Professional styling with color-coded verdicts
+ * CRITICAL CHANGES FROM v4.27.0:
+ * ✅ FIXED: Display ALL authors (not just first one)
+ * ✅ REMOVED: All awards references (6 removals total)
+ * ✅ ENHANCED: Authors joined with "and" (Paul Kirby and John Sudworth)
  * ✅ PRESERVED: All other services unchanged (DO NO HARM)
- * ✅ PRESERVED: Mode-aware display (transcript vs news)
- * ✅ PRESERVED: All existing 13-point grading scale
  * 
- * WHAT CHANGED: Only displayFactChecker() function redesigned
+ * WHAT CHANGED:
+ * 1. displayAuthor() - Now shows all authors joined with "and"
+ * 2. Author template - Removed awards stat-item
+ * 3. Author template - Removed awards-section
+ * 4. Source template - Removed awards detail-item
+ * 5. displayAuthor() - Removed awards updateElement
+ * 6. displaySourceCredibility() - Removed awards updateElement
+ * 
  * WHAT'S PRESERVED: All other services, templates, and functionality
- * 
- * TRANSCRIPT MODE: Shows only Fact Checking service
- * NEWS MODE: Shows all 6 services (Source, Bias, Fact, Author, Transparency, Content)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
@@ -117,15 +115,6 @@ window.ServiceTemplates = {
                                 </div>
                             </div>
                             
-                            <div class="source-detail-item">
-                                <div class="detail-icon">
-                                    <i class="fas fa-trophy"></i>
-                                </div>
-                                <div class="detail-content">
-                                    <div class="detail-label">Awards</div>
-                                    <div class="detail-value" id="source-awards">--</div>
-                                </div>
-                            </div>
                             
                             <div class="source-detail-item">
                                 <div class="detail-icon">
@@ -307,10 +296,6 @@ window.ServiceTemplates = {
                                 <div class="stat-value" id="author-experience">--</div>
                                 <div class="stat-label">Experience</div>
                             </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="author-awards">--</div>
-                                <div class="stat-label">Awards</div>
-                            </div>
                         </div>
                     </div>
                     
@@ -341,11 +326,6 @@ window.ServiceTemplates = {
                     <div class="author-detail-sections">
                         <div class="author-bio" id="author-bio" style="display: none">
                             <!-- Bio will be inserted here if available -->
-                        </div>
-                        
-                        <div class="author-awards-section" id="author-awards-section" style="display: none">
-                            <h4><i class="fas fa-trophy"></i> Awards & Recognition</h4>
-                            <ul class="awards-list" id="awards-list"></ul>
                         </div>
                         
                         <div class="author-trust-indicators" id="trust-indicators" style="display: none">
@@ -570,7 +550,7 @@ window.ServiceTemplates = {
         // Update details
         this.updateElement('source-org', data.organization || 'Independent');
         this.updateElement('source-founded', year);
-        this.updateElement('source-awards', data.awards || 'N/A');
+        // Awards removed - v4.28.0
         this.updateElement('source-readership', data.readership || 'N/A');
         
         // TOP 10 NEWS SOURCES COMPARISON
@@ -1337,8 +1317,11 @@ window.ServiceTemplates = {
         // Check if author is unknown
         const isUnknown = primaryAuthor === 'Unknown Author' || primaryAuthor === 'Unknown' || !primaryAuthor;
         
-        // Display primary author name in main header
-        this.updateElement('author-name', authorList[0]);
+        // Display ALL authors (not just first one) - FIXED v4.28.0
+        const authorDisplayName = authorList.length > 1 
+            ? authorList.join(' and ') 
+            : authorList[0];
+        this.updateElement('author-name', authorDisplayName);
         
         // Better title for Unknown Author
         if (isUnknown) {
@@ -1356,7 +1339,7 @@ window.ServiceTemplates = {
         // Stats
         this.updateElement('author-articles', data.articles_found || data.articles_count || '--');
         this.updateElement('author-experience', data.years_experience || data.experience || '--');
-        this.updateElement('author-awards', data.awards_count || data.awards || '--');
+        // Awards removed - v4.28.0
         
         // Metrics
         this.updateElement('author-credibility', credibility + '/100');
@@ -1403,7 +1386,7 @@ window.ServiceTemplates = {
                 const bioSection = document.getElementById('author-bio');
                 if (bioSection) {
                     bioSection.innerHTML = `
-                        <h4><i class="fas fa-user-circle"></i> About ${authorList[0]}</h4>
+                        <h4><i class="fas fa-user-circle"></i> About ${authorDisplayName}</h4>
                         <p style="line-height: 1.6; color: #475569;">${bio}</p>
                     `;
                     bioSection.style.display = 'block';
