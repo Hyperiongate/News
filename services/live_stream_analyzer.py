@@ -1,8 +1,14 @@
 """
 Live Stream Transcript Analyzer
 File: services/live_stream_analyzer.py
-Date: October 20, 2025
-Version: 1.0.0
+Date: October 22, 2025
+Version: 1.1.0
+
+CHANGES FROM v1.0.0:
+- FIXED: SSE JSON formatting bug (lines 157, 161) - EventSource parse errors resolved
+- Bug: Used Python dict syntax {'key': 'value'} instead of proper JSON
+- Fix: Now using json.dumps() for all SSE data to ensure valid JSON formatting
+- This fixes: "Uncaught SyntaxError: Expected property name or '}' in JSON"
 
 PURPOSE:
 Analyzes YouTube Live streams in near real-time by:
@@ -15,12 +21,13 @@ Analyzes YouTube Live streams in near real-time by:
 COST: $0/month with AssemblyAI free tier (100 hours/month)
 
 DO NO HARM: This is a NEW file - doesn't modify existing functionality
-Last modified: October 20, 2025 - Initial creation
+Last modified: October 22, 2025 - Fixed SSE JSON formatting bug
 """
 
 import os
 import re
 import time
+import json
 import queue
 import logging
 import threading
@@ -70,7 +77,6 @@ class LiveStreamAnalyzer:
                     'error': 'Could not access YouTube stream'
                 }
             
-            import json
             info = json.loads(result.stdout)
             
             is_live = info.get('is_live', False)
@@ -146,7 +152,13 @@ class LiveStreamAnalyzer:
             return self.active_streams.get(stream_id)
     
     def stream_events(self, stream_id: str) -> Generator[str, None, None]:
-        """Generate Server-Sent Events for a stream"""
+        """
+        Generate Server-Sent Events for a stream
+        
+        FIXED v1.1.0: Now uses json.dumps() for all SSE data
+        - Previously used Python dict syntax {'key': 'value'} which creates invalid JSON
+        - Now properly formats all SSE messages with json.dumps() for valid JSON
+        """
         last_update = 0
         
         while True:
@@ -154,17 +166,20 @@ class LiveStreamAnalyzer:
                 stream = self.active_streams.get(stream_id)
                 
                 if not stream:
-                    yield f"data: {{'error': 'Stream not found'}}\n\n"
+                    # FIXED: Use json.dumps() instead of f-string with dict
+                    error_data = {'error': 'Stream not found'}
+                    yield f"data: {json.dumps(error_data)}\n\n"
                     break
                 
                 if stream['should_stop'] or stream['status'] == 'completed':
-                    yield f"data: {{'status': 'completed'}}\n\n"
+                    # FIXED: Use json.dumps() instead of f-string with dict
+                    complete_data = {'status': 'completed'}
+                    yield f"data: {json.dumps(complete_data)}\n\n"
                     break
                 
                 # Send updates
                 current_update = len(stream.get('transcript_chunks', []))
                 if current_update > last_update:
-                    import json
                     data = {
                         'status': stream['status'],
                         'transcript_chunks': stream['transcript_chunks'][last_update:],
