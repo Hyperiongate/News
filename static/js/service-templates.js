@@ -1478,7 +1478,17 @@ window.ServiceTemplates = {
         console.log('[Author Display v4.26.0] ✓ Complete');
     },
 
-    updateElement: function(id, value) {
+    getSensationalismExplanation: function(level) {
+        const explanations = {
+            'High': 'Significant use of sensational language that may exaggerate issues',
+            'Moderate': 'Some sensational language present but not overwhelming',
+            'Low': 'Minimal sensational language detected',
+            'Minimal': 'Very little or no sensational language used'
+        };
+        return explanations[level] || 'Article uses measured, factual language';
+    },
+    
+        updateElement: function(id, value) {
         const element = document.getElementById(id);
         if (element) {
             element.textContent = value;
