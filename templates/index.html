@@ -3,8 +3,8 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.5.3 - FIXED DEBATE ARENA HEADER LINK
-    Date: October 21, 2025
+    Version: 4.6.0 - ENHANCED PROGRESS BAR EXPERIENCE
+    Date: October 22, 2025
     
     CHANGES FROM 4.5.2:
     - FIXED: Added nav-link class to Debate Arena link (now white like other nav links)
@@ -513,6 +513,83 @@
     </style>
 </head>
 <body>
+<!--
+  ADD THIS HTML TO templates/index.html
+  INSERT RIGHT AFTER the <body> tag (before the header)
+  This creates the new fixed progress bar at the top of the viewport
+-->
+
+<!-- Enhanced Progress Bar - Fixed at Top -->
+<div class="progress-container-fixed" id="progressContainerFixed">
+    <div class="progress-inner">
+        <div class="progress-header-enhanced">
+            <div class="progress-title-enhanced">
+                <div class="progress-spinner"></div>
+                <span>Analyzing Content</span>
+            </div>
+            <div class="progress-percentage-enhanced" id="progressPercentageFixed">0%</div>
+        </div>
+
+        <!-- Dynamic Rotating Message -->
+        <div class="progress-message" id="progressMessage">
+            <i class="fas fa-info-circle"></i>
+            <span id="progressMessageText">Starting analysis...</span>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="progress-bar-container-enhanced">
+            <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+
+        <!-- Enhanced Steps with Icons -->
+        <div class="progress-steps-enhanced" id="progressStepsEnhanced">
+            <div class="progress-step-enhanced" data-step="0">
+                <div class="step-icon-enhanced"><i class="fas fa-file-text"></i></div>
+                <div class="step-text-enhanced">Extracting</div>
+            </div>
+            <div class="progress-step-enhanced" data-step="1">
+                <div class="step-icon-enhanced"><i class="fas fa-globe"></i></div>
+                <div class="step-text-enhanced">Source</div>
+            </div>
+            <div class="progress-step-enhanced" data-step="2">
+                <div class="step-icon-enhanced"><i class="fas fa-balance-scale"></i></div>
+                <div class="step-text-enhanced">Bias</div>
+            </div>
+            <div class="progress-step-enhanced" data-step="3">
+                <div class="step-icon-enhanced"><i class="fas fa-check-circle"></i></div>
+                <div class="step-text-enhanced">Facts</div>
+            </div>
+            <div class="progress-step-enhanced" data-step="4">
+                <div class="step-icon-enhanced"><i class="fas fa-user"></i></div>
+                <div class="step-text-enhanced">Author</div>
+            </div>
+            <div class="progress-step-enhanced" data-step="5">
+                <div class="step-icon-enhanced"><i class="fas fa-flag-checkered"></i></div>
+                <div class="step-text-enhanced">Final</div>
+            </div>
+        </div>
+
+        <!-- Fun Facts Section -->
+        <div class="fun-facts-section" id="funFactsSection">
+            <div class="fun-fact" id="funFact">
+                <i class="fas fa-lightbulb"></i>
+                <span id="funFactText">Did you know? Our AI analyzes 7 different aspects of credibility...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Backdrop Overlay -->
+<div class="loading-overlay-backdrop" id="loadingBackdrop"></div>
+
+<!--
+  INSTRUCTIONS:
+  1. Open templates/index.html
+  2. Find the <body> tag (around line 55-60)
+  3. Paste this entire HTML block RIGHT AFTER <body>
+  4. Keep the existing progress-container (around line 842) - it won't interfere
+  5. Save the file
+-->
     <!-- Compact Header -->
     <header class="header">
         <div class="header-content">
