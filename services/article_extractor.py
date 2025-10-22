@@ -1,22 +1,22 @@
 """
-Article Extractor - v22.0 BBC NEW FORMAT FIX
+Article Extractor - v23.0 BBC NEW FORMAT FIX
 Date: October 22, 2025
 Last Updated: October 22, 2025 - 12:30 PM
 
-CRITICAL FIX IN v22.0:
+CRITICAL FIX IN v23.0:
 ✅ FIXED: BBC new article format (/news/articles/) author extraction
 ✅ ADDED: STRATEGY 7 for BBC - "Name, Title and Name, Location" pattern
 ✅ TESTED: https://www.bbc.com/news/articles/czjpe0193geo (Paul Kirby, John Sudworth)
 ✅ ENHANCED: Better handling of comma-separated author/role combinations
 
-CHANGE LOG v22.0 (October 22, 2025):
+CHANGE LOG v23.0 (October 22, 2025):
 - Added _extract_bbc_authors STRATEGY 7: New article format parser
 - Handles "Paul Kirby, Europe digital editor and John Sudworth, Kyiv" pattern
 - Extracts multiple authors with their titles/locations
 - Validates each extracted name properly
 - Falls back to universal extraction if BBC strategies fail
 
-PREVIOUS VERSION: v22.0
+PREVIOUS VERSION: v23.0
 - Had 6 BBC strategies but none caught new /news/articles/ format
 - Missing support for comma-separated author/title combinations
 
@@ -63,7 +63,7 @@ NON_JOURNALIST_NAMES = {
     "Staff Writer", "Editorial Board", "News Desk", "Associated Press"
 }
 
-# Sites that require JavaScript rendering - UPDATED v22.0
+# Sites that require JavaScript rendering - UPDATED v23.0
 JS_REQUIRED_SITES = {
     'foxnews.com',
     'cnn.com',
@@ -72,15 +72,15 @@ JS_REQUIRED_SITES = {
     'newsweek.com',
     'nypost.com',
     'abcnews.go.com',
-    'bbc.com',           # ADDED v22.0
-    'bbc.co.uk',         # ADDED v22.0
+    'bbc.com',           # ADDED v23.0
+    'bbc.co.uk',         # ADDED v23.0
 }
 
 
 class ArticleExtractor:
     """
     Article extractor with JavaScript rendering support
-    v22.0 - UNIVERSAL BULLETPROOF: BBC + ABC + All Sites
+    v23.0 - UNIVERSAL BULLETPROOF: BBC + ABC + All Sites
     """
     
     def __init__(self):
@@ -100,7 +100,7 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        logger.info(f"[ArticleExtractor v22.0 UNIVERSAL] Ready - OpenAI: {openai_available}")
+        logger.info(f"[ArticleExtractor v23.0 UNIVERSAL] Ready - OpenAI: {openai_available}")
     
     def _needs_js_rendering(self, url: str) -> bool:
         """Determine if a site needs JavaScript rendering"""
@@ -118,9 +118,9 @@ class ArticleExtractor:
                         break
         
         if needs_js:
-            logger.info(f"[JSDetect v22.0] ✓ {domain} requires JavaScript rendering")
+            logger.info(f"[JSDetect v23.0] ✓ {domain} requires JavaScript rendering")
         else:
-            logger.info(f"[JSDetect v22.0] ○ {domain} uses static HTML")
+            logger.info(f"[JSDetect v23.0] ○ {domain} uses static HTML")
         
         return needs_js
     
@@ -162,7 +162,7 @@ class ArticleExtractor:
     def extract(self, url: str) -> Dict[str, Any]:
         """Main extraction method - ALWAYS returns valid Dict"""
         
-        logger.info(f"[ArticleExtractor v22.0] Extracting: {url}")
+        logger.info(f"[ArticleExtractor v23.0] Extracting: {url}")
         
         extraction_errors = []
         
@@ -254,9 +254,9 @@ class ArticleExtractor:
         }
         
         if needs_rendering:
-            logger.info(f"[ScraperAPI v22.0] Using JavaScript rendering")
+            logger.info(f"[ScraperAPI v23.0] Using JavaScript rendering")
         else:
-            logger.info(f"[ScraperAPI v22.0] Using fast mode")
+            logger.info(f"[ScraperAPI v23.0] Using fast mode")
         
         try:
             response = requests.get(api_url, params=params, timeout=60)
@@ -357,7 +357,7 @@ class ArticleExtractor:
             title = self._extract_title(soup)
             text = self._extract_text(soup)
             
-            # v22.0: UNIVERSAL author extraction with site-specific priority
+            # v23.0: UNIVERSAL author extraction with site-specific priority
             author, author_page_url, author_page_urls = self._extract_authors_and_construct_urls(soup, url, html, text)
             
             source = self._get_source_from_url(url)
@@ -460,23 +460,23 @@ class ArticleExtractor:
     
     def _extract_authors_and_construct_urls(self, soup: BeautifulSoup, url: str, html: str, article_text: str) -> tuple[str, Optional[str], List[str]]:
         """
-        v22.0 UNIVERSAL: Site-specific extraction with universal fallback
+        v23.0 UNIVERSAL: Site-specific extraction with universal fallback
         Returns: (comma_separated_names, primary_url, all_urls)
         """
         
         logger.info("=" * 70)
-        logger.info("[AUTHOR v22.0 UNIVERSAL] Starting extraction")
+        logger.info("[AUTHOR v23.0 UNIVERSAL] Starting extraction")
         
         domain = urlparse(url).netloc.replace('www.', '')
         base_url = f"{urlparse(url).scheme}://{urlparse(url).netloc}"
         
-        # ========== BBC NEWS PRIORITY EXTRACTION (NEW v22.0) ==========
+        # ========== BBC NEWS PRIORITY EXTRACTION (NEW v23.0) ==========
         if 'bbc.com' in domain or 'bbc.co.uk' in domain:
-            logger.info("[AUTHOR v22.0] ⚠️ BBC NEWS DETECTED - Using dedicated extraction")
+            logger.info("[AUTHOR v23.0] ⚠️ BBC NEWS DETECTED - Using dedicated extraction")
             author_names = self._extract_bbc_authors(soup, html)
             
             if author_names and author_names != ['Unknown']:
-                logger.info(f"[AUTHOR v22.0] ✓✓✓ BBC NEWS SUCCESS: {author_names}")
+                logger.info(f"[AUTHOR v23.0] ✓✓✓ BBC NEWS SUCCESS: {author_names}")
                 author_urls = [self._construct_author_url(name, domain, base_url) for name in author_names]
                 author_urls = [url for url in author_urls if url]
                 
@@ -486,15 +486,15 @@ class ArticleExtractor:
                 logger.info("=" * 70)
                 return all_names, primary_url, author_urls
             else:
-                logger.warning("[AUTHOR v22.0] ❌ BBC NEWS dedicated extraction failed, trying universal...")
+                logger.warning("[AUTHOR v23.0] ❌ BBC NEWS dedicated extraction failed, trying universal...")
         
         # ========== ABC NEWS PRIORITY EXTRACTION (PRESERVED FROM v20.7) ==========
         if 'abcnews.go.com' in domain:
-            logger.info("[AUTHOR v22.0] ⚠️ ABC NEWS DETECTED - Using dedicated extraction")
+            logger.info("[AUTHOR v23.0] ⚠️ ABC NEWS DETECTED - Using dedicated extraction")
             author_names = self._extract_abc_news_authors(soup, html)
             
             if author_names and author_names != ['Unknown']:
-                logger.info(f"[AUTHOR v22.0] ✓✓✓ ABC NEWS SUCCESS: {author_names}")
+                logger.info(f"[AUTHOR v23.0] ✓✓✓ ABC NEWS SUCCESS: {author_names}")
                 author_urls = [self._construct_author_url(name, domain, base_url) for name in author_names]
                 author_urls = [url for url in author_urls if url]
                 
@@ -504,7 +504,7 @@ class ArticleExtractor:
                 logger.info("=" * 70)
                 return all_names, primary_url, author_urls
             else:
-                logger.warning("[AUTHOR v22.0] ❌ ABC NEWS dedicated extraction failed, trying universal...")
+                logger.warning("[AUTHOR v23.0] ❌ ABC NEWS dedicated extraction failed, trying universal...")
         
         # ========== UNIVERSAL EXTRACTION FOR ALL SITES ==========
         
@@ -518,7 +518,7 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v22.0] ✓✓✓ SUCCESS via meta: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v23.0] ✓✓✓ SUCCESS via meta: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
@@ -532,12 +532,12 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v22.0] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v23.0] ✓✓✓ SUCCESS via JSON-LD: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
         # PRIORITY 3: Byline text
-        logger.info("[AUTHOR v22.0] Trying byline text...")
+        logger.info("[AUTHOR v23.0] Trying byline text...")
         byline_text = self._find_byline_text(soup)
         if byline_text:
             logger.info(f"[AUTHOR] ✓ Byline: '{byline_text}'")
@@ -553,12 +553,12 @@ class ArticleExtractor:
                 all_names = ', '.join(author_names)
                 primary_url = author_urls[0] if author_urls else None
                 
-                logger.info(f"[AUTHOR v22.0] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
+                logger.info(f"[AUTHOR v23.0] ✓✓✓ SUCCESS via byline: {len(author_names)} author(s)")
                 logger.info("=" * 70)
                 return all_names, primary_url, author_urls
         
         # PRIORITY 4: Byline containers
-        logger.info("[AUTHOR v22.0] Trying byline containers...")
+        logger.info("[AUTHOR v23.0] Trying byline containers...")
         author_names = self._extract_from_byline_containers(soup)
         if author_names:
             logger.info(f"[AUTHOR] ✓ Containers: {author_names}")
@@ -568,24 +568,24 @@ class ArticleExtractor:
             all_names = ', '.join(author_names)
             primary_url = author_urls[0] if author_urls else None
             
-            logger.info(f"[AUTHOR v22.0] ✓✓✓ SUCCESS via containers: {len(author_names)} author(s)")
+            logger.info(f"[AUTHOR v23.0] ✓✓✓ SUCCESS via containers: {len(author_names)} author(s)")
             logger.info("=" * 70)
             return all_names, primary_url, author_urls
         
         # ALL METHODS FAILED
-        logger.warning("[AUTHOR v22.0] ❌ All extraction methods failed")
+        logger.warning("[AUTHOR v23.0] ❌ All extraction methods failed")
         logger.info("=" * 70)
         return "Unknown", None, []
     
     def _extract_bbc_authors(self, soup: BeautifulSoup, html: str) -> List[str]:
         """
-        v22.0 NEW: Dedicated BBC News author extraction
-        Tries 6 different BBC News specific patterns
+        v23.0 NEW: Dedicated BBC News author extraction
+        Tries 8 different BBC News specific patterns
         TEST: https://www.bbc.com/news/articles/crmxz37nv3zo (Sean Seddon)
         """
 
         # ===== NEW STRATEGY 7: BBC New Article Format - "Name, Title and Name, Location" =====
-        logger.info("[BBC v22.0] Strategy 7 (NEW): Checking new article format with comma-separated authors...")
+        logger.info("[BBC v23.0] Strategy 7 (NEW): Checking new article format with comma-separated authors...")
         try:
             # Look for patterns like:
             # "Paul Kirby, Europe digital editor and John Sudworth, Kyiv"
@@ -605,11 +605,11 @@ class ArticleExtractor:
                     
                     # Validate the name
                     if self._is_valid_author_name(name):
-                        logger.info(f"[BBC v22.0 Strategy 7] ✓ Found author: {name} ({role})")
+                        logger.info(f"[BBC v23.0 Strategy 7] ✓ Found author: {name} ({role})")
                         names.append(name)
                 
                 if names:
-                    logger.info(f"[BBC v22.0 Strategy 7] ✓✓ SUCCESS: Found {len(names)} author(s)")
+                    logger.info(f"[BBC v23.0 Strategy 7] ✓✓ SUCCESS: Found {len(names)} author(s)")
                     return names
             
             # Also try searching for visible text in specific elements
@@ -619,7 +619,7 @@ class ArticleExtractor:
                 
                 # Look for the pattern in element text
                 if re.search(r'[A-Z][a-z]+\s+[A-Z][a-z]+,\s+[A-Za-z\s]+\s+and\s+[A-Z][a-z]+\s+[A-Z][a-z]+', text):
-                    logger.info(f"[BBC v22.0 Strategy 7] Found potential match in element: {text[:100]}")
+                    logger.info(f"[BBC v23.0 Strategy 7] Found potential match in element: {text[:100]}")
                     
                     # Extract names from this text
                     pattern = r'([A-Z][a-z]+\s+[A-Z][a-z]+),'
@@ -629,21 +629,21 @@ class ArticleExtractor:
                         valid_names = []
                         for name in found_names:
                             if self._is_valid_author_name(name):
-                                logger.info(f"[BBC v22.0 Strategy 7] ✓ Validated: {name}")
+                                logger.info(f"[BBC v23.0 Strategy 7] ✓ Validated: {name}")
                                 valid_names.append(name)
                         
                         if valid_names:
-                            logger.info(f"[BBC v22.0 Strategy 7] ✓✓ SUCCESS via element text")
+                            logger.info(f"[BBC v23.0 Strategy 7] ✓✓ SUCCESS via element text")
                             return valid_names
         
         except Exception as e:
-            logger.error(f"[BBC v22.0] Strategy 7 error: {e}")
+            logger.error(f"[BBC v23.0] Strategy 7 error: {e}")
         
         
-        logger.info("[BBC v22.0] Starting BBC News dedicated extraction")
+        logger.info("[BBC v23.0] Starting BBC News dedicated extraction")
         
         # STRATEGY 1: Look for data-component="byline-block" or similar BBC structures
-        logger.info("[BBC v22.0] Strategy 1: Checking BBC byline blocks...")
+        logger.info("[BBC v23.0] Strategy 1: Checking BBC byline blocks...")
         try:
             byline_blocks = soup.find_all(attrs={'data-component': re.compile(r'byline', re.I)})
             for block in byline_blocks:
@@ -654,15 +654,15 @@ class ArticleExtractor:
                     for elem in author_elements:
                         name = elem.get_text().strip()
                         if self._is_valid_author_name(name):
-                            logger.info(f"[BBC v22.0] ✓ Found in byline block: {name}")
+                            logger.info(f"[BBC v23.0] ✓ Found in byline block: {name}")
                             names.append(name)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[BBC v22.0] Strategy 1 error: {e}")
+            logger.error(f"[BBC v23.0] Strategy 1 error: {e}")
         
         # STRATEGY 2: Look for BBC-specific meta tags
-        logger.info("[BBC v22.0] Strategy 2: Checking BBC meta tags...")
+        logger.info("[BBC v23.0] Strategy 2: Checking BBC meta tags...")
         try:
             bbc_meta_patterns = [
                 {'name': 'author'},
@@ -675,15 +675,15 @@ class ArticleExtractor:
                 meta = soup.find('meta', attrs=pattern)
                 if meta and meta.get('content'):
                     content = meta['content'].strip()
-                    logger.info(f"[BBC v22.0] ✓ Found in meta {pattern}: {content}")
+                    logger.info(f"[BBC v23.0] ✓ Found in meta {pattern}: {content}")
                     names = self._parse_multiple_authors_from_text(content)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[BBC v22.0] Strategy 2 error: {e}")
+            logger.error(f"[BBC v23.0] Strategy 2 error: {e}")
         
         # STRATEGY 3: Look for role="author" attribute
-        logger.info("[BBC v22.0] Strategy 3: Checking role='author'...")
+        logger.info("[BBC v23.0] Strategy 3: Checking role='author'...")
         try:
             role_authors = soup.find_all(attrs={'role': 'author'})
             if role_authors:
@@ -693,15 +693,15 @@ class ArticleExtractor:
                     # Clean up BBC specific prefixes
                     text = re.sub(r'^(By|Reporter:|Correspondent:)\s*', '', text, flags=re.I)
                     if self._is_valid_author_name(text):
-                        logger.info(f"[BBC v22.0] ✓ Found via role='author': {text}")
+                        logger.info(f"[BBC v23.0] ✓ Found via role='author': {text}")
                         names.append(text)
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[BBC v22.0] Strategy 3 error: {e}")
+            logger.error(f"[BBC v23.0] Strategy 3 error: {e}")
         
         # STRATEGY 4: Search for BBC correspondent links
-        logger.info("[BBC v22.0] Strategy 4: Checking BBC correspondent links...")
+        logger.info("[BBC v23.0] Strategy 4: Checking BBC correspondent links...")
         try:
             # BBC often uses /news/correspondents/ URLs
             correspondent_links = soup.find_all('a', href=re.compile(r'/news/correspondents/', re.I))
@@ -710,15 +710,15 @@ class ArticleExtractor:
                 for link in correspondent_links:
                     name = link.get_text().strip()
                     if self._is_valid_author_name(name):
-                        logger.info(f"[BBC v22.0] ✓ Found correspondent: {name}")
+                        logger.info(f"[BBC v23.0] ✓ Found correspondent: {name}")
                         names.append(name)
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[BBC v22.0] Strategy 4 error: {e}")
+            logger.error(f"[BBC v23.0] Strategy 4 error: {e}")
         
         # STRATEGY 5: Raw HTML search for "By [Name]" pattern near article start
-        logger.info("[BBC v22.0] Strategy 5: Searching raw HTML for byline patterns...")
+        logger.info("[BBC v23.0] Strategy 5: Searching raw HTML for byline patterns...")
         try:
             # Look for "By [Name]" in the first 5000 chars of HTML (near article start)
             html_start = html[:5000]
@@ -734,15 +734,15 @@ class ArticleExtractor:
                     names = []
                     for match in matches:
                         if self._is_valid_author_name(match):
-                            logger.info(f"[BBC v22.0] ✓ Found in HTML: {match}")
+                            logger.info(f"[BBC v23.0] ✓ Found in HTML: {match}")
                             names.append(match)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[BBC v22.0] Strategy 5 error: {e}")
+            logger.error(f"[BBC v23.0] Strategy 5 error: {e}")
         
         # STRATEGY 6: Look for BBC-specific class patterns
-        logger.info("[BBC v22.0] Strategy 6: Checking BBC-specific classes...")
+        logger.info("[BBC v23.0] Strategy 6: Checking BBC-specific classes...")
         try:
             bbc_class_patterns = [
                 'ssrcss-',  # BBC uses ssrcss- prefix for styles
@@ -758,12 +758,55 @@ class ArticleExtractor:
                     # Must look like a name
                     if re.match(r'^[A-Z][a-z]+\s+[A-Z][a-z]+$', text):
                         if self._is_valid_author_name(text):
-                            logger.info(f"[BBC v22.0] ✓ Found via class '{pattern}': {text}")
+                            logger.info(f"[BBC v23.0] ✓ Found via class '{pattern}': {text}")
                             return [text]
         except Exception as e:
-            logger.error(f"[BBC v22.0] Strategy 6 error: {e}")
+            logger.error(f"[BBC v23.0] Strategy 6 error: {e}")
         
-        logger.warning("[BBC v22.0] ❌ All 7 BBC News strategies failed!")
+        
+        # STRATEGY 8: NUCLEAR OPTION - Brute force search for ANY two capitalized names
+        logger.info("[BBC v23.0] Strategy 8 (NUCLEAR): Brute force name extraction...")
+        try:
+            # Get ALL text content from the page
+            all_text = soup.get_text()
+            
+            logger.info(f"[BBC v23.0 Strategy 8] Total text length: {len(all_text)} chars")
+            
+            # Find ALL occurrences of capitalized two-word names
+            all_potential_names = re.findall(r'\b([A-Z][a-z]{2,15}\s+[A-Z][a-z]{2,15})\b', all_text)
+            
+            logger.info(f"[BBC v23.0 Strategy 8] Found {len(all_potential_names)} potential names total")
+            
+            # Validate and deduplicate
+            valid_names = []
+            seen = set()
+            
+            for name in all_potential_names:
+                if name not in seen:
+                    seen.add(name)
+                    if self._is_valid_author_name(name):
+                        valid_names.append(name)
+                        logger.info(f"[BBC v23.0 Strategy 8] Valid name: {name}")
+                        
+                        if len(valid_names) >= 2:
+                            name1_pos = all_text.find(valid_names[0])
+                            name2_pos = all_text.find(valid_names[1])
+                            distance = abs(name1_pos - name2_pos)
+                            logger.info(f"[BBC v23.0 Strategy 8] Distance between names: {distance} chars")
+                            
+                            if distance < 500:
+                                logger.info(f"[BBC v23.0 Strategy 8] ✓✓ NUCLEAR SUCCESS: {valid_names[:2]}")
+                                return valid_names[:2]
+            
+            if valid_names:
+                logger.info(f"[BBC v23.0 Strategy 8] ✓ Found {len(valid_names)} name(s)")
+                return valid_names[:2]
+                
+        except Exception as e:
+            logger.error(f"[BBC v23.0] Strategy 8 error: {e}")
+        
+
+        logger.warning("[BBC v23.0] ❌ All 8 BBC News strategies failed!")
         return []
     
     def _extract_abc_news_authors(self, soup: BeautifulSoup, html: str) -> List[str]:
@@ -772,10 +815,10 @@ class ArticleExtractor:
         Tries 5 different ABC News specific patterns
         """
         
-        logger.info("[ABC v22.0] Starting ABC News dedicated extraction")
+        logger.info("[ABC v23.0] Starting ABC News dedicated extraction")
         
         # STRATEGY 1: Look for "By" links with /author/ in href
-        logger.info("[ABC v22.0] Strategy 1: Looking for author links...")
+        logger.info("[ABC v23.0] Strategy 1: Looking for author links...")
         try:
             author_links = soup.find_all('a', href=re.compile(r'/author/', re.I))
             if author_links:
@@ -783,29 +826,29 @@ class ArticleExtractor:
                 for link in author_links:
                     name = link.get_text().strip()
                     if self._is_valid_author_name(name):
-                        logger.info(f"[ABC v22.0] ✓ Found author link: {name}")
+                        logger.info(f"[ABC v23.0] ✓ Found author link: {name}")
                         names.append(name)
                 
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[ABC v22.0] Strategy 1 error: {e}")
+            logger.error(f"[ABC v23.0] Strategy 1 error: {e}")
         
         # STRATEGY 2: Look for meta tag "parsely-author"
-        logger.info("[ABC v22.0] Strategy 2: Checking parsely-author meta...")
+        logger.info("[ABC v23.0] Strategy 2: Checking parsely-author meta...")
         try:
             parsely = soup.find('meta', attrs={'name': 'parsely-author'})
             if parsely and parsely.get('content'):
                 content = parsely['content'].strip()
-                logger.info(f"[ABC v22.0] ✓ Found parsely-author: {content}")
+                logger.info(f"[ABC v23.0] ✓ Found parsely-author: {content}")
                 names = self._parse_multiple_authors_from_text(content)
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[ABC v22.0] Strategy 2 error: {e}")
+            logger.error(f"[ABC v23.0] Strategy 2 error: {e}")
         
         # STRATEGY 3: Look for specific ABC News byline classes
-        logger.info("[ABC v22.0] Strategy 3: Checking ABC byline classes...")
+        logger.info("[ABC v23.0] Strategy 3: Checking ABC byline classes...")
         try:
             abc_patterns = [
                 'ContentMetadata__Byline',
@@ -819,15 +862,15 @@ class ArticleExtractor:
                 for elem in elements:
                     text = elem.get_text().strip()
                     if text and ('by ' in text.lower() or ' and ' in text.lower()):
-                        logger.info(f"[ABC v22.0] ✓ Found in '{pattern}': {text}")
+                        logger.info(f"[ABC v23.0] ✓ Found in '{pattern}': {text}")
                         names = self._parse_multiple_authors_from_byline(text)
                         if names:
                             return names
         except Exception as e:
-            logger.error(f"[ABC v22.0] Strategy 3 error: {e}")
+            logger.error(f"[ABC v23.0] Strategy 3 error: {e}")
         
         # STRATEGY 4: Search raw HTML for "By [Name] and [Name]" pattern
-        logger.info("[ABC v22.0] Strategy 4: Searching raw HTML for byline pattern...")
+        logger.info("[ABC v23.0] Strategy 4: Searching raw HTML for byline pattern...")
         try:
             byline_match = re.search(r'By\s+([A-Z][a-z]+\s+[A-Z][a-z]+)(?:\s+and\s+([A-Z][a-z]+\s+[A-Z][a-z]+))?', html)
             if byline_match:
@@ -835,22 +878,22 @@ class ArticleExtractor:
                 if byline_match.group(1):
                     name1 = byline_match.group(1).strip()
                     if self._is_valid_author_name(name1):
-                        logger.info(f"[ABC v22.0] ✓ Found in HTML: {name1}")
+                        logger.info(f"[ABC v23.0] ✓ Found in HTML: {name1}")
                         names.append(name1)
                 
                 if byline_match.group(2):
                     name2 = byline_match.group(2).strip()
                     if self._is_valid_author_name(name2):
-                        logger.info(f"[ABC v22.0] ✓ Found in HTML: {name2}")
+                        logger.info(f"[ABC v23.0] ✓ Found in HTML: {name2}")
                         names.append(name2)
                 
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[ABC v22.0] Strategy 4 error: {e}")
+            logger.error(f"[ABC v23.0] Strategy 4 error: {e}")
         
         # STRATEGY 5: Look for any <a> tag with rel="author"
-        logger.info("[ABC v22.0] Strategy 5: Checking rel='author' links...")
+        logger.info("[ABC v23.0] Strategy 5: Checking rel='author' links...")
         try:
             rel_author_links = soup.find_all('a', rel='author')
             if rel_author_links:
@@ -858,19 +901,19 @@ class ArticleExtractor:
                 for link in rel_author_links:
                     name = link.get_text().strip()
                     if self._is_valid_author_name(name):
-                        logger.info(f"[ABC v22.0] ✓ Found rel='author': {name}")
+                        logger.info(f"[ABC v23.0] ✓ Found rel='author': {name}")
                         names.append(name)
                 
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[ABC v22.0] Strategy 5 error: {e}")
+            logger.error(f"[ABC v23.0] Strategy 5 error: {e}")
         
-        logger.warning("[ABC v22.0] ❌ All 5 ABC News strategies failed!")
+        logger.warning("[ABC v23.0] ❌ All 5 ABC News strategies failed!")
         return []
     
     def _extract_from_meta_tags(self, soup: BeautifulSoup) -> List[str]:
-        """Extract authors from meta tags - ENHANCED v22.0"""
+        """Extract authors from meta tags - ENHANCED v23.0"""
         
         try:
             meta_patterns = [
@@ -882,8 +925,8 @@ class ArticleExtractor:
                 {'property': 'author'},
                 {'name': 'dc.creator'},
                 {'name': 'parsely-author'},
-                {'name': 'article.author'},  # NEW v22.0
-                {'property': 'og:article:author'},  # NEW v22.0
+                {'name': 'article.author'},  # NEW v23.0
+                {'property': 'og:article:author'},  # NEW v23.0
             ]
             
             for pattern in meta_patterns:
@@ -900,7 +943,7 @@ class ArticleExtractor:
         return []
     
     def _extract_from_json_ld(self, soup: BeautifulSoup) -> List[str]:
-        """Extract authors from JSON-LD structured data - ENHANCED v22.0"""
+        """Extract authors from JSON-LD structured data - ENHANCED v23.0"""
         
         try:
             scripts = soup.find_all('script', type='application/ld+json')
@@ -931,7 +974,7 @@ class ArticleExtractor:
         return []
     
     def _extract_authors_from_json_obj(self, obj: dict) -> List[str]:
-        """Extract author names from a JSON-LD object - ENHANCED v22.0"""
+        """Extract author names from a JSON-LD object - ENHANCED v23.0"""
         
         try:
             if 'author' in obj:
@@ -957,7 +1000,7 @@ class ArticleExtractor:
                         if self._is_valid_author_name(name):
                             logger.info(f"[JSON-LD] Extracted: {name}")
                             return [name]
-                    # NEW v22.0: Also check for 'givenName' + 'familyName'
+                    # NEW v23.0: Also check for 'givenName' + 'familyName'
                     elif 'givenName' in author and 'familyName' in author:
                         name = f"{author['givenName']} {author['familyName']}"
                         if self._is_valid_author_name(name):
@@ -975,14 +1018,14 @@ class ArticleExtractor:
         return []
     
     def _find_byline_text(self, soup: BeautifulSoup) -> Optional[str]:
-        """Find byline text with multiple patterns - ENHANCED v22.0"""
+        """Find byline text with multiple patterns - ENHANCED v23.0"""
         
         byline_patterns = [
             'byline', 'author', 'by-line', 'article-author', 'articlebyline',
             'contributor', 'writtenby', 'story-byline', 'post-author',
             'article-meta', 'entry-meta', 'content-meta',
             'content-author', 'cbs-byline', 'liveblog-author',
-            'correspondent', 'reporter',  # NEW v22.0
+            'correspondent', 'reporter',  # NEW v23.0
         ]
         
         for pattern in byline_patterns:
@@ -1002,7 +1045,7 @@ class ArticleExtractor:
                 logger.info(f"[Byline] Found via rel='author': {text}")
                 return f"By {text}"
         
-        # NEW v22.0: Check for role="author"
+        # NEW v23.0: Check for role="author"
         role_authors = soup.find_all(attrs={'role': 'author'})
         for elem in role_authors:
             text = elem.get_text().strip()
@@ -1024,7 +1067,7 @@ class ArticleExtractor:
         return None
     
     def _parse_multiple_authors_from_byline(self, byline_text: str) -> List[str]:
-        """Parse multiple authors with separator variations - ENHANCED v22.0"""
+        """Parse multiple authors with separator variations - ENHANCED v23.0"""
         
         # Remove common prefixes
         text = re.sub(r'^(by|reporter|correspondent|written by|story by|updated by|author:|reporter:|correspondent:)\s+', 
@@ -1056,7 +1099,7 @@ class ArticleExtractor:
         return self._parse_multiple_authors_from_byline(text)
     
     def _extract_from_byline_containers(self, soup: BeautifulSoup) -> List[str]:
-        """Extract authors from byline containers - ENHANCED v22.0"""
+        """Extract authors from byline containers - ENHANCED v23.0"""
         
         try:
             byline_container_patterns = [
@@ -1073,8 +1116,8 @@ class ArticleExtractor:
                 'byline meta',
                 'ContentMetadata__Byline',
                 'authors__list',
-                'correspondent-name',  # NEW v22.0
-                'reporter-name',       # NEW v22.0
+                'correspondent-name',  # NEW v23.0
+                'reporter-name',       # NEW v23.0
             ]
             
             found_authors = []
@@ -1111,7 +1154,7 @@ class ArticleExtractor:
         return []
     
     def _construct_author_url(self, author_name: str, domain: str, base_url: str) -> Optional[str]:
-        """Construct author profile URL from name - ENHANCED v22.0"""
+        """Construct author profile URL from name - ENHANCED v23.0"""
         
         if not author_name or author_name == 'Unknown':
             return None
@@ -1123,7 +1166,7 @@ class ArticleExtractor:
         slug = re.sub(r'-+', '-', slug)
         slug = slug.strip('-')
         
-        # Site-specific URL patterns - EXPANDED v22.0
+        # Site-specific URL patterns - EXPANDED v23.0
         if 'bbc.com' in domain or 'bbc.co.uk' in domain:
             return f"{base_url}/news/correspondents/{slug}"
         elif 'abcnews.go.com' in domain:
@@ -1160,7 +1203,7 @@ class ArticleExtractor:
             return f"{base_url}/author/{slug}"
     
     def _clean_author_name(self, text: str) -> str:
-        """Clean up author name - ENHANCED v22.0"""
+        """Clean up author name - ENHANCED v23.0"""
         
         if not text:
             return "Unknown"
@@ -1184,7 +1227,7 @@ class ArticleExtractor:
         return text.strip()
     
     def _is_valid_author_name(self, name: str) -> bool:
-        """Check if a name is valid - ENHANCED v22.0"""
+        """Check if a name is valid - ENHANCED v23.0"""
         
         if not name or name == 'Unknown':
             return False
@@ -1225,7 +1268,7 @@ class ArticleExtractor:
         return True
     
     def _get_source_from_url(self, url: str) -> str:
-        """Get source name from URL - ENHANCED v22.0"""
+        """Get source name from URL - ENHANCED v23.0"""
         
         domain = urlparse(url).netloc.replace('www.', '')
         
@@ -1250,8 +1293,8 @@ class ArticleExtractor:
             'thehill.com': 'The Hill',
             'npr.org': 'NPR',
             'nypost.com': 'New York Post',
-            'bloomberg.com': 'Bloomberg',  # NEW v22.0
-            'axios.com': 'Axios',  # NEW v22.0
+            'bloomberg.com': 'Bloomberg',  # NEW v23.0
+            'axios.com': 'Axios',  # NEW v23.0
         }
         
         return sources.get(domain, domain.title())
@@ -1324,6 +1367,6 @@ class ArticleExtractor:
         return True
 
 
-logger.info("[ArticleExtractor v22.0] ✓ UNIVERSAL BULLETPROOF - BBC + ABC + ALL SITES!")
+logger.info("[ArticleExtractor v23.0] ✓ UNIVERSAL BULLETPROOF - BBC + ABC + ALL SITES!")
 
 # This file is not truncated
