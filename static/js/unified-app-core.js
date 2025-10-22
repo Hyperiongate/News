@@ -23,7 +23,7 @@
 
 
 function UnifiedTruthLensAnalyzer() {
-    console.log('[UnifiedTruthLens] Initializing v6.6.1...');
+    console.log('[UnifiedTruthLens] Initializing v6.6.2...');
     
     // Core properties
     this.currentMode = 'news';
@@ -285,9 +285,25 @@ UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
     var funFactContent = document.getElementById('funFactContent');
     var funFactSection = document.getElementById('funFact');
     
+    // NEW v6.6.2: Better debugging for message rotation
+    console.log('[Progress v6.6.2] Element check:');
+    console.log('  - loadingMessageEnhanced:', loadingMessage ? '✓ Found' : '❌ NOT FOUND');
+    console.log('  - funFactContent:', funFactContent ? '✓ Found' : '❌ NOT FOUND');
+    console.log('  - funFact section:', funFactSection ? '✓ Found' : '❌ NOT FOUND');
+    
     if (!progressContainer || !backdrop) {
         console.error('[UnifiedTruthLens] Progress elements not found');
         return;
+    }
+    
+    // NEW v6.6.2: If elements missing, warn user but continue
+    if (!loadingMessage) {
+        console.warn('[Progress] ⚠️ loadingMessageEnhanced element missing - messages will not rotate');
+        console.warn('[Progress] Add this to your HTML: <div id="loadingMessageEnhanced" class="loading-message"></div>');
+    }
+    if (!funFactContent) {
+        console.warn('[Progress] ⚠️ funFactContent element missing - fun facts will not rotate');
+        console.warn('[Progress] Add this to your HTML: <div id="funFactContent" class="fun-fact-content"></div>');
     }
     
     // Show progress container and backdrop
@@ -654,7 +670,7 @@ UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
 };
 
 // Initialize application
-console.log('[UnifiedTruthLens] Loading v6.6.1 - SYNTAX ERROR FIXED...');
+console.log('[UnifiedTruthLens] Loading v6.6.2 - MESSAGE ROTATION DEBUG...');
 var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 // Export for compatibility
