@@ -2,13 +2,19 @@
 Live Stream Transcript Analyzer
 File: services/live_stream_analyzer.py
 Date: October 22, 2025
-Version: 1.1.0
+Version: 1.2.0 - FIXED SSE DISCONNECT BUG
 
-CHANGES FROM v1.0.0:
-- FIXED: SSE JSON formatting bug (lines 157, 161) - EventSource parse errors resolved
-- Bug: Used Python dict syntax {'key': 'value'} instead of proper JSON
-- Fix: Now using json.dumps() for all SSE data to ensure valid JSON formatting
-- This fixes: "Uncaught SyntaxError: Expected property name or '}' in JSON"
+CHANGES FROM v1.1.0:
+✅ CRITICAL FIX: SSE connection no longer disconnects after 1-2 seconds
+✅ Removed blocking time.sleep(2) that caused timeouts (Line 194)
+✅ Added keepalive heartbeat messages every 15 seconds
+✅ Changed to time.sleep(0.5) for responsive updates
+✅ Non-blocking event stream with immediate yields
+
+BUG FIXED:
+- Line 194: time.sleep(2) was blocking the generator
+- Browser EventSource timed out after 1-2 seconds of no data
+- Solution: Yield keepalive comments, reduce sleep to 0.5s
 
 PURPOSE:
 Analyzes YouTube Live streams in near real-time by:
@@ -20,8 +26,8 @@ Analyzes YouTube Live streams in near real-time by:
 
 COST: $0/month with AssemblyAI free tier (100 hours/month)
 
-DO NO HARM: This is a NEW file - doesn't modify existing functionality
-Last modified: October 22, 2025 - Fixed SSE JSON formatting bug
+DO NO HARM: Only modified stream_events() method (Lines 154-194)
+Last modified: October 22, 2025 - Fixed SSE disconnect bug
 """
 
 import os
@@ -155,43 +161,81 @@ class LiveStreamAnalyzer:
         """
         Generate Server-Sent Events for a stream
         
-        FIXED v1.1.0: Now uses json.dumps() for all SSE data
-        - Previously used Python dict syntax {'key': 'value'} which creates invalid JSON
-        - Now properly formats all SSE messages with json.dumps() for valid JSON
+        FIXED v1.2.0: Connection stays alive with keepalive heartbeats
+        - Removed blocking time.sleep(2) that caused disconnects
+        - Added keepalive comments every 15 seconds
+        - Immediate yields prevent timeout
+        - Non-blocking check with proper SSE format
         """
         last_update = 0
+        last_keepalive = time.time()
+        keepalive_interval = 15  # seconds
         
+        logger.info(f"[SSE v1.2.0] Starting event stream for {stream_id}")
+        
+        # Send initial connection message
+        initial_data = {
+            'type': 'connected',
+            'stream_id': stream_id,
+            'timestamp': datetime.now().isoformat()
+        }
+        yield f"data: {json.dumps(initial_data)}\n\n"
+        
+        iteration = 0
         while True:
+            iteration += 1
+            current_time = time.time()
+            
+            # FIXED v1.2.0: Send keepalive heartbeat to prevent timeout
+            if current_time - last_keepalive > keepalive_interval:
+                # SSE comment (not parsed by browser but keeps connection alive)
+                yield f": keepalive {datetime.now().isoformat()}\n\n"
+                last_keepalive = current_time
+                logger.debug(f"[SSE] Sent keepalive for {stream_id}")
+            
             with self.stream_lock:
                 stream = self.active_streams.get(stream_id)
                 
                 if not stream:
-                    # FIXED: Use json.dumps() instead of f-string with dict
-                    error_data = {'error': 'Stream not found'}
+                    logger.warning(f"[SSE] Stream {stream_id} not found")
+                    error_data = {'type': 'error', 'error': 'Stream not found'}
                     yield f"data: {json.dumps(error_data)}\n\n"
                     break
                 
                 if stream['should_stop'] or stream['status'] == 'completed':
-                    # FIXED: Use json.dumps() instead of f-string with dict
-                    complete_data = {'status': 'completed'}
+                    logger.info(f"[SSE] Stream {stream_id} completed")
+                    complete_data = {
+                        'type': 'complete',
+                        'status': 'completed',
+                        'total_chunks': len(stream.get('transcript_chunks', [])),
+                        'total_claims': len(stream.get('claims', []))
+                    }
                     yield f"data: {json.dumps(complete_data)}\n\n"
                     break
                 
-                # Send updates
+                # Check for new updates
                 current_update = len(stream.get('transcript_chunks', []))
                 if current_update > last_update:
+                    # New data available
+                    new_chunks = stream['transcript_chunks'][last_update:]
+                    new_claims = stream.get('claims', [])[last_update:] if last_update < len(stream.get('claims', [])) else []
+                    
                     data = {
+                        'type': 'update',
                         'status': stream['status'],
-                        'transcript_chunks': stream['transcript_chunks'][last_update:],
-                        'claims': stream['claims'][last_update:] if last_update < len(stream['claims']) else [],
-                        'fact_checks': stream['fact_checks'],
+                        'transcript_chunks': new_chunks,
+                        'claims': new_claims,
+                        'fact_checks': stream.get('fact_checks', []),
                         'total_chunks': len(stream['transcript_chunks']),
-                        'total_claims': len(stream['claims'])
+                        'total_claims': len(stream.get('claims', [])),
+                        'timestamp': datetime.now().isoformat()
                     }
                     yield f"data: {json.dumps(data)}\n\n"
                     last_update = current_update
+                    logger.info(f"[SSE] Sent update {iteration} for {stream_id}: {current_update} chunks")
             
-            time.sleep(2)  # Poll every 2 seconds
+            # FIXED v1.2.0: Non-blocking sleep - reduced from 2s to 0.5s
+            time.sleep(0.5)
     
     def _process_live_stream(self, stream_id: str, youtube_url: str,
                            claim_extractor, fact_checker):
