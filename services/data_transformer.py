@@ -1,7 +1,8 @@
 """
 Data Transformer - WITH V4.0 EDUCATIONAL FIELDS PRESERVATION
 Date: October 13, 2025
-Version: 2.9 - PRESERVE EDUCATIONAL CONTENT FROM TRANSPARENCY & MANIPULATION V4.0
+Last Updated: October 21, 2025 - CRITICAL FIX FOR SOURCE CREDIBILITY
+Version: 3.0 - FIX READERSHIP & AWARDS MAPPING
 
 CRITICAL CHANGES FROM 2.8:
 - FIXED: _transform_transparency now preserves v4.0 educational fields
@@ -283,7 +284,7 @@ class DataTransformer:
         raw_data: Dict[str, Any],
         source: str
     ) -> Dict[str, Any]:
-        """Transform source credibility data"""
+        """Transform source credibility data - v3.0 FIX FOR READERSHIP & AWARDS"""
         
         result = template.copy()
         
@@ -294,7 +295,7 @@ class DataTransformer:
             50
         )
         
-        logger.info(f"[Transform SourceCred] Using score: {score} from raw_data")
+        logger.info(f"[Transform SourceCred v3.0] Using score: {score} from raw_data")
         
         metadata = DataTransformer.SOURCE_METADATA.get(source, {})
         
@@ -305,10 +306,30 @@ class DataTransformer:
         result['founded'] = raw_data.get('founded', metadata.get('founded', 'Unknown'))
         result['type'] = raw_data.get('source_type', metadata.get('type', 'News Outlet'))
         result['ownership'] = metadata.get('ownership', 'Unknown')
-        result['readership'] = metadata.get('readership', 'Unknown')
-        result['awards'] = metadata.get('awards', 'N/A')
         
-        logger.info(f"[Transform SourceCred] Final: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
+        # CRITICAL FIX v3.0: Get readership and awards from raw_data first, then fallback to metadata
+        # Source credibility returns: 'readership', 'daily_readers', 'monthly_unique_visitors'
+        result['readership'] = (
+            raw_data.get('readership') or 
+            raw_data.get('daily_readers') or 
+            raw_data.get('monthly_unique_visitors') or
+            metadata.get('readership', 'Unknown')
+        )
+        
+        # CRITICAL FIX v3.0: Get awards from raw_data first (can be string or list)
+        # Source credibility returns: 'awards' (can be string or list from other_awards)
+        awards_from_data = raw_data.get('awards') or raw_data.get('other_awards')
+        if awards_from_data:
+            # If it's a list, join it; if it's a string, use it
+            if isinstance(awards_from_data, list):
+                result['awards'] = ', '.join(awards_from_data) if awards_from_data else 'N/A'
+            else:
+                result['awards'] = awards_from_data
+        else:
+            result['awards'] = metadata.get('awards', 'N/A')
+        
+        logger.info(f"[Transform SourceCred v3.0] Final: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
+        logger.info(f"[Transform SourceCred v3.0] Readership: {result['readership']}, Awards: {result['awards']}")
         
         if result['score'] >= 80:
             result['reputation'] = 'Excellent'
@@ -668,3 +689,5 @@ class DataTransformer:
         logger.info(f"[Transform Content] Final score: {result['score']}")
         
         return result
+
+# This file is not truncated
