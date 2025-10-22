@@ -1,7 +1,7 @@
 """
-Fact Checker Service - v12.1 CRITICAL CLAIM EXTRACTION FIX
+Fact Checker Service - v12.2 CRITICAL CLAIM TEXT FIX
 Date: October 20, 2025
-Last Updated: October 20, 2025 - 10:00 PM
+Last Updated: October 21, 2025 - FIX FOR MISSING CLAIM TEXT
 
 CRITICAL FIXES FROM v12.0:
 ✅ FIXED: No more repeated claims (deduplication added)
@@ -19,7 +19,14 @@ THE PROBLEMS:
 3. Non-factual sentences were scoring too high
 4. Too many low-quality claims (15 was too many)
 
-THE FIXES:
+
+CRITICAL FIX FROM v12.1:
+✅ FIXED: Missing claim text in AI verification results
+✅ ADDED: ai_result['claim'] = claim at line 699
+✅ PROBLEM: Frontend showed "No claim text available"
+✅ SOLUTION: Ensure claim field is populated before returning AI result
+
+PREVIOUS FIXES (v12.1):
 1. Added deduplication using seen_claims set
 2. Require factual elements (numbers OR named entities)
 3. Stricter minimum length (30 chars, not 20)
@@ -696,6 +703,7 @@ class FactChecker(BaseAnalyzer):
             if self.openai_client:
                 ai_result = self._ai_verify_claim(claim, article_title)
                 if ai_result and ai_result.get('verdict') != 'needs_context':
+                    ai_result['claim'] = claim  # CRITICAL FIX v12.2: Add claim text
                     ai_result['method_used'] = 'AI Verification'
                     return ai_result
             
