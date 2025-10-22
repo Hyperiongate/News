@@ -1,21 +1,30 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
- * Date: October 14, 2025
- * Version: 4.26.0 - TRANSCRIPT MODE CONDITIONAL RENDERING
+ * Date: October 21, 2025
+ * Version: 4.27.0 - FACT-CHECKING DISPLAY REDESIGN
+ * Last Updated: October 21, 2025
  * 
- * CRITICAL CHANGES FROM v4.25.0:
- * ✅ ADDED: Mode-aware service display in displayAllAnalyses()
- * ✅ ADDED: If analysis_mode === 'transcript', show ONLY fact checking
- * ✅ ADDED: If analysis_mode === 'news', show all 6 services (unchanged)
- * ✅ PRESERVED: All existing functionality for news mode (DO NO HARM)
- * ✅ ENHANCED: Fact checker supports rich 13-verdict system from comprehensive_factcheck.py
+ * CRITICAL CHANGES FROM v4.26.0:
+ * ✅ REDESIGNED: Fact-checking claim layout (displayFactChecker function)
+ * ✅ NEW LAYOUT: 1. THE CLAIM (first, verbatim, in quotes)
+ *               2. OUR ANALYSIS (second, with 13-point indicator)
+ *               3. VERIFICATION METHOD (third, shows ALL resources)
+ * ✅ ENHANCED: Verification section now shows all methods (AI + Google + Pattern)
+ * ✅ ENHANCED: Verdict includes description explaining what it means
+ * ✅ ENHANCED: Professional styling with color-coded verdicts
+ * ✅ PRESERVED: All other services unchanged (DO NO HARM)
+ * ✅ PRESERVED: Mode-aware display (transcript vs news)
+ * ✅ PRESERVED: All existing 13-point grading scale
+ * 
+ * WHAT CHANGED: Only displayFactChecker() function redesigned
+ * WHAT'S PRESERVED: All other services, templates, and functionality
  * 
  * TRANSCRIPT MODE: Shows only Fact Checking service
  * NEWS MODE: Shows all 6 services (Source, Bias, Fact, Author, Transparency, Content)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
- * FILE IS COMPLETE - NO TRUNCATION - ~2150 LINES
+ * FILE IS COMPLETE - NO TRUNCATION
  */
 
 // Create global ServiceTemplates object
@@ -817,14 +826,15 @@ window.ServiceTemplates = {
     // FACT CHECKER - ENHANCED FOR RICH 13-VERDICT SYSTEM (v4.26.0)
     // ============================================================================
     displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker v4.26.0] Data received:', data);
+        console.log('[FactChecker v4.27.0] REDESIGNED CLAIM LAYOUT - Data received:', data);
         
         const score = data.accuracy_score || data.verification_score || data.score || 0;
         const claimsChecked = data.claims_checked || data.claims_found || 0;
         const claimsVerified = data.claims_verified || 0;
         const factChecks = data.fact_checks || data.claims || [];
         
-        console.log('[FactChecker v4.26.0] Fact checks array length:', factChecks.length);
+        console.log('[FactChecker v4.27.0] Fact checks array length:', factChecks.length);
+        console.log('[FactChecker v4.27.0] Layout: CLAIM → ANALYSIS → VERIFICATION');
         
         // Update summary metrics
         this.updateElement('fact-score', score + '%');
@@ -837,90 +847,249 @@ window.ServiceTemplates = {
             return;
         }
         
-        // Render findings with RICH VERDICT SYSTEM
+        // ========================================================================
+        // REDESIGNED CLAIM RENDERING - v4.27.0
+        // LAYOUT: 1. THE CLAIM → 2. OUR ANALYSIS → 3. VERIFICATION METHOD
+        // ========================================================================
         if (factChecks && factChecks.length > 0) {
-            console.log('[FactChecker v4.26.0] Rendering', factChecks.length, 'findings with rich verdicts...');
+            console.log('[FactChecker v4.27.0] REDESIGNED LAYOUT: Rendering', factChecks.length, 'findings...');
             
             let claimsHTML = '';
             
             factChecks.forEach((check, index) => {
-                const analysis = check.explanation || 'No analysis available';
+                // Extract claim data
+                const claim = check.claim || check.statement || 'No claim text available';
+                const analysis = check.explanation || check.analysis || 'No analysis available';
                 const verdict = check.verdict || 'unverified';
                 const confidence = check.confidence || 0;
+                
+                // Get all verification sources
                 const sources = check.sources || check.method_used || [];
                 const sourcesList = Array.isArray(sources) ? sources : [sources];
+                const methodUsed = check.method_used || 'Unknown';
                 
-                // RICH VERDICT STYLING (13 types from comprehensive_factcheck.py)
+                // Combine all verification methods
+                const allVerificationMethods = [];
+                if (methodUsed && methodUsed !== 'Unknown') {
+                    allVerificationMethods.push(methodUsed);
+                }
+                sourcesList.forEach(src => {
+                    if (src && !allVerificationMethods.includes(src)) {
+                        allVerificationMethods.push(src);
+                    }
+                });
+                
+                // 13-POINT VERDICT STYLING
                 const verdictStyles = {
-                    // Core verdicts
-                    'true': { color: '#10b981', icon: 'fa-check-circle', label: 'TRUE', badge: '#059669' },
-                    'mostly_true': { color: '#3b82f6', icon: 'fa-check-circle', label: 'MOSTLY TRUE', badge: '#2563eb' },
-                    'nearly_true': { color: '#3b82f6', icon: 'fa-check', label: 'NEARLY TRUE', badge: '#2563eb' },
+                    // True verdicts (green)
+                    'true': { 
+                        color: '#10b981', 
+                        icon: 'fa-check-circle', 
+                        label: 'TRUE', 
+                        badge: '#059669',
+                        description: 'Demonstrably accurate and supported by evidence'
+                    },
+                    'mostly_true': { 
+                        color: '#34d399', 
+                        icon: 'fa-check-circle', 
+                        label: 'MOSTLY TRUE', 
+                        badge: '#10b981',
+                        description: 'Largely accurate with minor imprecision'
+                    },
+                    'partially_true': { 
+                        color: '#fbbf24', 
+                        icon: 'fa-check', 
+                        label: 'PARTIALLY TRUE', 
+                        badge: '#f59e0b',
+                        description: 'Contains both accurate and inaccurate elements'
+                    },
                     
-                    // Problematic verdicts
-                    'exaggeration': { color: '#f59e0b', icon: 'fa-exclamation-triangle', label: 'EXAGGERATION', badge: '#d97706' },
-                    'misleading': { color: '#f59e0b', icon: 'fa-exclamation-triangle', label: 'MISLEADING', badge: '#d97706' },
-                    'mostly_false': { color: '#ef4444', icon: 'fa-times-circle', label: 'MOSTLY FALSE', badge: '#dc2626' },
-                    'false': { color: '#ef4444', icon: 'fa-times-circle', label: 'FALSE', badge: '#dc2626' },
+                    // Problematic verdicts (yellow/orange)
+                    'exaggerated': { 
+                        color: '#f59e0b', 
+                        icon: 'fa-chart-line', 
+                        label: 'EXAGGERATED', 
+                        badge: '#d97706',
+                        description: 'Based on truth but significantly overstated'
+                    },
+                    'misleading': { 
+                        color: '#f97316', 
+                        icon: 'fa-exclamation-triangle', 
+                        label: 'MISLEADING', 
+                        badge: '#ea580c',
+                        description: 'Contains truth but creates false impression'
+                    },
                     
-                    // Special categories
-                    'empty_rhetoric': { color: '#94a3b8', icon: 'fa-wind', label: 'EMPTY RHETORIC', badge: '#64748b' },
-                    'unsubstantiated_prediction': { color: '#a78bfa', icon: 'fa-crystal-ball', label: 'UNSUBSTANTIATED', badge: '#8b5cf6' },
-                    'opinion': { color: '#94a3b8', icon: 'fa-comment', label: 'OPINION', badge: '#64748b' },
-                    'needs_context': { color: '#f59e0b', icon: 'fa-info-circle', label: 'NEEDS CONTEXT', badge: '#d97706' },
+                    // False verdicts (red)
+                    'mostly_false': { 
+                        color: '#f87171', 
+                        icon: 'fa-times-circle', 
+                        label: 'MOSTLY FALSE', 
+                        badge: '#ef4444',
+                        description: 'Significant inaccuracies with grain of truth'
+                    },
+                    'false': { 
+                        color: '#ef4444', 
+                        icon: 'fa-times-circle', 
+                        label: 'FALSE', 
+                        badge: '#dc2626',
+                        description: 'Demonstrably incorrect'
+                    },
                     
-                    // Default
-                    'unverified': { color: '#94a3b8', icon: 'fa-question-circle', label: 'UNVERIFIED', badge: '#64748b' },
-                    'mixed': { color: '#f59e0b', icon: 'fa-exclamation-circle', label: 'MIXED', badge: '#d97706' }
+                    // Special categories (gray/purple)
+                    'empty_rhetoric': { 
+                        color: '#94a3b8', 
+                        icon: 'fa-wind', 
+                        label: 'EMPTY RHETORIC', 
+                        badge: '#64748b',
+                        description: 'Vague promises or boasts with no substantive content'
+                    },
+                    'unsubstantiated_prediction': { 
+                        color: '#a78bfa', 
+                        icon: 'fa-crystal-ball', 
+                        label: 'UNSUBSTANTIATED', 
+                        badge: '#8b5cf6',
+                        description: 'Future claim with no evidence or plan provided'
+                    },
+                    'needs_context': { 
+                        color: '#8b5cf6', 
+                        icon: 'fa-info-circle', 
+                        label: 'NEEDS CONTEXT', 
+                        badge: '#7c3aed',
+                        description: 'Cannot verify without additional information'
+                    },
+                    'opinion': { 
+                        color: '#6366f1', 
+                        icon: 'fa-comment', 
+                        label: 'OPINION', 
+                        badge: '#4f46e5',
+                        description: 'Subjective claim analyzed for factual elements'
+                    },
+                    'mixed': { 
+                        color: '#f59e0b', 
+                        icon: 'fa-exclamation-circle', 
+                        label: 'MIXED', 
+                        badge: '#d97706',
+                        description: 'Both accurate and inaccurate elements present'
+                    },
+                    'unverified': { 
+                        color: '#9ca3af', 
+                        icon: 'fa-question-circle', 
+                        label: 'UNVERIFIED', 
+                        badge: '#6b7280',
+                        description: 'Cannot verify with available information'
+                    }
                 };
                 
                 const style = verdictStyles[verdict] || verdictStyles['unverified'];
                 
+                // ====================================================================
+                // REDESIGNED CLAIM CARD LAYOUT
+                // 1. THE CLAIM (in quotes, verbatim)
+                // 2. OUR ANALYSIS (with indicator)
+                // 3. VERIFICATION METHOD (all sources)
+                // ====================================================================
+                
                 claimsHTML += `
-                    <div style="background: white; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid ${style.color}; transition: all 0.3s;"
-                         onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)'; this.style.transform='translateY(-2px)';"
+                    <div style="background: white; border-radius: 12px; padding: 1.75rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid ${style.color}; transition: all 0.3s;"
+                         onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,0.12)'; this.style.transform='translateY(-3px)';"
                          onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
                         
-                        <div style="display: flex; align-items: start; justify-content: space-between; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.75rem;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <div style="font-weight: 700; color: #1e293b; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem;">
-                                    <i class="fas fa-search" style="color: ${style.color}; font-size: 0.75rem; margin-right: 0.5rem;"></i>
-                                    Finding ${index + 1}
+                        <!-- Finding Number Header -->
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #f1f5f9;">
+                            <div style="font-weight: 700; color: #0f172a; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                <i class="fas fa-hashtag" style="color: ${style.color}; font-size: 0.875rem; margin-right: 0.5rem;"></i>
+                                FINDING ${index + 1}
+                            </div>
+                            <span style="padding: 0.5rem 1rem; background: ${style.badge}; color: white; border-radius: 20px; font-size: 0.8125rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.375rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                <i class="fas ${style.icon}"></i>
+                                ${style.label}
+                            </span>
+                        </div>
+                        
+                        <!-- 1. THE CLAIM (First, in quotes, verbatim) -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <i class="fas fa-quote-left" style="color: ${style.color}; font-size: 1.25rem;"></i>
+                                <div style="font-weight: 700; color: #0f172a; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                    THE CLAIM
                                 </div>
                             </div>
-                            <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                                <span style="padding: 0.375rem 0.875rem; background: ${style.badge}; color: white; border-radius: 12px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                    <i class="fas ${style.icon}"></i>
-                                    ${style.label}
-                                </span>
-                                <span style="background: #f1f5f9; color: #475569; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
-                                    ${confidence}% Confidence
-                                </span>
+                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 1.25rem 1.5rem; border-radius: 10px; border-left: 4px solid ${style.color}; position: relative;">
+                                <div style="position: absolute; top: 0.75rem; left: 0.75rem; opacity: 0.15; font-size: 3rem; color: ${style.color};">
+                                    <i class="fas fa-quote-left"></i>
+                                </div>
+                                <p style="margin: 0; color: #1e293b; font-size: 1.0625rem; line-height: 1.7; font-style: italic; position: relative; z-index: 1; padding-left: 2rem;">
+                                    ${claim}
+                                </p>
+                                <div style="position: absolute; bottom: 0.75rem; right: 0.75rem; opacity: 0.15; font-size: 3rem; color: ${style.color};">
+                                    <i class="fas fa-quote-right"></i>
+                                </div>
                             </div>
                         </div>
                         
-                        <div style="background: #f8fafc; padding: 1rem 1.25rem; border-radius: 8px; margin-bottom: 0.75rem; border-left: 3px solid ${style.color};">
-                            <div style="font-weight: 600; color: #475569; font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                <i class="fas fa-clipboard-list" style="color: ${style.color}; margin-right: 0.5rem;"></i>
-                                Our Analysis:
+                        <!-- 2. OUR ANALYSIS (Second, with indicator) -->
+                        <div style="margin-bottom: 1.5rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fas fa-microscope" style="color: ${style.color}; font-size: 1.125rem;"></i>
+                                    <div style="font-weight: 700; color: #0f172a; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                        OUR ANALYSIS
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 0.625rem;">
+                                    <span style="background: linear-gradient(135deg, ${style.color}20 0%, ${style.color}10 100%); border: 1.5px solid ${style.color}60; color: ${style.badge}; padding: 0.375rem 0.875rem; border-radius: 16px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                        <i class="fas fa-chart-bar"></i>
+                                        ${confidence}% Confidence
+                                    </span>
+                                </div>
                             </div>
-                            <p style="margin: 0; color: #1e293b; font-size: 0.95rem; line-height: 1.6;">
-                                ${analysis}
-                            </p>
+                            <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 10px; border: 2px solid ${style.color}40; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                                <!-- Verdict Badge with Description -->
+                                <div style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; background: linear-gradient(135deg, ${style.color}15 0%, ${style.color}05 100%); border-left: 4px solid ${style.color}; border-radius: 8px; margin-bottom: 1rem; width: 100%;">
+                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: ${style.badge}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem; flex-shrink: 0;">
+                                        <i class="fas ${style.icon}"></i>
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <div style="font-weight: 700; color: ${style.badge}; font-size: 0.9375rem; margin-bottom: 0.25rem;">
+                                            ${style.label}
+                                        </div>
+                                        <div style="font-size: 0.8125rem; color: #64748b; line-height: 1.4;">
+                                            ${style.description}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Analysis Text -->
+                                <p style="margin: 0; color: #334155; font-size: 0.9375rem; line-height: 1.7;">
+                                    ${analysis}
+                                </p>
+                            </div>
                         </div>
                         
-                        ${sourcesList.length > 0 && sourcesList[0] ? `
-                            <div style="padding-top: 0.75rem; border-top: 1px solid #e2e8f0;">
-                                <div style="font-weight: 600; color: #475569; font-size: 0.75rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                    <i class="fas fa-check-double" style="color: ${style.color}; margin-right: 0.5rem;"></i>
-                                    Verification Method:
+                        <!-- 3. VERIFICATION METHOD (Third, showing all sources) -->
+                        ${allVerificationMethods.length > 0 ? `
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                    <i class="fas fa-check-double" style="color: ${style.color}; font-size: 1.125rem;"></i>
+                                    <div style="font-weight: 700; color: #0f172a; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
+                                        VERIFICATION METHOD
+                                    </div>
                                 </div>
-                                <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-                                    ${sourcesList.map(source => `
-                                        <span style="display: inline-block; padding: 0.25rem 0.625rem; background: linear-gradient(135deg, ${style.color}15 0%, ${style.color}08 100%); border: 1px solid ${style.color}40; color: ${style.badge}; border-radius: 12px; font-size: 0.7rem; font-weight: 600;">
-                                            ${source}
+                                <div style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); padding: 1rem 1.25rem; border-radius: 10px; border: 1.5px solid #e2e8f0;">
+                                    <div style="display: flex; flex-wrap: wrap; gap: 0.625rem; align-items: center;">
+                                        <span style="font-size: 0.8125rem; color: #64748b; font-weight: 600; margin-right: 0.25rem;">
+                                            Verified using:
                                         </span>
-                                    `).join('')}
+                                        ${allVerificationMethods.map(method => `
+                                            <span style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.875rem; background: linear-gradient(135deg, ${style.color}15 0%, ${style.color}08 100%); border: 1.5px solid ${style.color}40; color: ${style.badge}; border-radius: 20px; font-size: 0.8125rem; font-weight: 600; transition: all 0.2s;"
+                                                 onmouseover="this.style.background='linear-gradient(135deg, ${style.color}25 0%, ${style.color}15 100%)'; this.style.borderColor='${style.color}60';"
+                                                 onmouseout="this.style.background='linear-gradient(135deg, ${style.color}15 0%, ${style.color}08 100%)'; this.style.borderColor='${style.color}40';">
+                                                <i class="fas fa-check-circle" style="font-size: 0.75rem;"></i>
+                                                ${method}
+                                            </span>
+                                        `).join('')}
+                                    </div>
                                 </div>
                             </div>
                         ` : ''}
@@ -929,17 +1098,18 @@ window.ServiceTemplates = {
             });
             
             claimsContainer.innerHTML = claimsHTML;
-            console.log('[FactChecker v4.26.0] ✓ Successfully rendered', factChecks.length, 'findings with rich verdicts');
+            console.log('[FactChecker v4.27.0] ✓ REDESIGNED LAYOUT: Successfully rendered', factChecks.length, 'findings');
+            console.log('[FactChecker v4.27.0] ✓ Each finding shows: CLAIM → ANALYSIS → VERIFICATION');
             
         } else {
-            console.log('[FactChecker v4.26.0] No findings to display');
+            console.log('[FactChecker v4.27.0] No findings to display');
             claimsContainer.innerHTML = `
-                <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
-                    <i class="fas fa-info-circle" style="font-size: 2rem; color: #3b82f6; margin-bottom: 1rem;"></i>
-                    <p style="color: #1e40af; font-size: 1rem; font-weight: 600; margin: 0;">
+                <div style="padding: 2.5rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
+                    <i class="fas fa-info-circle" style="font-size: 2.5rem; color: #3b82f6; margin-bottom: 1.25rem;"></i>
+                    <p style="color: #1e40af; font-size: 1.0625rem; font-weight: 600; margin: 0 0 0.5rem 0;">
                         No specific findings for fact-checking in this content.
                     </p>
-                    <p style="color: #3b82f6; font-size: 0.875rem; margin-top: 0.5rem;">
+                    <p style="color: #3b82f6; font-size: 0.9375rem; margin: 0;">
                         The content may be opinion-based, editorial, or contain primarily general statements.
                     </p>
                 </div>
@@ -1323,4 +1493,7 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('ServiceTemplates loaded successfully - v4.26.0 - TRANSCRIPT MODE CONDITIONAL RENDERING');
+console.log('[ServiceTemplates v4.27.0] REDESIGNED FACT-CHECKING DISPLAY - Module loaded');
+console.log('[ServiceTemplates v4.27.0] New layout: CLAIM → ANALYSIS → VERIFICATION');
+
+// This file is not truncated
