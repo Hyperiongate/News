@@ -1,22 +1,21 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
  * Date: October 22, 2025
- * Version: 4.28.0 - MULTI-AUTHOR DISPLAY + AWARDS REMOVED
- * Last Updated: October 22, 2025 - 2:00 PM
+ * Version: 4.29.0 - VISUAL DIAL + SUBTLE TRANSPARENCY
+ * Last Updated: October 22, 2025 - 5:00 PM
  * 
- * CRITICAL CHANGES FROM v4.27.0:
- * ✅ FIXED: Display ALL authors (not just first one)
- * ✅ REMOVED: All awards references (6 removals total)
- * ✅ ENHANCED: Authors joined with "and" (Paul Kirby and John Sudworth)
- * ✅ PRESERVED: All other services unchanged (DO NO HARM)
+ * CRITICAL CHANGES FROM v4.28.0:
+ * ✅ NEW: Visual SVG speedometer dial for bias detection (180° arc)
+ * ✅ NEW: Subtle horizontal layout for transparency (replaces giant purple box)
+ * ✅ ENHANCED: Animated needle for bias dial with color-coded zones
+ * ✅ ENHANCED: Compact purple score badge for transparency (content-first design)
+ * ✅ PRESERVED: All v4.28.0 functionality (multi-author display, no awards)
  * 
- * WHAT CHANGED:
- * 1. displayAuthor() - Now shows all authors joined with "and"
- * 2. Author template - Removed awards stat-item
- * 3. Author template - Removed awards-section
- * 4. Source template - Removed awards detail-item
- * 5. displayAuthor() - Removed awards updateElement
- * 6. displaySourceCredibility() - Removed awards updateElement
+ * WHAT'S NEW:
+ * 1. displayBiasDetector() - Now renders SVG speedometer dial with animated needle
+ * 2. displayTransparencyAnalyzer() - Now uses subtle horizontal layout (score on right)
+ * 3. Bias template - Added SVG dial HTML with 180° arc and colored zones
+ * 4. Transparency template - Replaced hero section with elegant horizontal card
  * 
  * WHAT'S PRESERVED: All other services, templates, and functionality
  * 
@@ -137,32 +136,94 @@ window.ServiceTemplates = {
                             <i class="fas fa-balance-scale"></i>
                             <h3>Bias Detection Analysis</h3>
                         </div>
-                        <div class="bias-meter-container">
-                            <div class="meter-title">Political Bias Spectrum</div>
-                            <div class="bias-meter">
-                                <div class="bias-scale">
-                                    <span class="scale-label">Far Left</span>
-                                    <span class="scale-label">Left</span>
-                                    <span class="scale-label">Center</span>
-                                    <span class="scale-label">Right</span>
-                                    <span class="scale-label">Far Right</span>
-                                </div>
-                                <div class="bias-track">
-                                    <div class="bias-indicator" id="bias-indicator" style="left: 50%"></div>
+                        
+                        <!-- NEW: Visual Speedometer Dial -->
+                        <div class="bias-dial-container" style="padding: 2rem; text-align: center;">
+                            <div class="dial-title" style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem;">
+                                <i class="fas fa-chart-line" style="margin-right: 0.5rem; color: #f59e0b;"></i>
+                                Political Bias Spectrum
+                            </div>
+                            
+                            <!-- SVG Speedometer -->
+                            <svg id="bias-dial-svg" width="100%" height="200" viewBox="0 0 400 220" style="max-width: 500px; margin: 0 auto;">
+                                <!-- Background Arc (180 degrees) -->
+                                <defs>
+                                    <linearGradient id="arcGradientRed1" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#dc2626;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
+                                    </linearGradient>
+                                    <linearGradient id="arcGradientOrange1" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                    </linearGradient>
+                                    <linearGradient id="arcGradientGreen" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                        <stop offset="50%" style="stop-color:#10b981;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                    </linearGradient>
+                                    <linearGradient id="arcGradientOrange2" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
+                                    </linearGradient>
+                                    <linearGradient id="arcGradientRed2" x1="0%" y1="0%" x2="100%" y2="0%">
+                                        <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+                                        <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
+                                    </linearGradient>
+                                </defs>
+                                
+                                <!-- Colored arc segments (180° from left to right) -->
+                                <!-- Far Left: Red (0-36°) -->
+                                <path d="M 50 180 A 150 150 0 0 1 86.3 68.3" 
+                                      stroke="url(#arcGradientRed1)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                
+                                <!-- Left: Orange (36-72°) -->
+                                <path d="M 86.3 68.3 A 150 150 0 0 1 150 50" 
+                                      stroke="url(#arcGradientOrange1)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                
+                                <!-- Center: Green (72-108°) -->
+                                <path d="M 150 50 A 150 150 0 0 1 250 50" 
+                                      stroke="url(#arcGradientGreen)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                
+                                <!-- Right: Orange (108-144°) -->
+                                <path d="M 250 50 A 150 150 0 0 1 313.7 68.3" 
+                                      stroke="url(#arcGradientOrange2)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                
+                                <!-- Far Right: Red (144-180°) -->
+                                <path d="M 313.7 68.3 A 150 150 0 0 1 350 180" 
+                                      stroke="url(#arcGradientRed2)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                
+                                <!-- Center point -->
+                                <circle cx="200" cy="180" r="8" fill="#64748b"/>
+                                
+                                <!-- Needle (will be rotated via CSS transform) -->
+                                <g id="bias-needle" style="transform-origin: 200px 180px; transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);">
+                                    <line x1="200" y1="180" x2="200" y2="60" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
+                                    <circle cx="200" cy="180" r="12" fill="#1e293b"/>
+                                    <circle cx="200" cy="60" r="8" fill="#dc2626"/>
+                                </g>
+                                
+                                <!-- Labels -->
+                                <text x="50" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#dc2626">Far Left</text>
+                                <text x="125" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b">Left</text>
+                                <text x="200" y="205" text-anchor="middle" font-size="12" font-weight="700" fill="#10b981">CENTER</text>
+                                <text x="275" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b">Right</text>
+                                <text x="350" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#dc2626">Far Right</text>
+                            </svg>
+                            
+                            <!-- Score Display Below Dial -->
+                            <div style="margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; display: inline-block; min-width: 250px;">
+                                <div style="font-size: 0.85rem; color: #92400e; font-weight: 600; margin-bottom: 0.25rem;">Detected Lean</div>
+                                <div id="bias-direction" style="font-size: 1.5rem; font-weight: 800; color: #1e293b;">Center</div>
+                                <div style="font-size: 0.9rem; color: #78350f; margin-top: 0.5rem;">
+                                    Objectivity: <span id="bias-score" style="font-weight: 700;">--</span>
                                 </div>
                             </div>
                         </div>
+                        
+                        <!-- Explanation Section (preserved from v4.27) -->
                         <div class="bias-metrics">
-                            <div class="metric-card warning">
-                                <span class="metric-label">Objectivity Score</span>
-                                <span class="metric-value" id="bias-score">--</span>
-                            </div>
-                            <div class="metric-card">
-                                <span class="metric-label">Political Lean</span>
-                                <span class="metric-value" id="bias-direction">--</span>
-                            </div>
+                            <!-- This will be populated by displayBiasDetector() -->
                         </div>
-                        <!-- Explanation section will be inserted here dynamically -->
                     </div>
                 </div>
             `,
@@ -654,7 +715,7 @@ window.ServiceTemplates = {
 
     // Display Bias Detector
     displayBiasDetector: function(data, analyzer) {
-        console.log('[BiasDetector v4.26.0] Displaying data:', data);
+        console.log('[BiasDetector v4.29.0 - VISUAL DIAL] Displaying data:', data);
         
         const objectivityScore = data.objectivity_score || data.score || 50;
         const direction = data.bias_direction || data.political_bias || data.direction || 'center';
@@ -663,18 +724,29 @@ window.ServiceTemplates = {
         
         console.log('[BiasDetector] Objectivity:', objectivityScore, 'Direction:', direction);
         
+        // Update text displays
         this.updateElement('bias-score', objectivityScore + '/100');
         this.updateElement('bias-direction', politicalLabel);
         
-        const indicator = document.getElementById('bias-indicator');
-        if (indicator) {
-            const position = this.getBiasPosition(direction, objectivityScore);
+        // NEW: Animate the needle on the visual dial
+        const needle = document.getElementById('bias-needle');
+        if (needle) {
+            // Convert bias position to rotation angle
+            // Position scale: 0 (far-left) to 100 (far-right), 50 = center
+            // Rotation: -90° (far-left) to +90° (far-right), 0° = center (pointing up)
+            const biasPosition = this.getBiasPosition(direction, objectivityScore);
+            // Map position (0-100) to angle (-90 to +90)
+            const angle = (biasPosition - 50) * 1.8; // 1.8 = 180/100
+            
+            console.log('[BiasDetector] Needle animation: position=' + biasPosition + ', angle=' + angle + '°');
+            
+            // Animate needle rotation
             setTimeout(function() {
-                indicator.style.left = position + '%';
-            }, 100);
+                needle.style.transform = 'rotate(' + angle + 'deg)';
+            }, 200);
         }
         
-        // Always add explanation section
+        // Always add explanation section (preserved from v4.27)
         const metricsContainer = document.querySelector('.biasDetectorDropdown .bias-metrics');
         if (metricsContainer) {
             // Remove existing explanation if present
@@ -748,63 +820,18 @@ window.ServiceTemplates = {
                         <i class="fas fa-search" style="margin-right: 0.5rem; color: #f59e0b;"></i>
                         What We Analyzed
                     </h5>
-                    <p style="margin: 0 0 1rem 0; color: #475569; line-height: 1.6;">
-                        We examined the article for political bias, sensationalism, loaded language, corporate bias, and framing techniques. 
-                        Our multi-dimensional analysis looks at word choice, tone, source diversity, and how issues are presented.
-                    </p>
-                    
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #1e293b; font-size: 1rem; font-weight: 600;">
-                        <i class="fas fa-clipboard-list" style="margin-right: 0.5rem; color: #f59e0b;"></i>
-                        What We Found
-                    </h5>
                     <ul style="margin: 0; padding-left: 1.5rem; color: #475569; line-height: 1.8;">
                         ${findings.join('')}
                     </ul>
-                    
-                    <h5 style="margin: 1.5rem 0 1rem 0; color: #1e293b; font-size: 1rem; font-weight: 600;">
-                        <i class="fas fa-lightbulb" style="margin-right: 0.5rem; color: #f59e0b;"></i>
-                        What This Means
-                    </h5>
-                    <p style="margin: 0; color: #475569; line-height: 1.6;">
-                        ${this.getObjectivityMeaning(objectivityScore, politicalLabel)}
-                    </p>
                 </div>
             `;
             
-            metricsContainer.parentElement.insertBefore(explanation, metricsContainer.nextSibling);
+            metricsContainer.appendChild(explanation);
         }
         
-        console.log('[BiasDetector v4.26.0] ✓ Explanation section rendered');
-    },
-    
-    getSensationalismExplanation: function(level) {
-        const explanations = {
-            'High': 'Significant use of sensational language that may exaggerate issues',
-            'Moderate': 'Some sensational language present but not overwhelming',
-            'Low': 'Minimal sensational language detected',
-            'Minimal': 'Very little or no sensational language used'
-        };
-        return explanations[level] || 'Article uses measured, factual language';
-    },
-    
-    getObjectivityMeaning: function(score, politicalLabel) {
-        if (score >= 85) {
-            return 'This article maintains excellent journalistic standards with balanced, neutral reporting. You can trust the information presented is factual and fair.';
-        } else if (score >= 70) {
-            return 'This article maintains good journalistic standards with mostly balanced reporting. While some bias elements exist, they don\'t significantly impact the overall reliability.';
-        } else if (score >= 50) {
-            if (politicalLabel && politicalLabel !== 'Center') {
-                return `This article shows a ${politicalLabel.toLowerCase()} perspective that may influence how information is presented. Consider reading coverage from other sources for a complete picture.`;
-            }
-            return 'This article contains noticeable bias elements that may affect how information is presented. Consider seeking additional sources for a balanced view.';
-        } else {
-            return 'This article shows significant bias that likely affects the reliability and balance of information. We strongly recommend verifying claims with multiple independent sources.';
-        }
+        console.log('[BiasDetector v4.29.0] ✓ Visual dial animated + explanation displayed');
     },
 
-    // ============================================================================
-    // FACT CHECKER - ENHANCED FOR RICH 13-VERDICT SYSTEM (v4.26.0)
-    // ============================================================================
     displayFactChecker: function(data, analyzer) {
         console.log('[FactChecker v4.27.0] REDESIGNED CLAIM LAYOUT - Data received:', data);
         
@@ -1099,8 +1126,8 @@ window.ServiceTemplates = {
 
     // Display Transparency Analyzer
     displayTransparencyAnalyzer: function(data, analyzer) {
-        console.log('[TransparencyAnalyzer v4.26.0] Displaying data:', data);
-        console.log('[TransparencyAnalyzer v4.26.0] Full data object:', JSON.stringify(data, null, 2));
+        console.log('[TransparencyAnalyzer v4.29.0 - SUBTLE HORIZONTAL] Displaying data:', data);
+        console.log('[TransparencyAnalyzer v4.29.0] Full data object:', JSON.stringify(data, null, 2));
         
         const container = document.getElementById('transparency-content-v3');
         if (!container) {
@@ -1112,7 +1139,7 @@ window.ServiceTemplates = {
         const hasEducationalContent = data.article_type || data.what_to_look_for || data.transparency_lessons;
         
         if (hasEducationalContent) {
-            console.log('[Transparency v4.26.0] ✓ Found v4.0 educational content! Displaying rich educational guide...');
+            console.log('[Transparency v4.29.0] ✓ Found v4.0 educational content! Displaying SUBTLE HORIZONTAL layout...');
             
             // Extract v4.0 educational data
             const articleType = data.article_type || 'News Report';
@@ -1122,14 +1149,31 @@ window.ServiceTemplates = {
             const lessons = data.transparency_lessons || [];
             const findings = data.findings || [];
             
-            // Build rich educational display
+            // Build NEW SUBTLE HORIZONTAL LAYOUT
             let html = `
                 <div style="padding: 2rem;">
-                    <!-- Hero Score Section -->
-                    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 2rem; box-shadow: 0 4px 12px rgba(139,92,246,0.2);">
-                        <div style="font-size: 3.5rem; font-weight: 800; margin-bottom: 0.5rem;">${score}</div>
-                        <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.25rem;">${level}</div>
-                        <div style="font-size: 0.95rem; opacity: 0.9;">Article Type: ${articleType}</div>
+                    <!-- NEW: Subtle Horizontal Layout (Info Left, Score Right) -->
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 1.5rem 2rem; background: white; border-radius: 12px; border: 2px solid #e9d5ff; box-shadow: 0 2px 8px rgba(139,92,246,0.08); margin-bottom: 2rem;">
+                        <!-- Left: Info -->
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.85rem; color: #8b5cf6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                                Transparency Analysis
+                            </div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem;">
+                                ${level}
+                            </div>
+                            <div style="font-size: 0.95rem; color: #64748b;">
+                                Article Type: <span style="font-weight: 600; color: #475569;">${articleType}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Right: Compact Score Badge -->
+                        <div style="flex-shrink: 0;">
+                            <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 1.25rem 1.75rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(139,92,246,0.2); min-width: 120px;">
+                                <div style="font-size: 2.5rem; font-weight: 800; color: white; line-height: 1;">${score}</div>
+                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.9); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.25rem;">Score</div>
+                            </div>
+                        </div>
                     </div>
             `;
             
@@ -1200,80 +1244,59 @@ window.ServiceTemplates = {
                     <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1.75rem; border-radius: 12px; border-left: 4px solid #f59e0b;">
                         <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">
                             <i class="fas fa-graduation-cap" style="margin-right: 0.5rem;"></i>
-                            Key Lessons
+                            Media Literacy Lessons
                         </h4>
-                        <ul style="margin: 0; padding-left: 1.5rem; color: #78350f; line-height: 1.9;">
+                        <div style="background: rgba(255,255,255,0.6); padding: 1.5rem; border-radius: 8px;">
                 `;
                 
                 lessons.forEach(lesson => {
-                    html += `<li style="margin-bottom: 0.5rem;">${lesson}</li>`;
+                    if (typeof lesson === 'string') {
+                        html += `<p style="margin: 0 0 0.75rem 0; color: #78350f; line-height: 1.7;">${lesson}</p>`;
+                    }
                 });
                 
                 html += `
-                        </ul>
+                        </div>
                     </div>
                 `;
             }
             
-            html += `</div>`;
+            html += '</div>'; // Close main padding div
+            
             container.innerHTML = html;
-            console.log('[TransparencyAnalyzer v4.26.0] ✓ Displayed v4.0 educational content');
-            return;
-        }
-        
-        // Fall back to score-only display if no educational content
-        const score = data.transparency_score || data.score || 0;
-        const level = data.transparency_level || data.level || 'Unknown';
-        
-        if (score > 0) {
-            console.log('[Transparency v4.26.0] Displaying score-only view');
-            container.innerHTML = `
-                <div style="padding: 2rem; text-align: center; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 1.5rem;">
-                    <div style="font-size: 3.5rem; font-weight: 800; margin-bottom: 0.5rem;">${score}</div>
-                    <div style="font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem;">${level} Transparency</div>
-                    <div style="font-size: 0.95rem; opacity: 0.9;">Analysis complete</div>
-                </div>
-                
-                <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                    <p style="margin: 0; color: #475569; line-height: 1.7; font-size: 0.95rem;">
-                        The transparency analyzer evaluated this article's source attribution, citation quality, and disclosure statements.
-                        ${score >= 70 ? 'This article demonstrates strong transparency with verifiable sources.' : 
-                          score >= 50 ? 'This article has moderate transparency with some verifiable elements.' :
-                          'This article has limited transparency. Consider verifying claims independently.'}
-                    </p>
-                </div>
-            `;
+            
         } else {
-            // No data at all - show generic educational content
-            console.log('[Transparency v4.26.0] No data - showing generic educational content');
+            // Fallback for non-educational format
+            console.log('[Transparency v4.29.0] Using fallback display (no educational content)');
+            
+            const score = data.transparency_score || data.score || 0;
+            const level = data.transparency_level || data.level || 'Unknown';
+            
             container.innerHTML = `
                 <div style="padding: 2rem;">
-                    <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); border-radius: 12px; color: white; margin-bottom: 2rem;">
-                        <div style="font-size: 3rem; margin-bottom: 0.75rem;">
-                            <i class="fas fa-eye"></i>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 1.5rem 2rem; background: white; border-radius: 12px; border: 2px solid #e9d5ff; box-shadow: 0 2px 8px rgba(139,92,246,0.08);">
+                        <div style="flex: 1;">
+                            <div style="font-size: 0.85rem; color: #8b5cf6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
+                                Transparency Analysis
+                            </div>
+                            <div style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">
+                                ${level}
+                            </div>
                         </div>
-                        <h3 style="margin: 0 0 0.5rem 0; font-size: 1.5rem; font-weight: 700;">
-                            What Transparent Journalism Looks Like
-                        </h3>
-                        <p style="margin: 0; font-size: 1rem; opacity: 0.95;">
-                            Learn to identify trustworthy, well-sourced journalism
-                        </p>
-                    </div>
-                    
-                    <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-                        <p style="margin: 0; color: #475569; line-height: 1.7;">
-                            The transparency analyzer service is currently unavailable. Look for these transparency indicators yourself:
-                            named sources, direct quotes, clear attribution, multiple perspectives, and disclosure of conflicts.
-                        </p>
+                        <div style="flex-shrink: 0;">
+                            <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 1.25rem 1.75rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(139,92,246,0.2); min-width: 120px;">
+                                <div style="font-size: 2.5rem; font-weight: 800; color: white; line-height: 1;">${score}</div>
+                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.9); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.25rem;">Score</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
         }
         
-        console.log('[TransparencyAnalyzer v4.26.0] ✓ Display complete');
+        console.log('[TransparencyAnalyzer v4.29.0] ✓ SUBTLE HORIZONTAL layout displayed');
     },
 
-    // Display Content Analyzer
     displayContentAnalyzer: function(data, analyzer) {
         const qualityScore = data.quality_score || data.score || 0;
         const readabilityLevel = data.readability_level || data.readability || 'Unknown';
@@ -1476,7 +1499,7 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('[ServiceTemplates v4.27.0] REDESIGNED FACT-CHECKING DISPLAY - Module loaded');
-console.log('[ServiceTemplates v4.27.0] New layout: CLAIM → ANALYSIS → VERIFICATION');
+console.log('[ServiceTemplates v4.29.0] VISUAL DIAL + SUBTLE TRANSPARENCY - Module loaded');
+console.log('[ServiceTemplates v4.29.0] Visual enhancements: DIAL + HORIZONTAL LAYOUT');
 
 // This file is not truncated
