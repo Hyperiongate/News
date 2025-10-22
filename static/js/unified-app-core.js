@@ -361,10 +361,12 @@ UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
         loadingMessage.textContent = messages[0];
     }
     
+    var self = this;
     this.messageInterval = setInterval(function() {
         messageIndex = (messageIndex + 1) % messages.length;
         if (loadingMessage) {
             loadingMessage.textContent = messages[messageIndex];
+            console.log('[Progress] Message changed: ' + messages[messageIndex]);
         }
     }, 4000); // Change message every 4 seconds
     
@@ -400,6 +402,7 @@ UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
             setTimeout(function() {
                 if (funFactContent) {
                     funFactContent.textContent = funFacts[factIndex];
+                    console.log('[Progress] Fun fact changed: ' + funFacts[factIndex].substring(0, 50) + '...');
                 }
                 // Fade in
                 if (funFactSection) {
