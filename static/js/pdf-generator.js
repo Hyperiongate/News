@@ -1,8 +1,8 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 12.2.1 - VERDICT LABEL FIX
+ * VERSION: 12.2.2 - VERDICT BADGE FIX
  * DATE: October 22, 2025
- * Last Updated: October 22, 2025 - 6:45 PM
+ * Last Updated: October 22, 2025 - 7:15 PM
  * 
  * CRITICAL UPGRADE FROM v12.1.1:
  * ✅ NEW: Integrated 13-point fact checking scale
@@ -12,11 +12,11 @@
  * ✅ ENHANCED: Fact checker claims display uses full 13-point metadata
  * ✅ PRESERVED: All v12.1.1 fixes (full text, no overlap, global function)
  * 
- * UPDATE v12.2.1 (October 22, 2025):
- * ✅ FIXED: Verdict labels no longer overlap claim text
- * ✅ FIXED: Verdict positioned at START of claim (not end)
- * ✅ FIXED: Reduced claim text width (155mm) to prevent overlap with verdicts
- * ✅ ENHANCED: Verdict label rendered BEFORE claim text for better alignment
+ * UPDATE v12.2.2 (October 22, 2025):
+ * ✅ FIXED: Verdict now in colored badge on SEPARATE line (icon line)
+ * ✅ FIXED: Claim text gets full width (no overlap possible)
+ * ✅ ENHANCED: Professional badge appearance (colored background + white text)
+ * ✅ ENHANCED: Better spacing between icon, badge, and claim text
  *
  * 13-POINT SCALE:
  * - true (✅ green), mostly_true (✅ light green)
@@ -1027,25 +1027,32 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
                 }
             }
             
-            // Save starting y position for verdict label alignment
-            const claimStartY = fy;
-            
             // Draw verdict icon
             doc.setFontSize(10);
             doc.setTextColor(...verdictColor);
             doc.text(verdictIcon, 20, fy);
             
-            // NEW v12.2.1: Add verdict label badge on the right (aligned with first line)
+            // FIXED v12.2.2: Draw verdict badge on same line as icon (separate from claim text)
             doc.setFontSize(7);
             doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...verdictColor);
-            doc.text(verdictLabel.toUpperCase(), 188, fy, { align: 'right' });
+            doc.setTextColor(255, 255, 255); // White text
+            
+            // Draw colored background for verdict badge
+            const verdictWidth = doc.getTextWidth(verdictLabel.toUpperCase()) + 4;
+            doc.setFillColor(...verdictColor);
+            doc.roundedRect(170 - verdictWidth, fy - 3, verdictWidth, 4, 0.5, 0.5, 'F');
+            
+            // Draw verdict text on colored background
+            doc.text(verdictLabel.toUpperCase(), 169, fy, { align: 'right' });
             doc.setFont('helvetica', 'normal');
             
-            // FIXED v12.1.1: Show FULL claim text (up to 3 lines)
+            // Move to next line for claim text
+            fy += 5;
+            
+            // FIXED v12.1.1: Show FULL claim text (up to 3 lines) - FULL WIDTH
             doc.setFontSize(8);
             doc.setTextColor(...colors.darkGray);
-            const lines = doc.splitTextToSize(claimText, 155); // Reduced from 165 to leave room for verdict
+            const lines = doc.splitTextToSize(claimText, 165); // Full width now that verdict is on separate line
             const linesToShow = Math.min(lines.length, 3);
             
             for (let i = 0; i < linesToShow; i++) {
