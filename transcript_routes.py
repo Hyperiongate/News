@@ -40,7 +40,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 # Create Blueprint
-transcript_bp = Blueprint('transcript', __name__)
+transcript_bp = Blueprint('transcript', __name__, url_prefix='/api/transcript')
 
 # In-memory job storage
 jobs = {}
