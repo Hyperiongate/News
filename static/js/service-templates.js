@@ -145,7 +145,7 @@ window.ServiceTemplates = {
                             </div>
                             
                             <!-- SVG Speedometer -->
-                            <svg id="bias-dial-svg" width="100%" height="200" viewBox="0 0 400 220" style="max-width: 500px; margin: 0 auto;">
+                            <svg id="bias-dial-svg" width="100%" height="250" viewBox="0 0 400 220" style="max-width: 500px; margin: 0 auto;">
                                 <!-- Background Arc (180 degrees) -->
                                 <defs>
                                     <linearGradient id="arcGradientRed1" x1="0%" y1="0%" x2="100%" y2="0%">
