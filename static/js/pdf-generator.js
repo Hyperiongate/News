@@ -1,8 +1,8 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 12.2.0 - 13-POINT SCALE INTEGRATION
- * DATE: October 16, 2025
- * Last Updated: October 16, 2025 - 9:00 PM
+ * VERSION: 12.2.1 - VERDICT LABEL FIX
+ * DATE: October 22, 2025
+ * Last Updated: October 22, 2025 - 6:45 PM
  * 
  * CRITICAL UPGRADE FROM v12.1.1:
  * ✅ NEW: Integrated 13-point fact checking scale
@@ -12,6 +12,12 @@
  * ✅ ENHANCED: Fact checker claims display uses full 13-point metadata
  * ✅ PRESERVED: All v12.1.1 fixes (full text, no overlap, global function)
  * 
+ * UPDATE v12.2.1 (October 22, 2025):
+ * ✅ FIXED: Verdict labels no longer overlap claim text
+ * ✅ FIXED: Verdict positioned at START of claim (not end)
+ * ✅ FIXED: Reduced claim text width (155mm) to prevent overlap with verdicts
+ * ✅ ENHANCED: Verdict label rendered BEFORE claim text for better alignment
+ *
  * 13-POINT SCALE:
  * - true (✅ green), mostly_true (✅ light green)
  * - partially_true (⚠️ yellow), exaggerated (📈 orange)
@@ -1021,27 +1027,30 @@ function displayFactCheckClaims(doc, serviceData, fullData, yPos, colors) {
                 }
             }
             
+            // Save starting y position for verdict label alignment
+            const claimStartY = fy;
+            
             // Draw verdict icon
             doc.setFontSize(10);
             doc.setTextColor(...verdictColor);
             doc.text(verdictIcon, 20, fy);
             
+            // NEW v12.2.1: Add verdict label badge on the right (aligned with first line)
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(...verdictColor);
+            doc.text(verdictLabel.toUpperCase(), 188, fy, { align: 'right' });
+            doc.setFont('helvetica', 'normal');
+            
             // FIXED v12.1.1: Show FULL claim text (up to 3 lines)
             doc.setFontSize(8);
             doc.setTextColor(...colors.darkGray);
-            const lines = doc.splitTextToSize(claimText, 165);
+            const lines = doc.splitTextToSize(claimText, 155); // Reduced from 165 to leave room for verdict
             const linesToShow = Math.min(lines.length, 3);
             
             for (let i = 0; i < linesToShow; i++) {
                 doc.text(lines[i], 25, fy + (i * 4));
             }
-            
-            // NEW v12.2.0: Add verdict label on the right
-            doc.setFontSize(7);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(...verdictColor);
-            doc.text(verdictLabel.toUpperCase(), 175, fy, { align: 'right' });
-            doc.setFont('helvetica', 'normal');
             
             fy += (linesToShow * 4) + 2;
             
