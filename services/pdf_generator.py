@@ -1,7 +1,20 @@
 # services/pdf_generator.py
 """
-PDF Generation Service
+PDF Generation Service - v2.2
 Creates professional PDF reports from analysis results
+
+CHANGE LOG:
+- 2025-10-23: v2.2 - FIXED: Bias graphic now displays as horizontal straight line
+  * New method: _create_bias_bar_graphic()
+  * Replaced curved/circular bias meter with horizontal color-coded bar
+  * 5 colored zones: Red-Orange-Green-Orange-Red (matching web UI)
+  * Clean, professional straight-line design
+  * Position marker shows exact bias location
+  * Labels below bar for clarity
+
+Previous versions:
+- v2.1 - Added bias section
+- v2.0 - Enhanced PDF generation
 """
 
 import io
@@ -22,7 +35,7 @@ try:
     from reportlab.lib.units import inch
     from reportlab.lib.enums import TA_CENTER, TA_RIGHT, TA_JUSTIFY, TA_LEFT
     from reportlab.pdfgen import canvas
-    from reportlab.graphics.shapes import Drawing, Circle, Rect, String
+    from reportlab.graphics.shapes import Drawing, Circle, Rect, String, Line
     from reportlab.graphics.charts.piecharts import Pie
     REPORTLAB_AVAILABLE = True
     logger.info("ReportLab loaded successfully")
@@ -202,8 +215,8 @@ class PDFGenerator:
             name='Success',
             parent=self.styles['BodyText'],
             fontSize=11,
-            textColor=colors.HexColor('#14532d'),
-            backColor=colors.HexColor('#f0fdf4'),
+            textColor=colors.HexColor('#065f46'),
+            backColor=colors.HexColor('#d1fae5'),
             borderWidth=1,
             borderColor=colors.HexColor('#10b981'),
             borderPadding=8,
@@ -216,90 +229,39 @@ class PDFGenerator:
             parent=self.styles['BodyText'],
             fontSize=11,
             textColor=colors.HexColor('#1e40af'),
-            backColor=colors.HexColor('#eff6ff'),
+            backColor=colors.HexColor('#dbeafe'),
             borderWidth=1,
-            borderColor=colors.HexColor('#60a5fa'),
+            borderColor=colors.HexColor('#3b82f6'),
             borderPadding=8,
             spaceAfter=12
         ))
     
     def _create_cover_page(self, data):
-        """Create the cover page"""
+        """Create cover page"""
         elements = []
         
         # Title
+        elements.append(Spacer(1, 2*inch))
         elements.append(Paragraph("News Analysis Report", self.styles['CustomTitle']))
-        elements.append(Spacer(1, 0.2*inch))
         
         # Article info
         article = data.get('article', {})
-        if article.get('title'):
-            elements.append(Paragraph(article['title'], self.styles['Subtitle']))
+        title = article.get('title', 'Unknown Article')
+        domain = article.get('domain', 'Unknown Source')
         
-        # Metadata table
-        metadata = []
-        if article.get('author'):
-            metadata.append(['Author:', article['author']])
-        if article.get('domain'):
-            metadata.append(['Source:', article['domain']])
-        if article.get('date'):
-            metadata.append(['Published:', article['date']])
-        metadata.append(['Analysis Date:', datetime.now().strftime('%B %d, %Y')])
-        
-        if metadata:
-            t = Table(metadata, colWidths=[2*inch, 4*inch])
-            t.setStyle(TableStyle([
-                ('FONT', (0, 0), (-1, -1), 'Helvetica', 10),
-                ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#6b7280')),
-                ('TEXTCOLOR', (1, 0), (1, -1), colors.HexColor('#1f2937')),
-                ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
-                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
-                ('TOPPADDING', (0, 0), (-1, -1), 3),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
-            ]))
-            elements.append(Spacer(1, 0.3*inch))
-            elements.append(t)
-        
-        # Trust Score
+        elements.append(Paragraph(f"<i>{title}</i>", self.styles['Subtitle']))
         elements.append(Spacer(1, 0.5*inch))
+        elements.append(Paragraph(f"Source: {domain}", self.styles['Subtitle']))
+        
+        # Trust score
         trust_score = data.get('trust_score', 0)
+        elements.append(Spacer(1, 1*inch))
         elements.append(self._create_trust_score_graphic(trust_score))
         
-        # Key metrics summary
-        elements.append(Spacer(1, 0.5*inch))
-        metrics = []
-        
-        if data.get('bias_analysis'):
-            bias = data['bias_analysis']
-            political_lean = bias.get('political_lean', 0)
-            if political_lean < -20:
-                lean_text = "Left-leaning"
-            elif political_lean > 20:
-                lean_text = "Right-leaning"
-            else:
-                lean_text = "Center/Neutral"
-            metrics.append(['Political Bias:', lean_text])
-        
-        if data.get('clickbait_analysis'):
-            score = data['clickbait_analysis'].get('score', 0)
-            level = 'Low' if score < 30 else 'Medium' if score < 60 else 'High'
-            metrics.append(['Clickbait Level:', f"{level} ({score}%)"])
-        
-        if data.get('source_credibility'):
-            metrics.append(['Source Credibility:', data['source_credibility'].get('credibility', 'Unknown')])
-        
-        if metrics:
-            t = Table(metrics, colWidths=[2.5*inch, 3.5*inch])
-            t.setStyle(TableStyle([
-                ('FONT', (0, 0), (-1, -1), 'Helvetica-Bold', 12),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.HexColor('#1f2937')),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor('#f3f4f6')),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-                ('TOPPADDING', (0, 0), (-1, -1), 8),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-            ]))
-            elements.append(t)
+        # Date
+        elements.append(Spacer(1, 1*inch))
+        date_str = datetime.now().strftime("%B %d, %Y")
+        elements.append(Paragraph(f"Generated: {date_str}", self.styles['Subtitle']))
         
         return elements
     
@@ -309,84 +271,111 @@ class PDFGenerator:
         
         elements.append(Paragraph("Executive Summary", self.styles['SectionHeader']))
         
-        # Trust assessment
+        # Trust score assessment
         trust_score = data.get('trust_score', 0)
         if trust_score >= 70:
-            trust_text = "This article demonstrates high credibility with reliable sourcing and minimal bias."
+            assessment = "This article demonstrates strong credibility and reliability."
             style = self.styles['Success']
         elif trust_score >= 40:
-            trust_text = "This article shows moderate credibility. Some caution is advised when interpreting claims."
-            style = self.styles['CustomBody']
+            assessment = "This article shows moderate credibility. Exercise caution with key facts."
+            style = self.styles['Info']
         else:
-            trust_text = "This article has significant credibility concerns. Verify all claims through independent sources."
+            assessment = "This article raises significant credibility concerns. Verify all information independently."
             style = self.styles['Alert']
         
-        elements.append(Paragraph(trust_text, style))
+        elements.append(Paragraph(assessment, style))
         elements.append(Spacer(1, 0.2*inch))
         
-        # Key findings
-        elements.append(Paragraph("Key Findings", self.styles['SubsectionHeader']))
+        # Key metrics table
+        article = data.get('article', {})
+        metrics_data = [
+            ['<b>Metric</b>', '<b>Score</b>'],
+            ['Overall Trust Score', f'{trust_score}/100'],
+            ['Source Credibility', f"{data.get('source_credibility', {}).get('score', 'N/A')}"],
+            ['Author Credibility', f"{data.get('author_info', {}).get('credibility_score', 'N/A')}"],
+            ['Fact Check Score', f"{data.get('fact_check_summary', {}).get('accuracy', 'N/A')}"],
+            ['Transparency', f"{data.get('transparency_analysis', {}).get('score', 'N/A')}%"]
+        ]
         
-        findings = []
+        metrics_table = Table(metrics_data, colWidths=[3*inch, 2*inch])
+        metrics_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f3f4f6')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#d1d5db'))
+        ]))
         
-        # Source credibility
-        if data.get('source_credibility'):
-            cred = data['source_credibility']
-            findings.append(f"• Source Credibility: {cred.get('credibility', 'Unknown')} - {cred.get('description', '')}")
+        elements.append(metrics_table)
+        elements.append(Spacer(1, 0.3*inch))
         
-        # Bias analysis
-        if data.get('bias_analysis'):
-            bias = data['bias_analysis']
-            findings.append(f"• Political Bias: {abs(bias.get('political_lean', 0))}% " +
-                          ("left" if bias.get('political_lean', 0) < 0 else "right" if bias.get('political_lean', 0) > 0 else "center"))
-        
-        # Transparency
-        if data.get('transparency_analysis'):
-            trans = data['transparency_analysis']
-            findings.append(f"• Transparency Score: {trans.get('score', 0)}%")
-        
-        for finding in findings:
-            elements.append(Paragraph(finding, self.styles['CustomBody']))
+        # Summary text
+        summary_text = data.get('summary', 'Analysis complete.')
+        elements.append(Paragraph(summary_text, self.styles['CustomBody']))
         
         return elements
     
     def _create_bias_section(self, bias_data):
-        """Create bias analysis section"""
+        """
+        Create bias analysis section with HORIZONTAL STRAIGHT-LINE GRAPHIC
+        v2.2 - October 23, 2025
+        """
         elements = []
         
-        elements.append(Paragraph("Bias Analysis", self.styles['SectionHeader']))
+        elements.append(Paragraph("Political Bias Analysis", self.styles['SectionHeader']))
         
-        # Political lean
-        lean = bias_data.get('political_lean', 0)
-        if lean < -20:
-            lean_text = "Left-leaning"
-        elif lean > 20:
-            lean_text = "Right-leaning"
-        else:
-            lean_text = "Center/Neutral"
+        # Add the NEW horizontal bias bar graphic
+        elements.append(self._create_bias_bar_graphic(bias_data))
+        elements.append(Spacer(1, 0.3*inch))
         
-        elements.append(Paragraph(f"<b>Political Orientation:</b> {lean_text} ({lean:+d})", self.styles['CustomBody']))
+        # Bias assessment
+        political_lean = bias_data.get('political_lean', 0)
+        political_label = bias_data.get('political_label', 'Center')
+        objectivity_score = bias_data.get('objectivity_score', 50)
         
-        # Other bias metrics
-        metrics = [
-            ['Metric', 'Value'],
-            ['Objectivity Score', f"{bias_data.get('objectivity_score', 0)}%"],
-            ['Opinion Content', f"{bias_data.get('opinion_percentage', 0)}%"],
-            ['Emotional Language', f"{bias_data.get('emotional_score', 0)}%"]
-        ]
-        
-        t = Table(metrics, colWidths=[2.5*inch, 2*inch])
-        t.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#3b82f6')),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-            ('FONT', (0, 0), (-1, 0), 'Helvetica-Bold', 10),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#e5e7eb')),
-            ('TOPPADDING', (0, 0), (-1, -1), 6),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ]))
+        elements.append(Paragraph(f"<b>Political Lean:</b> {political_label}", self.styles['CustomBody']))
+        elements.append(Paragraph(f"<b>Objectivity Score:</b> {objectivity_score}/100", self.styles['CustomBody']))
         elements.append(Spacer(1, 0.2*inch))
-        elements.append(t)
+        
+        # Interpretation
+        if abs(political_lean) < 0.2:
+            interpretation = "The article demonstrates balanced coverage with minimal political bias."
+            style = self.styles['Success']
+        elif abs(political_lean) < 0.5:
+            direction = "left-leaning" if political_lean < 0 else "right-leaning"
+            interpretation = f"The article shows noticeable {direction} perspective."
+            style = self.styles['Info']
+        else:
+            direction = "left-leaning" if political_lean < 0 else "right-leaning"
+            interpretation = f"The article demonstrates significant {direction} bias."
+            style = self.styles['Alert']
+        
+        elements.append(Paragraph(interpretation, style))
+        elements.append(Spacer(1, 0.2*inch))
+        
+        # Bias factors
+        if bias_data.get('bias_factors'):
+            elements.append(Paragraph("Bias Indicators Detected:", self.styles['SubsectionHeader']))
+            for factor in bias_data['bias_factors'][:5]:  # Limit to 5
+                if isinstance(factor, dict):
+                    text = factor.get('description', str(factor))
+                else:
+                    text = str(factor)
+                elements.append(Paragraph(f"• {text}", self.styles['CustomBody']))
+            elements.append(Spacer(1, 0.2*inch))
+        
+        # Language patterns
+        if bias_data.get('language_patterns'):
+            elements.append(Paragraph("Language Patterns:", self.styles['SubsectionHeader']))
+            for pattern in bias_data['language_patterns'][:3]:  # Limit to 3
+                if isinstance(pattern, dict):
+                    text = pattern.get('name', str(pattern))
+                else:
+                    text = str(pattern)
+                elements.append(Paragraph(f"• {text}", self.styles['CustomBody']))
         
         # Manipulation tactics
         if bias_data.get('manipulation_tactics'):
@@ -399,6 +388,116 @@ class PDFGenerator:
                 elements.append(Paragraph(f"• {text}", self.styles['CustomBody']))
         
         return elements
+    
+    def _create_bias_bar_graphic(self, bias_data):
+        """
+        Create HORIZONTAL STRAIGHT-LINE bias bar graphic for PDF
+        v2.2 - October 23, 2025
+        
+        Args:
+            bias_data: Bias analysis data with political_lean, political_label
+            
+        Returns:
+            Drawing object with horizontal bias bar visualization
+        """
+        if not bias_data:
+            # Return empty drawing if no data
+            return Drawing(450, 120)
+        
+        # Get bias position data
+        political_lean = bias_data.get('political_lean', 0)
+        political_label = bias_data.get('political_label', 'Center')
+        objectivity_score = bias_data.get('objectivity_score', 50)
+        
+        # Convert political lean (-1 to +1) to horizontal position (0-450)
+        # -1 (far left) = 0px, 0 (center) = 225px, +1 (far right) = 450px
+        bar_width = 450
+        marker_position = int((political_lean + 1) * (bar_width / 2))
+        marker_position = max(0, min(bar_width, marker_position))  # Clamp to 0-450 range
+        
+        # Create drawing
+        drawing = Drawing(bar_width, 120)
+        
+        # Define colors
+        far_left_color = colors.HexColor('#dc2626')     # Red
+        left_color = colors.HexColor('#ef4444')          # Light Red
+        left_orange = colors.HexColor('#f59e0b')         # Orange
+        center_color = colors.HexColor('#10b981')        # Green
+        right_orange = colors.HexColor('#f59e0b')        # Orange
+        right_color = colors.HexColor('#ef4444')         # Light Red
+        far_right_color = colors.HexColor('#dc2626')    # Red
+        
+        # Bar dimensions
+        bar_height = 40
+        bar_y = 60
+        
+        # Draw 5 colored zones as rectangles (straight horizontal bar)
+        zone_width = bar_width / 5
+        
+        # Zone 1: Far Left (Red) 0-20%
+        drawing.add(Rect(0, bar_y, zone_width, bar_height, 
+                        fillColor=far_left_color, strokeColor=None))
+        
+        # Zone 2: Left (Orange-Red) 20-40%
+        drawing.add(Rect(zone_width, bar_y, zone_width, bar_height, 
+                        fillColor=left_color, strokeColor=None))
+        
+        # Zone 3: Center (Green) 40-60%
+        drawing.add(Rect(zone_width*2, bar_y, zone_width, bar_height, 
+                        fillColor=center_color, strokeColor=None))
+        
+        # Zone 4: Right (Orange-Red) 60-80%
+        drawing.add(Rect(zone_width*3, bar_y, zone_width, bar_height, 
+                        fillColor=right_color, strokeColor=None))
+        
+        # Zone 5: Far Right (Red) 80-100%
+        drawing.add(Rect(zone_width*4, bar_y, zone_width, bar_height, 
+                        fillColor=far_right_color, strokeColor=None))
+        
+        # Add position marker (dark circle)
+        marker_radius = 8
+        drawing.add(Circle(marker_position, bar_y + bar_height/2, marker_radius, 
+                          fillColor=colors.HexColor('#1e293b'), 
+                          strokeColor=colors.white, strokeWidth=2))
+        
+        # Add labels below the bar
+        label_y = bar_y - 10
+        label_font_size = 9
+        
+        drawing.add(String(0, label_y, 'Far Left', 
+                          fontSize=label_font_size, fillColor=far_left_color, 
+                          fontName='Helvetica-Bold'))
+        
+        drawing.add(String(zone_width + 20, label_y, 'Left', 
+                          fontSize=label_font_size, fillColor=left_color, 
+                          fontName='Helvetica-Bold'))
+        
+        drawing.add(String(zone_width*2 + 25, label_y, 'CENTER', 
+                          fontSize=label_font_size, fillColor=center_color, 
+                          fontName='Helvetica-Bold'))
+        
+        drawing.add(String(zone_width*3 + 20, label_y, 'Right', 
+                          fontSize=label_font_size, fillColor=right_color, 
+                          fontName='Helvetica-Bold'))
+        
+        drawing.add(String(zone_width*4 + 10, label_y, 'Far Right', 
+                          fontSize=label_font_size, fillColor=far_right_color, 
+                          fontName='Helvetica-Bold'))
+        
+        # Add detected position label above the bar
+        position_y = bar_y + bar_height + 15
+        drawing.add(String(bar_width/2, position_y, f'Detected: {political_label}', 
+                          textAnchor='middle', fontSize=11, 
+                          fillColor=colors.HexColor('#1e293b'), 
+                          fontName='Helvetica-Bold'))
+        
+        # Add objectivity score below labels
+        score_y = label_y - 15
+        drawing.add(String(bar_width/2, score_y, f'Objectivity: {objectivity_score}/100', 
+                          textAnchor='middle', fontSize=10, 
+                          fillColor=colors.HexColor('#374151')))
+        
+        return drawing
     
     def _create_fact_check_section(self, fact_checks, summary=None):
         """Create fact checking section"""
@@ -588,3 +687,5 @@ class PDFGenerator:
         canvas_obj.setFillColor(colors.HexColor('#6b7280'))
         canvas_obj.drawCentredString(letter[0]/2, 30, f"Page {doc.page}")
         canvas_obj.restoreState()
+
+# This file is not truncated
