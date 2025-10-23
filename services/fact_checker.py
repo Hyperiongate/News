@@ -1,7 +1,26 @@
 """
-Fact Checker Service - v13.1 MULTI-SOURCE AGGREGATION
+
+CRITICAL FIX IN v13.2:
+✅ FIXED: Claim extraction now properly identifies news article claims
+✅ FIXED: Scoring patterns recognize construction/renovation news
+✅ FIXED: Lowered penalties for "may/could" in news context
+✅ FIXED: Better recognition of official statements and plans
+✅ FIXED: Historical facts and dates now scored properly
+✅ PRESERVED: All v13.1 multi-source aggregation features
+✅ PRESERVED: All 13-point grading scale verdicts
+✅ PRESERVED: All parallel checking optimizations
+
+CHANGES FROM v13.1:
+- _score_claim_likelihood_enhanced(): Enhanced scoring for news articles
+- Added patterns for: construction/renovation, cost estimates, official plans
+- Reduced penalty for "may/reportedly" in official contexts
+- Added bonus for proper nouns + specific facts
+- Better historical date recognition (e.g., "in 1942")
+- Lowered threshold from 10 to 8
+
+Fact Checker Service - v13.2 CLAIM EXTRACTION FIXED FOR NEWS ARTICLES
 Fact Checker Service - v13.1 SCORING FIX
-Last Updated: October 23, 2025 - MULTI-SOURCE VERIFICATION
+Last Updated: October 23, 2025 - FIXED CLAIM EXTRACTION FOR NEWS CONTENT
 Last Updated: October 23, 2025 - FIXED SCORING LOGIC
 MAJOR ENHANCEMENTS IN v13.1:
 
@@ -174,9 +193,9 @@ class FactChecker(BaseAnalyzer):
                     api_key=Config.OPENAI_API_KEY,
                     timeout=httpx.Timeout(5.0, connect=2.0)
                 )
-                logger.info("[FactChecker v13.1] OpenAI client initialized")
+                logger.info("[FactChecker v13.2] OpenAI client initialized")
             except Exception as e:
-                logger.warning(f"[FactChecker v13.1] Failed to initialize OpenAI: {e}")
+                logger.warning(f"[FactChecker v13.2] Failed to initialize OpenAI: {e}")
                 self.openai_client = None
         
         # ThreadPoolExecutor for parallel checking
@@ -201,9 +220,9 @@ class FactChecker(BaseAnalyzer):
         # Verdict types
         self.verdict_types = VERDICT_TYPES
         
-        logger.info(f"[FactChecker v13.1] MULTI-SOURCE AGGREGATION ENABLED")
-        logger.info(f"[FactChecker v13.1] Context: {self.current_date}, President: {self.current_us_president}")
-        logger.info(f"[FactChecker v13.1] 13-POINT SCALE + Cross-verification")
+        logger.info(f"[FactChecker v13.2] MULTI-SOURCE AGGREGATION ENABLED")
+        logger.info(f"[FactChecker v13.2] Context: {self.current_date}, President: {self.current_us_president}")
+        logger.info(f"[FactChecker v13.2] 13-POINT SCALE + Cross-verification")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -229,11 +248,11 @@ class FactChecker(BaseAnalyzer):
             quotes_count = data.get('quotes_count', 0)
             author = data.get('author', '')
             
-            logger.info(f"[FactChecker v13.1] Analyzing: {len(content)} chars, {sources_count} sources")
+            logger.info(f"[FactChecker v13.2] Analyzing: {len(content)} chars, {sources_count} sources")
             
             # 1. Extract claims with deduplication (PRESERVED from v12.3)
             extracted_claims = self._extract_claims_enhanced(content)
-            logger.info(f"[FactChecker v13.1] Extracted {len(extracted_claims)} UNIQUE claims")
+            logger.info(f"[FactChecker v13.2] Extracted {len(extracted_claims)} UNIQUE claims")
             
             # 2. Check claims in parallel with v13.0 multi-source aggregation
             fact_checks = self._check_claims_parallel(extracted_claims, article_url, article_title)
@@ -313,23 +332,23 @@ class FactChecker(BaseAnalyzer):
                     'text_length': len(content),
                     'article_url': article_url,
                     'article_title': article_title,
-                    'version': '13.0.0',
+                    'version': '13.2.0',
                     'grading_scale': '13-point',
                     'ai_enhanced': bool(self.openai_client),
                     'parallel_checking': True,
                     'multi_source_aggregation': True,  # NEW in v13.0
                     'current_date_context': self.current_date,
                     'current_president': self.current_us_president,
-                    'claim_extraction': 'FIXED - deduplication & validation'
+                    'claim_extraction': 'FIXED v13.2 - News article patterns enhanced'
                 }
             }
             
-            logger.info(f"[FactChecker v13.1] Complete: {verification_score}/100 ({verification_level})")
-            logger.info(f"[FactChecker v13.1] Verdicts: {verdict_counts}")
+            logger.info(f"[FactChecker v13.2] Complete: {verification_score}/100 ({verification_level})")
+            logger.info(f"[FactChecker v13.2] Verdicts: {verdict_counts}")
             return self.get_success_result(result)
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.1] Error: {e}", exc_info=True)
+            logger.error(f"[FactChecker v13.2] Error: {e}", exc_info=True)
             return self.get_error_result(f"Fact checking error: {str(e)}")
     
     # ============================================================================
@@ -344,7 +363,7 @@ class FactChecker(BaseAnalyzer):
         claims = []
         seen_claims = set()
         
-        logger.info(f"[FactChecker v13.1] Evaluating {len(sentences)} sentences for claims...")
+        logger.info(f"[FactChecker v13.2] Evaluating {len(sentences)} sentences for claims...")
         
         for i, sentence in enumerate(sentences):
             if self._matches_exclusion_patterns(sentence):
@@ -352,7 +371,7 @@ class FactChecker(BaseAnalyzer):
             
             score = self._score_claim_likelihood_enhanced(sentence)
             
-            if score >= 10:
+            if score >= 8:  # LOWERED from 10 to 8 to catch more news claims
                 claim = sentence.strip()
                 
                 if 30 < len(claim) < 400:
@@ -361,13 +380,13 @@ class FactChecker(BaseAnalyzer):
                     if claim_key not in seen_claims:
                         claims.append(claim)
                         seen_claims.add(claim_key)
-                        logger.debug(f"[FactChecker v13.1] Claim {len(claims)}: score={score}, len={len(claim)}")
+                        logger.debug(f"[FactChecker v13.2] Claim {len(claims)}: score={score}, len={len(claim)}")
                     else:
-                        logger.debug(f"[FactChecker v13.1] SKIPPED duplicate claim: {claim[:50]}...")
+                        logger.debug(f"[FactChecker v13.2] SKIPPED duplicate claim: {claim[:50]}...")
         
         final_claims = claims[:10]
         
-        logger.info(f"[FactChecker v13.1] Extracted {len(final_claims)} unique, validated claims")
+        logger.info(f"[FactChecker v13.2] Extracted {len(final_claims)} unique, validated claims")
         
         return final_claims
     
@@ -378,12 +397,16 @@ class FactChecker(BaseAnalyzer):
         score = 0
         sentence_lower = sentence.lower()
         
-        # Must have factual element
+        
+        
+        # v13.2: NEW - More lenient base requirements
         has_number = bool(re.search(r'\b\d+', sentence))
         has_named_entity = bool(re.search(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b', sentence))
+        has_specific_noun = bool(re.search(r'\b(?:building|facility|project|plan|renovation|construction|program|policy|law|bill)\b', sentence_lower))
         has_donor_pattern = bool(re.search(r'\b(?:donat|contribut|fund|sponsor)\w*\b', sentence_lower))
         
-        if not (has_number or has_named_entity or has_donor_pattern):
+        # v13.2: FIXED - Accept if has ANY factual element
+        if not (has_number or has_named_entity or has_specific_noun or has_donor_pattern):
             return 0
         
         # Research/studies (highest confidence)
@@ -421,12 +444,32 @@ class FactChecker(BaseAnalyzer):
         if re.search(r'\b(?:increased?|decreased?|rose|fell|grew|declined?|dropped?)\s+(?:by|to|from)\s+\d+', sentence_lower):
             score += 12
         
+        # v13.2: NEW - Construction/renovation claims
+        if re.search(r'\b(?:demolished?|rebuilt?|construct(?:ed|ion)?|renovat(?:ed|ion|ions)?|built?|expand(?:ed|sion)?)\b', sentence_lower):
+            score += 15
+        
+        # v13.2: NEW - Cost/budget estimates
+        if re.search(r'\$\s*\d+(?:,\d{3})*(?:\s+(?:million|billion|thousand))?|(?:million|billion|thousand)\s+dollars?', sentence_lower):
+            score += 18
+        
+        # v13.2: NEW - Official plans and proposals
+        if re.search(r'\b(?:plan|proposal|project|initiative)\s+(?:is|was|will be|would be|may be|could be)\b', sentence_lower):
+            score += 12
+        
+        
         # Dates and timeframes
         if re.search(r'\b(?:in|by|since|from|during)\s+\d{4}\b', sentence):
-            score += 10
+            score += 12  # v13.2: Increased from 10
+        
+        if re.search(r'\b(?:originally|first|initially)\s+(?:built|constructed|established|founded)\s+(?:in\s+)?\d{4}\b', sentence_lower):
+            score += 15  # v13.2: NEW - Historical construction dates
         
         # Named entities making statements
         if re.search(r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\s+(?:said|told|announced|confirmed|stated)\b', sentence):
+            score += 10
+        
+        # v13.2: NEW - Sources and attributions
+        if re.search(r'\baccording to\s+(?:sources?|officials?|reports?|documents?|the\s+\w+)\b', sentence_lower):
             score += 10
         
         # v12.3: Donor/contribution detection patterns
@@ -454,8 +497,21 @@ class FactChecker(BaseAnalyzer):
         if re.search(r'\b(?:more|less|higher|lower|greater|fewer)\s+than\b', sentence_lower):
             score += 8
         
+        
+        # v13.2: NEW - Structural/technical specifications
+        if re.search(r'\b(?:structural|technical|engineering|architectural|design)\s+(?:issues?|problems?|concerns?|requirements?)\b', sentence_lower):
+            score += 10
+        
         # PENALTIES
-        if re.search(r'\b(?:may|might|could|possibly|perhaps|allegedly|reportedly)\b', sentence_lower):
+        # v13.2: REDUCED PENALTIES for news context
+        # "may/reportedly" in official context is normal journalism, smaller penalty
+        if re.search(r'\b(?:may|reportedly)\b', sentence_lower):
+            if re.search(r'\b(?:official|government|plan|project|administration)\b', sentence_lower):
+                score -= 2  # Small penalty in official context
+            else:
+                score -= 5  # Normal penalty otherwise
+        
+        if re.search(r'\b(?:might|could|possibly|perhaps|allegedly)\b', sentence_lower):
             score -= 5
         
         if sentence.strip().endswith('?'):
@@ -465,7 +521,7 @@ class FactChecker(BaseAnalyzer):
             score -= 10
         
         if len(sentence) < 40:
-            score -= 5
+            score -= 3  # v13.2: Reduced from 5
         
         return max(0, score)
     
@@ -481,7 +537,7 @@ class FactChecker(BaseAnalyzer):
         if not claims:
             return []
         
-        logger.info(f"[FactChecker v13.1] Checking {len(claims)} claims in parallel...")
+        logger.info(f"[FactChecker v13.2] Checking {len(claims)} claims in parallel...")
         
         futures = {}
         for i, claim in enumerate(claims):
@@ -497,10 +553,10 @@ class FactChecker(BaseAnalyzer):
                 i, claim = futures[future]
                 result = future.result(timeout=1)
                 completed_results.append((i, result))
-                logger.info(f"[FactChecker v13.1] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
+                logger.info(f"[FactChecker v13.2] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
             except Exception as e:
                 i, claim = futures[future]
-                logger.error(f"[FactChecker v13.1] Claim {i+1} failed: {e}")
+                logger.error(f"[FactChecker v13.2] Claim {i+1} failed: {e}")
                 completed_results.append((i, {
                     'claim': claim,
                     'verdict': 'unverified',
@@ -513,7 +569,7 @@ class FactChecker(BaseAnalyzer):
         completed_results.sort(key=lambda x: x[0])
         fact_checks = [result for _, result in completed_results]
         
-        logger.info(f"[FactChecker v13.1] ✓ Parallel checking complete: {len(fact_checks)} claims")
+        logger.info(f"[FactChecker v13.2] ✓ Parallel checking complete: {len(fact_checks)} claims")
         return fact_checks
     
     def _verify_single_claim(self, claim: str, index: int,
@@ -538,7 +594,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.1] Error verifying claim {index}: {e}")
+            logger.error(f"[FactChecker v13.2] Error verifying claim {index}: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -616,7 +672,7 @@ class FactChecker(BaseAnalyzer):
             return final_result
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.1] Error verifying claim: {e}")
+            logger.error(f"[FactChecker v13.2] Error verifying claim: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -814,7 +870,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.warning(f"[FactChecker v13.1] AI verification failed: {e}")
+            logger.warning(f"[FactChecker v13.2] AI verification failed: {e}")
             return None
     
     def _get_system_prompt_13point(self) -> str:
@@ -921,7 +977,7 @@ Use information current as of {self.current_date}."""
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.1] Failed to parse AI response: {e}")
+            logger.error(f"[FactChecker v13.2] Failed to parse AI response: {e}")
             return None
     
     # ============================================================================
@@ -981,7 +1037,7 @@ Use information current as of {self.current_date}."""
             return {'found': False}
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.1] Google API error: {e}")
+            logger.error(f"[FactChecker v13.2] Google API error: {e}")
             return {'found': False}
     
     def _map_google_verdict_to_13point(self, verdicts: List[str]) -> str:
@@ -1298,7 +1354,7 @@ Use information current as of {self.current_date}."""
         final_score = base_score + source_score + quote_score + claim_score + author_score + complexity_score
         final_score = int(max(0, min(100, final_score)))
         
-        logger.info(f"[FactChecker v13.1] FIXED SCORE BREAKDOWN:")
+        logger.info(f"[FactChecker v13.2] FIXED SCORE BREAKDOWN:")
         logger.info(f"  Base:       {base_score}/20")
         logger.info(f"  Sources:    {source_score}/25 ({sources_count} sources)")
         logger.info(f"  Quotes:     {quote_score}/15 ({quotes_count} quotes)")
@@ -1524,11 +1580,11 @@ Use information current as of {self.current_date}."""
         """Get service information"""
         info = super().get_service_info()
         info.update({
-            'version': '13.0.0',
+            'version': '13.2.0',
             'grading_scale': '13-point comprehensive scale',
             'optimization': 'Multi-source aggregation with cross-verification',
             'current_context': f'{self.current_date}, President {self.current_us_president}',
-            'claim_extraction': 'FIXED - deduplication & validation',
+            'claim_extraction': 'FIXED v13.2 - News article patterns enhanced',
             'verdict_types': list(self.verdict_types.keys()),
             'capabilities': [
                 'FIXED: No more repeated claims',
@@ -1556,6 +1612,6 @@ Use information current as of {self.current_date}."""
         return info
 
 
-logger.info("[FactChecker v13.1] Module loaded - MULTI-SOURCE AGGREGATION ENABLED!")
+logger.info("[FactChecker v13.2] Module loaded - CLAIM EXTRACTION FIXED FOR NEWS ARTICLES!")
 
 # This file is not truncated
