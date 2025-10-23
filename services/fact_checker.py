@@ -1,7 +1,14 @@
 """
-Fact Checker Service - v12.2 CRITICAL CLAIM TEXT FIX
+Fact Checker Service - v12.3 DONOR/CONTRIBUTION CLAIM DETECTION
 Date: October 20, 2025
-Last Updated: October 21, 2025 - FIX FOR MISSING CLAIM TEXT
+Last Updated: October 23, 2025 - ENHANCED DONOR CLAIM DETECTION
+
+CRITICAL FIX FROM v12.3 (October 23, 2025):
+✅ FIXED: Donor/contribution claims now detected properly
+✅ ADDED: Donor pattern detection as factual element (line 405)
+✅ ADDED: 4 new scoring patterns for donations/contributions (lines 451-466)
+✅ PROBLEM: Articles with donor lists found zero claims
+✅ SOLUTION: Enhanced claim extraction to recognize donation language patterns
 
 CRITICAL FIXES FROM v12.0:
 ✅ FIXED: No more repeated claims (deduplication added)
@@ -399,7 +406,11 @@ class FactChecker(BaseAnalyzer):
         has_number = bool(re.search(r'\b\d+', sentence))
         has_named_entity = bool(re.search(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b', sentence))
         
-        if not (has_number or has_named_entity):
+        # NEW v12.3 (Oct 23, 2025): Donor/contribution patterns as factual elements
+        has_donor_pattern = bool(re.search(r'\b(?:donat|contribut|fund|sponsor)\w*\b', sentence_lower))
+        
+        # Allow donor patterns as factual elements (helps detect donation claims)
+        if not (has_number or has_named_entity or has_donor_pattern):
             return 0  # Skip vague claims without facts
         
         # Research/studies (highest confidence)
@@ -444,6 +455,23 @@ class FactChecker(BaseAnalyzer):
         # Named entities making statements
         if re.search(r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\s+(?:said|told|announced|confirmed|stated)\b', sentence):
             score += 10
+        
+        # NEW v12.3 (Oct 23, 2025): Donor/contribution detection patterns
+        # Donation/contribution actions with financial indicators
+        if re.search(r'\b(?:donated?|contributed?|gave|provided)\s+(?:\$|money|funds?|support|to)\b', sentence_lower):
+            score += 22
+        
+        # Named donors/contributors (proper nouns with donation verbs)
+        if re.search(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:donated?|contributed?|gave|provided|funded?)\b', sentence):
+            score += 20
+        
+        # Financial amounts in contributions
+        if re.search(r'\$\s*\d+(?:,\d{3})*(?:\.\d{2})?\s+(?:to|for|toward|in)\b', sentence):
+            score += 18
+        
+        # Lists of donors/contributors
+        if re.search(r'\b(?:donors?|contributors?|sponsors?|funders?)(?:\s+\w+)?\s+(?:include|are|were|such as)\b', sentence_lower):
+            score += 15
         
         # Specific locations/organizations
         if re.search(r'\b(?:in|at|from)\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b', sentence):
@@ -1303,6 +1331,6 @@ Use information current as of {self.current_date}."""
         return info
 
 
-logger.info("[FactChecker v12.1] Module loaded - CLAIM EXTRACTION FIXED!")
+logger.info("[FactChecker v12.3] Module loaded - DONOR CLAIM DETECTION ENHANCED!")
 
 # This file is not truncated
