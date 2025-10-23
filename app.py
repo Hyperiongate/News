@@ -1,16 +1,15 @@
 """
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.0.0
-Date: October 20, 2025
+Version: 10.0.1
+Date: October 22, 2025
 
-CHANGES FROM 9.0.0:
-1. ADDED: Live Stream transcript analysis for YouTube Live
-2. ADDED: Real-time transcription with AssemblyAI
-3. ADDED: Server-Sent Events for live updates
-4. ADDED: Transcript routes blueprint registration
-5. All v9.0.0 functionality preserved (DO NO HARM ✓)
+CHANGES FROM 10.0.0:
+1. FIXED: Enhanced error handling for live stream route registration
+2. FIXED: Better logging to debug 404 errors for /api/transcript/live/* routes
+3. ADDED: Route listing in logs to verify which endpoints are registered
+4. All v10.0.0 functionality preserved (DO NO HARM ✓)
 
-NEW FEATURES (Live Streaming):
+EXISTING FEATURES (v10.0.0):
 - YouTube Live stream analysis
 - Real-time audio transcription (AssemblyAI)
 - Automatic claim extraction from live streams
@@ -24,13 +23,13 @@ REQUIREMENTS:
 - ASSEMBLYAI_API_KEY environment variable (for live streaming)
 - yt-dlp and ffmpeg system dependencies
 
-EXISTING FEATURES PRESERVED:
+PREVIOUS FEATURES PRESERVED:
 - News Analysis (7 AI Services) - v8.x
 - Debate Arena (Phase 1 text-based) - v9.0.0
 - All v8.x enhancements
 
 This file is complete and ready to deploy.
-Last modified: October 20, 2025 - Added Live Streaming v10.0.0
+Last modified: October 22, 2025 - Enhanced live stream route debugging v10.0.1
 """
 
 import os
@@ -1624,6 +1623,7 @@ else:
 
 # ============================================================================
 # NEW: REGISTER TRANSCRIPT BLUEPRINT (v10.0.0)
+# FIXED v10.0.1: Enhanced error handling for live stream route debugging
 # ============================================================================
 
 try:
@@ -1631,16 +1631,30 @@ try:
     app.register_blueprint(transcript_bp)
     logger.info("✓ Transcript Analysis routes registered at /api/transcript/*")
     
+    # List all registered routes for debugging
+    transcript_routes = [rule.rule for rule in app.url_map.iter_rules() if '/api/transcript/' in rule.rule]
+    logger.info(f"✓ Registered transcript routes: {', '.join(transcript_routes)}")
+    
     # Check if live streaming is enabled
     if os.getenv('ASSEMBLYAI_API_KEY'):
         logger.info("✓ Live Stream Analysis enabled (AssemblyAI configured)")
+        # Verify live stream routes are present
+        live_routes = [r for r in transcript_routes if 'live' in r]
+        if live_routes:
+            logger.info(f"✓ Live stream routes available: {', '.join(live_routes)}")
+        else:
+            logger.warning("⚠️  Live stream routes not found in transcript_bp - check transcript_routes.py")
     else:
         logger.warning("⚠️  Live Stream Analysis disabled (set ASSEMBLYAI_API_KEY to enable)")
         
 except ImportError as e:
     logger.error(f"✗ Failed to import transcript_routes.py: {e}")
+    logger.error("✗ Make sure transcript_routes.py exists in the same directory as app.py")
+    logger.error("✗ Live streaming features will not be available")
 except Exception as e:
     logger.error(f"✗ Failed to register Transcript routes: {e}")
+    logger.error(f"✗ Traceback: {traceback.format_exc()}")
+
 
 
 # ============================================================================
