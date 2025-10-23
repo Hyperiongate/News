@@ -1,8 +1,8 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
  * Date: October 22, 2025
- * Version: 4.29.0 - VISUAL DIAL + SUBTLE TRANSPARENCY
- * Last Updated: October 22, 2025 - 5:00 PM
+ * Version: 4.30.0 - HORIZONTAL BAR + SUBTLE TRANSPARENCY
+ * Last Updated: October 23, 2025 - Changed bias from dial to horizontal bar
  * 
  * CRITICAL CHANGES FROM v4.28.0:
  * ✅ NEW: Visual SVG speedometer dial for bias detection (180° arc)
@@ -137,81 +137,45 @@ window.ServiceTemplates = {
                             <h3>Bias Detection Analysis</h3>
                         </div>
                         
-                        <!-- NEW: Visual Speedometer Dial -->
-                        <div class="bias-dial-container" style="padding: 2rem; text-align: center;">
-                            <div class="dial-title" style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem;">
+                        <!-- NEW v4.30.0: Horizontal Bias Bar -->
+                        <div class="bias-bar-container" style="padding: 2rem;">
+                            <div class="bias-title" style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem; text-align: center;">
                                 <i class="fas fa-chart-line" style="margin-right: 0.5rem; color: #f59e0b;"></i>
                                 Political Bias Spectrum
                             </div>
                             
-                            <!-- SVG Speedometer -->
-                            <svg id="bias-dial-svg" width="100%" height="250" viewBox="0 0 400 220" style="max-width: 500px; margin: 0 auto;">
-                                <!-- Background Arc (180 degrees) -->
-                                <defs>
-                                    <linearGradient id="arcGradientRed1" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style="stop-color:#dc2626;stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
-                                    </linearGradient>
-                                    <linearGradient id="arcGradientOrange1" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
-                                    </linearGradient>
-                                    <linearGradient id="arcGradientGreen" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
-                                        <stop offset="50%" style="stop-color:#10b981;stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:#f59e0b;stop-opacity:1" />
-                                    </linearGradient>
-                                    <linearGradient id="arcGradientOrange2" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style="stop-color:#f59e0b;stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:#ef4444;stop-opacity:1" />
-                                    </linearGradient>
-                                    <linearGradient id="arcGradientRed2" x1="0%" y1="0%" x2="100%" y2="0%">
-                                        <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
-                                        <stop offset="100%" style="stop-color:#dc2626;stop-opacity:1" />
-                                    </linearGradient>
-                                </defs>
+                            <!-- Horizontal Bar with 5 Colored Zones -->
+                            <div class="bias-bar-track" style="position: relative; height: 60px; border-radius: 30px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; max-width: 700px;">
+                                <!-- Far Left Zone (Red) -->
+                                <div style="position: absolute; left: 0%; width: 20%; height: 100%; background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);"></div>
                                 
-                                <!-- Colored arc segments (180° from left to right) -->
-                                <!-- Far Left: Red (0-36°) -->
-                                <path d="M 50 180 A 150 150 0 0 1 86.3 68.3" 
-                                      stroke="url(#arcGradientRed1)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                <!-- Left Zone (Orange) -->
+                                <div style="position: absolute; left: 20%; width: 20%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #f59e0b 100%);"></div>
                                 
-                                <!-- Left: Orange (36-72°) -->
-                                <path d="M 86.3 68.3 A 150 150 0 0 1 150 50" 
-                                      stroke="url(#arcGradientOrange1)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                <!-- Center Zone (Green) -->
+                                <div style="position: absolute; left: 40%; width: 20%; height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #10b981 50%, #f59e0b 100%);"></div>
                                 
-                                <!-- Center: Green (72-108°) -->
-                                <path d="M 150 50 A 150 150 0 0 1 250 50" 
-                                      stroke="url(#arcGradientGreen)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                <!-- Right Zone (Orange) -->
+                                <div style="position: absolute; left: 60%; width: 20%; height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);"></div>
                                 
-                                <!-- Right: Orange (108-144°) -->
-                                <path d="M 250 50 A 150 150 0 0 1 313.7 68.3" 
-                                      stroke="url(#arcGradientOrange2)" stroke-width="30" fill="none" stroke-linecap="round"/>
+                                <!-- Far Right Zone (Red) -->
+                                <div style="position: absolute; left: 80%; width: 20%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);"></div>
                                 
-                                <!-- Far Right: Red (144-180°) -->
-                                <path d="M 313.7 68.3 A 150 150 0 0 1 350 180" 
-                                      stroke="url(#arcGradientRed2)" stroke-width="30" fill="none" stroke-linecap="round"/>
-                                
-                                <!-- Center point -->
-                                <circle cx="200" cy="180" r="8" fill="#64748b"/>
-                                
-                                <!-- Needle (will be rotated via CSS transform) -->
-                                <g id="bias-needle" style="transform-origin: 200px 180px; transition: transform 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);">
-                                    <line x1="200" y1="180" x2="200" y2="60" stroke="#1e293b" stroke-width="4" stroke-linecap="round"/>
-                                    <circle cx="200" cy="180" r="12" fill="#1e293b"/>
-                                    <circle cx="200" cy="60" r="8" fill="#dc2626"/>
-                                </g>
-                                
-                                <!-- Labels -->
-                                <text x="50" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#dc2626">Far Left</text>
-                                <text x="125" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b">Left</text>
-                                <text x="200" y="205" text-anchor="middle" font-size="12" font-weight="700" fill="#10b981">CENTER</text>
-                                <text x="275" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#f59e0b">Right</text>
-                                <text x="350" y="205" text-anchor="middle" font-size="11" font-weight="600" fill="#dc2626">Far Right</text>
-                            </svg>
+                                <!-- Marker (animated indicator) -->
+                                <div id="bias-marker" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: #1e293b; border: 4px solid white; border-radius: 50%; box-shadow: 0 0 0 3px rgba(30,41,59,0.3), 0 4px 6px rgba(0,0,0,0.3); transition: left 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 10;"></div>
+                            </div>
                             
-                            <!-- Score Display Below Dial -->
-                            <div style="margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; display: inline-block; min-width: 250px;">
+                            <!-- Labels Below Bar -->
+                            <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding: 0 1rem; max-width: 700px; margin-left: auto; margin-right: auto;">
+                                <span style="font-size: 11px; font-weight: 600; color: #dc2626;">Far Left</span>
+                                <span style="font-size: 11px; font-weight: 600; color: #f59e0b;">Left</span>
+                                <span style="font-size: 12px; font-weight: 700; color: #10b981;">CENTER</span>
+                                <span style="font-size: 11px; font-weight: 600; color: #f59e0b;">Right</span>
+                                <span style="font-size: 11px; font-weight: 600; color: #dc2626;">Far Right</span>
+                            </div>
+                            
+                            <!-- Score Display Below Bar -->
+                            <div style="margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; text-align: center;">
                                 <div style="font-size: 0.85rem; color: #92400e; font-weight: 600; margin-bottom: 0.25rem;">Detected Lean</div>
                                 <div id="bias-direction" style="font-size: 1.5rem; font-weight: 800; color: #1e293b;">Center</div>
                                 <div style="font-size: 0.9rem; color: #78350f; margin-top: 0.5rem;">
@@ -713,36 +677,29 @@ window.ServiceTemplates = {
         }
     },
 
-    // Display Bias Detector
+    // Display Bias Detector - v4.30.0 HORIZONTAL BAR
     displayBiasDetector: function(data, analyzer) {
-        console.log('[BiasDetector v4.29.0 - VISUAL DIAL] Displaying data:', data);
+        console.log('[BiasDetector v4.30.0 - HORIZONTAL BAR] Displaying data:', data);
         
         const objectivityScore = data.objectivity_score || data.score || 50;
         const direction = data.bias_direction || data.political_bias || data.direction || 'center';
         const politicalLabel = data.political_label || data.political_leaning || 'Center';
         const sensationalismLevel = data.sensationalism_level || 'Unknown';
         
-        console.log('[BiasDetector] Objectivity:', objectivityScore, 'Direction:', direction);
+        console.log('[BiasDetector v4.30.0] Objectivity:', objectivityScore, 'Direction:', direction);
         
         // Update text displays
         this.updateElement('bias-score', objectivityScore + '/100');
         this.updateElement('bias-direction', politicalLabel);
         
-        // NEW: Animate the needle on the visual dial
-        const needle = document.getElementById('bias-needle');
-        if (needle) {
-            // Convert bias position to rotation angle
-            // Position scale: 0 (far-left) to 100 (far-right), 50 = center
-            // Rotation: -90° (far-left) to +90° (far-right), 0° = center (pointing up)
+        // NEW v4.30.0: Animate the marker on the horizontal bar
+        const marker = document.getElementById('bias-marker');
+        if (marker) {
             const biasPosition = this.getBiasPosition(direction, objectivityScore);
-            // Map position (0-100) to angle (-90 to +90)
-            const angle = (biasPosition - 50) * 1.8; // 1.8 = 180/100
+            console.log('[BiasDetector v4.30.0] Marker position=' + biasPosition + '%');
             
-            console.log('[BiasDetector] Needle animation: position=' + biasPosition + ', angle=' + angle + '°');
-            
-            // Animate needle rotation
             setTimeout(function() {
-                needle.style.transform = 'rotate(' + angle + 'deg)';
+                marker.style.left = biasPosition + '%';
             }, 200);
         }
         
@@ -829,7 +786,7 @@ window.ServiceTemplates = {
             metricsContainer.appendChild(explanation);
         }
         
-        console.log('[BiasDetector v4.29.0] ✓ Visual dial animated + explanation displayed');
+        console.log('[BiasDetector v4.30.0] ✓ Horizontal bar animated + explanation displayed');
     },
 
     displayFactChecker: function(data, analyzer) {
@@ -1509,7 +1466,7 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('[ServiceTemplates v4.29.0] VISUAL DIAL + SUBTLE TRANSPARENCY - Module loaded');
-console.log('[ServiceTemplates v4.29.0] Visual enhancements: DIAL + HORIZONTAL LAYOUT');
+console.log('[ServiceTemplates v4.30.0] HORIZONTAL BAR + SUBTLE TRANSPARENCY - Module loaded');
+console.log('[ServiceTemplates v4.30.0] Visual enhancements: HORIZONTAL BAR + SUBTLE LAYOUT');
 
 // This file is not truncated
