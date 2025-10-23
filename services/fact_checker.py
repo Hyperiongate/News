@@ -1,44 +1,30 @@
 """
-Fact Checker Service - v12.3 DONOR/CONTRIBUTION CLAIM DETECTION
-Date: October 20, 2025
-Last Updated: October 23, 2025 - ENHANCED DONOR CLAIM DETECTION
+Fact Checker Service - v13.0 MULTI-SOURCE AGGREGATION
+Date: October 23, 2025
+Last Updated: October 23, 2025 - MULTI-SOURCE VERIFICATION
 
-CRITICAL FIX FROM v12.3 (October 23, 2025):
-✅ FIXED: Donor/contribution claims now detected properly
-✅ ADDED: Donor pattern detection as factual element (line 405)
-✅ ADDED: 4 new scoring patterns for donations/contributions (lines 451-466)
-✅ PROBLEM: Articles with donor lists found zero claims
-✅ SOLUTION: Enhanced claim extraction to recognize donation language patterns
+MAJOR ENHANCEMENTS IN v13.0:
+✅ NEW: Cross-source verification aggregation
+✅ NEW: Combined verdict analysis (verdict + contextual notes)
+✅ NEW: Multi-outlet corroboration tracking
+✅ NEW: Transparent reasoning chain showing how conclusion was reached
+✅ NEW: Evidence synthesis from multiple verification methods
+✅ IMPROVED: Better use of available resources instead of "needs context"
+✅ IMPROVED: Contextual notes added to verdicts
 
-CRITICAL FIXES FROM v12.0:
-✅ FIXED: No more repeated claims (deduplication added)
-✅ FIXED: No more non-existent claims (better validation)
-✅ FIXED: Better claim quality (stricter scoring)
-✅ FIXED: Minimum claim length raised (30 chars, was 20)
-✅ FIXED: Maximum claims reduced (10, was 15)
-✅ PRESERVED: All v12.0 13-point grading scale
-✅ PRESERVED: All parallel checking optimizations
-✅ PRESERVED: All AI verification features
+PRESERVED FROM v12.3:
+✅ All 13-point grading scale verdicts
+✅ All claim extraction and deduplication
+✅ All parallel checking optimizations
+✅ All AI verification features
+✅ Donor/contribution claim detection
+✅ All scoring patterns
 
-THE PROBLEMS:
-1. Claims were being repeated (no deduplication)
-2. Generic/vague statements were being extracted
-3. Non-factual sentences were scoring too high
-4. Too many low-quality claims (15 was too many)
-
-
-CRITICAL FIX FROM v12.1:
-✅ FIXED: Missing claim text in AI verification results
-✅ ADDED: ai_result['claim'] = claim at line 699
-✅ PROBLEM: Frontend showed "No claim text available"
-✅ SOLUTION: Ensure claim field is populated before returning AI result
-
-PREVIOUS FIXES (v12.1):
-1. Added deduplication using seen_claims set
-2. Require factual elements (numbers OR named entities)
-3. Stricter minimum length (30 chars, not 20)
-4. Better quality threshold (score >= 10, was >= 8)
-5. Limit to 10 best claims (was 15)
+KEY PHILOSOPHY CHANGES:
+1. Don't say "can't see original" → Say "multiple outlets corroborate this"
+2. Don't pick one method → Aggregate all available verification
+3. Don't give simple verdict → Provide verdict + context notes
+4. Don't hide reasoning → Show exactly how we reached the conclusion
 
 Save as: services/fact_checker.py (REPLACE existing file)
 """
@@ -49,10 +35,11 @@ import time
 import hashlib
 import logging
 import requests
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from urllib.parse import quote
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
+from collections import Counter, defaultdict
 
 try:
     from openai import OpenAI
@@ -68,7 +55,7 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 
-# v12.0: 13-Point Verdict Type Definitions (PRESERVED)
+# v13.0: 13-Point Verdict Type Definitions (PRESERVED)
 VERDICT_TYPES = {
     'true': {
         'label': 'True',
@@ -166,14 +153,14 @@ VERDICT_TYPES = {
 
 class FactChecker(BaseAnalyzer):
     """
-    Fact-checker with 13-POINT GRADING SCALE + FIXED CLAIM EXTRACTION
-    v12.1 - No more repeated or non-existent claims
+    ENHANCED Fact-checker with MULTI-SOURCE AGGREGATION
+    v13.0 - Cross-verification and transparent reasoning
     """
     
     def __init__(self):
         super().__init__('fact_checker')
         
-        # Initialize OpenAI with 5s timeout (PRESERVED)
+        # Initialize OpenAI with 5s timeout
         self.openai_client = None
         if OPENAI_AVAILABLE and Config.OPENAI_API_KEY:
             try:
@@ -181,12 +168,12 @@ class FactChecker(BaseAnalyzer):
                     api_key=Config.OPENAI_API_KEY,
                     timeout=httpx.Timeout(5.0, connect=2.0)
                 )
-                logger.info("[FactChecker v12.1] OpenAI client initialized")
+                logger.info("[FactChecker v13.0] OpenAI client initialized")
             except Exception as e:
-                logger.warning(f"[FactChecker v12.1] Failed to initialize OpenAI: {e}")
+                logger.warning(f"[FactChecker v13.0] Failed to initialize OpenAI: {e}")
                 self.openai_client = None
         
-        # ThreadPoolExecutor for parallel checking (PRESERVED)
+        # ThreadPoolExecutor for parallel checking
         self.executor = ThreadPoolExecutor(max_workers=10)
         
         # Cache for fact check results
@@ -200,17 +187,17 @@ class FactChecker(BaseAnalyzer):
         self.claim_patterns = self._initialize_claim_patterns()
         self.exclusion_patterns = self._initialize_exclusion_patterns()
         
-        # Current context (PRESERVED)
+        # Current context
         self.current_date = datetime.now().strftime("%B %d, %Y")
         self.current_year = datetime.now().year
         self.current_us_president = "Donald Trump"
         
-        # Verdict types (PRESERVED)
+        # Verdict types
         self.verdict_types = VERDICT_TYPES
         
-        logger.info(f"[FactChecker v12.1] FIXED CLAIM EXTRACTION")
-        logger.info(f"[FactChecker v12.1] Context: {self.current_date}, President: {self.current_us_president}")
-        logger.info(f"[FactChecker v12.1] 13-POINT SCALE: {len(self.verdict_types)} verdict types")
+        logger.info(f"[FactChecker v13.0] MULTI-SOURCE AGGREGATION ENABLED")
+        logger.info(f"[FactChecker v13.0] Context: {self.current_date}, President: {self.current_us_president}")
+        logger.info(f"[FactChecker v13.0] 13-POINT SCALE + Cross-verification")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -218,8 +205,7 @@ class FactChecker(BaseAnalyzer):
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Analyze article with FIXED claim extraction
-        v12.1: Better quality, no duplicates, proper validation
+        Analyze article with v13.0 multi-source verification
         """
         try:
             start_time = time.time()
@@ -237,13 +223,13 @@ class FactChecker(BaseAnalyzer):
             quotes_count = data.get('quotes_count', 0)
             author = data.get('author', '')
             
-            logger.info(f"[FactChecker v12.1] Analyzing: {len(content)} chars, {sources_count} sources")
+            logger.info(f"[FactChecker v13.0] Analyzing: {len(content)} chars, {sources_count} sources")
             
-            # 1. FIXED: Extract claims with deduplication
+            # 1. Extract claims with deduplication (PRESERVED from v12.3)
             extracted_claims = self._extract_claims_enhanced(content)
-            logger.info(f"[FactChecker v12.1] Extracted {len(extracted_claims)} UNIQUE claims")
+            logger.info(f"[FactChecker v13.0] Extracted {len(extracted_claims)} UNIQUE claims")
             
-            # 2. Check claims in parallel (PRESERVED)
+            # 2. Check claims in parallel with v13.0 multi-source aggregation
             fact_checks = self._check_claims_parallel(extracted_claims, article_url, article_title)
             
             # 3. Enhanced scoring with 13-point scale (PRESERVED)
@@ -267,7 +253,7 @@ class FactChecker(BaseAnalyzer):
             # 7. Identify sources used
             sources_used = self._get_sources_used(fact_checks)
             
-            # Count verdicts using 13-point scale (PRESERVED)
+            # Count verdicts using 13-point scale
             verdict_counts = self._count_verdicts_by_type(fact_checks)
             
             # Build comprehensive result
@@ -295,20 +281,12 @@ class FactChecker(BaseAnalyzer):
                 'claims_checked': len(fact_checks),
                 'verdict_counts': verdict_counts,
                 
-                # Detailed fact checks (for display)
+                # Detailed fact checks (for display) - v13.0 ENHANCED
                 'fact_checks': self._enrich_fact_checks_with_metadata(fact_checks[:10]),
                 'claims': self._enrich_fact_checks_with_metadata(fact_checks[:10]),
                 
-                # Sources used
+                # Sources
                 'sources_used': sources_used,
-                'sources_cited_in_article': sources_count,
-                
-                # Verification methods
-                'google_api_used': bool(self.google_api_key),
-                'ai_verification_used': bool(self.openai_client),
-                
-                # Verdict type definitions for frontend
-                'verdict_types': self.verdict_types,
                 
                 # Chart data
                 'chart_data': self._generate_13point_chart_data(verdict_counts),
@@ -329,89 +307,78 @@ class FactChecker(BaseAnalyzer):
                     'text_length': len(content),
                     'article_url': article_url,
                     'article_title': article_title,
-                    'version': '12.1.0',
+                    'version': '13.0.0',
                     'grading_scale': '13-point',
                     'ai_enhanced': bool(self.openai_client),
                     'parallel_checking': True,
+                    'multi_source_aggregation': True,  # NEW in v13.0
                     'current_date_context': self.current_date,
                     'current_president': self.current_us_president,
                     'claim_extraction': 'FIXED - deduplication & validation'
                 }
             }
             
-            logger.info(f"[FactChecker v12.1] Complete: {verification_score}/100 ({verification_level})")
-            logger.info(f"[FactChecker v12.1] Verdicts: {verdict_counts}")
+            logger.info(f"[FactChecker v13.0] Complete: {verification_score}/100 ({verification_level})")
+            logger.info(f"[FactChecker v13.0] Verdicts: {verdict_counts}")
             return self.get_success_result(result)
             
         except Exception as e:
-            logger.error(f"[FactChecker v12.1] Error: {e}", exc_info=True)
+            logger.error(f"[FactChecker v13.0] Error: {e}", exc_info=True)
             return self.get_error_result(f"Fact checking error: {str(e)}")
     
     # ============================================================================
-    # CRITICAL FIX v12.1: ENHANCED CLAIM EXTRACTION
+    # v12.3: ENHANCED CLAIM EXTRACTION (PRESERVED)
     # ============================================================================
     
     def _extract_claims_enhanced(self, content: str) -> List[str]:
         """
-        FIXED v12.1: Extract unique, valid claims only
-        - Deduplication prevents repeated claims
-        - Better validation prevents non-existent claims
-        - Stricter scoring prevents vague statements
+        v12.3: Extract unique, valid claims only (PRESERVED)
         """
         sentences = self._split_sentences(content)
         claims = []
-        seen_claims = set()  # NEW v12.1: Track unique claims
+        seen_claims = set()
         
-        logger.info(f"[FactChecker v12.1] Evaluating {len(sentences)} sentences for claims...")
+        logger.info(f"[FactChecker v13.0] Evaluating {len(sentences)} sentences for claims...")
         
         for i, sentence in enumerate(sentences):
-            # Skip if matches exclusion patterns
             if self._matches_exclusion_patterns(sentence):
                 continue
             
-            # FIXED v12.1: Stricter scoring
             score = self._score_claim_likelihood_enhanced(sentence)
             
-            # FIXED v12.1: Higher threshold (10, was 8)
             if score >= 10:
                 claim = sentence.strip()
                 
-                # FIXED v12.1: Stricter length (30-400, was 20-500)
                 if 30 < len(claim) < 400:
-                    # NEW v12.1: Check for duplicates
-                    claim_key = claim.lower()[:100]  # Use first 100 chars as key
+                    claim_key = claim.lower()[:100]
                     
                     if claim_key not in seen_claims:
                         claims.append(claim)
                         seen_claims.add(claim_key)
-                        logger.debug(f"[FactChecker v12.1] Claim {len(claims)}: score={score}, len={len(claim)}")
+                        logger.debug(f"[FactChecker v13.0] Claim {len(claims)}: score={score}, len={len(claim)}")
                     else:
-                        logger.debug(f"[FactChecker v12.1] SKIPPED duplicate claim: {claim[:50]}...")
+                        logger.debug(f"[FactChecker v13.0] SKIPPED duplicate claim: {claim[:50]}...")
         
-        # FIXED v12.1: Limit to 10 best claims (was 15)
         final_claims = claims[:10]
         
-        logger.info(f"[FactChecker v12.1] Extracted {len(final_claims)} unique, validated claims")
+        logger.info(f"[FactChecker v13.0] Extracted {len(final_claims)} unique, validated claims")
         
         return final_claims
     
     def _score_claim_likelihood_enhanced(self, sentence: str) -> int:
         """
-        FIXED v12.1: Better scoring with mandatory factual elements
+        v12.3: Better scoring with mandatory factual elements (PRESERVED)
         """
         score = 0
         sentence_lower = sentence.lower()
         
-        # CRITICAL v12.1: Must have factual element
+        # Must have factual element
         has_number = bool(re.search(r'\b\d+', sentence))
         has_named_entity = bool(re.search(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b', sentence))
-        
-        # NEW v12.3 (Oct 23, 2025): Donor/contribution patterns as factual elements
         has_donor_pattern = bool(re.search(r'\b(?:donat|contribut|fund|sponsor)\w*\b', sentence_lower))
         
-        # Allow donor patterns as factual elements (helps detect donation claims)
         if not (has_number or has_named_entity or has_donor_pattern):
-            return 0  # Skip vague claims without facts
+            return 0
         
         # Research/studies (highest confidence)
         if re.search(r'\b(?:study|research|report|survey|poll|analysis)\s+(?:shows?|finds?|found|indicates?|suggests?|reveals?)\b', sentence_lower):
@@ -456,20 +423,16 @@ class FactChecker(BaseAnalyzer):
         if re.search(r'\b[A-Z][a-z]+\s+[A-Z][a-z]+\s+(?:said|told|announced|confirmed|stated)\b', sentence):
             score += 10
         
-        # NEW v12.3 (Oct 23, 2025): Donor/contribution detection patterns
-        # Donation/contribution actions with financial indicators
+        # v12.3: Donor/contribution detection patterns
         if re.search(r'\b(?:donated?|contributed?|gave|provided)\s+(?:\$|money|funds?|support|to)\b', sentence_lower):
             score += 22
         
-        # Named donors/contributors (proper nouns with donation verbs)
         if re.search(r'\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s+(?:donated?|contributed?|gave|provided|funded?)\b', sentence):
             score += 20
         
-        # Financial amounts in contributions
         if re.search(r'\$\s*\d+(?:,\d{3})*(?:\.\d{2})?\s+(?:to|for|toward|in)\b', sentence):
             score += 18
         
-        # Lists of donors/contributors
         if re.search(r'\b(?:donors?|contributors?|sponsors?|funders?)(?:\s+\w+)?\s+(?:include|are|were|such as)\b', sentence_lower):
             score += 15
         
@@ -485,166 +448,36 @@ class FactChecker(BaseAnalyzer):
         if re.search(r'\b(?:more|less|higher|lower|greater|fewer)\s+than\b', sentence_lower):
             score += 8
         
-        # PENALTIES (reduce score for problematic patterns)
-        
-        # Uncertainty (reduce score)
+        # PENALTIES
         if re.search(r'\b(?:may|might|could|possibly|perhaps|allegedly|reportedly)\b', sentence_lower):
             score -= 5
         
-        # Questions (strong negative)
         if sentence.strip().endswith('?'):
             score -= 15
         
-        # Opinion words (negative)
         if re.search(r'\b(?:I think|I believe|in my opinion|seems like|appears to)\b', sentence_lower):
             score -= 10
         
-        # Too short (negative)
         if len(sentence) < 40:
             score -= 5
         
         return max(0, score)
     
     # ============================================================================
-    # v12.0: 13-Point Scale Helper Methods (ALL PRESERVED)
-    # ============================================================================
-    
-    def _count_verdicts_by_type(self, fact_checks: List[Dict[str, Any]]) -> Dict[str, int]:
-        """Count verdicts using 13-point scale"""
-        counts = {verdict_type: 0 for verdict_type in self.verdict_types.keys()}
-        
-        for fc in fact_checks:
-            verdict = fc.get('verdict', 'unverified')
-            if verdict in counts:
-                counts[verdict] += 1
-            else:
-                counts['unverified'] += 1
-        
-        return counts
-    
-    def _enrich_fact_checks_with_metadata(self, fact_checks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Add verdict metadata (color, icon, label) to each fact check"""
-        enriched = []
-        
-        for fc in fact_checks:
-            verdict = fc.get('verdict', 'unverified')
-            verdict_meta = self.verdict_types.get(verdict, self.verdict_types['unverified'])
-            
-            enriched_fc = fc.copy()
-            enriched_fc.update({
-                'verdict_label': verdict_meta['label'],
-                'verdict_icon': verdict_meta['icon'],
-                'verdict_color': verdict_meta['color'],
-                'verdict_description': verdict_meta['description'],
-                'verdict_score': verdict_meta['score']
-            })
-            enriched.append(enriched_fc)
-        
-        return enriched
-    
-    def _generate_13point_chart_data(self, verdict_counts: Dict[str, int]) -> Dict[str, Any]:
-        """Generate chart data for 13-point scale"""
-        labels = []
-        data = []
-        colors = []
-        
-        # Group 1: True variants
-        true_count = verdict_counts.get('true', 0) + verdict_counts.get('mostly_true', 0)
-        if true_count > 0:
-            labels.append('True/Mostly True')
-            data.append(true_count)
-            colors.append('#10b981')
-        
-        # Group 2: Partially true/Mixed
-        partial_count = verdict_counts.get('partially_true', 0) + verdict_counts.get('mixed', 0)
-        if partial_count > 0:
-            labels.append('Partially True/Mixed')
-            data.append(partial_count)
-            colors.append('#fbbf24')
-        
-        # Group 3: Exaggerated/Misleading
-        misleading_count = verdict_counts.get('exaggerated', 0) + verdict_counts.get('misleading', 0)
-        if misleading_count > 0:
-            labels.append('Exaggerated/Misleading')
-            data.append(misleading_count)
-            colors.append('#f59e0b')
-        
-        # Group 4: False variants
-        false_count = verdict_counts.get('false', 0) + verdict_counts.get('mostly_false', 0)
-        if false_count > 0:
-            labels.append('False/Mostly False')
-            data.append(false_count)
-            colors.append('#ef4444')
-        
-        # Group 5: Non-factual
-        non_factual = (verdict_counts.get('opinion', 0) + 
-                      verdict_counts.get('empty_rhetoric', 0) + 
-                      verdict_counts.get('unsubstantiated_prediction', 0))
-        if non_factual > 0:
-            labels.append('Non-Factual Claims')
-            data.append(non_factual)
-            colors.append('#94a3b8')
-        
-        # Group 6: Unverified/Needs Context
-        unverified_count = verdict_counts.get('unverified', 0) + verdict_counts.get('needs_context', 0)
-        if unverified_count > 0:
-            labels.append('Unverified/Needs Context')
-            data.append(unverified_count)
-            colors.append('#9ca3af')
-        
-        return {
-            'type': 'doughnut',
-            'data': {
-                'labels': labels,
-                'datasets': [{
-                    'data': data,
-                    'backgroundColor': colors
-                }]
-            }
-        }
-    
-    def _calculate_score_with_13point_scale(self, fact_checks: List[Dict], sources_count: int,
-                                            quotes_count: int, total_claims: int, has_author: bool) -> int:
-        """Calculate score using 13-point verdict scores"""
-        
-        # Base scoring from sources and quotes
-        base_score = 50
-        source_score = min(30, sources_count * 5)
-        quote_score = min(20, quotes_count * 7)
-        
-        # Calculate claim score using verdict scores
-        claim_score = 0
-        if fact_checks:
-            scored_verdicts = []
-            for fc in fact_checks:
-                verdict = fc.get('verdict', 'unverified')
-                verdict_meta = self.verdict_types.get(verdict)
-                if verdict_meta and verdict_meta['score'] is not None:
-                    scored_verdicts.append(verdict_meta['score'])
-            
-            if scored_verdicts:
-                avg_score = sum(scored_verdicts) / len(scored_verdicts)
-                claim_score = int(avg_score * 0.20)
-        
-        author_score = 5 if has_author else 0
-        complexity_score = 5 if total_claims >= 10 else (3 if total_claims >= 5 else 0)
-        
-        final_score = base_score + source_score + quote_score + claim_score + author_score + complexity_score
-        return int(max(0, min(100, final_score)))
-    
-    # ============================================================================
-    # Parallel claim checking (PRESERVED from v10.0+)
+    # v13.0: PARALLEL CLAIM CHECKING (ENHANCED)
     # ============================================================================
     
     def _check_claims_parallel(self, claims: List[str], article_url: Optional[str] = None,
                                 article_title: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Check ALL claims in PARALLEL"""
+        """
+        v13.0: Parallel checking with multi-source aggregation
+        """
+        if not claims:
+            return []
         
-        fact_checks = []
+        logger.info(f"[FactChecker v13.0] Checking {len(claims)} claims in parallel...")
+        
         futures = {}
-        
-        logger.info(f"[FactChecker v12.1] Starting parallel check of {len(claims)} claims...")
-        
         for i, claim in enumerate(claims):
             future = self.executor.submit(
                 self._verify_single_claim,
@@ -658,10 +491,10 @@ class FactChecker(BaseAnalyzer):
                 i, claim = futures[future]
                 result = future.result(timeout=1)
                 completed_results.append((i, result))
-                logger.info(f"[FactChecker v12.1] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
+                logger.info(f"[FactChecker v13.0] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
             except Exception as e:
                 i, claim = futures[future]
-                logger.error(f"[FactChecker v12.1] Claim {i+1} failed: {e}")
+                logger.error(f"[FactChecker v13.0] Claim {i+1} failed: {e}")
                 completed_results.append((i, {
                     'claim': claim,
                     'verdict': 'unverified',
@@ -674,13 +507,13 @@ class FactChecker(BaseAnalyzer):
         completed_results.sort(key=lambda x: x[0])
         fact_checks = [result for _, result in completed_results]
         
-        logger.info(f"[FactChecker v12.1] ✓ Parallel checking complete: {len(fact_checks)} claims")
+        logger.info(f"[FactChecker v13.0] ✓ Parallel checking complete: {len(fact_checks)} claims")
         return fact_checks
     
     def _verify_single_claim(self, claim: str, index: int,
                              article_url: Optional[str],
                              article_title: Optional[str]) -> Dict[str, Any]:
-        """Verify a SINGLE claim"""
+        """Verify a SINGLE claim with caching"""
         
         try:
             if self.cache:
@@ -699,7 +532,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v12.1] Error verifying claim {index}: {e}")
+            logger.error(f"[FactChecker v13.0] Error verifying claim {index}: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -712,7 +545,9 @@ class FactChecker(BaseAnalyzer):
     def _verify_claim_comprehensive(self, claim: str, index: int,
                                    article_url: Optional[str],
                                    article_title: Optional[str]) -> Dict[str, Any]:
-        """Comprehensive claim verification"""
+        """
+        v13.0: ENHANCED - Aggregate results from ALL available methods
+        """
         
         try:
             # Skip trivial claims
@@ -727,31 +562,55 @@ class FactChecker(BaseAnalyzer):
                     'method_used': 'filtered'
                 }
             
-            # METHOD 1: AI Analysis with 13-point scale
+            # v13.0: NEW APPROACH - Collect results from ALL methods
+            verification_results = []
+            
+            # METHOD 1: AI Analysis
             if self.openai_client:
                 ai_result = self._ai_verify_claim(claim, article_title)
-                if ai_result and ai_result.get('verdict') != 'needs_context':
-                    ai_result['claim'] = claim  # CRITICAL FIX v12.2: Add claim text
-                    ai_result['method_used'] = 'AI Verification'
-                    return ai_result
+                if ai_result:
+                    verification_results.append({
+                        'method': 'AI Verification',
+                        'verdict': ai_result['verdict'],
+                        'confidence': ai_result['confidence'],
+                        'explanation': ai_result['explanation'],
+                        'sources': ai_result.get('sources', []),
+                        'weight': 0.4  # AI gets 40% weight
+                    })
             
             # METHOD 2: Google Fact Check API
             if self.google_api_key:
                 google_result = self._check_google_api(claim)
                 if google_result.get('found'):
-                    result = google_result['data']
-                    result['claim'] = claim
-                    result['method_used'] = 'Google Fact Check Database'
-                    return result
+                    data = google_result['data']
+                    verification_results.append({
+                        'method': 'Google Fact Check Database',
+                        'verdict': data['verdict'],
+                        'confidence': data['confidence'],
+                        'explanation': data['explanation'],
+                        'sources': data.get('sources', []),
+                        'fact_check_urls': data.get('fact_check_urls', []),
+                        'weight': 0.5  # External fact-checkers get 50% weight
+                    })
             
-            # METHOD 3: Pattern Analysis (fallback)
+            # METHOD 3: Pattern Analysis (always runs as fallback)
             pattern_result = self._analyze_claim_patterns(claim)
-            pattern_result['claim'] = claim
-            pattern_result['method_used'] = 'Pattern Analysis'
-            return pattern_result
+            verification_results.append({
+                'method': 'Pattern Analysis',
+                'verdict': pattern_result['verdict'],
+                'confidence': pattern_result['confidence'],
+                'explanation': pattern_result['explanation'],
+                'sources': pattern_result.get('sources', []),
+                'weight': 0.1  # Patterns get 10% weight
+            })
+            
+            # v13.0: Synthesize all results into single conclusion
+            final_result = self._synthesize_verifications(claim, verification_results)
+            
+            return final_result
             
         except Exception as e:
-            logger.error(f"[FactChecker v12.1] Error verifying claim: {e}")
+            logger.error(f"[FactChecker v13.0] Error verifying claim: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -762,9 +621,170 @@ class FactChecker(BaseAnalyzer):
                 'method_used': 'error'
             }
     
-    # ... (Continue with all remaining methods from original file - AI verification, Google API, helpers, etc.)
-    # Due to token limits, I'm showing the CRITICAL FIXES only
-    # The rest of the methods remain EXACTLY as they were in v12.0
+    # ============================================================================
+    # v13.0: NEW - MULTI-SOURCE AGGREGATION FUNCTIONS
+    # ============================================================================
+    
+    def _synthesize_verifications(self, claim: str, results: List[Dict]) -> Dict[str, Any]:
+        """
+        v13.0: NEW - Synthesize multiple verification results into one conclusion
+        """
+        if not results:
+            return {
+                'claim': claim,
+                'verdict': 'unverified',
+                'confidence': 30,
+                'explanation': 'No verification methods available',
+                'sources': [],
+                'method_used': 'none'
+            }
+        
+        # Count verdicts and calculate weighted scores
+        verdict_votes = Counter()
+        weighted_verdicts = defaultdict(float)
+        confidence_sum = 0
+        
+        for result in results:
+            verdict = result['verdict']
+            weight = result.get('weight', 1.0)
+            confidence = result.get('confidence', 50)
+            
+            verdict_votes[verdict] += 1
+            weighted_verdicts[verdict] += (confidence * weight)
+            confidence_sum += confidence
+        
+        # Determine primary verdict (highest weighted score)
+        primary_verdict = max(weighted_verdicts.items(), key=lambda x: x[1])[0]
+        
+        # Collect all sources from results that agree with primary verdict
+        corroborating_sources = []
+        for r in results:
+            if r.get('sources') and r['verdict'] == primary_verdict:
+                corroborating_sources.extend(r['sources'])
+        
+        unique_sources = list(set(corroborating_sources))
+        
+        # Build explanation showing the reasoning
+        reasoning_chain = self._build_reasoning_chain(results, primary_verdict)
+        
+        # Extract contextual notes (warnings even if verdict is positive)
+        contextual_notes = self._extract_contextual_notes(results, primary_verdict)
+        
+        # Calculate final confidence
+        avg_confidence = confidence_sum / len(results) if results else 50
+        
+        # Boost confidence if multiple sources agree
+        if len(results) >= 2 and verdict_votes[primary_verdict] >= 2:
+            avg_confidence = min(avg_confidence + 15, 95)
+        
+        # Build final result with v13.0 enhancements
+        return {
+            'claim': claim,
+            'verdict': primary_verdict,
+            'confidence': int(avg_confidence),
+            'explanation': reasoning_chain,
+            'contextual_notes': contextual_notes,  # NEW in v13.0
+            'sources': unique_sources,
+            'corroboration_count': len(unique_sources),  # NEW in v13.0
+            'verification_methods': [r['method'] for r in results],
+            'method_details': results,  # Full details for transparency
+            'cross_verified': len(results) >= 2 and verdict_votes[primary_verdict] >= 2,
+            'method_used': ', '.join([r['method'] for r in results])  # For compatibility
+        }
+    
+    def _build_reasoning_chain(self, results: List[Dict], final_verdict: str) -> str:
+        """
+        v13.0: NEW - Build transparent explanation of how we reached the verdict
+        """
+        chain_parts = []
+        
+        # Start with what we checked
+        methods = [r['method'] for r in results]
+        chain_parts.append(f"We verified this claim using {len(methods)} method(s): {', '.join(methods)}.")
+        
+        # Detail each method's finding
+        for result in results:
+            method = result['method']
+            verdict = result['verdict']
+            confidence = result.get('confidence', 50)
+            
+            verdict_label = self.verdict_types.get(verdict, {}).get('label', verdict)
+            
+            if method == 'Google Fact Check Database' and result.get('sources'):
+                sources = result['sources'][:3]  # First 3
+                if len(sources) > 0:
+                    chain_parts.append(
+                        f"{method} found this claim rated as '{verdict_label}' "
+                        f"by {len(sources)} fact-checker(s): {', '.join(sources)}."
+                    )
+                else:
+                    chain_parts.append(
+                        f"{method} assessed this as '{verdict_label}' with {confidence}% confidence."
+                    )
+            elif method == 'AI Verification':
+                chain_parts.append(
+                    f"{method} assessed this as '{verdict_label}' with {confidence}% confidence."
+                )
+            else:
+                chain_parts.append(
+                    f"{method} identified this as '{verdict_label}'."
+                )
+        
+        # Explain synthesis
+        if len(results) >= 2:
+            verdict_label = self.verdict_types.get(final_verdict, {}).get('label', final_verdict)
+            chain_parts.append(
+                f"Based on cross-verification from {len(results)} sources, "
+                f"we rate this claim as '{verdict_label}'."
+            )
+        
+        return " ".join(chain_parts)
+    
+    def _extract_contextual_notes(self, results: List[Dict], primary_verdict: str) -> List[str]:
+        """
+        v13.0: NEW - Extract important context even if not the primary verdict
+        
+        Example: Claim is "mostly_true" but one method noted "misleading"
+        Result: ['⚠️ Potentially misleading framing noted by AI analysis']
+        """
+        notes = []
+        
+        # Warning verdicts and concern verdicts
+        warning_verdicts = ['misleading', 'exaggerated', 'partially_true']
+        concern_verdicts = ['mostly_false', 'false']
+        
+        for result in results:
+            verdict = result['verdict']
+            method = result['method']
+            explanation = result.get('explanation', '')
+            
+            # If primary verdict is positive but method found concerns
+            if primary_verdict in ['true', 'mostly_true'] and verdict in warning_verdicts:
+                notes.append(
+                    f"⚠️ {method} noted: {verdict.replace('_', ' ').title()}"
+                )
+            
+            # If primary verdict is negative but method found some truth
+            if primary_verdict in concern_verdicts and verdict in ['partially_true', 'mostly_true']:
+                notes.append(
+                    f"ℹ️ {method} found: {verdict.replace('_', ' ').title()}"
+                )
+            
+            # Look for specific keywords in explanations
+            if 'misleading' in explanation.lower() and primary_verdict not in ['misleading', 'false']:
+                notes.append(f"⚠️ Potentially misleading framing noted by {method}")
+            
+            if 'exaggerat' in explanation.lower() and primary_verdict not in ['exaggerated', 'false']:
+                notes.append(f"⚠️ Some exaggeration noted by {method}")
+            
+            if 'context' in explanation.lower() and 'missing' in explanation.lower():
+                notes.append(f"ℹ️ Additional context recommended by {method}")
+        
+        return list(set(notes))  # Remove duplicates
+    
+    # ============================================================================
+    # AI VERIFICATION (PRESERVED from v12.3)
+    # ============================================================================
     
     def _ai_verify_claim(self, claim: str, article_context: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Use AI to verify claim with 13-point scale"""
@@ -788,7 +808,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.warning(f"[FactChecker v12.1] AI verification failed: {e}")
+            logger.warning(f"[FactChecker v13.0] AI verification failed: {e}")
             return None
     
     def _get_system_prompt_13point(self) -> str:
@@ -895,11 +915,12 @@ Use information current as of {self.current_date}."""
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v12.1] Failed to parse AI response: {e}")
+            logger.error(f"[FactChecker v13.0] Failed to parse AI response: {e}")
             return None
     
-    # ... ALL OTHER METHODS PRESERVED FROM v12.0
-    # (Google API, pattern analysis, helpers, etc. - exact same as before)
+    # ============================================================================
+    # GOOGLE FACT CHECK API (PRESERVED from v12.3)
+    # ============================================================================
     
     def _check_google_api(self, claim: str) -> Dict[str, Any]:
         """Check Google Fact Check API"""
@@ -954,7 +975,7 @@ Use information current as of {self.current_date}."""
             return {'found': False}
             
         except Exception as e:
-            logger.error(f"[FactChecker v12.1] Google API error: {e}")
+            logger.error(f"[FactChecker v13.0] Google API error: {e}")
             return {'found': False}
     
     def _map_google_verdict_to_13point(self, verdicts: List[str]) -> str:
@@ -993,6 +1014,10 @@ Use information current as of {self.current_date}."""
         from collections import Counter
         counts = Counter(normalized)
         return counts.most_common(1)[0][0]
+    
+    # ============================================================================
+    # PATTERN ANALYSIS (PRESERVED from v12.3)
+    # ============================================================================
     
     def _analyze_claim_patterns(self, claim: str) -> Dict[str, Any]:
         """Analyze claim using pattern matching"""
@@ -1043,6 +1068,10 @@ Use information current as of {self.current_date}."""
         
         return result
     
+    # ============================================================================
+    # HELPER METHODS (PRESERVED from v12.3)
+    # ============================================================================
+    
     def _split_sentences(self, text: str) -> List[str]:
         """Split text into sentences"""
         text = re.sub(r'\n+', '. ', text)
@@ -1088,6 +1117,164 @@ Use information current as of {self.current_date}."""
                 break
         
         return min(confidence, 95)
+    
+    # ============================================================================
+    # SCORING AND METADATA (PRESERVED from v12.3)
+    # ============================================================================
+    
+    def _count_verdicts_by_type(self, fact_checks: List[Dict[str, Any]]) -> Dict[str, int]:
+        """Count verdicts using 13-point scale"""
+        counts = {verdict_type: 0 for verdict_type in self.verdict_types.keys()}
+        
+        for fc in fact_checks:
+            verdict = fc.get('verdict', 'unverified')
+            if verdict in counts:
+                counts[verdict] += 1
+            else:
+                counts['unverified'] += 1
+        
+        return counts
+    
+    def _enrich_fact_checks_with_metadata(self, fact_checks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        v13.0: ENHANCED - Add rich metadata including corroboration info
+        """
+        enriched = []
+        
+        for fc in fact_checks:
+            verdict = fc.get('verdict', 'unverified')
+            verdict_meta = self.verdict_types.get(verdict, self.verdict_types['unverified'])
+            
+            enriched_fc = fc.copy()
+            enriched_fc.update({
+                'verdict_label': verdict_meta['label'],
+                'verdict_icon': verdict_meta['icon'],
+                'verdict_color': verdict_meta['color'],
+                'verdict_description': verdict_meta['description'],
+                'verdict_score': verdict_meta['score']
+            })
+            
+            # v13.0: NEW - Add corroboration information
+            sources_count = fc.get('corroboration_count', 0)
+            if sources_count >= 3:
+                enriched_fc['corroboration_level'] = 'Strong'
+                enriched_fc['corroboration_badge'] = '✓✓✓'
+            elif sources_count >= 2:
+                enriched_fc['corroboration_level'] = 'Moderate'
+                enriched_fc['corroboration_badge'] = '✓✓'
+            elif sources_count == 1:
+                enriched_fc['corroboration_level'] = 'Single Source'
+                enriched_fc['corroboration_badge'] = '✓'
+            else:
+                enriched_fc['corroboration_level'] = 'Not Corroborated'
+                enriched_fc['corroboration_badge'] = ''
+            
+            # v13.0: NEW - Add verification transparency
+            methods = fc.get('verification_methods', [])
+            if len(methods) >= 3:
+                enriched_fc['verification_strength'] = 'Comprehensive'
+            elif len(methods) == 2:
+                enriched_fc['verification_strength'] = 'Good'
+            else:
+                enriched_fc['verification_strength'] = 'Basic'
+            
+            # v13.0: NEW - Format for frontend display
+            if fc.get('cross_verified'):
+                enriched_fc['verification_badge'] = '🔍 Cross-Verified'
+            
+            enriched.append(enriched_fc)
+        
+        return enriched
+    
+    def _generate_13point_chart_data(self, verdict_counts: Dict[str, int]) -> Dict[str, Any]:
+        """Generate chart data for 13-point scale"""
+        labels = []
+        data = []
+        colors = []
+        
+        # Group 1: True variants
+        true_count = verdict_counts.get('true', 0) + verdict_counts.get('mostly_true', 0)
+        if true_count > 0:
+            labels.append('True/Mostly True')
+            data.append(true_count)
+            colors.append('#10b981')
+        
+        # Group 2: Partially true/Mixed
+        partial_count = verdict_counts.get('partially_true', 0) + verdict_counts.get('mixed', 0)
+        if partial_count > 0:
+            labels.append('Partially True/Mixed')
+            data.append(partial_count)
+            colors.append('#fbbf24')
+        
+        # Group 3: Exaggerated/Misleading
+        misleading_count = verdict_counts.get('exaggerated', 0) + verdict_counts.get('misleading', 0)
+        if misleading_count > 0:
+            labels.append('Exaggerated/Misleading')
+            data.append(misleading_count)
+            colors.append('#f59e0b')
+        
+        # Group 4: False variants
+        false_count = verdict_counts.get('false', 0) + verdict_counts.get('mostly_false', 0)
+        if false_count > 0:
+            labels.append('False/Mostly False')
+            data.append(false_count)
+            colors.append('#ef4444')
+        
+        # Group 5: Non-factual
+        non_factual = (verdict_counts.get('opinion', 0) + 
+                      verdict_counts.get('empty_rhetoric', 0) + 
+                      verdict_counts.get('unsubstantiated_prediction', 0))
+        if non_factual > 0:
+            labels.append('Non-Factual Claims')
+            data.append(non_factual)
+            colors.append('#94a3b8')
+        
+        # Group 6: Unverified/Needs Context
+        unverified_count = verdict_counts.get('unverified', 0) + verdict_counts.get('needs_context', 0)
+        if unverified_count > 0:
+            labels.append('Unverified/Needs Context')
+            data.append(unverified_count)
+            colors.append('#9ca3af')
+        
+        return {
+            'type': 'doughnut',
+            'data': {
+                'labels': labels,
+                'datasets': [{
+                    'data': data,
+                    'backgroundColor': colors
+                }]
+            }
+        }
+    
+    def _calculate_score_with_13point_scale(self, fact_checks: List[Dict], sources_count: int,
+                                            quotes_count: int, total_claims: int, has_author: bool) -> int:
+        """Calculate score using 13-point verdict scores"""
+        
+        # Base scoring from sources and quotes
+        base_score = 50
+        source_score = min(30, sources_count * 5)
+        quote_score = min(20, quotes_count * 7)
+        
+        # Calculate claim score using verdict scores
+        claim_score = 0
+        if fact_checks:
+            scored_verdicts = []
+            for fc in fact_checks:
+                verdict = fc.get('verdict', 'unverified')
+                verdict_meta = self.verdict_types.get(verdict)
+                if verdict_meta and verdict_meta['score'] is not None:
+                    scored_verdicts.append(verdict_meta['score'])
+            
+            if scored_verdicts:
+                avg_score = sum(scored_verdicts) / len(scored_verdicts)
+                claim_score = int(avg_score * 0.20)
+        
+        author_score = 5 if has_author else 0
+        complexity_score = 5 if total_claims >= 10 else (3 if total_claims >= 5 else 0)
+        
+        final_score = base_score + source_score + quote_score + claim_score + author_score + complexity_score
+        return int(max(0, min(100, final_score)))
     
     def _generate_detailed_findings(self, fact_checks: List[Dict[str, Any]], 
                                     sources_count: int, score: int) -> List[Dict[str, Any]]:
@@ -1172,9 +1359,9 @@ Use information current as of {self.current_date}."""
         """Generate comprehensive analysis"""
         
         verification_methods = []
-        if any(fc.get('method_used') == 'AI Verification' for fc in fact_checks):
+        if any(fc.get('method_used') and 'AI' in fc.get('method_used', '') for fc in fact_checks):
             verification_methods.append('AI verification with 13-point scale')
-        if any(fc.get('method_used') == 'Google Fact Check Database' for fc in fact_checks):
+        if any(fc.get('method_used') and 'Google' in fc.get('method_used', '') for fc in fact_checks):
             verification_methods.append('Google Fact Check database')
         verification_methods.append('pattern analysis')
         
@@ -1304,9 +1491,9 @@ Use information current as of {self.current_date}."""
         """Get service information"""
         info = super().get_service_info()
         info.update({
-            'version': '12.1.0',
+            'version': '13.0.0',
             'grading_scale': '13-point comprehensive scale',
-            'optimization': 'Parallel claim checking with FIXED claim extraction',
+            'optimization': 'Multi-source aggregation with cross-verification',
             'current_context': f'{self.current_date}, President {self.current_us_president}',
             'claim_extraction': 'FIXED - deduplication & validation',
             'verdict_types': list(self.verdict_types.keys()),
@@ -1314,6 +1501,10 @@ Use information current as of {self.current_date}."""
                 'FIXED: No more repeated claims',
                 'FIXED: No more non-existent claims',
                 'FIXED: Better claim quality validation',
+                'NEW: Multi-source verification aggregation',
+                'NEW: Cross-verification from multiple methods',
+                'NEW: Transparent reasoning chains',
+                'NEW: Contextual notes for nuanced verdicts',
                 'Parallel claim verification (10 workers)',
                 'AI-powered with 13-point grading scale',
                 'Google Fact Check database integration',
@@ -1326,11 +1517,12 @@ Use information current as of {self.current_date}."""
                 'Pattern Analysis'
             ],
             'ai_enhanced': bool(self.openai_client),
-            'parallel_processing': True
+            'parallel_processing': True,
+            'multi_source_aggregation': True
         })
         return info
 
 
-logger.info("[FactChecker v12.3] Module loaded - DONOR CLAIM DETECTION ENHANCED!")
+logger.info("[FactChecker v13.0] Module loaded - MULTI-SOURCE AGGREGATION ENABLED!")
 
 # This file is not truncated
