@@ -1,9 +1,15 @@
 """
-Fact Checker Service - v13.0 MULTI-SOURCE AGGREGATION
-Date: October 23, 2025
+Fact Checker Service - v13.1 MULTI-SOURCE AGGREGATION
+Fact Checker Service - v13.1 SCORING FIX
 Last Updated: October 23, 2025 - MULTI-SOURCE VERIFICATION
+Last Updated: October 23, 2025 - FIXED SCORING LOGIC
+MAJOR ENHANCEMENTS IN v13.1:
 
-MAJOR ENHANCEMENTS IN v13.0:
+CRITICAL FIX IN v13.1:
+✅ FIXED: Unverified claims now properly reduce the score
+✅ FIXED: 100/100 now reserved for articles where ALL claims are TRUE
+✅ FIXED: Proper weighted scoring that includes ALL claims
+
 ✅ NEW: Cross-source verification aggregation
 ✅ NEW: Combined verdict analysis (verdict + contextual notes)
 ✅ NEW: Multi-outlet corroboration tracking
@@ -110,28 +116,28 @@ VERDICT_TYPES = {
         'label': 'Empty Rhetoric',
         'icon': '💨',
         'color': '#94a3b8',
-        'score': None,
+        'score': 50,  # CHANGED: Was None, now 50 (neutral)
         'description': 'Vague promises or boasts with no substantive content'
     },
     'unsubstantiated_prediction': {
         'label': 'Unsubstantiated Prediction',
         'icon': '🔮',
         'color': '#a78bfa',
-        'score': None,
+        'score': 50,  # CHANGED: Was None, now 50 (neutral)
         'description': 'Future claim with no evidence or plan provided'
     },
     'needs_context': {
         'label': 'Needs Context',
         'icon': '❓',
         'color': '#8b5cf6',
-        'score': None,
+        'score': 45,  # CHANGED: Was None, now 45 (slight penalty)
         'description': 'Cannot verify without additional information'
     },
     'opinion': {
         'label': 'Opinion',
         'icon': '💭',
         'color': '#6366f1',
-        'score': None,
+        'score': 50,  # CHANGED: Was None, now 50 (neutral)
         'description': 'Subjective claim analyzed for factual elements'
     },
     'mixed': {
@@ -145,7 +151,7 @@ VERDICT_TYPES = {
         'label': 'Unverified',
         'icon': '?',
         'color': '#9ca3af',
-        'score': 50,
+        'score': 40,  # CHANGED: Was 50, now 40 (penalty for lack of verification)
         'description': 'Cannot verify with available information'
     }
 }
@@ -168,9 +174,9 @@ class FactChecker(BaseAnalyzer):
                     api_key=Config.OPENAI_API_KEY,
                     timeout=httpx.Timeout(5.0, connect=2.0)
                 )
-                logger.info("[FactChecker v13.0] OpenAI client initialized")
+                logger.info("[FactChecker v13.1] OpenAI client initialized")
             except Exception as e:
-                logger.warning(f"[FactChecker v13.0] Failed to initialize OpenAI: {e}")
+                logger.warning(f"[FactChecker v13.1] Failed to initialize OpenAI: {e}")
                 self.openai_client = None
         
         # ThreadPoolExecutor for parallel checking
@@ -195,9 +201,9 @@ class FactChecker(BaseAnalyzer):
         # Verdict types
         self.verdict_types = VERDICT_TYPES
         
-        logger.info(f"[FactChecker v13.0] MULTI-SOURCE AGGREGATION ENABLED")
-        logger.info(f"[FactChecker v13.0] Context: {self.current_date}, President: {self.current_us_president}")
-        logger.info(f"[FactChecker v13.0] 13-POINT SCALE + Cross-verification")
+        logger.info(f"[FactChecker v13.1] MULTI-SOURCE AGGREGATION ENABLED")
+        logger.info(f"[FactChecker v13.1] Context: {self.current_date}, President: {self.current_us_president}")
+        logger.info(f"[FactChecker v13.1] 13-POINT SCALE + Cross-verification")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -223,11 +229,11 @@ class FactChecker(BaseAnalyzer):
             quotes_count = data.get('quotes_count', 0)
             author = data.get('author', '')
             
-            logger.info(f"[FactChecker v13.0] Analyzing: {len(content)} chars, {sources_count} sources")
+            logger.info(f"[FactChecker v13.1] Analyzing: {len(content)} chars, {sources_count} sources")
             
             # 1. Extract claims with deduplication (PRESERVED from v12.3)
             extracted_claims = self._extract_claims_enhanced(content)
-            logger.info(f"[FactChecker v13.0] Extracted {len(extracted_claims)} UNIQUE claims")
+            logger.info(f"[FactChecker v13.1] Extracted {len(extracted_claims)} UNIQUE claims")
             
             # 2. Check claims in parallel with v13.0 multi-source aggregation
             fact_checks = self._check_claims_parallel(extracted_claims, article_url, article_title)
@@ -318,12 +324,12 @@ class FactChecker(BaseAnalyzer):
                 }
             }
             
-            logger.info(f"[FactChecker v13.0] Complete: {verification_score}/100 ({verification_level})")
-            logger.info(f"[FactChecker v13.0] Verdicts: {verdict_counts}")
+            logger.info(f"[FactChecker v13.1] Complete: {verification_score}/100 ({verification_level})")
+            logger.info(f"[FactChecker v13.1] Verdicts: {verdict_counts}")
             return self.get_success_result(result)
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.0] Error: {e}", exc_info=True)
+            logger.error(f"[FactChecker v13.1] Error: {e}", exc_info=True)
             return self.get_error_result(f"Fact checking error: {str(e)}")
     
     # ============================================================================
@@ -338,7 +344,7 @@ class FactChecker(BaseAnalyzer):
         claims = []
         seen_claims = set()
         
-        logger.info(f"[FactChecker v13.0] Evaluating {len(sentences)} sentences for claims...")
+        logger.info(f"[FactChecker v13.1] Evaluating {len(sentences)} sentences for claims...")
         
         for i, sentence in enumerate(sentences):
             if self._matches_exclusion_patterns(sentence):
@@ -355,13 +361,13 @@ class FactChecker(BaseAnalyzer):
                     if claim_key not in seen_claims:
                         claims.append(claim)
                         seen_claims.add(claim_key)
-                        logger.debug(f"[FactChecker v13.0] Claim {len(claims)}: score={score}, len={len(claim)}")
+                        logger.debug(f"[FactChecker v13.1] Claim {len(claims)}: score={score}, len={len(claim)}")
                     else:
-                        logger.debug(f"[FactChecker v13.0] SKIPPED duplicate claim: {claim[:50]}...")
+                        logger.debug(f"[FactChecker v13.1] SKIPPED duplicate claim: {claim[:50]}...")
         
         final_claims = claims[:10]
         
-        logger.info(f"[FactChecker v13.0] Extracted {len(final_claims)} unique, validated claims")
+        logger.info(f"[FactChecker v13.1] Extracted {len(final_claims)} unique, validated claims")
         
         return final_claims
     
@@ -475,7 +481,7 @@ class FactChecker(BaseAnalyzer):
         if not claims:
             return []
         
-        logger.info(f"[FactChecker v13.0] Checking {len(claims)} claims in parallel...")
+        logger.info(f"[FactChecker v13.1] Checking {len(claims)} claims in parallel...")
         
         futures = {}
         for i, claim in enumerate(claims):
@@ -491,10 +497,10 @@ class FactChecker(BaseAnalyzer):
                 i, claim = futures[future]
                 result = future.result(timeout=1)
                 completed_results.append((i, result))
-                logger.info(f"[FactChecker v13.0] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
+                logger.info(f"[FactChecker v13.1] Claim {i+1}: {result.get('verdict')} ({result.get('confidence')}%)")
             except Exception as e:
                 i, claim = futures[future]
-                logger.error(f"[FactChecker v13.0] Claim {i+1} failed: {e}")
+                logger.error(f"[FactChecker v13.1] Claim {i+1} failed: {e}")
                 completed_results.append((i, {
                     'claim': claim,
                     'verdict': 'unverified',
@@ -507,7 +513,7 @@ class FactChecker(BaseAnalyzer):
         completed_results.sort(key=lambda x: x[0])
         fact_checks = [result for _, result in completed_results]
         
-        logger.info(f"[FactChecker v13.0] ✓ Parallel checking complete: {len(fact_checks)} claims")
+        logger.info(f"[FactChecker v13.1] ✓ Parallel checking complete: {len(fact_checks)} claims")
         return fact_checks
     
     def _verify_single_claim(self, claim: str, index: int,
@@ -532,7 +538,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.0] Error verifying claim {index}: {e}")
+            logger.error(f"[FactChecker v13.1] Error verifying claim {index}: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -610,7 +616,7 @@ class FactChecker(BaseAnalyzer):
             return final_result
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.0] Error verifying claim: {e}")
+            logger.error(f"[FactChecker v13.1] Error verifying claim: {e}")
             return {
                 'claim': claim,
                 'verdict': 'unverified',
@@ -808,7 +814,7 @@ class FactChecker(BaseAnalyzer):
             return result
             
         except Exception as e:
-            logger.warning(f"[FactChecker v13.0] AI verification failed: {e}")
+            logger.warning(f"[FactChecker v13.1] AI verification failed: {e}")
             return None
     
     def _get_system_prompt_13point(self) -> str:
@@ -915,7 +921,7 @@ Use information current as of {self.current_date}."""
             return result
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.0] Failed to parse AI response: {e}")
+            logger.error(f"[FactChecker v13.1] Failed to parse AI response: {e}")
             return None
     
     # ============================================================================
@@ -975,7 +981,7 @@ Use information current as of {self.current_date}."""
             return {'found': False}
             
         except Exception as e:
-            logger.error(f"[FactChecker v13.0] Google API error: {e}")
+            logger.error(f"[FactChecker v13.1] Google API error: {e}")
             return {'found': False}
     
     def _map_google_verdict_to_13point(self, verdicts: List[str]) -> str:
@@ -1249,32 +1255,59 @@ Use information current as of {self.current_date}."""
     
     def _calculate_score_with_13point_scale(self, fact_checks: List[Dict], sources_count: int,
                                             quotes_count: int, total_claims: int, has_author: bool) -> int:
-        """Calculate score using 13-point verdict scores"""
+        """
+        v13.1: FIXED SCORING LOGIC
+        Calculate score properly counting ALL claims including unverified
+        """
         
-        # Base scoring from sources and quotes
-        base_score = 50
-        source_score = min(30, sources_count * 5)
-        quote_score = min(20, quotes_count * 7)
+        # Base score for having content
+        base_score = 20
         
-        # Calculate claim score using verdict scores
+        # Source scoring (up to 25 points)
+        source_score = min(25, sources_count * 5)
+        
+        # Quote scoring (up to 15 points)
+        quote_score = min(15, quotes_count * 5)
+        
+        # ===== CRITICAL FIX: Claim scoring (up to 35 points) =====
         claim_score = 0
-        if fact_checks:
-            scored_verdicts = []
+        if fact_checks and len(fact_checks) > 0:
+            all_verdict_scores = []
+            
             for fc in fact_checks:
                 verdict = fc.get('verdict', 'unverified')
-                verdict_meta = self.verdict_types.get(verdict)
-                if verdict_meta and verdict_meta['score'] is not None:
-                    scored_verdicts.append(verdict_meta['score'])
+                verdict_meta = self.verdict_types.get(verdict, self.verdict_types['unverified'])
+                
+                # FIXED: All verdicts now have scores (no more None values)
+                verdict_score = verdict_meta['score']
+                all_verdict_scores.append(verdict_score)
             
-            if scored_verdicts:
-                avg_score = sum(scored_verdicts) / len(scored_verdicts)
-                claim_score = int(avg_score * 0.20)
+            if all_verdict_scores:
+                # Calculate average of ALL claims
+                avg_claim_score = sum(all_verdict_scores) / len(all_verdict_scores)
+                # Convert to 0-35 point scale
+                claim_score = int((avg_claim_score / 100.0) * 35)
         
-        author_score = 5 if has_author else 0
-        complexity_score = 5 if total_claims >= 10 else (3 if total_claims >= 5 else 0)
+        # Author bonus (up to 3 points)
+        author_score = 3 if has_author else 0
         
+        # Complexity bonus (up to 2 points)
+        complexity_score = 2 if total_claims >= 5 else (1 if total_claims >= 3 else 0)
+        
+        # Calculate final score (max 100)
         final_score = base_score + source_score + quote_score + claim_score + author_score + complexity_score
-        return int(max(0, min(100, final_score)))
+        final_score = int(max(0, min(100, final_score)))
+        
+        logger.info(f"[FactChecker v13.1] FIXED SCORE BREAKDOWN:")
+        logger.info(f"  Base:       {base_score}/20")
+        logger.info(f"  Sources:    {source_score}/25 ({sources_count} sources)")
+        logger.info(f"  Quotes:     {quote_score}/15 ({quotes_count} quotes)")
+        logger.info(f"  Claims:     {claim_score}/35 ({len(fact_checks)} claims)")
+        logger.info(f"  Author:     {author_score}/3")
+        logger.info(f"  Complexity: {complexity_score}/2")
+        logger.info(f"  FINAL:      {final_score}/100")
+        
+        return final_score
     
     def _generate_detailed_findings(self, fact_checks: List[Dict[str, Any]], 
                                     sources_count: int, score: int) -> List[Dict[str, Any]]:
@@ -1523,6 +1556,6 @@ Use information current as of {self.current_date}."""
         return info
 
 
-logger.info("[FactChecker v13.0] Module loaded - MULTI-SOURCE AGGREGATION ENABLED!")
+logger.info("[FactChecker v13.1] Module loaded - MULTI-SOURCE AGGREGATION ENABLED!")
 
 # This file is not truncated
