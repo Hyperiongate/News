@@ -1,24 +1,28 @@
 """
-Author Analyzer - v5.1 AWARDS REMOVED (Issue #2 Fix)
-Date: October 16, 2025
-Last Updated: October 20, 2025
+Author Analyzer - v5.2 MULTI-AUTHOR TEXT FIX (Issue #3 Fix)
+Date: October 22, 2025
+Last Updated: October 22, 2025 - 11:50 PM
 
-CHANGES FROM v5.0:
-✅ ISSUE #2 FIX: Removed ALL awards references (~35-40 lines)
-✅ Removed 'awards' from known_journalists database
-✅ Removed awards from all _build_result methods
-✅ Removed awards from _extract_awards_from_text
-✅ Removed awards parameter from _get_author_meaning
-✅ Updated all trust_indicators to not reference awards
-✅ PRESERVED: All other v5.0 functionality
+CHANGES FROM v5.1:
+✅ ISSUE #3 FIX: Multi-author text generation now mentions ALL authors
+✅ NEW: _format_authors_for_text() helper function
+✅ FIXED: what_we_found text now says "Author A and Author B have..." instead of "Author A has..."
+✅ FIXED: All 5 _build_result methods updated to use multiple authors
+✅ PRESERVED: All v5.1 functionality (awards removed, outlet database)
 
-MAJOR FEATURES (PRESERVED FROM v5.0):
-✅ COMPREHENSIVE OUTLET DATABASE: 100+ news outlets with complete metadata
-✅ UNIVERSAL SOLUTION: No more whack-a-mole site-specific fixes
-✅ COMPLETE METADATA: Founding dates, readership, ownership for ALL major outlets
-✅ Multi-author support, scraping, Wikipedia, OpenAI
+TEXT GENERATION EXAMPLES (NEW):
+- Single author: "John Smith has 10 years experience..."
+- Two authors: "John Smith and Jane Doe have combined experience..."
+- Three+ authors: "John Smith, Jane Doe, and Bob Wilson have..."
+
+PREVIOUS FEATURES (FROM v5.1):
+✅ Awards removed (~35-40 lines)
+✅ Comprehensive outlet database (100+ news outlets)
+✅ Multi-author detection and display
+✅ Wikipedia, OpenAI, scraping support
 
 Save as: services/author_analyzer.py (REPLACE existing file)
+This file is complete and not truncated.
 """
 
 import re
@@ -47,7 +51,7 @@ logger = logging.getLogger(__name__)
 class AuthorAnalyzer(BaseAnalyzer):
     """
     Comprehensive author analysis with universal outlet database
-    v5.1 - Awards removed per Issue #2 fix
+    v5.2 - Multi-author text generation fixed (Issue #3)
     """
     
     def __init__(self):
@@ -1022,15 +1026,21 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
             
+            # FIX v5.2: Format authors correctly for text
+            author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
+            
             result['analysis'] = {
-                'what_we_looked': f'We analyzed {author}\'s profile page and {org_name}\'s outlet data.',
-                'what_we_found': f'{author} is verified at {org_name} (founded {outlet_info.get("founded")}) with {article_count} articles over {years_exp} years.',
+                'what_we_looked': f'We analyzed {author_text}\'s profile page and {org_name}\'s outlet data.',
+                'what_we_found': f'{author_text} {verb_form.replace("have", "are").replace("has", "is")} verified at {org_name} (founded {outlet_info.get("founded")}) with {article_count} articles over {years_exp} years.',
                 'what_it_means': self._get_author_meaning_with_outlet(credibility_score, years_exp, outlet_info)
             }
         else:
+            # FIX v5.2: Format authors correctly for text
+            author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
+            
             result['analysis'] = {
-                'what_we_looked': f'We found and analyzed {author}\'s official author profile page.',
-                'what_we_found': f'{author} is a verified journalist at {org_name} with {article_count} published articles.',
+                'what_we_looked': f'We found and analyzed {author_text}\'s official author profile page.',
+                'what_we_found': f'{author_text} {verb_form.replace("have", "are").replace("has", "is")} verified journalist{"s" if len(all_authors) > 1 else ""} at {org_name} with {article_count} published articles.',
                 'what_it_means': self._get_author_meaning(credibility_score, years_exp)
             }
         
@@ -1092,9 +1102,12 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
         
+        # FIX v5.2: Format authors correctly for text
+        author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
+        
         result['analysis'] = {
-            'what_we_looked': f'We verified {author} in our journalist database.',
-            'what_we_found': f'{author} has {years_exp} years experience at {employer} with {articles_count}+ articles.',
+            'what_we_looked': f'We verified {author_text} in our journalist database.',
+            'what_we_found': f'{author_text} {verb_form} {years_exp} years experience at {employer} with {articles_count}+ articles.',
             'what_it_means': self._get_author_meaning(credibility, years_exp)
         }
         
@@ -1160,9 +1173,12 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
         
+        # FIX v5.2: Format authors correctly for text
+        author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
+        
         result['analysis'] = {
-            'what_we_looked': f'We verified {author} through Wikipedia.',
-            'what_we_found': f'{author} is an established journalist with {int(years_exp)} years experience.',
+            'what_we_looked': f'We verified {author_text} through Wikipedia.',
+            'what_we_found': f'{author_text} {verb_form.replace("have", "are").replace("has", "is")} established journalist{"s" if len(all_authors) > 1 else ""} with {int(years_exp)} years experience.',
             'what_it_means': self._get_author_meaning(credibility_score, years_exp)
         }
         
@@ -1241,9 +1257,12 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
         
+        # FIX v5.2: Format authors correctly for text
+        author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
+        
         result['analysis'] = {
-            'what_we_looked': f'We researched {author} using AI analysis.',
-            'what_we_found': f'{author} has {years_exp} years of experience with {articles_count}+ articles.',
+            'what_we_looked': f'We researched {author_text} using AI analysis.',
+            'what_we_found': f'{author_text} {verb_form} {years_exp} years of experience with {articles_count}+ articles.',
             'what_it_means': self._get_author_meaning(credibility_score, years_exp)
         }
         
@@ -1306,21 +1325,51 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
             
+            # FIX v5.2: Format authors correctly for text
+            author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
+            
             result['analysis'] = {
-                'what_we_looked': f'We searched for {author} at {org_name}.',
-                'what_we_found': f'{author} writes for {org_name} (founded {outlet_info.get("founded")}, {outlet_info.get("readership_daily"):,} daily readers).',
+                'what_we_looked': f'We searched for {author_text} at {org_name}.',
+                'what_we_found': f'{author_text} {"write" if len(all_authors) > 1 else "writes"} for {org_name} (founded {outlet_info.get("founded")}, {outlet_info.get("readership_daily"):,} daily readers).',
                 'what_it_means': f'Limited author information. {org_name} has credibility score of {outlet_score}/100.'
             }
         else:
+            # FIX v5.2: Format authors correctly for text
+            author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
+            
             result['analysis'] = {
-                'what_we_looked': f'We searched for {author} but found limited information.',
-                'what_we_found': f'{author} writes for {org_name}. Estimated {years_experience} years experience.',
+                'what_we_looked': f'We searched for {author_text} but found limited information.',
+                'what_we_found': f'{author_text} {"write" if len(all_authors) > 1 else "writes"} for {org_name}. Estimated {years_experience} years experience.',
                 'what_it_means': f'Limited author information. Outlet credibility: {outlet_score}/100.'
             }
         
         return result
     
     # === HELPER METHODS (preserved from v4.1) ===
+    
+    def _format_authors_for_text(self, primary_author: str, all_authors: List[str]) -> tuple:
+        """
+        Format author name(s) for text generation.
+        Returns: (author_text, verb_form, possessive_form)
+        
+        Examples:
+        - Single: ("John Smith", "has", "John Smith's")
+        - Multiple: ("John Smith and Jane Doe", "have", "The authors'")
+        
+        Added: v5.2 - October 22, 2025 (Fix Issue #3 - Multi-author text)
+        """
+        if not all_authors or len(all_authors) <= 1:
+            # Single author
+            return (primary_author, "has", f"{primary_author}'s")
+        
+        # Multiple authors
+        if len(all_authors) == 2:
+            author_text = f"{all_authors[0]} and {all_authors[1]}"
+        else:
+            # 3+ authors: "A, B, and C"
+            author_text = ", ".join(all_authors[:-1]) + f", and {all_authors[-1]}"
+        
+        return (author_text, "have", "The authors'")
     
     def _scrape_author_page(self, url: str, author_name: str) -> Optional[Dict]:
         """Scrape author profile page for rich data"""
@@ -1734,6 +1783,6 @@ REQUIREMENTS:
             return f"Author at {outlet_name}. {years} years experience. Verify important claims."
 
 
-logger.info("[AuthorAnalyzer] v5.1 loaded - AWARDS REMOVED (Issue #2 Fix Complete)")
+logger.info("[AuthorAnalyzer] v5.2 loaded - MULTI-AUTHOR TEXT FIX (Issue #3 Complete)")
 
 # This file is not truncated
