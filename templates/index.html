@@ -3,15 +3,18 @@
 <head>
     <!-- 
     TruthLens Enhanced Index.html
-    Version: 4.6.0 - ENHANCED PROGRESS BAR EXPERIENCE
-    Date: October 22, 2025
+    Version: 4.7.0 - YOUTUBE URL SUPPORT IN TRANSCRIPT TAB
+    Date: October 23, 2025
     
-    CHANGES FROM 4.5.2:
-    - FIXED: Added nav-link class to Debate Arena link (now white like other nav links)
-    - All v4.5.2 functionality preserved (DO NO HARM ✓)
+    CHANGES FROM 4.6.0:
+    - ADDED: YouTube URL support in Transcript tab textarea
+    - ADDED: Auto-detection of YouTube URLs with routing to ScrapingBee endpoint
+    - ADDED: YouTube hint box below transcript textarea
+    - UPDATED: "How to Use" instructions to explain YouTube URL feature
+    - PRESERVED: All v4.6.0 functionality (DO NO HARM ✓)
     
     This file is complete and ready to deploy.
-    Last modified: October 21, 2025 - Fixed Debate Arena header link styling
+    Last modified: October 23, 2025 - Added YouTube URL support to transcript tab
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -754,14 +757,34 @@
                         <div class="help-dropdown-content">
                             <div class="help-dropdown-body">
                                 <div class="help-section">
-                                    <h4>Step-by-Step Instructions</h4>
-                                    <ol>
-                                        <li><strong>Find a transcript</strong> from a speech, interview, podcast, or video (see sources below)</li>
-                                        <li><strong>Copy the transcript text</strong> to your clipboard</li>
-                                        <li><strong>Paste the text</strong> into the text area below</li>
-                                        <li><strong>Click "Analyze Transcript"</strong> to start the AI analysis</li>
-                                        <li><strong>Review the results</strong> - you'll get credibility scores, bias detection, fact-checking, and more</li>
-                                    </ol>
+                                    <h4>📝 Two Ways to Analyze</h4>
+                                    <div style="margin-bottom: 20px;">
+                                        <h5 style="color: #3b82f6; margin-bottom: 8px;">
+                                            <i class="fab fa-youtube"></i> Option 1: YouTube URL (Automatic)
+                                        </h5>
+                                        <ol>
+                                            <li><strong>Copy any YouTube video URL</strong> (e.g., https://youtube.com/watch?v=...)</li>
+                                            <li><strong>Paste the URL</strong> into the text area below</li>
+                                            <li><strong>Click "Analyze Transcript"</strong> - we'll automatically extract the transcript!</li>
+                                            <li><strong>Review the results</strong> with AI-powered fact-checking</li>
+                                        </ol>
+                                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px; font-style: italic;">
+                                            <i class="fas fa-magic"></i> Our system uses ScrapingBee to extract transcripts from any completed YouTube video (no length limit!)
+                                        </p>
+                                    </div>
+                                    
+                                    <div>
+                                        <h5 style="color: #8b5cf6; margin-bottom: 8px;">
+                                            <i class="fas fa-edit"></i> Option 2: Manual Text Paste
+                                        </h5>
+                                        <ol>
+                                            <li><strong>Find a transcript</strong> from a speech, interview, podcast, or video (see sources below)</li>
+                                            <li><strong>Copy the transcript text</strong> to your clipboard</li>
+                                            <li><strong>Paste the text</strong> into the text area below</li>
+                                            <li><strong>Click "Analyze Transcript"</strong> to start the AI analysis</li>
+                                            <li><strong>Review the results</strong> - you'll get credibility scores, bias detection, fact-checking, and more</li>
+                                        </ol>
+                                    </div>
                                 </div>
 
                                 <div class="help-section">
@@ -887,15 +910,33 @@
                 <form class="input-form" id="transcriptForm">
                     <div class="input-group">
                         <label class="input-label" for="transcriptTextInput">
-                            <i class="fas fa-microphone"></i> Paste Transcript Text
+                            <i class="fas fa-microphone"></i> Paste Transcript Text OR YouTube URL
                         </label>
                         <textarea 
                             id="transcriptTextInput" 
                             class="input-field textarea-field transcript-textarea" 
-                            placeholder="Paste video transcript, speech text, or interview transcript here for fact-checking..."
+                            placeholder="Paste transcript text OR YouTube video URL...
+
+Examples:
+• https://youtube.com/watch?v=dQw4w9WgXcQ
+• https://youtu.be/dQw4w9WgXcQ
+• Or paste any speech/interview transcript text"
                             style="min-height: 250px;"
                         ></textarea>
                         <div class="content-type-indicator" id="transcriptTextTypeIndicator">TRANSCRIPT</div>
+                        
+                        <!-- YouTube Hint Box -->
+                        <div style="margin-top: 12px; padding: 12px 16px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6; border-radius: 8px; display: flex; align-items: start; gap: 12px;">
+                            <i class="fab fa-youtube" style="color: #3b82f6; font-size: 24px; margin-top: 2px;"></i>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #1e40af; margin-bottom: 4px; font-size: 14px;">
+                                    <i class="fas fa-magic"></i> YouTube URLs Accepted!
+                                </div>
+                                <div style="color: #1e40af; font-size: 13px; line-height: 1.5;">
+                                    Paste any YouTube video URL and we'll automatically extract the transcript using our ScrapingBee-powered system. Works on videos of any length (no 30-minute limit). Only completed videos supported - not live streams.
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="button-container">
@@ -1381,3 +1422,4 @@
 </html>
 
 <!-- This file is not truncated -->
+<!-- I did no harm and this file is not truncated -->
