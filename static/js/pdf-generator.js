@@ -1,21 +1,22 @@
 /**
  * FILE: static/js/pdf-generator.js
- * VERSION: 12.2.2 - VERDICT BADGE FIX
+ * VERSION: 12.2.3 - BIAS DIAL THICKNESS FIX
  * DATE: October 22, 2025
- * Last Updated: October 22, 2025 - 8:45 PM
+ * Last Updated: October 22, 2025 - 11:45 PM
  * 
- * CRITICAL UPGRADE FROM v12.1.1:
- * ✅ NEW: Integrated 13-point fact checking scale
- * ✅ NEW: Shows verdict icons (✅, ❌, ⚠️, 💨, 🔮, ❓, 💭)
- * ✅ NEW: Color-coded verdicts matching fact checker service
- * ✅ NEW: Verdict labels (True, Mostly True, Exaggerated, etc.)
- * ✅ ENHANCED: Fact checker claims display uses full 13-point metadata
- * ✅ PRESERVED: All v12.1.1 fixes (full text, no overlap, global function)
+ * CRITICAL FIX FROM v12.2.2:
+ * ✅ FIXED: Bias dial line width increased from 6 to 12 (was appearing flattened in PDF)
+ * ✅ ENHANCED: Political bias dial now more visible and prominent
  * 
- * UPDATE v12.2.3 (October 22, 2025 - 8:45 PM):
- * ✅ FIXED: PDF layout - increased height from 70mm to 100mm for more claims
- * ✅ FIXED: Better spacing between claims (3px instead of 2px)
- * ✅ RESULT: Can now display 6-8 claims instead of just 3-4
+ * PREVIOUS FEATURES (v12.2.2):
+ * ✅ Integrated 13-point fact checking scale
+ * ✅ Shows verdict icons (✅, ❌, ⚠️, 💨, 🔮, ❓, 💭)
+ * ✅ Color-coded verdicts matching fact checker service
+ * ✅ Verdict labels (True, Mostly True, Exaggerated, etc.)
+ * ✅ Fact checker claims display uses full 13-point metadata
+ * ✅ PDF layout - increased height from 70mm to 100mm for more claims
+ * ✅ Better spacing between claims (3px instead of 2px)
+ * ✅ Can now display 6-8 claims instead of just 3-4
  *
  * 13-POINT SCALE:
  * - true (✅ green), mostly_true (✅ light green)
@@ -25,7 +26,7 @@
  * - unsubstantiated_prediction (🔮 purple), needs_context (❓ purple)
  * - opinion (💭 blue), mixed (◐ orange), unverified (? gray)
  * 
- * This version provides comprehensive, informative fact checking display!
+ * This file is not truncated.
  */
 
 // ============================================================================
@@ -816,7 +817,7 @@ function drawPoliticalBiasDial(doc, biasData, yPos, colors) {
         }
         
         doc.setDrawColor(...color);
-        doc.setLineWidth(6);
+        doc.setLineWidth(12); // FIXED v12.2.3: Increased from 6 to 12 for better PDF visibility
         
         const x1 = centerX + Math.cos(angle) * radius;
         const y1 = centerY + Math.sin(angle) * radius;
@@ -1432,6 +1433,6 @@ function addPageFooter(doc, pageNum, totalPages, colors) {
     doc.text(`Page ${pageNum} of ${totalPages}`, 190, 292, { align: 'right' });
 }
 
-console.log('[PDF v12.2.0] Professional quality PDF generator loaded - 13-POINT SCALE INTEGRATED');
+console.log('[PDF v12.2.3] Professional quality PDF generator loaded - BIAS DIAL THICKNESS FIXED');
 
 // This file is not truncated
