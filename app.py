@@ -1,7 +1,12 @@
 """
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.0.1
-Date: October 22, 2025
+Version: 10.1.0
+Date: October 23, 2025
+
+CHANGES FROM 10.0.1:
+1. ADDED: /transcript route to render transcript.html (standalone transcript page)
+2. ENHANCEMENT: Users can now access transcript functionality via tab OR standalone page
+3. PRESERVED: All v10.0.1 functionality (DO NO HARM ✓)
 
 CHANGES FROM 10.0.0:
 1. FIXED: Enhanced error handling for live stream route registration
@@ -29,7 +34,7 @@ PREVIOUS FEATURES PRESERVED:
 - All v8.x enhancements
 
 This file is complete and ready to deploy.
-Last modified: October 22, 2025 - Enhanced live stream route debugging v10.0.1
+Last modified: October 23, 2025 - Added /transcript route for standalone transcript page v10.1.0
 """
 
 import os
@@ -1465,6 +1470,23 @@ def debate_arena():
 def live_stream():
     """Live stream analysis page"""
     return render_template('live-stream.html')
+
+@app.route('/transcript')
+def transcript_page():
+    """
+    Standalone transcript analysis page with YouTube URL support
+    
+    NEW in v10.1.0:
+    - Renders transcript.html (separate from index.html tab mode)
+    - Full YouTube URL support via ScrapingBee API
+    - Text input, file upload, and microphone options
+    - Same backend API as tab mode (/api/transcript/*)
+    
+    Users can access transcript analysis via:
+    1. Tab in index.html (existing behavior)
+    2. Direct link to /transcript (new standalone page)
+    """
+    return render_template('transcript.html')
 
 @app.route('/health')
 def health():
