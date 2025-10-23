@@ -1,9 +1,16 @@
 # services/report_generator.py
 """
-Report Generation Service - v2.0
+Report Generation Service - v2.1
 Creates various report formats from analysis results
 
 CHANGE LOG:
+- 2025-10-23: v2.1 - Added horizontal bias bar visualization for PDF
+  * New method: _generate_bias_bar_html()
+  * Bias shown as colorful horizontal bar (matches web UI)
+  * 5 colored zones: Red-Orange-Green-Orange-Red
+  * Includes position marker and labels
+  * Integrated into markdown report generation
+
 - 2025-10-13: v2.0 - Enhanced "What We Found" summary generation
   * Added dynamic, conversational summaries (2-5 sentences)
   * Summaries now highlight specific findings from each service
@@ -280,6 +287,8 @@ class ReportGenerator:
 ## Key Findings
 
 ### Bias Analysis
+{self._generate_bias_bar_html(data.get('bias_analysis', {}))}
+
 {self._format_bias_findings(data.get('bias_analysis', {}))}
 
 ### Source Credibility
@@ -416,6 +425,77 @@ class ReportGenerator:
             'indicators_found': transparency_data.get('indicators', []),
             'missing_elements': transparency_data.get('missing', [])
         }
+    
+    def _generate_bias_bar_html(self, bias_data: Dict[str, Any]) -> str:
+        """
+        Generate horizontal bias bar HTML for PDF reports
+        v2.1 - October 23, 2025
+        
+        Args:
+            bias_data: Bias analysis data with political_lean, political_label, objectivity_score
+            
+        Returns:
+            HTML string with inline CSS for horizontal bias bar visualization
+        """
+        if not bias_data:
+            return ""
+        
+        # Get bias position data
+        political_lean = bias_data.get('political_lean', 0)
+        political_label = bias_data.get('political_label', 'Center')
+        objectivity_score = bias_data.get('objectivity_score', 50)
+        
+        # Convert political lean (-1 to +1) to horizontal position (0-100)
+        # -1 (far left) = 0%, 0 (center) = 50%, +1 (far right) = 100%
+        position = int((political_lean + 1) * 50)
+        position = max(0, min(100, position))  # Clamp to 0-100 range
+        
+        # Generate HTML with inline CSS for PDF rendering engines
+        html = f'''
+        <div style="margin: 20px 0; padding: 20px; background: #f9fafb; border-radius: 12px;">
+            <h4 style="margin: 0 0 15px 0; color: #1e293b; font-size: 1.1rem; font-weight: 600;">
+                Political Bias Spectrum
+            </h4>
+            
+            <!-- Horizontal Bar with 5 Colored Zones -->
+            <div style="position: relative; height: 50px; border-radius: 25px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 10px;">
+                <!-- Far Left Zone (Red) 0-20% -->
+                <div style="position: absolute; left: 0%; width: 20%; height: 100%; background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);"></div>
+                
+                <!-- Left Zone (Orange) 20-40% -->
+                <div style="position: absolute; left: 20%; width: 20%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #f59e0b 100%);"></div>
+                
+                <!-- Center Zone (Green) 40-60% -->
+                <div style="position: absolute; left: 40%; width: 20%; height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #10b981 50%, #f59e0b 100%);"></div>
+                
+                <!-- Right Zone (Orange) 60-80% -->
+                <div style="position: absolute; left: 60%; width: 20%; height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);"></div>
+                
+                <!-- Far Right Zone (Red) 80-100% -->
+                <div style="position: absolute; left: 80%; width: 20%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);"></div>
+                
+                <!-- Position Marker -->
+                <div style="position: absolute; left: {position}%; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; background: #1e293b; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>
+            </div>
+            
+            <!-- Labels Below Bar -->
+            <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; margin-bottom: 15px;">
+                <span style="color: #dc2626;">Far Left</span>
+                <span style="color: #f59e0b;">Left</span>
+                <span style="color: #10b981; font-weight: 700;">CENTER</span>
+                <span style="color: #f59e0b;">Right</span>
+                <span style="color: #dc2626;">Far Right</span>
+            </div>
+            
+            <!-- Score Display -->
+            <div style="text-align: center; padding: 10px; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px;">
+                <div style="font-size: 0.85rem; color: #92400e; font-weight: 600;">Detected Lean: <strong>{political_label}</strong></div>
+                <div style="font-size: 0.9rem; color: #78350f; margin-top: 5px;">Objectivity: {objectivity_score}/100</div>
+            </div>
+        </div>
+        '''
+        
+        return html
     
     def _clean_for_json(self, data):
         """Clean data for JSON serialization"""
