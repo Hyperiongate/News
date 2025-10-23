@@ -129,4 +129,16 @@ playwright-stealth==1.0.6
 # Security
 Werkzeug==2.3.7
 
+# requirements.txt - ADD THESE LINES
+# ScrapingBee Integration - October 23, 2025
+
+# Core dependencies (should already be installed)
+requests>=2.31.0
+
+# OPTIONAL: For rate limiting (recommended)
+flask-limiter>=3.5.0
+
+# OPTIONAL: For Redis-based rate limiting in production
+# redis>=5.0.1
+
 # This file is not truncated
