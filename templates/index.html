@@ -2,26 +2,24 @@
 <html lang="en">
 <head>
     <!-- 
-    TruthLens News Analysis Page
-    Version: 5.1.0 - PROFESSIONAL NAVIGATION HEADER ADDED
+    TruthLens News Analysis Page (Separated)
+    Version: 6.0.0 - COMPLETE NAVIGATION ON SEPARATE PAGE
     Date: October 24, 2025
     
-    CHANGES FROM 5.0.0:
-    - ADDED: Professional unified navigation header with logo and menu
-    - ADDED: Active page highlighting in navigation
-    - ADDED: Mobile-responsive hamburger menu
-    - ADDED: Smooth navigation transitions
-    - ADDED: "Debate Arena (Coming Soon)" menu item
+    CHANGES FROM 5.1.0:
+    - STRUCTURE: This is NEWS ANALYSIS ONLY (no tabs, separate from transcript)
+    - NAVIGATION: Complete menu with all 7 original pages restored
+    - ADDED: Features, Pricing, About, Debate Arena, Live Stream, Contact links
+    - ADDED: Upgrade to Pro CTA button
     - PRESERVED: All News Analysis functionality (DO NO HARM ✓)
-    - ENHANCED: Professional branding across all pages
+    - REMOVED: Mode tabs (News/Transcript switching) - now separate pages
     
     NAVIGATION STRUCTURE:
-    - Logo: TruthLens brand with icon
-    - Menu Items: News Analysis (active), Transcript Analysis, Debate Arena
-    - Mobile: Hamburger menu for small screens
+    - Features, Pricing, About, Debate Arena, Live Stream, Contact, Upgrade to Pro
+    - Transcript Analysis accessible via separate page (/transcript)
     
     This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - Added professional navigation header
+    Last modified: October 24, 2025 - News-only with complete navigation
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,7 +48,7 @@
     
     <!-- Enhanced Styles -->
     <style>
-        /* v5.1.0 - Page-Specific Styles */
+        /* v6.0.0 - News-Only Page Specific Styles */
         :root {
             --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -212,78 +210,6 @@
             display: block;
         }
 
-        /* Service Cards */
-        .service-card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 20px;
-        }
-
-        .service-card-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 16px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid #f3f4f6;
-        }
-
-        .service-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--gradient-blue);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 24px;
-        }
-
-        .service-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1f2937;
-        }
-
-        /* Trust Score Display */
-        .trust-score-container {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 24px;
-        }
-
-        .trust-score-display {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 20px;
-            padding: 20px;
-        }
-
-        .trust-score-circle {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 36px;
-            font-weight: 800;
-            color: white;
-            position: relative;
-        }
-
-        .trust-score-label {
-            font-size: 18px;
-            font-weight: 600;
-            color: #374151;
-        }
-
         /* Responsive Design */
         @media (max-width: 768px) {
             .main-title-compact {
@@ -306,36 +232,62 @@
     </style>
 </head>
 <body>
-    <!-- NAVIGATION HEADER - NEW v5.1.0 -->
+    <!-- COMPLETE NAVIGATION HEADER - v6.0.0 -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
+            <!-- Logo -->
             <a href="/" class="nav-logo">
                 <i class="fas fa-search-location"></i>
                 <span>TruthLens</span>
             </a>
             
+            <!-- Mobile Menu Toggle -->
             <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
                 <i class="fas fa-bars"></i>
             </button>
             
+            <!-- Navigation Menu -->
             <ul class="nav-menu" id="navMenu">
                 <li class="nav-item">
-                    <a href="/" class="nav-link active">
-                        <i class="fas fa-newspaper"></i>
-                        <span>News Analysis</span>
+                    <a href="/features" class="nav-link">
+                        <i class="fas fa-star"></i>
+                        <span>Features</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/transcript" class="nav-link">
-                        <i class="fas fa-microphone"></i>
-                        <span>Transcript Analysis</span>
+                    <a href="/pricing" class="nav-link">
+                        <i class="fas fa-tag"></i>
+                        <span>Pricing</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="#" class="nav-link coming-soon" onclick="return false;">
+                    <a href="/about" class="nav-link">
+                        <i class="fas fa-info-circle"></i>
+                        <span>About</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/debate-arena" class="nav-link">
                         <i class="fas fa-gavel"></i>
                         <span>Debate Arena</span>
-                        <span class="badge">Soon</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/live-stream" class="nav-link">
+                        <i class="fas fa-video"></i>
+                        <span>Live Stream</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/contact" class="nav-link">
+                        <i class="fas fa-envelope"></i>
+                        <span>Contact</span>
+                    </a>
+                </li>
+                <li class="nav-item nav-cta">
+                    <a href="#upgrade" class="nav-link-cta">
+                        <i class="fas fa-crown"></i>
+                        <span>Upgrade to Pro</span>
                     </a>
                 </li>
             </ul>
@@ -441,7 +393,7 @@
         var analyzer;
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[NewsPage] Initializing news-only analysis page v5.1.0');
+            console.log('[NewsPage] Initializing news-only analysis page v6.0.0');
             
             // Initialize analyzer in news mode only
             analyzer = new UnifiedTruthLensAnalyzer();
