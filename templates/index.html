@@ -3,18 +3,27 @@
 <head>
     <!-- 
     TruthLens News Analysis Page
-    Version: 7.0.0 - UNIFIED NAVIGATION UPDATE
+    Version: 7.1.0 - RESTORED PROGRESS & TRUST SCORE
     Date: October 24, 2025
     
-    CHANGES FROM 6.0.0:
-    - REMOVED: Pricing link from navigation
-    - ADDED: News Analysis link (current page indicator)
-    - ADDED: Transcript/Youtube Analysis link to /transcript
-    - PRESERVED: All News Analysis functionality (DO NO HARM ✓)
-    - NAVIGATION: News Analysis, Transcript/Youtube, Features, About, Debate Arena, Live Stream, Contact, Upgrade to Pro
+    CHANGES FROM 7.0.0:
+    - RESTORED: Fancy progress overlay with fun facts and animated steps
+    - RESTORED: Trust score circular display with breakdown
+    - RESTORED: updateEnhancedTrustDisplay() function
+    - PRESERVED: All v7.0.0 navigation and functionality (DO NO HARM ✓)
+    
+    WHAT WAS BROKEN IN v7.0.0:
+    - Progress overlay elements missing (progressContainerFixed, loadingBackdrop, etc.)
+    - Trust score display missing
+    - updateEnhancedTrustDisplay() function missing
+    
+    WHAT'S FIXED IN v7.1.0:
+    - Full progress overlay HTML added
+    - Trust score container with display function
+    - All element IDs that unified-app-core.js expects
     
     This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - Unified navigation with Transcript/Youtube added
+    Last modified: October 24, 2025 - Restored missing UI components v7.1.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -43,7 +52,7 @@
     
     <!-- Enhanced Styles -->
     <style>
-        /* v7.0.0 - News Analysis Page with Unified Navigation */
+        /* v7.1.0 - News Analysis Page with Unified Navigation + RESTORED UI */
         :root {
             --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -191,18 +200,44 @@
             cursor: not-allowed;
         }
 
-        /* Progress Section */
-        .progress-section {
-            display: none;
+        /* Trust Score Display */
+        .trust-score-display {
             background: white;
-            border-radius: 12px;
-            padding: 24px;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 24px;
         }
 
-        .progress-section.active {
-            display: block;
+        .trust-score-circle {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 1rem;
+            position: relative;
+        }
+
+        .trust-score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .trust-score-number {
+            font-size: 2.5rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .trust-score-number.high { color: #10b981; }
+        .trust-score-number.medium { color: #3b82f6; }
+        .trust-score-number.low { color: #ef4444; }
+
+        .trust-score-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            margin-top: 0.5rem;
         }
 
         /* Responsive Design */
@@ -227,6 +262,57 @@
     </style>
 </head>
 <body>
+    <!-- LOADING OVERLAY BACKDROP (v7.1.0 RESTORED) -->
+    <div id="loadingBackdrop" class="loading-overlay-backdrop"></div>
+
+    <!-- PROGRESS OVERLAY (v7.1.0 RESTORED) -->
+    <div id="progressContainerFixed" class="progress-container-fixed">
+        <div class="progress-inner">
+            <div class="progress-header-enhanced">
+                <div class="progress-title-enhanced">
+                    <div class="progress-spinner"></div>
+                    Analyzing Article...
+                </div>
+                <div id="progressPercentageFixed" class="progress-percentage-enhanced">0%</div>
+            </div>
+
+            <div id="loadingMessageEnhanced" class="progress-message">
+                <i class="fas fa-cog fa-spin"></i>
+                Initializing analysis...
+            </div>
+
+            <div class="progress-bar-container-enhanced">
+                <div id="progressBarFill" class="progress-bar-fill"></div>
+            </div>
+
+            <div class="progress-steps-enhanced">
+                <div class="progress-step-enhanced">
+                    <div class="step-icon-enhanced"><i class="fas fa-download"></i></div>
+                    <div class="step-text-enhanced">Fetch</div>
+                </div>
+                <div class="progress-step-enhanced">
+                    <div class="step-icon-enhanced"><i class="fas fa-search"></i></div>
+                    <div class="step-text-enhanced">Extract</div>
+                </div>
+                <div class="progress-step-enhanced">
+                    <div class="step-icon-enhanced"><i class="fas fa-brain"></i></div>
+                    <div class="step-text-enhanced">Analyze</div>
+                </div>
+                <div class="progress-step-enhanced">
+                    <div class="step-icon-enhanced"><i class="fas fa-check-circle"></i></div>
+                    <div class="step-text-enhanced">Complete</div>
+                </div>
+            </div>
+
+            <div class="fun-facts-section">
+                <div id="funFact" class="fun-fact">
+                    <i class="fas fa-lightbulb"></i>
+                    <span id="funFactText">Did you know? People are 6x more likely to share false information than fact-check it first.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- UNIFIED NAVIGATION HEADER - v7.0.0 -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
@@ -360,22 +446,18 @@
             </button>
         </div>
 
-        <!-- Progress Section -->
-        <div id="progress-section" class="progress-section">
-            <div class="progress-header">
-                <h3><i class="fas fa-spinner fa-spin"></i> Analyzing...</h3>
-                <p id="progress-message">Initializing analysis...</p>
-            </div>
-            <div class="progress-bar-container">
-                <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
-            </div>
-        </div>
-
         <!-- Results Section -->
-        <div id="results-section" class="results-section">
-            <!-- Trust Score Container -->
-            <div id="trust-score-container" class="trust-score-container" style="display: none;">
-                <!-- Trust score will be dynamically inserted here -->
+        <div id="results-section" class="results-section" style="display: none;">
+            <!-- Trust Score Container (v7.1.0 RESTORED) -->
+            <div id="trust-score-container" class="trust-score-display" style="display: none;">
+                <div class="trust-score-circle">
+                    <canvas id="trustScoreCanvas" width="160" height="160"></canvas>
+                    <div class="trust-score-value">
+                        <div id="trust-score-number" class="trust-score-number">--</div>
+                        <div class="trust-score-label">Trust Score</div>
+                    </div>
+                </div>
+                <div id="trust-score-breakdown"></div>
             </div>
 
             <!-- Service Results Container -->
@@ -394,7 +476,7 @@
         var analyzer;
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[NewsPage] Initializing news-only analysis page v7.0.0');
+            console.log('[NewsPage] Initializing news-only analysis page v7.1.0');
             
             // Initialize analyzer in news mode only
             analyzer = new UnifiedTruthLensAnalyzer();
@@ -419,6 +501,94 @@
                 console.error('[NewsPage] Analyzer not initialized');
                 alert('Analyzer not ready. Please refresh the page.');
             }
+        }
+
+        // RESTORED v7.1.0: Trust score display function
+        function updateEnhancedTrustDisplay(data) {
+            console.log('[TrustScore v7.1.0] Updating trust score display');
+            
+            const trustScore = data.trust_score || 0;
+            const trustContainer = document.getElementById('trust-score-container');
+            const trustNumberEl = document.getElementById('trust-score-number');
+            const trustBreakdownEl = document.getElementById('trust-score-breakdown');
+            
+            if (!trustContainer || !trustNumberEl) {
+                console.warn('[TrustScore] Trust score elements not found');
+                return;
+            }
+            
+            // Show trust score container
+            trustContainer.style.display = 'block';
+            
+            // Update trust score number
+            trustNumberEl.textContent = Math.round(trustScore);
+            
+            // Color based on score
+            if (trustScore >= 70) {
+                trustNumberEl.className = 'trust-score-number high';
+            } else if (trustScore >= 40) {
+                trustNumberEl.className = 'trust-score-number medium';
+            } else {
+                trustNumberEl.className = 'trust-score-number low';
+            }
+            
+            // Draw circular progress
+            const canvas = document.getElementById('trustScoreCanvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                const centerX = 80;
+                const centerY = 80;
+                const radius = 70;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, 160, 160);
+                
+                // Background circle
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.strokeStyle = '#e5e7eb';
+                ctx.lineWidth = 12;
+                ctx.stroke();
+                
+                // Progress arc
+                const endAngle = (trustScore / 100) * 2 * Math.PI - (Math.PI / 2);
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, -Math.PI / 2, endAngle);
+                
+                // Color based on score
+                if (trustScore >= 70) {
+                    ctx.strokeStyle = '#10b981';
+                } else if (trustScore >= 40) {
+                    ctx.strokeStyle = '#3b82f6';
+                } else {
+                    ctx.strokeStyle = '#ef4444';
+                }
+                ctx.lineWidth = 12;
+                ctx.lineCap = 'round';
+                ctx.stroke();
+            }
+            
+            // Show source and author if available
+            if (trustBreakdownEl) {
+                let breakdownHTML = '<div style="text-align: center; margin-top: 1rem;">';
+                
+                if (data.source) {
+                    breakdownHTML += `<div style="font-size: 0.875rem; color: #6b7280; margin-bottom: 0.5rem;">
+                        <strong>Source:</strong> ${data.source}
+                    </div>`;
+                }
+                
+                if (data.author && data.author !== 'Unknown' && data.author !== 'N/A') {
+                    breakdownHTML += `<div style="font-size: 0.875rem; color: #6b7280;">
+                        <strong>Author:</strong> ${data.author}
+                    </div>`;
+                }
+                
+                breakdownHTML += '</div>';
+                trustBreakdownEl.innerHTML = breakdownHTML;
+            }
+            
+            console.log('[TrustScore v7.1.0] Trust score displayed:', trustScore);
         }
 
         // Allow Enter key in URL field to trigger analysis
