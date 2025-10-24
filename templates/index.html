@@ -3,34 +3,29 @@
 <head>
     <!-- 
     TruthLens News Analysis Page
-    Version: 7.2.0 - COMPREHENSIVE SUMMARY WITH PDF & RESET
+    Version: 7.2.1 - PDF DOWNLOAD FIX
     Date: October 24, 2025
     
-    CHANGES FROM 7.1.0:
-    - ADDED: Comprehensive article summary section (for free tier/monetization)
-    - ADDED: "What We Found and What It Means" analysis summary
-    - ADDED: PDF download button with professional styling
-    - ADDED: Reset button to clear results and start over
-    - ENHANCED: Trust score section now includes full article metadata
-    - ENHANCED: Professional free-tier-ready summary display
+    CHANGES FROM 7.2.0:
+    - FIXED: PDF download now works! Added missing pdf-generator.js script
+    - FIXED: Removed placeholder downloadPDFReport() function
+    - VERIFIED: Professional PDF generation with full report
     
-    WHAT'S IN THE SUMMARY (Free Tier):
-    1. ✓ Trust Score with circular display
-    2. ✓ Article content summary
-    3. ✓ Source information
-    4. ✓ Author information
-    5. ✓ What we found and what it means
-    6. ✓ PDF download button
-    7. ✓ Reset button
+    WHAT'S IN v7.2.1:
+    - ✓ Complete comprehensive summary section
+    - ✓ Working PDF download button (red gradient)
+    - ✓ Reset button functionality
+    - ✓ All 7 summary components
     
     This summary is designed to stand alone as free tier content for monetization.
     
-    PRESERVED FROM 7.1.0:
-    - Fancy progress overlay with fun facts
+    PRESERVED FROM 7.2.0:
+    - Comprehensive summary with trust score, article content, findings
+    - All v7.1.0 progress overlay functionality
     - All v7.0.0 navigation and functionality (DO NO HARM ✓)
     
     This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - Added comprehensive summary v7.2.0
+    Last modified: October 24, 2025 - Fixed PDF download v7.2.1
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -59,7 +54,7 @@
     
     <!-- Enhanced Styles -->
     <style>
-        /* v7.2.0 - News Analysis Page with Comprehensive Summary */
+        /* v7.2.1 - News Analysis Page with Comprehensive Summary + WORKING PDF */
         :root {
             --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -899,13 +894,14 @@
     <!-- Load JavaScript Dependencies -->
     <script src="/static/js/service-templates.js"></script>
     <script src="/static/js/unified-app-core.js"></script>
+    <script src="/static/js/pdf-generator.js"></script>
     
     <script>
         // Initialize the analyzer in NEWS-ONLY mode
         var analyzer;
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[NewsPage] Initializing news-only analysis page v7.2.0');
+            console.log('[NewsPage] Initializing news-only analysis page v7.2.1 with PDF download');
             
             // Initialize analyzer in news mode only
             analyzer = new UnifiedTruthLensAnalyzer();
@@ -1200,28 +1196,6 @@
             if (serviceWrapper) {
                 serviceWrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
-        }
-
-        // PDF download function placeholder
-        function downloadPDFReport() {
-            console.log('[PDF] Download initiated');
-            
-            // Check if jsPDF is loaded
-            if (typeof window.jspdf === 'undefined') {
-                alert('PDF library is loading. Please try again in a moment.');
-                return;
-            }
-            
-            // Check if we have analysis data
-            if (!window.lastAnalysisData) {
-                alert('No analysis data available. Please run an analysis first.');
-                return;
-            }
-            
-            alert('PDF download feature will be fully implemented in the next update. Your analysis data is ready!');
-            
-            // TODO: Implement full PDF generation
-            // This will be added in the next iteration with proper formatting
         }
 
         // Allow Enter key in URL field to trigger analysis
