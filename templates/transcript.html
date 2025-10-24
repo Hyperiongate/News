@@ -3,24 +3,25 @@
 <head>
     <!-- 
     File: transcript.html
-    Version: 2.0.0 - PROFESSIONAL NAVIGATION HEADER ADDED
+    Version: 3.0.0 - COMPLETE NAVIGATION RESTORED
     Last Updated: October 24, 2025
     Description: Standalone Transcript Fact-Checker Page with Unified Navigation
     
-    CHANGES FROM 1.0:
-    - ADDED: Professional unified navigation header matching News Analyzer
-    - ADDED: Active page highlighting (Transcript Analysis highlighted)
-    - ADDED: Mobile-responsive hamburger menu
-    - ADDED: "Debate Arena (Coming Soon)" menu item
-    - REMOVED: Old simple header navigation
+    CHANGES FROM 2.0:
+    - RESTORED: All original navigation links (Features, Pricing, About, Live Stream, Contact)
+    - ADDED: Upgrade to Pro CTA button
+    - ENHANCED: Professional navigation design with icons
     - PRESERVED: ALL transcript functionality (DO NO HARM ✓)
     - PRESERVED: All input methods (text/file/microphone/YouTube)
     - PRESERVED: Export functionality (JSON/TXT/PDF)
-    - PRESERVED: Real-time progress tracking
     
-    NAVIGATION: TruthLens logo | News | Transcript (active) | Debate Arena
+    COMPLETE NAVIGATION:
+    - Home (TruthLens logo)
+    - Features, Pricing, About, Debate Arena, Live Stream, Contact
+    - Upgrade to Pro (CTA)
+    
     This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - Added professional navigation header
+    Last modified: October 24, 2025 - Complete navigation with all pages restored
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -821,36 +822,62 @@
 </head>
 <body>
     <!-- Header -->
-    <!-- NAVIGATION HEADER - v2.0.0 -->
+    <!-- NAVIGATION HEADER - v3.0.0 COMPLETE -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
+            <!-- Logo -->
             <a href="/" class="nav-logo">
                 <i class="fas fa-search-location"></i>
                 <span>TruthLens</span>
             </a>
             
+            <!-- Mobile Menu Toggle -->
             <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
                 <i class="fas fa-bars"></i>
             </button>
             
+            <!-- Navigation Menu -->
             <ul class="nav-menu" id="navMenu">
                 <li class="nav-item">
-                    <a href="/" class="nav-link">
-                        <i class="fas fa-newspaper"></i>
-                        <span>News Analysis</span>
+                    <a href="/features" class="nav-link">
+                        <i class="fas fa-star"></i>
+                        <span>Features</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/transcript" class="nav-link active">
-                        <i class="fas fa-microphone"></i>
-                        <span>Transcript Analysis</span>
+                    <a href="/pricing" class="nav-link">
+                        <i class="fas fa-tag"></i>
+                        <span>Pricing</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="#" class="nav-link coming-soon" onclick="return false;">
+                    <a href="/about" class="nav-link">
+                        <i class="fas fa-info-circle"></i>
+                        <span>About</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/debate-arena" class="nav-link">
                         <i class="fas fa-gavel"></i>
                         <span>Debate Arena</span>
-                        <span class="badge">Soon</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/live-stream" class="nav-link">
+                        <i class="fas fa-video"></i>
+                        <span>Live Stream</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/contact" class="nav-link">
+                        <i class="fas fa-envelope"></i>
+                        <span>Contact</span>
+                    </a>
+                </li>
+                <li class="nav-item nav-cta">
+                    <a href="#upgrade" class="nav-link-cta">
+                        <i class="fas fa-crown"></i>
+                        <span>Upgrade to Pro</span>
                     </a>
                 </li>
             </ul>
