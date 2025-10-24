@@ -2,24 +2,19 @@
 <html lang="en">
 <head>
     <!-- 
-    TruthLens News Analysis Page (Separated)
-    Version: 6.0.0 - COMPLETE NAVIGATION ON SEPARATE PAGE
+    TruthLens News Analysis Page
+    Version: 7.0.0 - UNIFIED NAVIGATION UPDATE
     Date: October 24, 2025
     
-    CHANGES FROM 5.1.0:
-    - STRUCTURE: This is NEWS ANALYSIS ONLY (no tabs, separate from transcript)
-    - NAVIGATION: Complete menu with all 7 original pages restored
-    - ADDED: Features, Pricing, About, Debate Arena, Live Stream, Contact links
-    - ADDED: Upgrade to Pro CTA button
+    CHANGES FROM 6.0.0:
+    - REMOVED: Pricing link from navigation
+    - ADDED: News Analysis link (current page indicator)
+    - ADDED: Transcript/Youtube Analysis link to /transcript
     - PRESERVED: All News Analysis functionality (DO NO HARM ✓)
-    - REMOVED: Mode tabs (News/Transcript switching) - now separate pages
-    
-    NAVIGATION STRUCTURE:
-    - Features, Pricing, About, Debate Arena, Live Stream, Contact, Upgrade to Pro
-    - Transcript Analysis accessible via separate page (/transcript)
+    - NAVIGATION: News Analysis, Transcript/Youtube, Features, About, Debate Arena, Live Stream, Contact, Upgrade to Pro
     
     This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - News-only with complete navigation
+    Last modified: October 24, 2025 - Unified navigation with Transcript/Youtube added
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -48,7 +43,7 @@
     
     <!-- Enhanced Styles -->
     <style>
-        /* v6.0.0 - News-Only Page Specific Styles */
+        /* v7.0.0 - News Analysis Page with Unified Navigation */
         :root {
             --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -232,7 +227,7 @@
     </style>
 </head>
 <body>
-    <!-- COMPLETE NAVIGATION HEADER - v6.0.0 -->
+    <!-- UNIFIED NAVIGATION HEADER - v7.0.0 -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <!-- Logo -->
@@ -249,15 +244,21 @@
             <!-- Navigation Menu -->
             <ul class="nav-menu" id="navMenu">
                 <li class="nav-item">
-                    <a href="/features" class="nav-link">
-                        <i class="fas fa-star"></i>
-                        <span>Features</span>
+                    <a href="/" class="nav-link active">
+                        <i class="fas fa-newspaper"></i>
+                        <span>News Analysis</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/pricing" class="nav-link">
-                        <i class="fas fa-tag"></i>
-                        <span>Pricing</span>
+                    <a href="/transcript" class="nav-link">
+                        <i class="fas fa-file-video"></i>
+                        <span>Transcript/Youtube</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/features" class="nav-link">
+                        <i class="fas fa-star"></i>
+                        <span>Features</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -393,7 +394,7 @@
         var analyzer;
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[NewsPage] Initializing news-only analysis page v6.0.0');
+            console.log('[NewsPage] Initializing news-only analysis page v7.0.0');
             
             // Initialize analyzer in news mode only
             analyzer = new UnifiedTruthLensAnalyzer();
