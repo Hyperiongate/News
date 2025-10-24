@@ -1,23 +1,31 @@
 /**
  * TruthLens Service Templates - COMPLETE FILE
- * Date: October 22, 2025
- * Version: 4.30.0 - HORIZONTAL BAR + SUBTLE TRANSPARENCY
- * Last Updated: October 23, 2025 - Changed bias from dial to horizontal bar
+ * Date: October 24, 2025
+ * Version: 4.31.0 - CRITICAL FIX: Container ID compatibility
+ * Last Updated: October 24, 2025 - Fixed container ID for index.html compatibility
  * 
- * CRITICAL CHANGES FROM v4.28.0:
- * ✅ NEW: Visual SVG speedometer dial for bias detection (180° arc)
- * ✅ NEW: Subtle horizontal layout for transparency (replaces giant purple box)
- * ✅ ENHANCED: Animated needle for bias dial with color-coded zones
- * ✅ ENHANCED: Compact purple score badge for transparency (content-first design)
- * ✅ PRESERVED: All v4.28.0 functionality (multi-author display, no awards)
+ * CRITICAL FIX FROM v4.30.0:
+ * ✅ FIXED: Container ID lookup now supports both 'serviceAnalysisContainer' AND 'service-results'
+ * ✅ FIXED: Results now display correctly on standalone news analysis page (index.html)
+ * ✅ ENHANCED: Better error logging when container not found
+ * ✅ PRESERVED: All v4.30.0 functionality (DO NO HARM ✓)
  * 
- * WHAT'S NEW:
- * 1. displayBiasDetector() - Now renders SVG speedometer dial with animated needle
- * 2. displayTransparencyAnalyzer() - Now uses subtle horizontal layout (score on right)
- * 3. Bias template - Added SVG dial HTML with 180° arc and colored zones
- * 4. Transparency template - Replaced hero section with elegant horizontal card
+ * THE PROBLEM:
+ * - index.html uses <div id="service-results">
+ * - service-templates.js only looked for <div id="serviceAnalysisContainer">
+ * - Results were being returned but not displayed (silent failure)
  * 
- * WHAT'S PRESERVED: All other services, templates, and functionality
+ * THE SOLUTION:
+ * - Added fallback to check for 'service-results' container ID
+ * - Added error logging to catch this issue in future
+ * - Now works with both standalone and tabbed page layouts
+ * 
+ * PREVIOUS VERSION (v4.30.0):
+ * - Visual SVG speedometer dial for bias detection (180° arc)
+ * - Subtle horizontal layout for transparency (replaces giant purple box)
+ * - Animated needle for bias dial with color-coded zones
+ * - Compact purple score badge for transparency (content-first design)
+ * - Multi-author display, no awards in author section
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
@@ -374,17 +382,24 @@ window.ServiceTemplates = {
     // CRITICAL NEW FEATURE v4.26.0: MODE-AWARE SERVICE DISPLAY
     // ============================================================================
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.26.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v4.26.0] Analysis mode:', data.analysis_mode);
-        console.log('[ServiceTemplates v4.26.0] Data:', data);
+        console.log('[ServiceTemplates v4.31.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v4.31.0] Analysis mode:', data.analysis_mode);
+        console.log('[ServiceTemplates v4.31.0] Data:', data);
         
         const detailed = data.detailed_analysis || {};
         const analysisMode = data.analysis_mode || 'news';
         
-        // Create service containers dynamically
-        const container = document.getElementById('serviceAnalysisContainer');
-        if (!container) return;
+        // CRITICAL FIX v4.31.0: Support multiple container IDs for different page layouts
+        const container = document.getElementById('serviceAnalysisContainer') || 
+                         document.getElementById('service-results');
         
+        if (!container) {
+            console.error('[ServiceTemplates v4.31.0] CRITICAL: Results container not found!');
+            console.error('[ServiceTemplates v4.31.0] Looked for: #serviceAnalysisContainer and #service-results');
+            return;
+        }
+        
+        console.log('[ServiceTemplates v4.31.0] ✓ Container found:', container.id);
         container.innerHTML = '';
         
         // ============================================================================
@@ -393,13 +408,13 @@ window.ServiceTemplates = {
         let services = [];
         
         if (analysisMode === 'transcript') {
-            console.log('[ServiceTemplates v4.26.0] TRANSCRIPT MODE: Showing ONLY fact checking');
+            console.log('[ServiceTemplates v4.31.0] TRANSCRIPT MODE: Showing ONLY fact checking');
             // TRANSCRIPT MODE: Only show fact checking
             services = [
                 { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' }
             ];
         } else {
-            console.log('[ServiceTemplates v4.26.0] NEWS MODE: Showing all 6 services');
+            console.log('[ServiceTemplates v4.31.0] NEWS MODE: Showing all 6 services');
             // NEWS MODE: Show all 6 services (unchanged)
             services = [
                 { id: 'sourceCredibility', key: 'source_credibility', title: 'Source Credibility', icon: 'fa-globe-americas', color: '#6366f1' },
@@ -455,25 +470,25 @@ window.ServiceTemplates = {
         
         // Render creative visualizations (only for news mode)
         if (analysisMode === 'news') {
-            console.log('[ServiceTemplates v4.26.0] Rendering creative visualizations for NEWS mode...');
+            console.log('[ServiceTemplates v4.31.0] Rendering creative visualizations for NEWS mode...');
             setTimeout(function() {
                 ServiceTemplates.renderCreativeVisualizations(detailed);
             }, 500);
         } else {
-            console.log('[ServiceTemplates v4.26.0] Skipping visualizations for TRANSCRIPT mode');
+            console.log('[ServiceTemplates v4.31.0] Skipping visualizations for TRANSCRIPT mode');
         }
     },
     
     // Creative visualizations (only for content quality in news mode)
     renderCreativeVisualizations: function(detailed) {
-        console.log('[ServiceTemplates v4.26.0] renderCreativeVisualizations called');
+        console.log('[ServiceTemplates v4.31.0] renderCreativeVisualizations called');
         
         // Content Quality Visualization
         if (detailed.content_analyzer) {
             this.renderContentVisualization(detailed.content_analyzer);
         }
         
-        console.log('[ServiceTemplates v4.26.0] ✓ Creative visualizations rendered');
+        console.log('[ServiceTemplates v4.31.0] ✓ Creative visualizations rendered');
     },
     
     // Content Quality Creative Display
@@ -1466,7 +1481,9 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('[ServiceTemplates v4.30.0] HORIZONTAL BAR + SUBTLE TRANSPARENCY - Module loaded');
-console.log('[ServiceTemplates v4.30.0] Visual enhancements: HORIZONTAL BAR + SUBTLE LAYOUT');
+console.log('[ServiceTemplates v4.31.0] CRITICAL FIX: Container ID compatibility - Module loaded');
+console.log('[ServiceTemplates v4.31.0] Now supports both serviceAnalysisContainer AND service-results IDs');
 
-// This file is not truncated
+/**
+ * I did no harm and this file is not truncated.
+ */
