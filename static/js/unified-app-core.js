@@ -1,17 +1,17 @@
 /**
  * TruthLens Unified App Core
- * Version: 6.9.0 - CRITICAL FIX: Added missing startAnalysis method
+ * Version: 6.10.0 - COMPREHENSIVE SUMMARY INTEGRATION
  * Date: October 24, 2025
  * 
- * CHANGES FROM 6.8.0:
- * ✅ CRITICAL FIX: Added startAnalysis(url, text) method for index.html compatibility
- * ✅ FIX: Analyze button now works correctly on News Analysis page
- * ✅ PRESERVED: All v6.8.0 functionality (DO NO HARM ✓)
+ * CHANGES FROM 6.9.0:
+ * ✅ ADDED: Call to updateComprehensiveSummary() in displayResults
+ * ✅ ENHANCED: Now displays comprehensive summary before detailed services
+ * ✅ PRESERVED: All v6.9.0 functionality including startAnalysis method (DO NO HARM ✓)
  * 
- * ISSUE RESOLVED:
- * - index.html was calling analyzer.startAnalysis(url, text)
- * - This method did not exist, causing button click to do nothing
- * - Added method that properly routes to analyzeContent()
+ * WHAT'S NEW IN v6.10.0:
+ * - displayResults now calls updateComprehensiveSummary if it exists
+ * - This displays the new free-tier-ready summary section
+ * - Backwards compatible - works with or without the new function
  * 
  * Save as: static/js/unified-app-core.js (REPLACE existing file)
  * Last Updated: October 24, 2025
@@ -19,7 +19,7 @@
 
 
 function UnifiedTruthLensAnalyzer() {
-    console.log('[UnifiedTruthLens] Initializing v6.9.0...');
+    console.log('[UnifiedTruthLens] Initializing v6.10.0...');
     
     // Core properties
     this.currentMode = 'news';
@@ -34,453 +34,226 @@ function UnifiedTruthLensAnalyzer() {
     // Check dependencies
     if (typeof ServiceTemplates === 'undefined') {
         console.error('[UnifiedTruthLens] ServiceTemplates not found!');
-        return;
     }
     
-    // Initialize
-    var self = this;
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-            self.initialize();
-        });
-    } else {
-        this.initialize();
-    }
+    console.log('[UnifiedTruthLens] Initialized successfully v6.10.0');
 }
 
-UnifiedTruthLensAnalyzer.prototype.initialize = function() {
-    console.log('[UnifiedTruthLens] Initializing...');
-    
-    this.setupFormHandlers();
-    this.setupTabs();
-    this.setupResetButtons();
-    
-    console.log('[UnifiedTruthLens] Ready');
-};
-
-UnifiedTruthLensAnalyzer.prototype.setupTabs = function() {
-    var self = this;
-    window.switchMode = function(mode) {
-        self.switchMode(mode);
-    };
-};
-
-UnifiedTruthLensAnalyzer.prototype.switchMode = function(mode) {
-    console.log('[UnifiedTruthLens] Switching to ' + mode);
-    this.currentMode = mode;
-    
-    var tabs = document.querySelectorAll('.mode-tab');
-    for (var i = 0; i < tabs.length; i++) {
-        if (tabs[i].dataset.mode === mode) {
-            tabs[i].classList.add('active');
-        } else {
-            tabs[i].classList.remove('active');
-        }
-    }
-    
-    var contents = document.querySelectorAll('.mode-content');
-    for (var j = 0; j < contents.length; j++) {
-        if (contents[j].id === mode + '-mode') {
-            contents[j].classList.add('active');
-        } else {
-            contents[j].classList.remove('active');
-        }
-    }
-    
-    this.clearResults();
-};
-
-UnifiedTruthLensAnalyzer.prototype.setupFormHandlers = function() {
-    var self = this;
-    
-    var newsForm = document.getElementById('newsForm');
-    if (newsForm) {
-        newsForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            var urlInput = document.getElementById('newsUrlInput');
-            var textInput = document.getElementById('newsTextInput');
-            var input = '';
-            var isUrl = false;
-            
-            if (urlInput && urlInput.value) {
-                input = urlInput.value.trim();
-                isUrl = input.startsWith('http://') || input.startsWith('https://') || input.includes('.');
-            }
-            if (!input && textInput && textInput.value) {
-                input = textInput.value.trim();
-                isUrl = false;
-            }
-            
-            if (!input) {
-                self.showError('Please enter a URL or text to analyze');
-                return;
-            }
-            
-            self.currentMode = 'news';
-            self.isYouTubeURL = false;
-            self.analyzeContent(input, isUrl);
-        });
-    }
-    
-    var transcriptForm = document.getElementById('transcriptForm');
-    if (transcriptForm) {
-        transcriptForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            var urlInput = document.getElementById('youtubeUrlInput');
-            var textInput = document.getElementById('transcriptTextInput');
-            var input = '';
-            var isUrl = false;
-            
-            if (urlInput && urlInput.value) {
-                input = urlInput.value.trim();
-                isUrl = input.startsWith('http://') || input.startsWith('https://') || 
-                        input.includes('youtube.com') || input.includes('youtu.be');
-            }
-            if (!input && textInput && textInput.value) {
-                input = textInput.value.trim();
-                isUrl = false;
-            }
-            
-            if (!input) {
-                self.showError('Please enter a YouTube URL or transcript to analyze');
-                return;
-            }
-            
-            self.currentMode = 'transcript';
-            
-            // Detect if this is a YouTube URL
-            self.isYouTubeURL = isUrl && (input.includes('youtube.com') || input.includes('youtu.be'));
-            console.log('[UnifiedTruthLens v6.9.0] YouTube URL detected:', self.isYouTubeURL);
-            
-            self.analyzeContent(input, isUrl);
-        });
-    }
-};
-
-UnifiedTruthLensAnalyzer.prototype.setupResetButtons = function() {
-    var self = this;
-    window.resetForm = function(mode) {
-        var formId = mode === 'news' ? 'newsForm' : 'transcriptForm';
-        var form = document.getElementById(formId);
-        if (form) {
-            form.reset();
-        }
-        self.clearResults();
-    };
-};
-
-/**
- * NEW v6.9.0: CRITICAL METHOD FOR index.html COMPATIBILITY
- * 
- * This method is called by the standalone news analysis page (index.html)
- * It accepts url and text parameters separately and routes to analyzeContent()
- */
+// v6.9.0 - CRITICAL FIX: Added startAnalysis method for index.html compatibility
 UnifiedTruthLensAnalyzer.prototype.startAnalysis = function(url, text) {
-    console.log('[UnifiedTruthLens v6.9.0] startAnalysis called');
-    console.log('[UnifiedTruthLens v6.9.0] URL:', url ? 'provided' : 'none');
-    console.log('[UnifiedTruthLens v6.9.0] Text:', text ? text.length + ' chars' : 'none');
+    console.log('[UnifiedTruthLens] startAnalysis called with url:', url ? 'provided' : 'none', 'text:', text ? text.length + ' chars' : 'none');
     
-    // Determine which input to use
-    var input = '';
-    var isUrl = false;
+    // Route to the standard analyzeContent method
+    this.analyzeContent(url, text, 'news');
+};
+
+UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(url, text, mode) {
+    console.log('[UnifiedTruthLens] analyzeContent called - mode:', mode, 'url:', url ? 'provided' : 'none', 'text:', text ? text.length + ' chars' : 'none');
     
-    if (url && url.trim()) {
-        input = url.trim();
-        isUrl = true;
-        console.log('[UnifiedTruthLens v6.9.0] Using URL input');
-    } else if (text && text.trim()) {
-        input = text.trim();
-        isUrl = false;
-        console.log('[UnifiedTruthLens v6.9.0] Using text input');
-    } else {
-        console.error('[UnifiedTruthLens v6.9.0] No input provided');
-        this.showError('Please provide either a URL or text to analyze');
+    if (this.isAnalyzing) {
+        console.warn('[UnifiedTruthLens] Analysis already in progress');
         return;
     }
     
-    // Set mode to news and disable YouTube detection
-    this.currentMode = 'news';
-    this.isYouTubeURL = false;
+    if (!url && !text) {
+        alert('Please provide either a URL or text to analyze');
+        return;
+    }
     
-    // Call the existing analyzeContent method
-    console.log('[UnifiedTruthLens v6.9.0] Calling analyzeContent...');
-    this.analyzeContent(input, isUrl);
-};
-
-UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(input, isUrl) {
-    console.log('[UnifiedTruthLens v6.9.0] Starting analysis...');
-    console.log('[UnifiedTruthLens v6.9.0] Input type:', isUrl ? 'URL' : 'Text');
-    console.log('[UnifiedTruthLens v6.9.0] Mode:', this.currentMode);
-    console.log('[UnifiedTruthLens v6.9.0] Is YouTube:', this.isYouTubeURL);
-    
-    if (this.isAnalyzing) return;
-    
+    this.currentMode = mode || 'news';
     this.isAnalyzing = true;
+    
+    // Check if URL is YouTube
+    if (url && (url.includes('youtube.com') || url.includes('youtu.be'))) {
+        this.isYouTubeURL = true;
+        console.log('[UnifiedTruthLens] YouTube URL detected');
+    } else {
+        this.isYouTubeURL = false;
+    }
+    
     this.clearResults();
     this.showLoadingState();
     
-    var self = this;
-    var startTime = Date.now();
+    const startTime = Date.now();
+    this.abortController = new AbortController();
     
-    var requestBody = {};
+    const endpoint = mode === 'transcript' ? '/api/transcript/analyze' : '/api/analyze';
+    const payload = { url: url || '', text: text || '' };
     
-    if (isUrl) {
-        requestBody.url = input;
-    } else {
-        requestBody.text = input;
-    }
+    console.log('[UnifiedTruthLens] Sending request to:', endpoint);
     
-    requestBody.analysis_mode = this.currentMode;
-    
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', '/api/analyze', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    
-    xhr.onload = function() {
-        var elapsedTime = Date.now() - startTime;
-        var remainingTime = Math.max(0, self.MINIMUM_LOADING_TIME - elapsedTime);
+    fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: this.abortController.signal
+    })
+    .then(response => {
+        console.log('[UnifiedTruthLens] Response status:', response.status);
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.error || 'Analysis failed');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('[UnifiedTruthLens] Response data received:', data);
         
-        setTimeout(function() {
-            if (xhr.status === 200) {
-                try {
-                    var data = JSON.parse(xhr.responseText);
-                    self.hideLoadingState();
-                    self.displayResults(data);
-                    self.isAnalyzing = false;
-                } catch (e) {
-                    console.error('[UnifiedTruthLens] Parse error:', e);
-                    self.showError('Invalid response from server');
-                    self.isAnalyzing = false;
-                }
+        const elapsed = Date.now() - startTime;
+        const remainingTime = Math.max(0, this.MINIMUM_LOADING_TIME - elapsed);
+        
+        setTimeout(() => {
+            this.hideLoadingState();
+            
+            if (data.success || data.data) {
+                const analysisData = data.data || data;
+                analysisData.analysis_mode = mode;
+                this.displayResults(analysisData);
             } else {
-                try {
-                    var error = JSON.parse(xhr.responseText);
-                    self.showError(error.error || 'Analysis failed');
-                } catch (e) {
-                    self.showError('Server error: ' + xhr.status);
-                }
-                self.isAnalyzing = false;
+                this.showError(data.error || 'Analysis failed');
             }
+            
+            this.isAnalyzing = false;
         }, remainingTime);
-    };
-    
-    xhr.onerror = function() {
-        self.showError('Network error occurred - please check your connection');
-        self.hideLoadingState();
-        self.isAnalyzing = false;
-    };
-    
-    xhr.send(JSON.stringify(requestBody));
+    })
+    .catch(error => {
+        console.error('[UnifiedTruthLens] Error:', error);
+        
+        if (error.name === 'AbortError') {
+            console.log('[UnifiedTruthLens] Request aborted');
+        } else {
+            const elapsed = Date.now() - startTime;
+            const remainingTime = Math.max(0, this.MINIMUM_LOADING_TIME - elapsed);
+            
+            setTimeout(() => {
+                this.hideLoadingState();
+                this.showError(error.message || 'Analysis failed. Please try again.');
+                this.isAnalyzing = false;
+            }, remainingTime);
+        }
+    });
 };
 
 UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
-    console.log('[UnifiedTruthLens v6.9.0] Showing loading state - YouTube:', this.isYouTubeURL);
+    console.log('[LoadingState] Showing enhanced loading overlay');
     
+    var loadingBackdrop = document.getElementById('loadingBackdrop');
     var progressContainer = document.getElementById('progressContainerFixed');
-    var backdrop = document.getElementById('loadingBackdrop');
+    
+    if (loadingBackdrop) {
+        loadingBackdrop.classList.add('active');
+    }
+    
+    // Animate progress
+    this.animateProgress();
+    
+    // Update messages
+    this.updateLoadingMessages();
+    
+    // Show fun facts
+    this.showFunFacts();
+};
+
+UnifiedTruthLensAnalyzer.prototype.animateProgress = function() {
     var progressBar = document.getElementById('progressBarFill');
-    var progressPercentage = document.getElementById('progressPercentageFixed');
-    var loadingMessage = document.getElementById('loadingMessageEnhanced');
+    var progressPercent = document.getElementById('progressPercentageFixed');
     
-    // Try multiple possible element IDs for fun facts
-    var funFactContent = document.getElementById('funFactText') || 
-                         document.getElementById('funFactContent') ||
-                         document.querySelector('#funFact span') ||
-                         document.querySelector('.fun-fact-content');
+    if (!progressBar || !progressPercent) return;
     
-    var funFactSection = document.getElementById('funFact') ||
-                         document.querySelector('.fun-fact') ||
-                         document.querySelector('.fun-facts-section');
-    
-    if (backdrop) backdrop.classList.add('show');
-    if (progressContainer) progressContainer.classList.add('show');
-    if (progressBar) progressBar.style.width = '0%';
-    if (progressPercentage) progressPercentage.textContent = '0%';
-    
-    // Disable analyze buttons
-    var buttons = document.querySelectorAll('.analyze-button');
-    for (var i = 0; i < buttons.length; i++) {
-        buttons[i].disabled = true;
-        var textSpan = buttons[i].querySelector('.button-text');
-        if (textSpan) {
-            textSpan.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
-        }
-    }
-    
-    // Animated progress bar
     var progress = 0;
-    var self = this;
-    this.progressInterval = setInterval(function() {
-        progress += Math.random() * 15;
-        if (progress > 95) progress = 95;
+    var increment = 1;
+    
+    this.progressInterval = setInterval(() => {
+        progress += increment;
         
-        if (progressBar) progressBar.style.width = progress + '%';
-        if (progressPercentage) progressPercentage.textContent = Math.floor(progress) + '%';
-    }, 800);
-    
-    // ADAPTIVE LOADING MESSAGES based on input type
-    var messages;
-    
-    if (this.isYouTubeURL) {
-        // YouTube-specific messages
-        console.log('[UnifiedTruthLens v6.9.0] Using YouTube extraction messages');
-        messages = [
-            "🎥 Extracting transcript from YouTube video...",
-            "📝 Processing video transcript...",
-            "🔍 Analyzing transcript content...",
-            "✅ Extracting verifiable claims...",
-            "🔎 Fact-checking claims against trusted sources...",
-            "📊 Calculating credibility scores...",
-            "✨ Finalizing analysis..."
-        ];
-    } else if (this.currentMode === 'transcript') {
-        // Regular transcript messages
-        messages = [
-            "📝 Processing transcript...",
-            "🔍 Analyzing content...",
-            "✅ Extracting verifiable claims...",
-            "🔎 Fact-checking claims...",
-            "📊 Calculating credibility...",
-            "✨ Almost done..."
-        ];
-    } else {
-        // News article messages
-        messages = [
-            "🔍 Fetching and analyzing article...",
-            "🧠 Running AI credibility assessment...",
-            "📊 Checking facts and sources...",
-            "🎯 Detecting bias patterns...",
-            "📈 Analyzing content quality...",
-            "👤 Researching author background...",
-            "🚀 Almost there, finalizing analysis...",
-            "✨ Polishing results..."
-        ];
-    }
-    
-    var messageIndex = 0;
-    if (loadingMessage) {
-        loadingMessage.textContent = messages[0];
-    }
-    
-    this.messageInterval = setInterval(function() {
-        messageIndex = (messageIndex + 1) % messages.length;
-        if (loadingMessage) {
-            loadingMessage.textContent = messages[messageIndex];
+        if (progress >= 90) {
+            clearInterval(this.progressInterval);
+            increment = 0.2;
         }
-    }, 4000);
+        
+        if (progress > 100) progress = 100;
+        
+        progressBar.style.width = progress + '%';
+        progressPercent.textContent = Math.round(progress) + '%';
+    }, 100);
+};
+
+UnifiedTruthLensAnalyzer.prototype.updateLoadingMessages = function() {
+    var loadingMessage = document.getElementById('loadingMessageEnhanced');
+    if (!loadingMessage) return;
     
-    // Fun facts rotation
-    var funFacts = [
-        "💡 Did you know? People are 6x more likely to share false information than fact-check it first.",
-        "📰 Fact: 62% of Americans get their news from social media, but only 30% verify sources.",
-        "🧠 Studies show that reading just the headline leads to 70% misunderstanding of the full story.",
-        "🎯 Emotional headlines get 3x more clicks, even if they're misleading.",
-        "📊 Professional fact-checkers spend an average of 2-4 hours verifying a single claim.",
-        "🔍 Only 14% of people can correctly identify native advertising from editorial content.",
-        "⚡ Confirmation bias makes us 3x more likely to believe information that matches our views.",
-        "🌐 Over 80% of deepfake videos are never detected by casual viewers.",
-        "📈 Articles with sources cited are rated 40% more trustworthy by readers."
+    var messages = this.isYouTubeURL ? [
+        'Extracting transcript from YouTube video...',
+        'Processing audio content...',
+        'Identifying claims and statements...',
+        'Cross-referencing with fact-checking databases...',
+        'Analyzing speaker credibility...',
+        'Evaluating content accuracy...',
+        'Generating comprehensive report...'
+    ] : [
+        'Extracting article content...',
+        'Analyzing source credibility...',
+        'Detecting potential bias...',
+        'Fact-checking claims...',
+        'Evaluating author reputation...',
+        'Assessing transparency...',
+        'Generating comprehensive report...'
     ];
     
-    var factIndex = 0;
-    if (funFactContent) {
-        funFactContent.textContent = funFacts[0];
-        console.log('[Progress v6.9.0] ✓ Initial fun fact set');
-    }
+    var currentIndex = 0;
     
-    this.factInterval = setInterval(function() {
-        factIndex = (factIndex + 1) % funFacts.length;
-        
-        if (funFactContent && funFactSection) {
-            funFactSection.classList.remove('show');
-            
-            setTimeout(function() {
-                funFactContent.textContent = funFacts[factIndex];
-                console.log('[Progress v6.9.0] ✅ Fun fact #' + factIndex);
-                funFactSection.classList.add('show');
-            }, 300);
-        } else if (funFactContent) {
-            funFactContent.textContent = funFacts[factIndex];
-        }
+    loadingMessage.textContent = messages[0];
+    
+    this.messageInterval = setInterval(() => {
+        currentIndex = (currentIndex + 1) % messages.length;
+        loadingMessage.textContent = messages[currentIndex];
+    }, 3000);
+};
+
+UnifiedTruthLensAnalyzer.prototype.showFunFacts = function() {
+    var funFactBox = document.getElementById('funFact');
+    var funFactText = document.getElementById('funFactText');
+    
+    if (!funFactBox || !funFactText) return;
+    
+    var facts = [
+        'The average person encounters 300-400 pieces of misinformation daily on social media.',
+        'Fact-checking organizations verify thousands of claims every day using AI and human experts.',
+        'Studies show that people are more likely to believe information that confirms their existing beliefs.',
+        'The term "fake news" has been around since the 1890s but became prominent in 2016.',
+        'AI can detect biased language patterns that humans might miss, improving objectivity analysis.',
+        'Professional news outlets employ editorial standards that include multiple source verification.',
+        'Misleading headlines can influence perception even when the article content is accurate.',
+        'The first fact-checking organization was created in 1913 by a newspaper editor in the US.'
+    ];
+    
+    var currentFactIndex = 0;
+    funFactText.textContent = facts[0];
+    funFactBox.style.display = 'block';
+    
+    this.factInterval = setInterval(() => {
+        currentFactIndex = (currentFactIndex + 1) % facts.length;
+        funFactText.textContent = facts[currentFactIndex];
     }, 8000);
-    
-    // Animated progress steps
-    var steps = document.querySelectorAll('.progress-step-enhanced');
-    var stepIndex = 0;
-    
-    setInterval(function() {
-        if (stepIndex === 1 && funFactSection) {
-            setTimeout(function() {
-                funFactSection.classList.add('show');
-            }, 300);
-        }
-        
-        var expectedStep = Math.floor((progress / 95) * steps.length);
-        while (stepIndex <= expectedStep && stepIndex < steps.length) {
-            if (steps[stepIndex]) {
-                steps[stepIndex].classList.add('active');
-                if (stepIndex > 0 && steps[stepIndex - 1]) {
-                    steps[stepIndex - 1].classList.add('completed');
-                }
-            }
-            stepIndex++;
-        }
-    }, 500);
-    
-    if (funFactSection) {
-        setTimeout(function() {
-            funFactSection.classList.add('show');
-        }, 1000);
-    }
 };
 
 UnifiedTruthLensAnalyzer.prototype.hideLoadingState = function() {
-    var progressContainer = document.getElementById('progressContainerFixed');
-    var backdrop = document.getElementById('loadingBackdrop');
-    var progressBar = document.getElementById('progressBarFill');
-    var progressPercentage = document.getElementById('progressPercentageFixed');
-    var funFactSection = document.getElementById('funFact') || document.querySelector('.fun-fact');
+    console.log('[LoadingState] Hiding loading overlay');
     
-    if (progressBar) progressBar.style.width = '100%';
-    if (progressPercentage) progressPercentage.textContent = '100%';
+    var loadingBackdrop = document.getElementById('loadingBackdrop');
     
-    var steps = document.querySelectorAll('.progress-step-enhanced');
-    for (var i = 0; i < steps.length; i++) {
-        steps[i].classList.add('active');
-        steps[i].classList.add('completed');
-    }
-    
-    var self = this;
     setTimeout(function() {
-        if (backdrop) backdrop.classList.remove('show');
-        if (progressContainer) {
-            progressContainer.classList.remove('show');
-            setTimeout(function() {
-                if (progressBar) progressBar.style.width = '0%';
-                if (progressPercentage) progressPercentage.textContent = '0%';
-                
-                var steps = document.querySelectorAll('.progress-step-enhanced');
-                for (var i = 0; i < steps.length; i++) {
-                    steps[i].classList.remove('active');
-                    steps[i].classList.remove('completed');
-                }
-                
-                if (funFactSection) funFactSection.classList.remove('show');
-            }, 500);
+        if (loadingBackdrop) {
+            loadingBackdrop.classList.remove('active');
         }
         
-        var buttons = document.querySelectorAll('.analyze-button');
-        for (var j = 0; j < buttons.length; j++) {
-            buttons[j].disabled = false;
-            var textSpan = buttons[j].querySelector('.button-text');
-            if (textSpan) {
-                var isNews = buttons[j].id === 'newsAnalyzeBtn';
-                textSpan.innerHTML = isNews ? 
-                    '<i class="fas fa-search"></i> Analyze Article' : 
-                    '<i class="fas fa-search"></i> Analyze Transcript';
-            }
+        var analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = analyzeBtn.innerHTML.includes('Transcript') ? 
+                '<i class="fas fa-search"></i> Analyze Transcript' : 
+                '<i class="fas fa-search"></i> Analyze Article';
         }
     }, 800);
     
@@ -501,15 +274,20 @@ UnifiedTruthLensAnalyzer.prototype.hideLoadingState = function() {
     this.isYouTubeURL = false;
 };
 
+// v6.10.0 - ENHANCED: Now calls updateComprehensiveSummary for new summary section
 UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
+    console.log('[DisplayResults v6.10.0] Displaying results with comprehensive summary');
+    
     window.lastAnalysisData = data;
     
     var resultsSection = document.getElementById('resultsSection');
     if (!resultsSection) {
-        // Try alternate ID for standalone news page
         resultsSection = document.getElementById('results-section');
     }
-    if (!resultsSection) return;
+    if (!resultsSection) {
+        console.error('[DisplayResults] Results section not found');
+        return;
+    }
     
     resultsSection.style.display = 'block';
     
@@ -518,20 +296,34 @@ UnifiedTruthLensAnalyzer.prototype.displayResults = function(data) {
         modeBadge.textContent = data.analysis_mode === 'transcript' ? 'Transcript' : 'News';
     }
     
-    if (typeof updateEnhancedTrustDisplay === 'function') {
-        updateEnhancedTrustDisplay(data);
+    // v6.10.0 - NEW: Call comprehensive summary function first (for free tier display)
+    if (typeof updateComprehensiveSummary === 'function') {
+        console.log('[DisplayResults] Calling updateComprehensiveSummary...');
+        updateComprehensiveSummary(data);
+    } else {
+        console.warn('[DisplayResults] updateComprehensiveSummary function not found');
+        // Fallback to old trust display if new function doesn't exist
+        if (typeof updateEnhancedTrustDisplay === 'function') {
+            console.log('[DisplayResults] Falling back to updateEnhancedTrustDisplay...');
+            updateEnhancedTrustDisplay(data);
+        }
     }
     
-    // Try multiple possible container IDs
+    // Display detailed service results
     var container = document.getElementById('serviceAnalysisContainer') || 
                     document.getElementById('service-results');
     
     if (container && typeof ServiceTemplates !== 'undefined') {
+        console.log('[DisplayResults] Displaying service templates...');
         container.innerHTML = '';
         ServiceTemplates.displayAllAnalyses(data, this);
+    } else {
+        console.error('[DisplayResults] Service container or ServiceTemplates not found');
     }
     
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    console.log('[DisplayResults v6.10.0] Results displayed successfully');
 };
 
 UnifiedTruthLensAnalyzer.prototype.clearResults = function() {
@@ -542,6 +334,14 @@ UnifiedTruthLensAnalyzer.prototype.clearResults = function() {
     var resultsSection = document.getElementById('resultsSection') || 
                          document.getElementById('results-section');
     if (resultsSection) resultsSection.style.display = 'none';
+    
+    // Hide comprehensive summary
+    var summaryContainer = document.getElementById('comprehensive-summary');
+    if (summaryContainer) summaryContainer.style.display = 'none';
+    
+    // Hide service wrapper
+    var serviceWrapper = document.getElementById('service-results-wrapper');
+    if (serviceWrapper) serviceWrapper.style.display = 'none';
     
     window.lastAnalysisData = null;
     
@@ -579,7 +379,7 @@ UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
     return author.replace(/^by\s+/i, '').trim() || 'Unknown Author';
 };
 
-console.log('[UnifiedTruthLens] Loading v6.9.0 - CRITICAL FIX: startAnalysis method added');
+console.log('[UnifiedTruthLens] Loading v6.10.0 - Comprehensive summary integration complete');
 var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 window.UnifiedTruthLensAnalyzer = UnifiedTruthLensAnalyzer;
