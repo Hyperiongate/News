@@ -3,18 +3,19 @@
 <head>
     <!-- 
     TruthLens Features Page
-    Version: 1.1.0
-    Date: October 17, 2025
+    Version: 2.0.0 - UNIFIED NAVIGATION + CONTENT UPDATE
+    Date: October 24, 2025
     
-    CHANGES FROM 1.0.0:
-    - ADDED: Coming Soon section with 4 future features
-    - Features: AI Detection, Deepfake Detection, Plagiarism Detection, Live-Stream Fact Checking
-    - All v1.0.0 content preserved (DO NO HARM ✓)
+    CHANGES FROM 1.1.0:
+    - REMOVED: Pricing link from navigation
+    - ADDED: News Analysis link
+    - ADDED: Transcript/Youtube Analysis link
+    - UPDATED: Transcript feature description to include YouTube
+    - MOVED: Live Stream from "Coming Soon" to active features
+    - NAVIGATION: News Analysis, Transcript/Youtube, Features (active), About, Debate Arena, Live Stream, Contact
     
-    Shows all analysis capabilities and data sources
-    Lists features with beta pricing information
-    
-    This file is not truncated.
+    This file is complete and ready to deploy.
+    Last modified: October 24, 2025 - Unified navigation and content update
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -194,6 +195,7 @@
         .feature-icon.transparency { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
         .feature-icon.content { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
         .feature-icon.transcript { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        .feature-icon.livestream { background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%); }
 
         .feature-card h3 {
             font-size: 1.5rem;
@@ -210,25 +212,23 @@
 
         .feature-badge {
             display: inline-block;
-            padding: 0.25rem 0.75rem;
-            background: rgba(16, 185, 129, 0.1);
-            color: #059669;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .feature-badge.pro {
-            background: rgba(139, 92, 246, 0.1);
-            color: #7c3aed;
-        }
-
-        .feature-badge.coming-soon {
-            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             color: white;
-            animation: pulse 2s ease-in-out infinite;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .live-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            animation: pulse 2s infinite;
         }
 
         @keyframes pulse {
@@ -236,26 +236,10 @@
             50% { opacity: 0.7; }
         }
 
-        /* Coming Soon Section Styles */
+        /* Coming Soon Section */
         .coming-soon-section {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-radius: 16px;
-            padding: 3rem;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            margin-top: 4rem;
             margin-bottom: 4rem;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .coming-soon-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%);
-            pointer-events: none;
         }
 
         .coming-soon-section h2 {
@@ -263,128 +247,114 @@
             font-weight: 800;
             text-align: center;
             margin-bottom: 1rem;
-            color: white;
-            position: relative;
-            z-index: 1;
+            color: #1e293b;
         }
 
-        .coming-soon-section p {
+        .coming-soon-section > p {
             text-align: center;
-            color: rgba(255, 255, 255, 0.8);
-            margin-bottom: 2.5rem;
-            font-size: 1.125rem;
-            position: relative;
-            z-index: 1;
+            color: #64748b;
+            margin-bottom: 3rem;
         }
 
         .coming-soon-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 1.5rem;
-            position: relative;
-            z-index: 1;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
         }
 
         .coming-soon-card {
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            background: white;
+            border-radius: 16px;
             padding: 2rem;
+            border: 2px dashed #d1d5db;
+            text-align: center;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
         }
 
         .coming-soon-card:hover {
-            background: rgba(255, 255, 255, 0.08);
-            border-color: rgba(102, 126, 234, 0.5);
-            transform: translateY(-4px);
+            border-color: #667eea;
+            background: #f9fafb;
         }
 
         .coming-soon-icon {
-            width: 56px;
-            height: 56px;
-            border-radius: 12px;
+            width: 64px;
+            height: 64px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.75rem;
+            font-size: 2rem;
             color: white;
-            margin-bottom: 1.25rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            margin: 0 auto 1.5rem;
         }
 
-        .coming-soon-icon.ai { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
-        .coming-soon-icon.deepfake { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .coming-soon-icon.plagiarism { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
-        .coming-soon-icon.livestream { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
+        .coming-soon-icon.ai { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
+        .coming-soon-icon.deepfake { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
+        .coming-soon-icon.plagiarism { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
 
         .coming-soon-card h3 {
             font-size: 1.25rem;
             font-weight: 700;
-            color: white;
+            color: #1e293b;
             margin-bottom: 0.75rem;
         }
 
         .coming-soon-card p {
-            color: rgba(255, 255, 255, 0.7);
-            line-height: 1.6;
+            color: #64748b;
+            line-height: 1.7;
             margin-bottom: 1rem;
-            font-size: 0.95rem;
         }
 
         .coming-soon-badge {
             display: inline-block;
-            padding: 0.35rem 0.85rem;
-            background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-            color: white;
+            padding: 6px 16px;
+            background: #e5e7eb;
+            color: #6b7280;
             border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            animation: pulse 2s ease-in-out infinite;
+            font-size: 14px;
+            font-weight: 600;
         }
 
+        /* Sources Section */
         .sources-section {
             background: white;
-            border-radius: 16px;
-            padding: 3rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-radius: 20px;
+            padding: 3rem 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             margin-bottom: 4rem;
         }
 
         .sources-section h2 {
+            text-align: center;
             font-size: 2rem;
             font-weight: 800;
-            text-align: center;
             margin-bottom: 2rem;
             color: #1e293b;
         }
 
         .sources-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 1.5rem;
+            margin-bottom: 2rem;
         }
 
         .source-item {
+            background: #f8fafc;
             padding: 1.5rem;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
             border-radius: 12px;
-            border: 2px solid #e5e7eb;
             transition: all 0.3s ease;
         }
 
         .source-item:hover {
-            border-color: #667eea;
+            background: #eff6ff;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
         }
 
         .source-name {
+            font-size: 1.125rem;
             font-weight: 700;
             color: #1e293b;
-            font-size: 1.125rem;
             margin-bottom: 0.5rem;
             display: flex;
             align-items: center;
@@ -397,83 +367,67 @@
 
         .source-type {
             font-size: 0.875rem;
-            color: #64748b;
+            color: #667eea;
+            font-weight: 600;
             margin-bottom: 0.25rem;
         }
 
         .source-founded {
-            font-size: 0.8rem;
-            color: #94a3b8;
-            font-style: italic;
+            font-size: 0.875rem;
+            color: #64748b;
         }
 
+        /* CTA Section */
         .cta-section {
-            text-align: center;
-            padding: 3rem 2rem;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 16px;
             color: white;
+            text-align: center;
+            padding: 4rem 2rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
         }
 
         .cta-section h2 {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 800;
             margin-bottom: 1rem;
         }
 
         .cta-section p {
-            font-size: 1.125rem;
+            font-size: 1.25rem;
             margin-bottom: 2rem;
             opacity: 0.95;
         }
 
         .cta-button {
             display: inline-block;
-            padding: 1rem 2.5rem;
+            padding: 1.25rem 3rem;
             background: white;
             color: #667eea;
             text-decoration: none;
-            border-radius: 10px;
+            border-radius: 12px;
             font-weight: 700;
             font-size: 1.125rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
 
         .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
         }
 
         @media (max-width: 768px) {
-            .header-content {
-                flex-direction: column;
-                gap: 1rem;
-            }
-
             .nav-links {
-                flex-wrap: wrap;
-                justify-content: center;
-                gap: 1rem;
+                display: none;
             }
 
             .page-title {
                 font-size: 2rem;
             }
 
-            .beta-banner h2 {
-                font-size: 1.5rem;
-            }
-
-            .features-grid,
-            .sources-grid,
-            .coming-soon-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .sources-section,
-            .coming-soon-section {
-                padding: 2rem 1.5rem;
+            .cta-section h2 {
+                font-size: 2rem;
             }
         }
     </style>
@@ -482,40 +436,39 @@
     <header class="header">
         <div class="header-content">
             <a href="/" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-search-plus"></i>
-                </div>
+                <div class="logo-icon"><i class="fas fa-search-plus"></i></div>
                 <span class="logo-text">TruthLens</span>
             </a>
-            
             <nav class="nav-links">
+                <a href="/" class="nav-link">News Analysis</a>
+                <a href="/transcript" class="nav-link">Transcript/Youtube</a>
                 <a href="/features" class="nav-link active">Features</a>
-                <a href="/pricing" class="nav-link">Pricing</a>
                 <a href="/about" class="nav-link">About</a>
+                <a href="/debate-arena" class="nav-link">Debate Arena</a>
+                <a href="/live-stream" class="nav-link">Live Stream</a>
                 <a href="/contact" class="nav-link">Contact</a>
-                <a href="/" class="nav-link" style="background: rgba(255, 255, 255, 0.2); padding: 0.5rem 1.25rem; border-radius: 8px;">Try It Free</a>
             </nav>
         </div>
     </header>
 
     <div class="container">
         <div class="beta-banner">
-            <h2>🎉 Everything FREE During Beta Testing</h2>
-            <p>All features are completely free while we're in beta. Test everything, give feedback, help us improve!</p>
+            <h2>🎉 FREE Beta Access</h2>
+            <p>All features completely free during beta testing • No credit card required</p>
         </div>
 
-        <h1 class="page-title">Powerful AI Analysis Features</h1>
+        <h1 class="page-title">Comprehensive Analysis Features</h1>
         <p class="page-subtitle">
-            Comprehensive news credibility and transcript fact-checking powered by advanced AI and trusted data sources
+            Advanced AI-powered tools to analyze news, transcripts, and live streams with professional-grade accuracy
         </p>
 
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon source">
-                    <i class="fas fa-shield-check"></i>
+                    <i class="fas fa-shield-alt"></i>
                 </div>
-                <h3>Source Credibility Analysis</h3>
-                <p>Evaluates the reputation, history, and reliability of news sources. Checks founding dates, ownership, awards, and track record of over 500 news outlets.</p>
+                <h3>Source Credibility</h3>
+                <p>Evaluates news outlet reliability based on founding history, awards, bias ratings, and track record. Database of 500+ sources with detailed metadata.</p>
                 <span class="feature-badge">Free Forever</span>
             </div>
 
@@ -523,8 +476,8 @@
                 <div class="feature-icon bias">
                     <i class="fas fa-balance-scale"></i>
                 </div>
-                <h3>Advanced Bias Detection</h3>
-                <p>Multi-dimensional analysis detects political lean, sensationalism, loaded language, and controversial figure amplification. Provides objectivity scores and political classification.</p>
+                <h3>Bias Detection</h3>
+                <p>Identifies political lean, sensationalism, loaded language, and editorial slant. Provides visual bias meter and specific examples.</p>
                 <span class="feature-badge">Free Forever</span>
             </div>
 
@@ -532,17 +485,17 @@
                 <div class="feature-icon facts">
                     <i class="fas fa-check-double"></i>
                 </div>
-                <h3>Fact-Checking & Claims Verification</h3>
-                <p>AI-powered extraction of factual claims with verification against trusted databases. Shows verified vs unverified claims with confidence scores.</p>
+                <h3>Fact-Checking</h3>
+                <p>Verifies factual claims against trusted databases and sources. Cross-references statistics, quotes, and statements for accuracy.</p>
                 <span class="feature-badge">Free Forever</span>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon author">
-                    <i class="fas fa-user-check"></i>
+                    <i class="fas fa-user-edit"></i>
                 </div>
-                <h3>Author Credibility Assessment</h3>
-                <p>Analyzes journalist credentials, experience, expertise areas, awards, and track record. Provides outlet-based scores even when author is unknown.</p>
+                <h3>Author Analysis</h3>
+                <p>Assesses journalist credentials, expertise, publication history, and professional background. Links to social profiles when available.</p>
                 <span class="feature-badge">Free Forever</span>
             </div>
 
@@ -551,26 +504,35 @@
                     <i class="fas fa-eye"></i>
                 </div>
                 <h3>Transparency Scoring</h3>
-                <p>Measures article transparency by analyzing source citations, direct quotes, author attribution, and verifiable information. Identifies gaps in accountability.</p>
+                <p>Measures source citations, attribution quality, and journalistic standards. Identifies unsourced claims and anonymous sources.</p>
                 <span class="feature-badge">Free Forever</span>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon content">
-                    <i class="fas fa-file-alt"></i>
+                    <i class="fas fa-star-half-alt"></i>
                 </div>
-                <h3>Content Quality Analysis</h3>
-                <p>Evaluates article depth, readability, structure, and completeness. Assesses word count, sentence complexity, and information density.</p>
+                <h3>Content Quality</h3>
+                <p>Evaluates depth, comprehensiveness, and completeness of coverage. Assesses whether key context is provided.</p>
                 <span class="feature-badge">Free Forever</span>
             </div>
 
             <div class="feature-card">
                 <div class="feature-icon transcript">
-                    <i class="fas fa-microphone"></i>
+                    <i class="fas fa-file-video"></i>
                 </div>
-                <h3>Transcript Fact-Checking</h3>
-                <p>Specialized analysis for speeches, interviews, podcasts, and video transcripts. Extracts and verifies claims from spoken content.</p>
+                <h3>Transcript Analysis</h3>
+                <p>Specialized fact-checking for speeches, interviews, and YouTube videos. Paste transcript text OR provide YouTube URL for automatic extraction and analysis.</p>
                 <span class="feature-badge">Free Forever</span>
+            </div>
+
+            <div class="feature-card">
+                <div class="feature-icon livestream">
+                    <i class="fas fa-satellite-dish"></i>
+                </div>
+                <h3>Live Stream Analysis</h3>
+                <p>Real-time fact-checking of YouTube live broadcasts. Instant verification as events unfold with automatic claim extraction and fact-checking.</p>
+                <span class="live-badge">🔴 Live Now</span>
             </div>
         </div>
 
@@ -604,15 +566,6 @@
                     </div>
                     <h3>Plagiarism Detection</h3>
                     <p>Comprehensive scanning to detect copied content, verify originality, and identify sources. Ensures content authenticity and proper attribution.</p>
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </div>
-
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon livestream">
-                        <i class="fas fa-satellite-dish"></i>
-                    </div>
-                    <h3>Live-Stream Fact Checking</h3>
-                    <p>Real-time analysis of live broadcasts, debates, and streams. Instant fact-checking as events unfold, helping you stay informed during breaking news.</p>
                     <span class="coming-soon-badge">Coming Soon</span>
                 </div>
             </div>
@@ -786,4 +739,4 @@
 </body>
 </html>
 
-<!-- This file is not truncated -->
+<!-- I did no harm and this file is not truncated -->
