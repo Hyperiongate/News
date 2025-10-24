@@ -2,24 +2,31 @@
 <html lang="en">
 <head>
     <!-- 
-    TruthLens Enhanced Index.html
-    Version: 4.7.0 - YOUTUBE URL SUPPORT IN TRANSCRIPT TAB
-    Date: October 23, 2025
+    TruthLens News Analysis Page (Separated)
+    Version: 5.0.0 - SEPARATED PAGES ARCHITECTURE
+    Date: October 24, 2025
     
-    CHANGES FROM 4.6.0:
-    - ADDED: YouTube URL support in Transcript tab textarea
-    - ADDED: Auto-detection of YouTube URLs with routing to ScrapingBee endpoint
-    - ADDED: YouTube hint box below transcript textarea
-    - UPDATED: "How to Use" instructions to explain YouTube URL feature
-    - PRESERVED: All v4.6.0 functionality (DO NO HARM ✓)
+    CHANGES FROM 4.7.0:
+    - MAJOR: Removed Transcript tab - now separate page at /transcript
+    - MAJOR: This page is now News Analysis ONLY
+    - ADDED: Navigation link to Transcript Analysis page
+    - REMOVED: Mode switching functionality
+    - REMOVED: Transcript-related HTML and JavaScript
+    - PRESERVED: All News Analysis functionality (DO NO HARM ✓)
+    - SIMPLIFIED: Single-purpose page with cleaner architecture
+    
+    ARCHITECTURAL CHANGE:
+    - Old: index.html had both News + Transcript tabs
+    - New: index.html = News only, transcript.html = Transcript only
+    - Navigation: Links between pages for seamless user experience
     
     This file is complete and ready to deploy.
-    Last modified: October 23, 2025 - Added YouTube URL support to transcript tab
+    Last modified: October 24, 2025 - Separated into distinct pages
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens - AI-Powered News & Transcript Analysis</title>
-    <meta name="description" content="Professional AI analysis for news credibility and transcript fact-checking using 7 advanced services.">
+    <title>TruthLens - AI-Powered News Credibility Analysis</title>
+    <meta name="description" content="Professional AI analysis for news credibility using 7 advanced services.">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/static/images/favicon.png">
@@ -43,7 +50,7 @@
     
     <!-- Enhanced Styles -->
     <style>
-        /* v4.3.0 Color Enhancements */
+        /* v5.0.0 - Simplified for News-Only Page */
         :root {
             --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -52,7 +59,7 @@
             --gradient-red: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
-        /* Hero Section - More Subtle */
+        /* Hero Section */
         .section-header-compact {
             text-align: center;
             padding: 20px 20px 10px;
@@ -69,7 +76,7 @@
             color: #6b7280 !important;
         }
 
-        /* Capabilities Badges - More Colorful */
+        /* Capabilities Badges */
         .capabilities-showcase {
             display: flex;
             justify-content: center;
@@ -107,54 +114,42 @@
             box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
         }
 
-        /* Mode Selector - Colorful Tabs */
-        .mode-selector {
+        /* NEW v5.0.0: Navigation to Transcript Page */
+        .page-navigation {
             display: flex;
+            justify-content: center;
             gap: 12px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             padding: 0 20px;
         }
 
-        .mode-tab {
-            flex: 1;
+        .nav-link-button {
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 6px;
-            padding: 16px;
-            background: #f3f4f6;
-            border: 2px solid transparent;
-            border-radius: 12px;
+            gap: 8px;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
             font-size: 14px;
             font-weight: 600;
-            color: #6b7280;
+            text-decoration: none;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
 
-        .mode-tab i {
-            font-size: 24px;
-        }
-
-        .mode-tab:hover {
+        .nav-link-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
         }
 
-        .mode-tab.active {
-            background: var(--gradient-blue);
-            color: white;
-            border-color: #3b82f6;
-            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        .nav-link-button i {
+            font-size: 16px;
         }
 
-        .mode-tab[data-mode="transcript"].active {
-            background: var(--gradient-purple);
-            border-color: #667eea;
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        }
-
-        /* Mode Description - Cleaner */
+        /* Mode Description */
         .mode-description-compact {
             background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
             border-left: 4px solid #3b82f6;
@@ -170,1256 +165,333 @@
             color: #3b82f6;
         }
 
-        #transcript-mode .mode-description-compact {
-            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-            border-left-color: #8b5cf6;
-            color: #5b21b6;
+        /* Analysis Container */
+        .analysis-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 20px 40px;
         }
 
-        #transcript-mode .mode-description-compact i {
-            color: #8b5cf6;
+        /* Input Section */
+        .input-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
         }
 
-        /* Help Dropdowns for Transcript Tab */
-        .help-dropdowns-container {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
+        .input-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        textarea.input-field {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .analyze-button {
+            width: 100%;
+            padding: 14px;
+            background: var(--gradient-blue);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 16px;
+        }
+
+        .analyze-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .analyze-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Progress Section */
+        .progress-section {
+            display: none;
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        /* Results Section */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        /* Service Cards */
+        .service-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
             margin-bottom: 20px;
         }
 
-        .help-dropdown {
-            background: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .help-dropdown:hover {
-            border-color: #8b5cf6;
-            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.15);
-        }
-
-        .help-dropdown-header {
+        .service-card-header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 14px 18px;
-            cursor: pointer;
-            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-            transition: all 0.3s ease;
-        }
-
-        .help-dropdown:hover .help-dropdown-header {
-            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-        }
-
-        .help-dropdown.open .help-dropdown-header {
-            background: var(--gradient-purple);
-            color: white;
-        }
-
-        .help-dropdown-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .help-dropdown.open .help-dropdown-title {
-            color: white;
-        }
-
-        .help-dropdown-title i {
-            font-size: 16px;
-            color: #8b5cf6;
-        }
-
-        .help-dropdown.open .help-dropdown-title i {
-            color: white;
-        }
-
-        .help-dropdown-icon {
-            font-size: 14px;
-            color: #6b7280;
-            transition: transform 0.3s ease;
-        }
-
-        .help-dropdown.open .help-dropdown-icon {
-            transform: rotate(180deg);
-            color: white;
-        }
-
-        .help-dropdown-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .help-dropdown.open .help-dropdown-content {
-            max-height: 1000px;
-        }
-
-        .help-dropdown-body {
-            padding: 18px;
-            background: white;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #374151;
-        }
-
-        .help-dropdown-body h4 {
-            font-size: 13px;
-            font-weight: 700;
-            color: #8b5cf6;
-            margin: 0 0 10px 0;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .help-dropdown-body ol,
-        .help-dropdown-body ul {
-            margin: 10px 0;
-            padding-left: 20px;
-        }
-
-        .help-dropdown-body li {
-            margin-bottom: 8px;
-            line-height: 1.5;
-        }
-
-        .help-dropdown-body strong {
-            color: #6b5cf6;
-            font-weight: 600;
-        }
-
-        .help-section {
+            gap: 12px;
             margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid #f3f4f6;
         }
 
-        .help-section:last-child {
-            margin-bottom: 0;
-        }
-
-        /* Source Links Styling */
-        .source-links-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 12px;
-            margin-top: 12px;
-        }
-
-        .source-link-card {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 12px;
-            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-        }
-
-        .source-link-card:hover {
-            border-color: #8b5cf6;
-            background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
-        }
-
-        .source-link-icon {
-            font-size: 20px;
-            color: #8b5cf6;
-            flex-shrink: 0;
-        }
-
-        .source-link-content {
-            flex: 1;
-        }
-
-        .source-link-title {
-            font-size: 13px;
-            font-weight: 700;
-            color: #374151;
-            margin-bottom: 4px;
-        }
-
-        .source-link-card:hover .source-link-title {
-            color: #6b5cf6;
-        }
-
-        .source-link-desc {
-            font-size: 12px;
-            color: #6b7280;
-            line-height: 1.4;
-        }
-
-        .source-link-arrow {
-            font-size: 14px;
-            color: #9ca3af;
-            flex-shrink: 0;
-        }
-
-        .source-link-card:hover .source-link-arrow {
-            color: #8b5cf6;
-            transform: translateX(2px);
-        }
-
-        /* Analyze Button - Gradient */
-        .analyze-button {
-            background: var(--gradient-purple) !important;
-            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4) !important;
-        }
-
-        .analyze-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5) !important;
-        }
-
-        /* Progress Bar - Colorful */
-        .progress-bar {
-            background: var(--gradient-purple) !important;
-        }
-
-        /* Results Mode Badge - Colorful */
-        .analysis-mode-badge {
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .analysis-mode-badge.news {
+        .service-icon {
+            width: 48px;
+            height: 48px;
             background: var(--gradient-blue);
-            color: white;
-        }
-
-        .analysis-mode-badge.transcript {
-            background: var(--gradient-purple);
-            color: white;
-        }
-
-        /* Trust Score - Enhanced Colors */
-        .trust-score-big.high {
-            background: var(--gradient-green);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .trust-label-badge.high {
-            background: var(--gradient-green);
-            color: white;
-        }
-
-        /* Contribution Bars - More Vibrant */
-        .contribution-source {
-            background: var(--gradient-blue) !important;
-        }
-
-        .contribution-bias {
-            background: var(--gradient-orange) !important;
-        }
-
-        .contribution-author {
-            background: var(--gradient-purple) !important;
-        }
-
-        .contribution-facts {
-            background: var(--gradient-green) !important;
-        }
-
-        .contribution-transparency {
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
-        }
-
-        /* NEW v4.5.2: Manipulation detector bar styling */
-        .contribution-manipulation {
-            background: var(--gradient-red) !important;
-        }
-
-        .contribution-content {
-            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%) !important;
-        }
-
-        /* PDF Download Button */
-        .pdf-download-button {
-            display: inline-flex;
+            border-radius: 12px;
+            display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            justify-content: center;
             color: white;
-            border: none;
-            border-radius: 10px;
-            font-size: 15px;
+            font-size: 24px;
+        }
+
+        .service-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+        }
+
+        /* Trust Score Display */
+        .trust-score-container {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
+
+        .trust-score-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .trust-score-circle {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 800;
+            color: white;
+            position: relative;
+        }
+
+        .trust-score-label {
+            font-size: 18px;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            margin-left: 16px;
+            color: #374151;
         }
 
-        .pdf-download-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-        }
-
-        .pdf-download-button:active {
-            transform: translateY(0);
-        }
-
-        .pdf-download-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .pdf-download-button i {
-            font-size: 16px;
-        }
-
-        /* Responsive PDF Button */
+        /* Responsive Design */
         @media (max-width: 768px) {
-            .pdf-download-button {
-                margin-left: 0;
-                margin-top: 12px;
-                width: 100%;
-                justify-content: center;
+            .main-title-compact {
+                font-size: 24px !important;
             }
 
-            .results-header {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
-
-        /* Responsive */
-        @media (max-width: 768px) {
-            .mode-selector {
-                flex-direction: column;
-            }
-            
             .capabilities-showcase {
-                justify-content: center;
+                gap: 8px;
             }
 
-            .source-links-grid {
-                grid-template-columns: 1fr;
+            .capability-badge {
+                padding: 6px 12px;
+                font-size: 12px;
+            }
+
+            .analysis-container {
+                padding: 0 15px 30px;
             }
         }
     </style>
 </head>
 <body>
-<!--
-  ADD THIS HTML TO templates/index.html
-  INSERT RIGHT AFTER the <body> tag (before the header)
-  This creates the new fixed progress bar at the top of the viewport
--->
-
-<!-- Enhanced Progress Bar - Fixed at Top -->
-<div class="progress-container-fixed" id="progressContainerFixed">
-    <div class="progress-inner">
-        <div class="progress-header-enhanced">
-            <div class="progress-title-enhanced">
-                <div class="progress-spinner"></div>
-                <span>Analyzing Content</span>
-            </div>
-            <div class="progress-percentage-enhanced" id="progressPercentageFixed">0%</div>
+    <div class="analysis-container">
+        <!-- Header Section -->
+        <div class="section-header-compact">
+            <h1 class="main-title-compact">
+                AI-Powered <span style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Truth Analysis</span>
+            </h1>
+            <p class="subtitle-compact">Analyze news from Reuters, AP, NYT, BBC, and 500+ sources with 7 advanced AI services</p>
         </div>
 
-        <!-- Dynamic Rotating Message -->
-        <div class="progress-message" id="progressMessage">
-            <i class="fas fa-info-circle"></i>
-            <span id="progressMessageText">Starting analysis...</span>
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="progress-bar-container-enhanced">
-            <div class="progress-bar-fill" id="progressBarFill"></div>
-        </div>
-
-        <!-- Enhanced Steps with Icons -->
-        <div class="progress-steps-enhanced" id="progressStepsEnhanced">
-            <div class="progress-step-enhanced" data-step="0">
-                <div class="step-icon-enhanced"><i class="fas fa-file-text"></i></div>
-                <div class="step-text-enhanced">Extracting</div>
+        <!-- Capabilities Badges -->
+        <div class="capabilities-showcase">
+            <div class="capability-badge">
+                <i class="fas fa-robot"></i>
+                <span>7 AI Services</span>
             </div>
-            <div class="progress-step-enhanced" data-step="1">
-                <div class="step-icon-enhanced"><i class="fas fa-globe"></i></div>
-                <div class="step-text-enhanced">Source</div>
+            <div class="capability-badge">
+                <i class="fas fa-newspaper"></i>
+                <span>500+ News Sources</span>
             </div>
-            <div class="progress-step-enhanced" data-step="2">
-                <div class="step-icon-enhanced"><i class="fas fa-balance-scale"></i></div>
-                <div class="step-text-enhanced">Bias</div>
+            <div class="capability-badge">
+                <i class="fas fa-clock"></i>
+                <span>Real-Time Analysis</span>
             </div>
-            <div class="progress-step-enhanced" data-step="3">
-                <div class="step-icon-enhanced"><i class="fas fa-check-circle"></i></div>
-                <div class="step-text-enhanced">Facts</div>
-            </div>
-            <div class="progress-step-enhanced" data-step="4">
-                <div class="step-icon-enhanced"><i class="fas fa-user"></i></div>
-                <div class="step-text-enhanced">Author</div>
-            </div>
-            <div class="progress-step-enhanced" data-step="5">
-                <div class="step-icon-enhanced"><i class="fas fa-flag-checkered"></i></div>
-                <div class="step-text-enhanced">Final</div>
+            <div class="capability-badge">
+                <i class="fas fa-check-circle"></i>
+                <span>Fact-Checked</span>
             </div>
         </div>
 
-        <!-- Fun Facts Section -->
-        <div class="fun-facts-section" id="funFactsSection">
-            <div class="fun-fact" id="funFact">
-                <i class="fas fa-lightbulb"></i>
-                <span id="funFactText">Did you know? Our AI analyzes 7 different aspects of credibility...</span>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Backdrop Overlay -->
-<div class="loading-overlay-backdrop" id="loadingBackdrop"></div>
-
-<!--
-  INSTRUCTIONS:
-  1. Open templates/index.html
-  2. Find the <body> tag (around line 55-60)
-  3. Paste this entire HTML block RIGHT AFTER <body>
-  4. Keep the existing progress-container (around line 842) - it won't interfere
-  5. Save the file
--->
-    <!-- Compact Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-search-plus"></i>
-                </div>
-                <span class="logo-text">TruthLens</span>
+        <!-- NEW v5.0.0: Navigation to Transcript Analysis -->
+        <div class="page-navigation">
+            <a href="/transcript" class="nav-link-button">
+                <i class="fas fa-microphone"></i>
+                <span>Switch to Transcript Analysis</span>
             </a>
-            
-            <nav class="nav-links">
-                <a href="/features" class="nav-link">Features</a>
-                <a href="/pricing" class="nav-link">Pricing</a>
-                <a href="/about" class="nav-link">About</a>
-                <a href="/debate-arena" class="nav-link">Debate Arena</a>
-                <a href="/live-stream" class="nav-link">Live Stream</a>
-                <a href="/contact" class="nav-link">Contact</a>
-                <a href="#upgrade" class="cta-button">Upgrade to Pro</a>
-            </nav>
         </div>
-    </header>
 
-    <!-- Main Content -->
-    <main class="main-container">
-        <!-- Compact Analysis Section -->
-        <section class="analysis-section">
-            <!-- Compact Hero -->
-            <div class="section-header-compact">
-                <h1 class="main-title-compact">
-                    AI-Powered <span class="gradient-text">Truth Analysis</span>
-                </h1>
-                <p class="subtitle-compact">
-                    Analyze news from Reuters, AP, NYT, BBC, and 500+ sources with 7 advanced AI services
-                </p>
+        <!-- Mode Description -->
+        <div class="mode-description-compact">
+            <i class="fas fa-newspaper"></i>
+            Comprehensive news credibility analysis with source verification, bias detection, and fact-checking
+        </div>
+
+        <!-- Input Section -->
+        <div class="input-section">
+            <label class="input-label" for="article-url">
+                <i class="fas fa-link"></i> Article URL
+            </label>
+            <input 
+                type="url" 
+                id="article-url" 
+                class="input-field" 
+                placeholder="https://example.com/article"
+            >
+            
+            <div style="margin: 16px 0; text-align: center; color: #6b7280; font-size: 14px;">
+                <span>— OR —</span>
             </div>
+            
+            <label class="input-label" for="article-text">
+                <i class="fas fa-align-left"></i> Article Text
+            </label>
+            <textarea 
+                id="article-text" 
+                class="input-field" 
+                placeholder="Paste article text here..."
+            ></textarea>
 
-            <!-- Capabilities Showcase -->
-            <div class="capabilities-showcase">
-                <div class="capability-badge">
-                    <i class="fas fa-database"></i>
-                    <span>7 AI Services</span>
-                </div>
-                <div class="capability-badge">
-                    <i class="fas fa-newspaper"></i>
-                    <span>500+ News Sources</span>
-                </div>
-                <div class="capability-badge">
-                    <i class="fas fa-chart-line"></i>
-                    <span>Real-Time Analysis</span>
-                </div>
-                <div class="capability-badge">
-                    <i class="fas fa-shield-check"></i>
-                    <span>Fact-Checked</span>
-                </div>
-            </div>
-
-            <!-- Mode Selector -->
-            <div class="mode-selector">
-                <button class="mode-tab active" data-mode="news" onclick="switchMode('news')">
-                    <i class="fas fa-newspaper"></i>
-                    <span>News Analysis</span>
-                </button>
-                <button class="mode-tab" data-mode="transcript" onclick="switchMode('transcript')">
-                    <i class="fas fa-microphone"></i>
-                    <span>Transcript Analysis</span>
-                </button>
-            </div>
-
-            <!-- News Analysis Mode -->
-            <div class="mode-content active" id="news-mode">
-                <div class="mode-description-compact">
-                    <p>
-                        <i class="fas fa-newspaper"></i>
-                        Comprehensive news credibility analysis with source verification, bias detection, and fact-checking
-                    </p>
-                </div>
-
-                <form class="input-form" id="newsForm">
-                    <div class="input-group">
-                        <label class="input-label" for="newsUrlInput">
-                            <i class="fas fa-link"></i> Article URL
-                        </label>
-                        <input 
-                            type="url" 
-                            id="newsUrlInput" 
-                            class="input-field" 
-                            placeholder="https://example.com/news-article"
-                        >
-                        <div class="content-type-indicator" id="newsTypeIndicator">NEWS</div>
-                    </div>
-
-                    <div class="extraction-blocked-message" id="newsBlockedMessage">
-                        <div class="blocked-header">
-                            <div class="blocked-icon">
-                                <i class="fas fa-lock"></i>
-                            </div>
-                            <h3 class="blocked-title">Website Blocking Extraction</h3>
-                        </div>
-                        <div class="blocked-message" id="newsBlockedText">
-                            This website is blocking automated access.
-                        </div>
-                        <div class="blocked-action">
-                            <div class="blocked-action-title">
-                                <i class="fas fa-arrow-down"></i>
-                                What to do:
-                            </div>
-                            <div class="blocked-action-text">
-                                Copy the article text from your browser and paste it in the text box below, then click "Analyze Article" again.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label class="input-label" for="newsTextInput">
-                            <i class="fas fa-file-text"></i> Or Paste Article Text
-                        </label>
-                        <textarea 
-                            id="newsTextInput" 
-                            class="input-field textarea-field" 
-                            placeholder="Paste article text here for analysis..."
-                        ></textarea>
-                        <div class="content-type-indicator" id="newsTextTypeIndicator">TEXT</div>
-                    </div>
-
-                    <div class="button-container">
-                        <button type="submit" class="analyze-button" id="newsAnalyzeBtn">
-                            <div class="button-content">
-                                <span class="button-text">
-                                    <i class="fas fa-search"></i>
-                                    Analyze Article
-                                </span>
-                            </div>
-                        </button>
-                        <button type="button" class="reset-button" onclick="resetForm('news')">
-                            <i class="fas fa-redo"></i>
-                            Reset
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Transcript Analysis Mode -->
-            <div class="mode-content" id="transcript-mode">
-                <div class="mode-description-compact">
-                    <p>
-                        <i class="fas fa-microphone"></i>
-                        In-depth transcript fact-checking with claim extraction and verification
-                    </p>
-                </div>
-
-                <!-- Help Dropdowns -->
-                <div class="help-dropdowns-container">
-                    <!-- How to Use This App Dropdown -->
-                    <div class="help-dropdown" id="howToUseDropdown">
-                        <div class="help-dropdown-header" onclick="toggleHelpDropdown('howToUseDropdown')">
-                            <div class="help-dropdown-title">
-                                <i class="fas fa-question-circle"></i>
-                                <span>How to Use This App</span>
-                            </div>
-                            <i class="fas fa-chevron-down help-dropdown-icon"></i>
-                        </div>
-                        <div class="help-dropdown-content">
-                            <div class="help-dropdown-body">
-                                <div class="help-section">
-                                    <h4>📝 Two Ways to Analyze</h4>
-                                    <div style="margin-bottom: 20px;">
-                                        <h5 style="color: #3b82f6; margin-bottom: 8px;">
-                                            <i class="fab fa-youtube"></i> Option 1: YouTube URL (Automatic)
-                                        </h5>
-                                        <ol>
-                                            <li><strong>Copy any YouTube video URL</strong> (e.g., https://youtube.com/watch?v=...)</li>
-                                            <li><strong>Paste the URL</strong> into the text area below</li>
-                                            <li><strong>Click "Analyze Transcript"</strong> - we'll automatically extract the transcript!</li>
-                                            <li><strong>Review the results</strong> with AI-powered fact-checking</li>
-                                        </ol>
-                                        <p style="font-size: 13px; color: #6b7280; margin-top: 8px; font-style: italic;">
-                                            <i class="fas fa-magic"></i> Our system uses ScrapingBee to extract transcripts from any completed YouTube video (no length limit!)
-                                        </p>
-                                    </div>
-                                    
-                                    <div>
-                                        <h5 style="color: #8b5cf6; margin-bottom: 8px;">
-                                            <i class="fas fa-edit"></i> Option 2: Manual Text Paste
-                                        </h5>
-                                        <ol>
-                                            <li><strong>Find a transcript</strong> from a speech, interview, podcast, or video (see sources below)</li>
-                                            <li><strong>Copy the transcript text</strong> to your clipboard</li>
-                                            <li><strong>Paste the text</strong> into the text area below</li>
-                                            <li><strong>Click "Analyze Transcript"</strong> to start the AI analysis</li>
-                                            <li><strong>Review the results</strong> - you'll get credibility scores, bias detection, fact-checking, and more</li>
-                                        </ol>
-                                    </div>
-                                </div>
-
-                                <div class="help-section">
-                                    <h4>What Gets Analyzed</h4>
-                                    <ul>
-                                        <li><strong>Factual Claims:</strong> AI extracts and verifies specific claims made in the transcript</li>
-                                        <li><strong>Content Credibility:</strong> Evaluates the overall trustworthiness of statements</li>
-                                        <li><strong>Bias Detection:</strong> Identifies potential bias in language and framing</li>
-                                        <li><strong>Transparency:</strong> Assesses clarity and honesty of communication</li>
-                                    </ul>
-                                </div>
-
-                                <div class="help-section">
-                                    <h4>Tips for Best Results</h4>
-                                    <ul>
-                                        <li>Use complete transcripts (not partial snippets)</li>
-                                        <li>Include speaker names/timestamps if available</li>
-                                        <li>Longer transcripts (500+ words) provide more comprehensive analysis</li>
-                                        <li>Clean text works best - remove excessive formatting</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Sources of Transcripts Dropdown -->
-                    <div class="help-dropdown" id="sourcesDropdown">
-                        <div class="help-dropdown-header" onclick="toggleHelpDropdown('sourcesDropdown')">
-                            <div class="help-dropdown-title">
-                                <i class="fas fa-link"></i>
-                                <span>Sources of Transcripts</span>
-                            </div>
-                            <i class="fas fa-chevron-down help-dropdown-icon"></i>
-                        </div>
-                        <div class="help-dropdown-content">
-                            <div class="help-dropdown-body">
-                                <div class="help-section">
-                                    <h4>Government & Official Sources</h4>
-                                    <div class="source-links-grid">
-                                        <a href="https://www.whitehouse.gov/briefing-room/speeches-remarks/" target="_blank" class="source-link-card">
-                                            <i class="fas fa-landmark source-link-icon"></i>
-                                            <div class="source-link-content">
-                                                <div class="source-link-title">White House</div>
-                                                <div class="source-link-desc">Presidential speeches & remarks</div>
-                                            </div>
-                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
-                                        </a>
-                                        <a href="https://www.c-span.org/" target="_blank" class="source-link-card">
-                                            <i class="fas fa-tv source-link-icon"></i>
-                                            <div class="source-link-content">
-                                                <div class="source-link-title">C-SPAN</div>
-                                                <div class="source-link-desc">Congress & political speeches</div>
-                                            </div>
-                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
-                                        </a>
-                                        <a href="https://www.congress.gov/" target="_blank" class="source-link-card">
-                                            <i class="fas fa-balance-scale source-link-icon"></i>
-                                            <div class="source-link-content">
-                                                <div class="source-link-title">Congress.gov</div>
-                                                <div class="source-link-desc">Congressional hearings</div>
-                                            </div>
-                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
-                                        </a>
-                                        <a href="https://www.supremecourt.gov/oral_arguments/" target="_blank" class="source-link-card">
-                                            <i class="fas fa-gavel source-link-icon"></i>
-                                            <div class="source-link-content">
-                                                <div class="source-link-title">Supreme Court</div>
-                                                <div class="source-link-desc">Oral arguments transcripts</div>
-                                            </div>
-                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
-                                        </a>
-                                    </div>
-                                </div>
-
-                                <div class="help-section">
-                                    <h4>News & Media Transcripts</h4>
-                                    <div class="source-links-grid">
-                                        <a href="https://www.rev.com/blog/transcripts" target="_blank" class="source-link-card">
-                                            <i class="fas fa-file-alt source-link-icon"></i>
-                                            <div class="source-link-content">
-                                                <div class="source-link-title">Rev Transcripts</div>
-                                                <div class="source-link-desc">Public speeches & debates</div>
-                                            </div>
-                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
-                                        </a>
-                                        <a href="http://transcripts.cnn.com/" target="_blank" class="source-link-card">
-                                            <i class="fas fa-broadcast-tower source-link-icon"></i>
-                                            <div class="source-link-content">
-                                                <div class="source-link-title">CNN Transcripts</div>
-                                                <div class="source-link-desc">TV news show transcripts</div>
-                                            </div>
-                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
-                                        </a>
-                                        <a href="https://www.npr.org/" target="_blank" class="source-link-card">
-                                            <i class="fas fa-microphone-alt source-link-icon"></i>
-                                            <div class="source-link-content">
-                                                <div class="source-link-title">NPR</div>
-                                                <div class="source-link-desc">Radio stories with transcripts</div>
-                                            </div>
-                                            <i class="fas fa-external-link-alt source-link-arrow"></i>
-                                        </a>
-                                    </div>
-                                </div>
-
-                                <div class="help-section">
-                                    <h4>How to Get YouTube Transcripts</h4>
-                                    <ol>
-                                        <li>Open any <strong>YouTube video</strong> in your browser</li>
-                                        <li>Click the <strong>"..." (more)</strong> button below the video</li>
-                                        <li>Select <strong>"Show transcript"</strong> from the menu</li>
-                                        <li><strong>Copy all the text</strong> from the transcript panel</li>
-                                        <li><strong>Paste it</strong> into the text area above</li>
-                                    </ol>
-                                    <p style="margin-top: 10px; font-style: italic; color: #6b7280;">
-                                        <i class="fas fa-info-circle"></i> Not all videos have transcripts. If you don't see the option, the creator hasn't enabled it.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <form class="input-form" id="transcriptForm">
-                    <div class="input-group">
-                        <label class="input-label" for="transcriptTextInput">
-                            <i class="fas fa-microphone"></i> Paste Transcript Text OR YouTube URL
-                        </label>
-                        <textarea 
-                            id="transcriptTextInput" 
-                            class="input-field textarea-field transcript-textarea" 
-                            placeholder="Paste transcript text OR YouTube video URL...
-
-Examples:
-• https://youtube.com/watch?v=dQw4w9WgXcQ
-• https://youtu.be/dQw4w9WgXcQ
-• Or paste any speech/interview transcript text"
-                            style="min-height: 250px;"
-                        ></textarea>
-                        <div class="content-type-indicator" id="transcriptTextTypeIndicator">TRANSCRIPT</div>
-                        
-                        <!-- YouTube Hint Box -->
-                        <div style="margin-top: 12px; padding: 12px 16px; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-left: 4px solid #3b82f6; border-radius: 8px; display: flex; align-items: start; gap: 12px;">
-                            <i class="fab fa-youtube" style="color: #3b82f6; font-size: 24px; margin-top: 2px;"></i>
-                            <div style="flex: 1;">
-                                <div style="font-weight: 600; color: #1e40af; margin-bottom: 4px; font-size: 14px;">
-                                    <i class="fas fa-magic"></i> YouTube URLs Accepted!
-                                </div>
-                                <div style="color: #1e40af; font-size: 13px; line-height: 1.5;">
-                                    Paste any YouTube video URL and we'll automatically extract the transcript using our ScrapingBee-powered system. Works on videos of any length (no 30-minute limit). Only completed videos supported - not live streams.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="button-container">
-                        <button type="submit" class="analyze-button" id="transcriptAnalyzeBtn">
-                            <div class="button-content">
-                                <span class="button-text">
-                                    <i class="fas fa-search"></i>
-                                    Analyze Transcript
-                                </span>
-                            </div>
-                        </button>
-                        <button type="button" class="reset-button" onclick="resetForm('transcript')">
-                            <i class="fas fa-redo"></i>
-                            Reset
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Progress Container -->
-            <div class="progress-container" id="progressContainer">
-                <div class="progress-header">
-                    <h3 class="progress-title">Analyzing Content...</h3>
-                    <p class="progress-subtitle">Our AI is examining multiple factors</p>
-                </div>
-                
-                <div class="progress-percentage" id="progressPercentage">0%</div>
-                
-                <div class="progress-bar-container">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                
-                <div class="progress-steps" id="progressSteps">
-                    <div class="progress-step" data-step="0">
-                        <div class="step-icon">1</div>
-                        <div class="step-text">Extracting</div>
-                    </div>
-                    <div class="progress-step" data-step="1">
-                        <div class="step-icon">2</div>
-                        <div class="step-text">Source</div>
-                    </div>
-                    <div class="progress-step" data-step="2">
-                        <div class="step-icon">3</div>
-                        <div class="step-text">Bias</div>
-                    </div>
-                    <div class="progress-step" data-step="3">
-                        <div class="step-icon">4</div>
-                        <div class="step-text">Facts</div>
-                    </div>
-                    <div class="progress-step" data-step="4">
-                        <div class="step-icon">5</div>
-                        <div class="step-text">Author</div>
-                    </div>
-                    <div class="progress-step" data-step="5">
-                        <div class="step-icon">6</div>
-                        <div class="step-text">Final</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Results Section -->
-            <div class="results-section" id="resultsSection">
-                <div class="results-header">
-                    <h2 class="results-title">Analysis Complete</h2>
-                    <div class="analysis-mode-badge" id="analysisModeBadge">News</div>
-                    <!-- PDF Download Button -->
-                    <button class="pdf-download-button" id="pdfDownloadBtn" onclick="downloadPDFReport()">
-                        <i class="fas fa-download"></i>
-                        <span>Download PDF Report</span>
-                    </button>
-                </div>
-
-                <!-- Enhanced Analysis Overview -->
-                <div class="enhanced-analysis-overview" id="enhancedAnalysisOverview">
-                    <!-- Trust score and breakdown will be populated dynamically -->
-                </div>
-
-                <!-- Service Analysis Dropdowns Container -->
-                <div id="serviceAnalysisContainer">
-                    <!-- Service dropdowns will be dynamically inserted here -->
-                </div>
-
-                <!-- Source/Content Information -->
-                <div class="source-info-section" id="sourceInfoSection">
-                    <!-- Mode-specific source information will be shown here -->
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <!-- Error Message -->
-    <div id="errorMessage" class="error-message" style="display: none;">
-        <div class="error-content">
-            <div class="error-icon">
-                <i class="fas fa-exclamation-triangle"></i>
-            </div>
-            <div class="error-text" id="errorText">An error occurred</div>
-            <button class="error-close" onclick="document.getElementById('errorMessage').classList.remove('active');">
-                <i class="fas fa-times"></i>
+            <button id="analyze-btn" class="analyze-button" onclick="startAnalysis()">
+                <i class="fas fa-search"></i> Analyze Article
             </button>
         </div>
-    </div>
 
-    <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay" style="display: none;">
-        <div class="loading-content">
-            <div class="loading-spinner">
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
-                <div class="spinner-ring"></div>
+        <!-- Progress Section -->
+        <div id="progress-section" class="progress-section">
+            <div class="progress-header">
+                <h3><i class="fas fa-spinner fa-spin"></i> Analyzing...</h3>
+                <p id="progress-message">Initializing analysis...</p>
             </div>
-            <h3 class="loading-title">Analyzing Content...</h3>
-            <p class="loading-subtitle">Processing through AI analysis pipeline</p>
+            <div class="progress-bar-container">
+                <div id="progress-bar" class="progress-bar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section" class="results-section">
+            <!-- Trust Score Container -->
+            <div id="trust-score-container" class="trust-score-container" style="display: none;">
+                <!-- Trust score will be dynamically inserted here -->
+            </div>
+
+            <!-- Service Results Container -->
+            <div id="service-results">
+                <!-- Service cards will be dynamically inserted here -->
+            </div>
         </div>
     </div>
 
-    <!-- Load JavaScript files in correct order -->
+    <!-- Load JavaScript Dependencies -->
     <script src="/static/js/service-templates.js"></script>
-    <script src="/static/js/chart-renderer.js"></script>
     <script src="/static/js/unified-app-core.js"></script>
-    <script src="/static/js/pdf-generator.js"></script>
     
     <script>
-        // Global state for current mode
-        let currentAnalysisMode = 'news';
-
-        // Toggle Help Dropdown Function
-        function toggleHelpDropdown(dropdownId) {
-            const dropdown = document.getElementById(dropdownId);
-            if (dropdown) {
-                dropdown.classList.toggle('open');
-            }
-        }
-
-        // Functions to handle extraction blocking
-        function showBlockedMessage(mode, message) {
-            const blockedMsgId = mode === 'news' ? 'newsBlockedMessage' : 'transcriptBlockedMessage';
-            const blockedTextId = mode === 'news' ? 'newsBlockedText' : 'transcriptBlockedText';
-            const textareaId = mode === 'news' ? 'newsTextInput' : 'transcriptTextInput';
-            
-            const blockedMsg = document.getElementById(blockedMsgId);
-            const blockedText = document.getElementById(blockedTextId);
-            const textarea = document.getElementById(textareaId);
-            
-            if (blockedMsg && blockedText) {
-                blockedText.textContent = message || 'This website is blocking automated access.';
-                blockedMsg.classList.add('show');
-            }
-            
-            if (textarea) {
-                textarea.classList.add('highlight');
-                textarea.focus();
-                
-                setTimeout(() => {
-                    textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }, 100);
-            }
-            
-            console.log('Showing blocked message for', mode);
-        }
-
-        function hideBlockedMessage(mode) {
-            const blockedMsgId = mode === 'news' ? 'newsBlockedMessage' : 'transcriptBlockedMessage';
-            const textareaId = mode === 'news' ? 'newsTextInput' : 'transcriptTextInput';
-            
-            const blockedMsg = document.getElementById(blockedMsgId);
-            const textarea = document.getElementById(textareaId);
-            
-            if (blockedMsg) {
-                blockedMsg.classList.remove('show');
-            }
-            
-            if (textarea) {
-                textarea.classList.remove('highlight');
-            }
-        }
-
-        // Mode switching functionality
-        function switchMode(mode) {
-            currentAnalysisMode = mode;
-            
-            document.querySelectorAll('.mode-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.mode === mode);
-            });
-            
-            document.querySelectorAll('.mode-content').forEach(content => {
-                content.classList.toggle('active', content.id === `${mode}-mode`);
-            });
-            
-            hideBlockedMessage('news');
-            hideBlockedMessage('transcript');
-            
-            const subtitle = document.querySelector('.progress-subtitle');
-            if (subtitle) {
-                subtitle.textContent = mode === 'news' 
-                    ? 'Our AI is examining multiple credibility factors'
-                    : 'Our AI is analyzing transcript content and claims';
-            }
-            
-            console.log(`Switched to ${mode} mode`);
-        }
-
-        // Reset form functionality
-        function resetForm(mode) {
-            if (mode === 'news') {
-                document.getElementById('newsForm').reset();
-                hideBlockedMessage('news');
-            } else {
-                document.getElementById('transcriptForm').reset();
-                hideBlockedMessage('transcript');
-            }
-            
-            const resultsSection = document.getElementById('resultsSection');
-            if (resultsSection) {
-                resultsSection.style.display = 'none';
-            }
-            
-            const progressContainer = document.getElementById('progressContainer');
-            if (progressContainer) {
-                progressContainer.style.display = 'none';
-            }
-            
-            if (window.ChartRenderer) {
-                window.ChartRenderer.destroyAllCharts();
-            }
-        }
-
-        // Content type detection
-        function updateContentTypeIndicator() {
-            // Implementation in unified-app-core.js
-        }
-
-        // Initialize on page load
+        // Initialize the analyzer in NEWS-ONLY mode
+        var analyzer;
+        
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('TruthLens v4.5.3 - FIXED Debate Arena Header Link');
+            console.log('[NewsPage] Initializing news-only analysis page v5.0.0');
             
-            const inputs = ['newsUrlInput', 'newsTextInput', 'transcriptTextInput'];
-            inputs.forEach(id => {
-                const input = document.getElementById(id);
-                if (input) {
-                    input.addEventListener('input', updateContentTypeIndicator);
-                }
-            });
+            // Initialize analyzer in news mode only
+            analyzer = new UnifiedTruthLensAnalyzer();
+            analyzer.currentMode = 'news'; // Force news mode
+            
+            console.log('[NewsPage] Analyzer initialized in news-only mode');
         });
 
-        // Update enhanced trust display
-        function updateEnhancedTrustDisplay(data) {
-            const trustScore = data.trust_score || 0;
-            const detailed = data.detailed_analysis || {};
-            const analysisMode = data.analysis_mode || 'news';
+        // Start analysis function
+        function startAnalysis() {
+            const url = document.getElementById('article-url').value.trim();
+            const text = document.getElementById('article-text').value.trim();
             
-            const modeBadge = document.getElementById('analysisModeBadge');
-            if (modeBadge) {
-                modeBadge.textContent = analysisMode === 'news' ? 'News Analysis' : 'Transcript Analysis';
-                modeBadge.className = `analysis-mode-badge ${analysisMode}`;
+            if (!url && !text) {
+                alert('Please provide either an article URL or article text');
+                return;
             }
             
-            const overview = document.getElementById('enhancedAnalysisOverview');
-            if (overview) {
-                overview.innerHTML = createEnhancedOverviewHTML(data);
-            }
-            
-            setTimeout(() => updateServiceContributions(detailed), 300);
-        }
-
-        function createEnhancedOverviewHTML(data) {
-            const trustScore = data.trust_score || 0;
-            const analysisMode = data.analysis_mode || 'news';
-            
-            let scoreClass = 'medium';
-            let label = 'MODERATE';
-            if (trustScore >= 80) {
-                scoreClass = 'high';
-                label = 'TRUSTWORTHY';
-            } else if (trustScore >= 60) {
-                label = 'RELIABLE';
-            } else if (trustScore < 40) {
-                scoreClass = 'low';
-                label = 'UNRELIABLE';
-            }
-
-            return `
-                <div class="trust-score-visual">
-                    <div class="score-circle-container">
-                        <div class="score-circle-bg">
-                            <div class="score-circle-inner">
-                                <div class="trust-score-big ${scoreClass}">${Math.round(trustScore)}</div>
-                                <div class="trust-score-max">/100</div>
-                                <div class="trust-label-badge ${scoreClass}">${label}</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="score-details-section">
-                        <h3 class="score-breakdown-title">
-                            <i class="fas fa-chart-line"></i>
-                            ${analysisMode === 'news' ? 'News Credibility' : 'Transcript Accuracy'} Analysis
-                        </h3>
-
-                        <div class="calculation-method">
-                            <div class="calculation-method-title">How We Calculate Your Score</div>
-                            <div class="calculation-method-text">
-                                Our AI analyzes multiple critical factors using advanced algorithms. 
-                                ${analysisMode === 'news' 
-                                    ? 'Each service contributes based on source reputation, factual accuracy, bias levels, and transparency.'
-                                    : 'Each service evaluates claims accuracy, content credibility, and fact verification from the transcript.'}
-                            </div>
-                        </div>
-
-                        <div class="service-contributions">
-                            <div class="contributions-title">Score Breakdown by Service</div>
-                            
-                            <div class="contribution-item">
-                                <span class="contribution-label">Source Credibility</span>
-                                <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-source" style="width: 0%" id="contribSource">
-                                        <span class="contribution-score">0/30</span>
-                                    </div>
-                                </div>
-                                <span class="contribution-weight">30%</span>
-                            </div>
-
-                            <div class="contribution-item">
-                                <span class="contribution-label">Bias Detection</span>
-                                <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-bias" style="width: 0%" id="contribBias">
-                                        <span class="contribution-score">0/20</span>
-                                    </div>
-                                </div>
-                                <span class="contribution-weight">20%</span>
-                            </div>
-
-                            <div class="contribution-item">
-                                <span class="contribution-label">Author Analysis</span>
-                                <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-author" style="width: 0%" id="contribAuthor">
-                                        <span class="contribution-score">0/15</span>
-                                    </div>
-                                </div>
-                                <span class="contribution-weight">15%</span>
-                            </div>
-
-                            <div class="contribution-item">
-                                <span class="contribution-label">Fact Checking</span>
-                                <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-facts" style="width: 0%" id="contribFacts">
-                                        <span class="contribution-score">0/15</span>
-                                    </div>
-                                </div>
-                                <span class="contribution-weight">15%</span>
-                            </div>
-
-                            <div class="contribution-item">
-                                <span class="contribution-label">Transparency</span>
-                                <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-transparency" style="width: 0%" id="contribTransparency">
-                                        <span class="contribution-score">0/10</span>
-                                    </div>
-                                </div>
-                                <span class="contribution-weight">10%</span>
-                            </div>
-
-                            <div class="contribution-item">
-                                <span class="contribution-label">Manipulation Detection</span>
-                                <div class="contribution-bar-container">
-                                    <div class="contribution-bar contribution-manipulation" style="width: 0%" id="contribManipulation">
-                                        <span class="contribution-score">0/10</span>
-                                    </div>
-                                </div>
-                                <span class="contribution-weight">10%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="article-info-section">
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <span class="info-label">${analysisMode === 'news' ? 'Article Summary' : 'Content Title'}</span>
-                            <span class="info-value" id="articleSummary">${data.article_summary || 'Loading...'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Source</span>
-                            <span class="info-value" id="articleSource">${data.source || 'Loading...'}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">${analysisMode === 'news' ? 'Author' : 'Creator'}</span>
-                            <span class="info-value" id="articleAuthor">${data.author || 'Loading...'}</span>
-                        </div>
-                    </div>
-                    <div class="findings-summary">
-                        <div class="findings-title">What We Found</div>
-                        <div class="findings-text" id="findingsSummary">
-                            ${data.findings_summary || 'Loading comprehensive analysis findings...'}
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // FIXED v4.5.2: Updated weights to match backend (now 100% total)
-        function updateServiceContributions(detailed) {
-            const weights = {
-                'source_credibility': 0.30,      // Was 0.25, now 30%
-                'bias_detector': 0.20,           // Unchanged, 20%
-                'author_analyzer': 0.15,         // Unchanged, 15%
-                'fact_checker': 0.15,            // Unchanged, 15%
-                'transparency_analyzer': 0.10,   // Unchanged, 10%
-                'manipulation_detector': 0.10,   // NEW! Was missing, now 10%
-                'content_analyzer': 0.00         // Was 0.05, now 0% (informational only)
-            };
-            
-            console.log('[TrustScore v12.7] Updating contribution bars with 100% weights');
-            
-            Object.keys(weights).forEach(serviceKey => {
-                // Skip content_analyzer since it's 0%
-                if (serviceKey === 'content_analyzer') {
-                    console.log('[TrustScore] Skipping content_analyzer (0% weight)');
-                    return;
-                }
-                
-                if (detailed[serviceKey]) {
-                    const serviceData = detailed[serviceKey];
-                    
-                    let score = 0;
-                    
-                    // Extract score based on service type
-                    if (serviceKey === 'source_credibility') {
-                        score = serviceData.credibility_score || serviceData.score || 0;
-                    } else if (serviceKey === 'bias_detector') {
-                        score = serviceData.objectivity_score || serviceData.score || 0;
-                    } else if (serviceKey === 'fact_checker') {
-                        score = serviceData.verification_score || serviceData.accuracy_score || serviceData.score || 0;
-                    } else if (serviceKey === 'author_analyzer') {
-                        score = serviceData.credibility_score || serviceData.credibility || serviceData.score || 0;
-                    } else if (serviceKey === 'transparency_analyzer') {
-                        score = serviceData.transparency_score || serviceData.score || 0;
-                    } else if (serviceKey === 'manipulation_detector') {
-                        score = serviceData.integrity_score || serviceData.score || 0;
-                    } else {
-                        score = serviceData.score || 0;
-                    }
-                    
-                    const contribution = (score * weights[serviceKey]).toFixed(1);
-                    const maxWeight = weights[serviceKey] * 100;
-                    
-                    console.log(`[TrustScore] ${serviceKey}: ${score} × ${maxWeight}% = ${contribution}`);
-                    
-                    // Map to element IDs
-                    const elementIdMap = {
-                        'source_credibility': 'contribSource',
-                        'bias_detector': 'contribBias',
-                        'author_analyzer': 'contribAuthor',
-                        'fact_checker': 'contribFacts',
-                        'transparency_analyzer': 'contribTransparency',
-                        'manipulation_detector': 'contribManipulation',
-                        'content_analyzer': 'contribContent'
-                    };
-                    
-                    const elementId = elementIdMap[serviceKey] || 'contrib' + serviceKey;
-                    
-                    updateContributionBar(elementId, score, contribution, maxWeight);
-                }
-            });
-        }
-        
-        function updateContributionBar(elementId, score, contribution, maxWeight) {
-            const bar = document.getElementById(elementId);
-            if (bar) {
-                setTimeout(() => {
-                    bar.style.width = score + '%';
-                }, 100);
-                
-                const scoreSpan = bar.querySelector('.contribution-score');
-                if (scoreSpan) {
-                    scoreSpan.textContent = `${contribution}/${maxWeight}`;
-                }
+            if (analyzer) {
+                analyzer.startAnalysis(url, text);
+            } else {
+                console.error('[NewsPage] Analyzer not initialized');
+                alert('Analyzer not ready. Please refresh the page.');
             }
         }
+
+        // Allow Enter key in URL field to trigger analysis
+        document.getElementById('article-url').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                startAnalysis();
+            }
+        });
     </script>
 </body>
 </html>
 
-<!-- This file is not truncated -->
 <!-- I did no harm and this file is not truncated -->
