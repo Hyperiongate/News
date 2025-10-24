@@ -2,26 +2,26 @@
 <html lang="en">
 <head>
     <!-- 
+    <!-- 
     File: transcript.html
-    Version: 3.0.0 - COMPLETE NAVIGATION RESTORED
+    Version: 4.0.0 - UNIFIED NAVIGATION UPDATE
     Last Updated: October 24, 2025
     Description: Standalone Transcript Fact-Checker Page with Unified Navigation
     
-    CHANGES FROM 2.0:
-    - RESTORED: All original navigation links (Features, Pricing, About, Live Stream, Contact)
-    - ADDED: Upgrade to Pro CTA button
-    - ENHANCED: Professional navigation design with icons
+    CHANGES FROM 3.0:
+    - REMOVED: Pricing link from navigation
+    - ADDED: News Analysis link to /
+    - ADDED: Transcript/Youtube Analysis link (current page indicator)
     - PRESERVED: ALL transcript functionality (DO NO HARM ✓)
     - PRESERVED: All input methods (text/file/microphone/YouTube)
     - PRESERVED: Export functionality (JSON/TXT/PDF)
     
-    COMPLETE NAVIGATION:
-    - Home (TruthLens logo)
-    - Features, Pricing, About, Debate Arena, Live Stream, Contact
-    - Upgrade to Pro (CTA)
+    NAVIGATION:
+    - News Analysis, Transcript/Youtube (active), Features, About, Debate Arena, Live Stream, Contact, Upgrade to Pro
     
     This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - Complete navigation with all pages restored
+    Last modified: October 24, 2025 - Unified navigation update
+    -->
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -822,7 +822,7 @@
 </head>
 <body>
     <!-- Header -->
-    <!-- NAVIGATION HEADER - v3.0.0 COMPLETE -->
+    <!-- UNIFIED NAVIGATION HEADER - v7.0.0 -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <!-- Logo -->
@@ -839,15 +839,21 @@
             <!-- Navigation Menu -->
             <ul class="nav-menu" id="navMenu">
                 <li class="nav-item">
-                    <a href="/features" class="nav-link">
-                        <i class="fas fa-star"></i>
-                        <span>Features</span>
+                    <a href="/" class="nav-link">
+                        <i class="fas fa-newspaper"></i>
+                        <span>News Analysis</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="/pricing" class="nav-link">
-                        <i class="fas fa-tag"></i>
-                        <span>Pricing</span>
+                    <a href="/transcript" class="nav-link active">
+                        <i class="fas fa-file-video"></i>
+                        <span>Transcript/Youtube</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="/features" class="nav-link">
+                        <i class="fas fa-star"></i>
+                        <span>Features</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -883,6 +889,7 @@
             </ul>
         </div>
     </nav>
+
 
     <div class="container">
         <!-- Hero Section -->
@@ -1653,3 +1660,5 @@ Examples:
     <!-- I did no harm and this file is not truncated -->
 </body>
 </html>
+
+<!-- I did no harm and this file is not truncated -->
