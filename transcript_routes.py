@@ -1,13 +1,23 @@
 """
 File: transcript_routes.py
-Last Updated: October 25, 2025 - FIXED MULTI-INSTANCE 404 ERRORS
+Last Updated: October 25, 2025 - HOTFIX: Method Name Correction
 Description: Flask routes for transcript fact-checking with Redis-backed job storage
 
-CRITICAL FIX (October 25, 2025):
-- FIXED: 404 errors caused by multiple Render instances
-- ADDED: Better detection and warnings for multi-instance issues
-- ADDED: Clearer logging for debugging 404 problems
-- IMPROVED: Redis fallback handling
+LATEST HOTFIX (October 25, 2025 - 6:15 PM):
+- FIXED: Changed claim_extractor.extract_claims() to claim_extractor.extract()
+- FIXED: Removed redundant speaker/topic extraction (now using results from extract())
+- FIXED: Updated claim text access to handle both 'text' and 'claim' keys
+- REASON: AttributeError - extract_claims() method doesn't exist, correct method is extract()
+
+PREVIOUS CHANGES (October 25, 2025):
+- ADDED: Redis persistent job storage (works across multiple instances)
+- ADDED: Automatic fallback to memory for local development
+- ADDED: Connection pooling for Redis
+- ADDED: Job expiration (24 hours automatic cleanup)
+- ADDED: Export data stored with job (fixes 404 export errors)
+- FIXED: Multiple instance support (Render load balancer)
+- FIXED: Job persistence across server restarts
+- IMPROVED: Error handling and logging
 - PRESERVED: All existing functionality (DO NO HARM ✓)
 
 THE PROBLEM:
@@ -349,7 +359,13 @@ def process_transcript_job(job_id: str, transcript: str) -> None:
         
         # Step 2: Extract claims (10-40%)
         update_job_progress(job_id, 15, random.choice(CLAIM_EXTRACTION_MESSAGES))
-        claims = claim_extractor.extract_claims(transcript)
+        
+        # FIXED: Use extract() method which returns dict with claims, speakers, topics
+        extraction_result = claim_extractor.extract(transcript)
+        claims = extraction_result.get('claims', [])
+        speakers = extraction_result.get('speakers', [])
+        topics = extraction_result.get('topics', [])
+        
         logger.info(f"[TranscriptRoutes] ✓ Extracted {len(claims)} claims from transcript")
         
         update_job_progress(job_id, 35, f"📝 Found {len(claims)} claims to verify!")
@@ -362,7 +378,9 @@ def process_transcript_job(job_id: str, transcript: str) -> None:
         progress_per_claim = 40 / max(len(claims), 1)
         
         for i, claim in enumerate(claims):
-            logger.info(f"[TranscriptRoutes] Fact-checking claim {i+1}/{len(claims)}: {claim.get('claim', '')[:50]}...")
+            # Get claim text - handle both dict formats
+            claim_text = claim.get('text') or claim.get('claim', '')
+            logger.info(f"[TranscriptRoutes] Fact-checking claim {i+1}/{len(claims)}: {claim_text[:50]}...")
             
             # Fact-check the claim
             fact_check_result = fact_checker.check_claim(claim)
@@ -380,9 +398,7 @@ def process_transcript_job(job_id: str, transcript: str) -> None:
         # Calculate credibility score
         credibility_score = calculate_credibility_score(fact_checks)
         
-        # Extract speakers and topics
-        speakers = transcript_processor.extract_speakers(transcript)
-        topics = transcript_processor.extract_topics(transcript)
+        # Note: speakers and topics already extracted above from claim_extractor.extract()
         
         # Generate summary
         summary = generate_summary(fact_checks, credibility_score, speakers, topics)
