@@ -1,13 +1,21 @@
 /**
  * Transcript Fact Checker - Main Application JavaScript
  * Date: October 25, 2025
- * Version: 11.0.0 - ADDED ENTERTAINING PROGRESS BAR
+ * Version: 12.0.0 - FIXED DID YOU KNOW CYCLING + PROGRESS
  * 
  * LATEST CHANGES (October 25, 2025):
- * - ADDED: Enhanced progress bar with animated emojis
- * - ADDED: Progress percentage display
- * - ADDED: Smooth animations and transitions
- * - PRESERVED: All v10.0 functionality (DO NO HARM)
+ * - FIXED: "Did You Know" facts now cycle every 4 seconds
+ * - FIXED: Fun facts interval properly starts and stops
+ * - FIXED: Progress emoji rotates through analyzing states
+ * - ADDED: Claim counter animation
+ * - ADDED: Better timeout handling (10 minute max)
+ * - IMPROVED: Progress bar percentage display
+ * - PRESERVED: All v11.0 functionality (DO NO HARM)
+ * 
+ * ROOT CAUSE OF "DID YOU KNOW" NOT CYCLING:
+ * - startPolling() never initialized funFactsInterval
+ * - No setInterval was set up to rotate through facts
+ * - Fixed by adding startFunFactsCycle() function
  * 
  * PURPOSE:
  * Frontend application for transcript fact-checking with multiple input methods
@@ -16,7 +24,8 @@
  * - Direct text input
  * - File upload (TXT, SRT, VTT)
  * - Microphone transcription
- * - Real-time progress tracking with fun messages
+ * - Real-time progress tracking with cycling fun facts
+ * - Rotating emoji animations
  * - Export to JSON, TXT, PDF
  * 
  * Save as: static/js/transcript_app.js
@@ -32,12 +41,34 @@
 let currentJobId = null;
 let pollInterval = null;
 let currentResults = null;
+let funFactsInterval = null; // FIXED: Added for cycling facts
+let progressEmojiInterval = null; // NEW: For rotating emojis
 
 // Speech recognition for microphone input
 let recognition = null;
 let isRecording = false;
 
-console.log('[TranscriptApp] Module loading - v11.0.0 with entertaining progress...');
+// FIXED: Define fun facts array globally
+const funFacts = [
+    "🤖 AI models can process thousands of claims per minute!",
+    "🌍 Fact-checking helps combat misinformation worldwide.",
+    "📊 Our system cross-references multiple trusted sources.",
+    "🔍 The average person encounters 100+ claims daily.",
+    "✨ Truth is more fascinating than fiction!",
+    "🎯 Accuracy matters more than ever in the digital age.",
+    "🧠 Critical thinking is humanity's superpower.",
+    "📚 Knowledge is the best defense against false information.",
+    "🚀 Technology amplifies both truth and misinformation.",
+    "💡 Always verify before you trust!",
+    "🔬 Science and facts go hand in hand.",
+    "🗞️ Good journalism requires thorough fact-checking.",
+    "🎓 Education is the foundation of a truth-seeking society."
+];
+
+// NEW: Progress emojis that rotate
+const progressEmojis = ["🔍", "🔎", "🕵️", "📝", "✅", "🎯", "💡"];
+
+console.log('[TranscriptApp] Module loading - v12.0.0 with cycling fun facts...');
 
 // ============================================================================
 // MICROPHONE TRANSCRIPTION
@@ -52,7 +83,10 @@ function initializeMicrophone() {
             startBtn.style.opacity = '0.5';
             startBtn.style.cursor = 'not-allowed';
         }
-        document.getElementById('status-text').textContent = 'Speech recognition not supported in this browser';
+        const statusText = document.getElementById('status-text');
+        if (statusText) {
+            statusText.textContent = 'Speech recognition not supported in this browser';
+        }
         return;
     }
     
@@ -237,6 +271,10 @@ function startAnalysis() {
     document.getElementById('progress-section').classList.add('active');
     document.getElementById('results-section').classList.remove('active');
     
+    // FIXED: Start fun facts cycling and emoji rotation
+    startFunFactsCycle();
+    startEmojiRotation();
+    
     // Submit for analysis
     submitAnalysis(transcript, sourceType);
 }
@@ -273,6 +311,7 @@ async function submitAnalysis(transcript, sourceType) {
         
     } catch (error) {
         console.error('[TranscriptApp] Analysis error:', error);
+        stopAllIntervals(); // FIXED: Clean up intervals on error
         showError('Analysis failed: ' + error.message);
     }
 }
@@ -288,9 +327,24 @@ function startPolling() {
     
     console.log('[TranscriptApp] Starting to poll for job status');
     
+    // FIXED: Add timeout after 10 minutes (600 seconds)
+    const startTime = Date.now();
+    const maxDuration = 600000; // 10 minutes in milliseconds
+    
     // Poll immediately, then every 2 seconds
     checkJobStatus();
-    pollInterval = setInterval(checkJobStatus, 2000);
+    pollInterval = setInterval(() => {
+        // Check if we've exceeded max duration
+        if (Date.now() - startTime > maxDuration) {
+            console.error('[TranscriptApp] Analysis timeout after 10 minutes');
+            clearInterval(pollInterval);
+            stopAllIntervals();
+            showError('Analysis is taking longer than expected. Please try with a shorter transcript.');
+            return;
+        }
+        
+        checkJobStatus();
+    }, 2000);
 }
 
 async function checkJobStatus() {
@@ -310,9 +364,15 @@ async function checkJobStatus() {
         // Update progress with entertaining display
         updateProgress(data.progress || 0, data.message || 'Processing...');
         
+        // NEW: Update claims counter if available
+        if (data.claims_checked) {
+            updateClaimsCounter(data.claims_checked);
+        }
+        
         if (data.status === 'completed') {
             console.log('[TranscriptApp] ✓ Analysis complete');
             clearInterval(pollInterval);
+            stopAllIntervals(); // FIXED: Stop all animations
             
             // Get full results
             const resultsResponse = await fetch(`/api/transcript/results/${currentJobId}`);
@@ -328,19 +388,101 @@ async function checkJobStatus() {
         } else if (data.status === 'failed') {
             console.error('[TranscriptApp] Analysis failed:', data.error);
             clearInterval(pollInterval);
+            stopAllIntervals(); // FIXED: Stop all animations
             showError(data.error || 'Analysis failed');
         }
         
     } catch (error) {
         console.error('[TranscriptApp] Polling error:', error);
         clearInterval(pollInterval);
+        stopAllIntervals(); // FIXED: Stop all animations
         showError('Connection error: ' + error.message);
+    }
+}
+
+// ============================================================================
+// PROGRESS ANIMATIONS (FIXED: Added fun facts cycling)
+// ============================================================================
+
+function startFunFactsCycle() {
+    // FIXED: This is the missing function that cycles through fun facts
+    console.log('[TranscriptApp] Starting fun facts cycle');
+    
+    // Clear any existing interval
+    if (funFactsInterval) {
+        clearInterval(funFactsInterval);
+    }
+    
+    const funFactElement = document.getElementById('fun-fact');
+    if (!funFactElement) {
+        console.warn('[TranscriptApp] Fun fact element not found');
+        return;
+    }
+    
+    let currentFactIndex = 0;
+    
+    // Set first fact immediately
+    funFactElement.textContent = funFacts[0];
+    
+    // FIXED: Rotate through facts every 4 seconds
+    funFactsInterval = setInterval(() => {
+        currentFactIndex = (currentFactIndex + 1) % funFacts.length;
+        funFactElement.textContent = funFacts[currentFactIndex];
+        
+        // Add fade animation
+        funFactElement.style.animation = 'none';
+        setTimeout(() => {
+            funFactElement.style.animation = 'fadeInBounce 0.5s ease-out';
+        }, 10);
+        
+        console.log(`[TranscriptApp] Showing fun fact ${currentFactIndex + 1}/${funFacts.length}`);
+    }, 4000); // Cycle every 4 seconds
+}
+
+function startEmojiRotation() {
+    // NEW: Rotate through progress emojis
+    console.log('[TranscriptApp] Starting emoji rotation');
+    
+    if (progressEmojiInterval) {
+        clearInterval(progressEmojiInterval);
+    }
+    
+    const emojiElement = document.getElementById('progress-emoji');
+    if (!emojiElement) {
+        return;
+    }
+    
+    let currentEmojiIndex = 0;
+    
+    progressEmojiInterval = setInterval(() => {
+        currentEmojiIndex = (currentEmojiIndex + 1) % progressEmojis.length;
+        emojiElement.textContent = progressEmojis[currentEmojiIndex];
+    }, 2000); // Rotate every 2 seconds
+}
+
+function stopAllIntervals() {
+    // FIXED: Centralized cleanup function
+    console.log('[TranscriptApp] Stopping all intervals');
+    
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
+    
+    if (funFactsInterval) {
+        clearInterval(funFactsInterval);
+        funFactsInterval = null;
+    }
+    
+    if (progressEmojiInterval) {
+        clearInterval(progressEmojiInterval);
+        progressEmojiInterval = null;
     }
 }
 
 function updateProgress(progress, message) {
     const progressFill = document.getElementById('progress-fill');
-    const progressText = document.getElementById('progress-text');
+    const progressPercentage = document.getElementById('progress-percentage');
     
     if (progressFill) {
         // Smooth animation
@@ -354,15 +496,28 @@ function updateProgress(progress, message) {
         }
     }
     
+    if (progressPercentage) {
+        // Update percentage display
+        progressPercentage.textContent = Math.round(progress) + '%';
+    }
+    
+    // Update message if there's a progress-text element
+    const progressText = document.getElementById('progress-text');
     if (progressText) {
-        // Display message with percentage
-        const percentageText = `<strong>${Math.round(progress)}%</strong>`;
-        progressText.innerHTML = `${message} ${percentageText}`;
+        progressText.textContent = message;
+    }
+}
+
+function updateClaimsCounter(count) {
+    // NEW: Update the claims checked counter
+    const claimsCount = document.getElementById('claims-checked-count');
+    if (claimsCount) {
+        claimsCount.textContent = count;
         
-        // Add bounce animation on message change
-        progressText.style.animation = 'none';
+        // Add bounce animation
+        claimsCount.style.animation = 'none';
         setTimeout(() => {
-            progressText.style.animation = 'fadeInBounce 0.5s ease-out';
+            claimsCount.style.animation = 'fadeInBounce 0.3s ease-out';
         }, 10);
     }
 }
@@ -373,6 +528,9 @@ function updateProgress(progress, message) {
 
 function displayResults(results) {
     console.log('[TranscriptApp] Displaying results:', results);
+    
+    // FIXED: Stop all intervals when showing results
+    stopAllIntervals();
     
     // Hide progress, show results
     document.getElementById('progress-section').classList.remove('active');
@@ -394,7 +552,7 @@ function buildResultsHTML(results) {
     
     let html = `
         <div style="text-align: center; margin-bottom: 30px;">
-            <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+            <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
                 <i class="fas fa-plus-circle"></i> New Analysis
             </button>
         </div>
@@ -558,10 +716,12 @@ async function exportResults(format) {
 function startNewAnalysis() {
     console.log('[TranscriptApp] Starting new analysis');
     
+    // FIXED: Clean up all intervals
+    stopAllIntervals();
+    
     // Reset state
     currentJobId = null;
     currentResults = null;
-    if (pollInterval) clearInterval(pollInterval);
     
     // Clear inputs
     document.getElementById('text-input').value = '';
@@ -588,6 +748,9 @@ function startNewAnalysis() {
 
 function showError(message) {
     console.error('[TranscriptApp] Error:', message);
+    
+    // FIXED: Clean up intervals on error
+    stopAllIntervals();
     
     document.getElementById('progress-section').classList.remove('active');
     document.getElementById('input-section').style.display = 'block';
@@ -644,9 +807,19 @@ style.textContent = `
     .pulsing {
         animation: pulse 1.5s ease-in-out infinite !important;
     }
+    
+    /* FIXED: Enhanced emoji rotation animation */
+    #progress-emoji {
+        animation: spin 3s linear infinite;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
 `;
 document.head.appendChild(style);
 
-console.log('[TranscriptApp] ✓ Module loaded - v11.0.0');
+console.log('[TranscriptApp] ✓ Module loaded - v12.0.0 with cycling fun facts');
 
 // I did no harm and this file is not truncated
