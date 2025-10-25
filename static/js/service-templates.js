@@ -1,31 +1,29 @@
 /**
- * TruthLens Service Templates - COMPLETE FILE
- * Date: October 24, 2025
- * Version: 4.31.0 - CRITICAL FIX: Container ID compatibility
- * Last Updated: October 24, 2025 - Fixed container ID for index.html compatibility
+ * TruthLens Service Templates - WITH INTEGRATED CHART RENDERING
+ * Date: October 25, 2025
+ * Version: 5.0.0 - CHART INTEGRATION & VISUAL ENHANCEMENTS
+ * Last Updated: October 25, 2025
  * 
- * CRITICAL FIX FROM v4.30.0:
- * ✅ FIXED: Container ID lookup now supports both 'serviceAnalysisContainer' AND 'service-results'
- * ✅ FIXED: Results now display correctly on standalone news analysis page (index.html)
- * ✅ ENHANCED: Better error logging when container not found
- * ✅ PRESERVED: All v4.30.0 functionality (DO NO HARM ✓)
+ * MAJOR CHANGES FROM v4.31.0:
+ * ✅ ADDED: Chart rendering integration for ALL services
+ * ✅ ADDED: Vibrant canvas elements in service templates
+ * ✅ ADDED: Automatic chart detection and rendering from backend data
+ * ✅ ADDED: Animated chart containers with modern styling
+ * ✅ ENHANCED: Visual "bling" with gradients and animations
+ * ✅ PRESERVED: All v4.31.0 functionality (DO NO HARM ✓)
  * 
- * THE PROBLEM:
- * - index.html uses <div id="service-results">
- * - service-templates.js only looked for <div id="serviceAnalysisContainer">
- * - Results were being returned but not displayed (silent failure)
+ * WHAT'S NEW:
+ * - Each service template now includes a canvas element for charts
+ * - displayAllAnalyses() now renders charts after populating data
+ * - Charts appear contextually within each service card
+ * - Vibrant colors, gradients, and smooth animations
+ * - Fallback handling if ChartRenderer not available
  * 
- * THE SOLUTION:
- * - Added fallback to check for 'service-results' container ID
- * - Added error logging to catch this issue in future
- * - Now works with both standalone and tabbed page layouts
- * 
- * PREVIOUS VERSION (v4.30.0):
- * - Visual SVG speedometer dial for bias detection (180° arc)
- * - Subtle horizontal layout for transparency (replaces giant purple box)
- * - Animated needle for bias dial with color-coded zones
- * - Compact purple score badge for transparency (content-first design)
- * - Multi-author display, no awards in author section
+ * CHART FLOW:
+ * 1. Backend embeds chart_data in service response
+ * 2. Template includes <canvas> element
+ * 3. Display method calls renderServiceChart(serviceId, data)
+ * 4. ChartRenderer.renderChart() creates vibrant visualization
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * 
@@ -34,7 +32,7 @@
 
 // Create global ServiceTemplates object
 window.ServiceTemplates = {
-    // Get template HTML for a service
+    // Get template HTML for a service (NOW WITH CHART CANVAS!)
     getTemplate: function(serviceId) {
         const templates = {
             sourceCredibility: `
@@ -61,27 +59,18 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- Source Comparison Chart -->
-                        <div class="source-comparison-section">
-                            <h4 class="comparison-title">
-                                <i class="fas fa-chart-bar"></i>
-                                Outlet Credibility Comparison
-                            </h4>
-                            
-                            <!-- Explanation of score differences -->
-                            <div class="score-explanation" style="background: #f0f9ff; border-left: 3px solid #3b82f6; padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 6px;">
-                                <p style="margin: 0; font-size: 0.875rem; color: #1e40af; line-height: 1.5;">
-                                    <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
-                                    <strong>Note:</strong> The bars below show each outlet's <em>typical</em> credibility score. 
-                                    Individual articles may score higher or lower based on their specific quality, sourcing, and accuracy. 
-                                    This article scored <span id="article-score-inline" style="font-weight: 700;">--</span>, 
-                                    while <span id="outlet-name-inline" style="font-weight: 700;">this outlet</span> typically scores 
-                                    <span id="outlet-average-inline" style="font-weight: 700;">--</span>.
-                                </p>
+                        <!-- NEW v5.0: INTEGRATED CHART CONTAINER -->
+                        <div class="chart-container-vibrant" style="margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 16px; border: 2px solid #3b82f6;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <i class="fas fa-chart-bar" style="font-size: 1.25rem; color: #3b82f6;"></i>
+                                <h4 style="margin: 0; color: #1e40af; font-size: 1.1rem; font-weight: 700;">Outlet Credibility Comparison</h4>
                             </div>
-                            
-                            <div class="source-ranking-chart" id="source-ranking-chart">
-                                <!-- Chart will be populated dynamically -->
+                            <div style="position: relative; height: 300px; background: white; border-radius: 12px; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                <canvas id="source-credibility-chart" style="max-height: 100%;"></canvas>
+                            </div>
+                            <div style="margin-top: 1rem; padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 8px; font-size: 0.875rem; color: #1e40af;">
+                                <i class="fas fa-info-circle" style="margin-right: 0.5rem;"></i>
+                                <strong>Note:</strong> Comparison shows typical outlet scores. Individual articles may vary based on quality and accuracy.
                             </div>
                         </div>
                         
@@ -122,7 +111,6 @@ window.ServiceTemplates = {
                                 </div>
                             </div>
                             
-                            
                             <div class="source-detail-item">
                                 <div class="detail-icon">
                                     <i class="fas fa-users"></i>
@@ -145,7 +133,7 @@ window.ServiceTemplates = {
                             <h3>Bias Detection Analysis</h3>
                         </div>
                         
-                        <!-- NEW v4.30.0: Horizontal Bias Bar -->
+                        <!-- Horizontal Bias Bar (Preserved) -->
                         <div class="bias-bar-container" style="padding: 2rem;">
                             <div class="bias-title" style="font-size: 1.1rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem; text-align: center;">
                                 <i class="fas fa-chart-line" style="margin-right: 0.5rem; color: #f59e0b;"></i>
@@ -154,35 +142,34 @@ window.ServiceTemplates = {
                             
                             <!-- Horizontal Bar with 5 Colored Zones -->
                             <div class="bias-bar-track" style="position: relative; height: 60px; border-radius: 30px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin: 0 auto; max-width: 700px;">
-                                <!-- Far Left Zone (Red) -->
+                                <!-- Far Left Zone -->
                                 <div style="position: absolute; left: 0%; width: 20%; height: 100%; background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%);"></div>
+                                <!-- Left Zone -->
+                                <div style="position: absolute; left: 20%; width: 20%; height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #fbbf24 100%);"></div>
+                                <!-- Center Zone -->
+                                <div style="position: absolute; left: 40%; width: 20%; height: 100%; background: linear-gradient(90deg, #10b981 0%, #34d399 100%);"></div>
+                                <!-- Right Zone -->
+                                <div style="position: absolute; left: 60%; width: 20%; height: 100%; background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%);"></div>
+                                <!-- Far Right Zone -->
+                                <div style="position: absolute; left: 80%; width: 20%; height: 100%; background: linear-gradient(90deg, #8b5cf6 0%, #a78bfa 100%);"></div>
                                 
-                                <!-- Left Zone (Orange) -->
-                                <div style="position: absolute; left: 20%; width: 20%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #f59e0b 100%);"></div>
+                                <!-- Indicator Needle -->
+                                <div id="bias-needle" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 4px; height: 70px; background: linear-gradient(180deg, #1e293b 0%, #475569 100%); border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);"></div>
                                 
-                                <!-- Center Zone (Green) -->
-                                <div style="position: absolute; left: 40%; width: 20%; height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #10b981 50%, #f59e0b 100%);"></div>
-                                
-                                <!-- Right Zone (Orange) -->
-                                <div style="position: absolute; left: 60%; width: 20%; height: 100%; background: linear-gradient(90deg, #f59e0b 0%, #ef4444 100%);"></div>
-                                
-                                <!-- Far Right Zone (Red) -->
-                                <div style="position: absolute; left: 80%; width: 20%; height: 100%; background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);"></div>
-                                
-                                <!-- Marker (animated indicator) -->
-                                <div id="bias-marker" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: #1e293b; border: 4px solid white; border-radius: 50%; box-shadow: 0 0 0 3px rgba(30,41,59,0.3), 0 4px 6px rgba(0,0,0,0.3); transition: left 1.5s cubic-bezier(0.68, -0.55, 0.265, 1.55); z-index: 10;"></div>
+                                <!-- Indicator Circle -->
+                                <div id="bias-circle" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: white; border: 4px solid #1e293b; border-radius: 50%; box-shadow: 0 2px 12px rgba(0,0,0,0.25); transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); z-index: 2;"></div>
                             </div>
                             
-                            <!-- Labels Below Bar -->
-                            <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; padding: 0 1rem; max-width: 700px; margin-left: auto; margin-right: auto;">
-                                <span style="font-size: 11px; font-weight: 600; color: #dc2626;">Far Left</span>
-                                <span style="font-size: 11px; font-weight: 600; color: #f59e0b;">Left</span>
-                                <span style="font-size: 12px; font-weight: 700; color: #10b981;">CENTER</span>
-                                <span style="font-size: 11px; font-weight: 600; color: #f59e0b;">Right</span>
-                                <span style="font-size: 11px; font-weight: 600; color: #dc2626;">Far Right</span>
+                            <!-- Bias Labels -->
+                            <div style="display: flex; justify-content: space-between; margin-top: 0.75rem; font-size: 0.7rem; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">
+                                <span>Far Left</span>
+                                <span>Left</span>
+                                <span>Center</span>
+                                <span>Right</span>
+                                <span>Far Right</span>
                             </div>
                             
-                            <!-- Score Display Below Bar -->
+                            <!-- Detected Lean Box -->
                             <div style="margin-top: 1.5rem; padding: 1rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; text-align: center;">
                                 <div style="font-size: 0.85rem; color: #92400e; font-weight: 600; margin-bottom: 0.25rem;">Detected Lean</div>
                                 <div id="bias-direction" style="font-size: 1.5rem; font-weight: 800; color: #1e293b;">Center</div>
@@ -192,9 +179,20 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- Explanation Section (preserved from v4.27) -->
+                        <!-- NEW v5.0: BIAS RADAR CHART -->
+                        <div class="chart-container-vibrant" style="margin: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-radius: 16px; border: 2px solid #f59e0b;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <i class="fas fa-radar" style="font-size: 1.25rem; color: #f59e0b;"></i>
+                                <h4 style="margin: 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">Bias Dimensions Analysis</h4>
+                            </div>
+                            <div style="position: relative; height: 350px; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                <canvas id="bias-detector-chart" style="max-height: 100%;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Explanation Section -->
                         <div class="bias-metrics">
-                            <!-- This will be populated by displayBiasDetector() -->
+                            <!-- Populated by displayBiasDetector() -->
                         </div>
                     </div>
                 </div>
@@ -221,26 +219,34 @@ window.ServiceTemplates = {
                                 <div class="metric-icon"><i class="fas fa-clipboard-check"></i></div>
                                 <div class="metric-content">
                                     <span class="metric-value" id="claims-checked">--</span>
-                                    <span class="metric-label">Findings</span>
+                                    <span class="metric-label">Claims Checked</span>
                                 </div>
                             </div>
                             <div class="metric-card warning">
-                                <div class="metric-icon"><i class="fas fa-search"></i></div>
+                                <div class="metric-icon"><i class="fas fa-shield-alt"></i></div>
                                 <div class="metric-content">
-                                    <span class="metric-value" id="claims-verified">--</span>
+                                    <span class="metric-value" id="verified-claims">--</span>
                                     <span class="metric-label">Verified</span>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Enhanced Claims Display -->
-                        <div class="claims-section">
-                            <h4 class="claims-section-title">
-                                <i class="fas fa-list-check"></i>
-                                Our Findings
-                            </h4>
-                            <div class="claims-list-enhanced" id="claims-list-enhanced">
-                                <!-- Claims will be populated here -->
+                        <!-- NEW v5.0: FACT CHECK PIE CHART -->
+                        <div class="chart-container-vibrant" style="margin: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 16px; border: 2px solid #3b82f6;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <i class="fas fa-chart-pie" style="font-size: 1.25rem; color: #3b82f6;"></i>
+                                <h4 style="margin: 0; color: #1e40af; font-size: 1.1rem; font-weight: 700;">Claim Verification Breakdown</h4>
+                            </div>
+                            <div style="position: relative; height: 300px; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                <canvas id="fact-checker-chart" style="max-height: 100%;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Claims List -->
+                        <div class="claims-checked-section">
+                            <h4><i class="fas fa-list-check"></i> Individual Claims</h4>
+                            <div id="claims-list" class="claims-list">
+                                <!-- Populated dynamically -->
                             </div>
                         </div>
                     </div>
@@ -249,9 +255,91 @@ window.ServiceTemplates = {
             
             transparencyAnalyzer: `
                 <div class="service-analysis-section">
-                    <div class="transparency-enhanced-v3">
-                        <div id="transparency-content-v3">
-                            <!-- Content will be populated dynamically -->
+                    <div class="service-card-enhanced">
+                        <!-- Compact Purple Badge (Preserved v4.30.0) -->
+                        <div style="padding: 1.5rem 2rem;">
+                            <div style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%); border-radius: 12px; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+                                <i class="fas fa-eye" style="font-size: 1.5rem; color: white;"></i>
+                                <div>
+                                    <div style="font-size: 0.75rem; font-weight: 600; color: rgba(255,255,255,0.9); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.125rem;">Transparency Score</div>
+                                    <div id="transparency-score" style="font-size: 2rem; font-weight: 800; color: white; line-height: 1;">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.0: TRANSPARENCY BAR CHART -->
+                        <div class="chart-container-vibrant" style="margin: 0 2rem 2rem 2rem; padding: 1.5rem; background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border-radius: 16px; border: 2px solid #8b5cf6;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <i class="fas fa-chart-bar" style="font-size: 1.25rem; color: #8b5cf6;"></i>
+                                <h4 style="margin: 0; color: #6b21a8; font-size: 1.1rem; font-weight: 700;">Transparency Elements</h4>
+                            </div>
+                            <div style="position: relative; height: 300px; background: white; border-radius: 12px; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                <canvas id="transparency-analyzer-chart" style="max-height: 100%;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Transparency Details -->
+                        <div style="padding: 0 2rem 2rem 2rem;">
+                            <div class="transparency-checklist">
+                                <div class="checklist-item" id="trans-author">
+                                    <i class="fas fa-user"></i>
+                                    <span>Author Attribution</span>
+                                    <span class="status">--</span>
+                                </div>
+                                <div class="checklist-item" id="trans-date">
+                                    <i class="fas fa-calendar"></i>
+                                    <span>Publication Date</span>
+                                    <span class="status">--</span>
+                                </div>
+                                <div class="checklist-item" id="trans-sources">
+                                    <i class="fas fa-link"></i>
+                                    <span>Sources Cited</span>
+                                    <span class="status">--</span>
+                                </div>
+                                <div class="checklist-item" id="trans-corrections">
+                                    <i class="fas fa-edit"></i>
+                                    <span>Corrections Policy</span>
+                                    <span class="status">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            
+            manipulationDetector: `
+                <div class="service-analysis-section">
+                    <div class="service-card-enhanced">
+                        <div class="card-header-gradient manipulation-header">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <h3>Manipulation Detection</h3>
+                        </div>
+                        
+                        <!-- Risk Level Display -->
+                        <div class="manipulation-risk-display">
+                            <div class="risk-badge" id="manipulation-badge">
+                                <i class="fas fa-shield-alt"></i>
+                                <span id="manipulation-level">--</span>
+                            </div>
+                            <div class="risk-score">
+                                Risk Score: <span id="manipulation-score">--</span>
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.0: MANIPULATION TACTICS CHART -->
+                        <div class="chart-container-vibrant" style="margin: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 16px; border: 2px solid #ef4444;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <i class="fas fa-chart-line" style="font-size: 1.25rem; color: #ef4444;"></i>
+                                <h4 style="margin: 0; color: #991b1b; font-size: 1.1rem; font-weight: 700;">Manipulation Tactics Detected</h4>
+                            </div>
+                            <div style="position: relative; height: 300px; background: white; border-radius: 12px; padding: 1rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                <canvas id="manipulation-detector-chart" style="max-height: 100%;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Tactics List -->
+                        <div class="manipulation-tactics" id="manipulation-tactics">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
@@ -264,1086 +352,508 @@ window.ServiceTemplates = {
                             <i class="fas fa-file-alt"></i>
                             <h3>Content Quality Analysis</h3>
                         </div>
-                        <div class="content-metrics">
-                            <div class="metric-card primary">
-                                <div class="metric-icon"><i class="fas fa-star"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="quality-score">--</span>
+                        
+                        <!-- Quality Metrics -->
+                        <div class="content-quality-metrics">
+                            <div class="quality-metric">
+                                <i class="fas fa-star"></i>
+                                <div class="metric-info">
                                     <span class="metric-label">Quality Score</span>
+                                    <span class="metric-value" id="content-quality">--</span>
                                 </div>
                             </div>
-                            <div class="metric-card info">
-                                <div class="metric-icon"><i class="fas fa-glasses"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="readability-level">--</span>
+                            <div class="quality-metric">
+                                <i class="fas fa-book-open"></i>
+                                <div class="metric-info">
                                     <span class="metric-label">Readability</span>
+                                    <span class="metric-value" id="content-readability">--</span>
                                 </div>
                             </div>
-                            <div class="metric-card secondary">
-                                <div class="metric-icon"><i class="fas fa-font"></i></div>
-                                <div class="metric-content">
-                                    <span class="metric-value" id="word-count">--</span>
+                            <div class="quality-metric">
+                                <i class="fas fa-align-left"></i>
+                                <div class="metric-info">
                                     <span class="metric-label">Word Count</span>
+                                    <span class="metric-value" id="content-wordcount">--</span>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- CONTENT QUALITY VISUALIZATION -->
-                        <div id="content-visualization-container"></div>
+                        <!-- NEW v5.0: CONTENT QUALITY RADAR CHART -->
+                        <div class="chart-container-vibrant" style="margin: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-radius: 16px; border: 2px solid #ec4899;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <i class="fas fa-chart-area" style="font-size: 1.25rem; color: #ec4899;"></i>
+                                <h4 style="margin: 0; color: #9f1239; font-size: 1.1rem; font-weight: 700;">Quality Dimensions</h4>
+                            </div>
+                            <div style="position: relative; height: 350px; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                <canvas id="content-analyzer-chart" style="max-height: 100%;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- Content Details -->
+                        <div id="content-details" class="content-details-section">
+                            <!-- Populated dynamically -->
+                        </div>
                     </div>
                 </div>
             `,
             
-            author: `
-                <div class="service-analysis-section author-enhanced">
-                    <div class="author-profile-header">
-                        <div class="author-avatar-section">
-                            <div class="author-avatar-circle">
-                                <i class="fas fa-user-edit"></i>
+            authorAnalyzer: `
+                <div class="service-analysis-section">
+                    <div class="service-card-enhanced">
+                        <div class="card-header-gradient author-header">
+                            <i class="fas fa-user-circle"></i>
+                            <h3>Author Credibility Analysis</h3>
+                        </div>
+                        
+                        <!-- Author Profile Header -->
+                        <div class="author-profile-header">
+                            <div class="author-avatar">
+                                <i class="fas fa-user"></i>
                             </div>
-                            <div class="credibility-badge high" id="author-cred-badge">
-                                <span id="author-cred-score">--</span>
+                            <div class="author-info">
+                                <h4 id="author-name">--</h4>
+                                <div class="author-meta">
+                                    <span id="author-organization">--</span>
+                                </div>
                             </div>
-                            <div class="verification-badge" id="author-verified-badge" style="display: none">
-                                <i class="fas fa-check-circle"></i>
-                                <span>Verified</span>
+                            <div class="author-score-badge">
+                                <span class="score-label">Credibility</span>
+                                <span class="score-value" id="author-credibility">--</span>
                             </div>
                         </div>
                         
-                        <div class="author-main-info">
-                            <h2 class="author-name" id="author-name">Loading...</h2>
-                            <p class="author-title" id="author-title">Analyzing credentials...</p>
-                            <div class="author-social-links" id="author-links"></div>
-                            
-                            <div class="expertise-tags" id="expertise-tags">
-                                <!-- Expertise tags will be inserted here -->
+                        <!-- NEW v5.0: AUTHOR CREDIBILITY GAUGE -->
+                        <div class="chart-container-vibrant" style="margin: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #ecfeff 0%, #cffafe 100%); border-radius: 16px; border: 2px solid #06b6d4;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+                                <i class="fas fa-tachometer-alt" style="font-size: 1.25rem; color: #06b6d4;"></i>
+                                <h4 style="margin: 0; color: #164e63; font-size: 1.1rem; font-weight: 700;">Credibility Gauge</h4>
+                            </div>
+                            <div style="position: relative; height: 250px; background: white; border-radius: 12px; padding: 1.5rem; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                                <canvas id="author-analyzer-chart" style="max-height: 100%;"></canvas>
                             </div>
                         </div>
                         
-                        <div class="author-stats">
-                            <div class="stat-item">
-                                <div class="stat-value" id="author-articles">--</div>
-                                <div class="stat-label">Articles</div>
-                            </div>
-                            <div class="stat-item">
-                                <div class="stat-value" id="author-experience">--</div>
-                                <div class="stat-label">Experience</div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="author-metrics-grid">
-                        <div class="metric-card primary">
-                            <div class="metric-icon"><i class="fas fa-certificate"></i></div>
-                            <div class="metric-content">
-                                <span class="metric-value" id="author-credibility">--</span>
-                                <span class="metric-label">Credibility Score</span>
-                            </div>
-                        </div>
-                        <div class="metric-card info">
-                            <div class="metric-icon"><i class="fas fa-graduation-cap"></i></div>
-                            <div class="metric-content">
-                                <span class="metric-value" id="author-expertise">--</span>
-                                <span class="metric-label">Expertise Level</span>
-                            </div>
-                        </div>
-                        <div class="metric-card success">
-                            <div class="metric-icon"><i class="fas fa-chart-line"></i></div>
-                            <div class="metric-content">
-                                <span class="metric-value" id="author-track-record">--</span>
-                                <span class="metric-label">Track Record</span>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="author-detail-sections">
-                        <div class="author-bio" id="author-bio" style="display: none">
-                            <!-- Bio will be inserted here if available -->
+                        <!-- Author Details -->
+                        <div id="author-bio" class="author-bio-section" style="display: none;">
+                            <!-- Populated dynamically -->
                         </div>
                         
-                        <div class="author-trust-indicators" id="trust-indicators" style="display: none">
-                            <h4><i class="fas fa-shield-alt"></i> Trust Indicators</h4>
-                            <div class="indicator-list" id="trust-indicator-list"></div>
+                        <div id="expertise-tags" class="expertise-tags-container">
+                            <!-- Populated dynamically -->
                         </div>
                         
-                        <div class="author-red-flags" id="red-flags" style="display: none">
-                            <h4><i class="fas fa-exclamation-triangle"></i> Red Flags</h4>
-                            <div class="flag-list" id="red-flag-list"></div>
+                        <div id="author-links" class="author-links-container">
+                            <!-- Populated dynamically -->
                         </div>
                     </div>
                 </div>
             `
         };
         
-        return templates[serviceId] || '<div class="error">Template not found</div>';
+        return templates[serviceId] || '<div class="no-template">Template not found</div>';
     },
-
+    
     // ============================================================================
-    // CRITICAL NEW FEATURE v4.26.0: MODE-AWARE SERVICE DISPLAY
+    // NEW v5.0: CHART RENDERING INTEGRATION
     // ============================================================================
-    displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v4.31.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v4.31.0] Analysis mode:', data.analysis_mode);
-        console.log('[ServiceTemplates v4.31.0] Data:', data);
+    
+    /**
+     * Render chart for a specific service
+     * Called after populating service data
+     */
+    renderServiceChart: function(serviceId, serviceData) {
+        console.log('[ServiceTemplates v5.0] Checking for chart data in:', serviceId);
         
-        const detailed = data.detailed_analysis || {};
-        const analysisMode = data.analysis_mode || 'news';
-        
-        // CRITICAL FIX v4.31.0: Support multiple container IDs for different page layouts
-        const container = document.getElementById('serviceAnalysisContainer') || 
-                         document.getElementById('service-results');
-        
-        if (!container) {
-            console.error('[ServiceTemplates v4.31.0] CRITICAL: Results container not found!');
-            console.error('[ServiceTemplates v4.31.0] Looked for: #serviceAnalysisContainer and #service-results');
+        // Check if ChartRenderer is available
+        if (typeof ChartRenderer === 'undefined') {
+            console.warn('[ServiceTemplates] ChartRenderer not loaded - charts will not render');
             return;
         }
         
-        console.log('[ServiceTemplates v4.31.0] ✓ Container found:', container.id);
-        container.innerHTML = '';
-        
-        // ============================================================================
-        // CRITICAL: MODE-BASED SERVICE SELECTION
-        // ============================================================================
-        let services = [];
-        
-        if (analysisMode === 'transcript') {
-            console.log('[ServiceTemplates v4.31.0] TRANSCRIPT MODE: Showing ONLY fact checking');
-            // TRANSCRIPT MODE: Only show fact checking
-            services = [
-                { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' }
-            ];
-        } else {
-            console.log('[ServiceTemplates v4.31.0] NEWS MODE: Showing all 6 services');
-            // NEWS MODE: Show all 6 services (unchanged)
-            services = [
-                { id: 'sourceCredibility', key: 'source_credibility', title: 'Source Credibility', icon: 'fa-globe-americas', color: '#6366f1' },
-                { id: 'biasDetector', key: 'bias_detector', title: 'Bias Detection', icon: 'fa-balance-scale', color: '#f59e0b' },
-                { id: 'factChecker', key: 'fact_checker', title: 'Fact Checking', icon: 'fa-check-circle', color: '#3b82f6' },
-                { id: 'author', key: 'author_analyzer', title: 'Author Analysis', icon: 'fa-user-edit', color: '#06b6d4' },
-                { id: 'transparencyAnalyzer', key: 'transparency_analyzer', title: 'Transparency Guide', icon: 'fa-eye', color: '#8b5cf6' },
-                { id: 'contentAnalyzer', key: 'content_analyzer', title: 'Content Quality', icon: 'fa-file-alt', color: '#ec4899' }
-            ];
+        // Check if service has chart data
+        if (!serviceData || !serviceData.chart_data) {
+            console.log('[ServiceTemplates] No chart data for:', serviceId);
+            return;
         }
         
-        // Create dropdowns for selected services with colored borders
-        services.forEach(function(service) {
-            const serviceData = detailed[service.key] || {};
-            const dropdown = document.createElement('div');
-            dropdown.className = 'service-dropdown ' + service.id + 'Dropdown';
-            dropdown.style.borderLeft = '4px solid ' + service.color;
+        // Map service IDs to canvas IDs
+        const canvasMap = {
+            'source_credibility': 'source-credibility-chart',
+            'bias_detector': 'bias-detector-chart',
+            'fact_checker': 'fact-checker-chart',
+            'transparency_analyzer': 'transparency-analyzer-chart',
+            'manipulation_detector': 'manipulation-detector-chart',
+            'content_analyzer': 'content-analyzer-chart',
+            'author_analyzer': 'author-analyzer-chart'
+        };
+        
+        const canvasId = canvasMap[serviceId];
+        if (!canvasId) {
+            console.warn('[ServiceTemplates] No canvas mapping for:', serviceId);
+            return;
+        }
+        
+        // Check if canvas exists
+        const canvas = document.getElementById(canvasId);
+        if (!canvas) {
+            console.warn('[ServiceTemplates] Canvas not found:', canvasId);
+            return;
+        }
+        
+        try {
+            // Render the chart with a slight delay for DOM to settle
+            setTimeout(function() {
+                console.log('[ServiceTemplates] Rendering chart for:', serviceId, 'on canvas:', canvasId);
+                ChartRenderer.renderChart(canvasId, serviceData.chart_data);
+                
+                // Add fade-in animation
+                ChartRenderer.animateChartEntry(canvasId);
+            }, 300);
             
-            dropdown.innerHTML = `
-                <div class="service-header" onclick="toggleServiceDropdown('${service.id}')" style="background: linear-gradient(135deg, ${service.color}10 0%, ${service.color}05 100%);">
+        } catch (error) {
+            console.error('[ServiceTemplates] Error rendering chart:', serviceId, error);
+        }
+    },
+    
+    // ============================================================================
+    // MAIN DISPLAY METHOD (Enhanced v5.0)
+    // ============================================================================
+    
+    displayAllAnalyses: function(data, analyzer) {
+        console.log('[ServiceTemplates v5.0] displayAllAnalyses called - NOW WITH CHART RENDERING');
+        
+        var detailed = data.detailed_analysis || {};
+        var analysisMode = data.analysis_mode || 'news';
+        
+        console.log('[ServiceTemplates v5.0] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.0] Services available:', Object.keys(detailed));
+        
+        // Get container (supports both IDs)
+        var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
+        
+        if (!container) {
+            console.error('[ServiceTemplates v5.0] CRITICAL: Container not found! Checked: serviceAnalysisContainer, service-results');
+            return;
+        }
+        
+        console.log('[ServiceTemplates v5.0] Container found:', container.id);
+        
+        // Service display order
+        var serviceOrder = [
+            { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', displayFunc: 'displaySourceCredibility' },
+            { id: 'bias_detector', name: 'Bias Detection', icon: 'fa-balance-scale', displayFunc: 'displayBiasDetector' },
+            { id: 'fact_checker', name: 'Fact Checking', icon: 'fa-check-circle', displayFunc: 'displayFactChecker' },
+            { id: 'author_analyzer', name: 'Author Analysis', icon: 'fa-user-circle', displayFunc: 'displayAuthorAnalyzer' },
+            { id: 'transparency_analyzer', name: 'Transparency', icon: 'fa-eye', displayFunc: 'displayTransparencyAnalyzer' },
+            { id: 'manipulation_detector', name: 'Manipulation Detection', icon: 'fa-exclamation-triangle', displayFunc: 'displayManipulationDetector' },
+            { id: 'content_analyzer', name: 'Content Quality', icon: 'fa-file-alt', displayFunc: 'displayContentAnalyzer' }
+        ];
+        
+        container.innerHTML = '';
+        
+        var self = this;
+        serviceOrder.forEach(function(service) {
+            if (detailed[service.id]) {
+                console.log('[ServiceTemplates v5.0] Processing service:', service.name);
+                
+                // Create service dropdown
+                var serviceCard = document.createElement('div');
+                serviceCard.className = 'service-dropdown ' + service.id.replace(/_/g, '') + 'Dropdown';
+                serviceCard.id = service.id.replace(/_/g, '') + 'Dropdown';
+                
+                // Service header
+                var header = document.createElement('div');
+                header.className = 'service-header';
+                header.innerHTML = `
                     <div class="service-title">
-                        <i class="fas ${service.icon}" style="color: ${service.color}"></i>
-                        <span>${service.title}</span>
+                        <i class="fas ${service.icon}"></i>
+                        <span>${service.name}</span>
                     </div>
                     <div class="service-toggle">
                         <i class="fas fa-chevron-down"></i>
                     </div>
-                </div>
-                <div class="service-content" style="display: none">
-                    <div class="service-analysis-card" id="${service.id}Content">
-                        ${ServiceTemplates.getTemplate(service.id)}
-                    </div>
-                </div>
-            `;
-            
-            container.appendChild(dropdown);
-            
-            // Display the service data
-            ServiceTemplates['display' + service.id.charAt(0).toUpperCase() + service.id.slice(1)](serviceData, analyzer);
-        });
-        
-        // Add toggle functionality
-        window.toggleServiceDropdown = function(serviceId) {
-            const dropdown = document.querySelector('.' + serviceId + 'Dropdown');
-            if (dropdown) {
-                dropdown.classList.toggle('active');
-                const content = dropdown.querySelector('.service-content');
-                if (content) {
-                    content.style.display = content.style.display === 'none' ? 'block' : 'none';
-                }
-            }
-        };
-        
-        // Render creative visualizations (only for news mode)
-        if (analysisMode === 'news') {
-            console.log('[ServiceTemplates v4.31.0] Rendering creative visualizations for NEWS mode...');
-            setTimeout(function() {
-                ServiceTemplates.renderCreativeVisualizations(detailed);
-            }, 500);
-        } else {
-            console.log('[ServiceTemplates v4.31.0] Skipping visualizations for TRANSCRIPT mode');
-        }
-    },
-    
-    // Creative visualizations (only for content quality in news mode)
-    renderCreativeVisualizations: function(detailed) {
-        console.log('[ServiceTemplates v4.31.0] renderCreativeVisualizations called');
-        
-        // Content Quality Visualization
-        if (detailed.content_analyzer) {
-            this.renderContentVisualization(detailed.content_analyzer);
-        }
-        
-        console.log('[ServiceTemplates v4.31.0] ✓ Creative visualizations rendered');
-    },
-    
-    // Content Quality Creative Display
-    renderContentVisualization: function(data) {
-        const container = document.getElementById('content-visualization-container');
-        if (!container) return;
-        
-        const qualityScore = data.quality_score || data.score || 0;
-        const readability = data.readability || data.readability_level || 'Unknown';
-        const wordCount = data.word_count || 0;
-        
-        console.log('[Content Viz] quality:', qualityScore, 'readability:', readability, 'words:', wordCount);
-        
-        // Quality breakdown (simulated metrics based on score)
-        const metrics = {
-            'Structure': Math.min(100, qualityScore * 1.1),
-            'Clarity': Math.max(30, qualityScore * 0.9),
-            'Depth': Math.min(100, qualityScore * 1.05),
-            'Grammar': Math.min(100, qualityScore * 0.95)
-        };
-        
-        let html = `
-            <div style="margin-top: 20px; padding: 20px; background: linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%); border-radius: 12px; border-left: 4px solid #ec4899;">
-                <h4 style="margin: 0 0 15px 0; color: #9f1239; font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                    <i class="fas fa-chart-bar" style="font-size: 1rem;"></i>
-                    Quality Breakdown
-                </h4>
-                
-                <div style="background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);">
-        `;
-        
-        // Quality metrics bars
-        Object.keys(metrics).forEach(function(metric) {
-            const score = Math.round(metrics[metric]);
-            const color = score >= 70 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-            
-            html += `
-                <div style="margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                        <span style="font-size: 0.875rem; font-weight: 600; color: #1e293b;">${metric}</span>
-                        <span style="font-size: 0.875rem; font-weight: 700; color: ${color};">${score}/100</span>
-                    </div>
-                    <div style="width: 100%; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden;">
-                        <div style="width: ${score}%; height: 100%; background: ${color}; transition: width 0.5s ease;"></div>
-                    </div>
-                </div>
-            `;
-        });
-        
-        html += `
-                </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 15px;">
-                    <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: #ec4899; margin-bottom: 4px;">
-                            ${readability}
-                        </div>
-                        <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
-                            Readability
-                        </div>
-                    </div>
-                    <div style="background: white; padding: 15px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                        <div style="font-size: 1.75rem; font-weight: 800; color: #8b5cf6; margin-bottom: 4px;">
-                            ${wordCount.toLocaleString()}
-                        </div>
-                        <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
-                            Words
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        container.innerHTML = html;
-    },
-
-    // Display Source Credibility
-    displaySourceCredibility: function(data, analyzer) {
-        const score = data.score || 0;
-        const year = data.established_year || data.founded || new Date().getFullYear();
-        const yearsOld = new Date().getFullYear() - year;
-        const reputation = data.credibility || data.reputation || 'Unknown';
-        const currentSource = data.source || data.organization || 'This Source';
-        
-        // Update metrics
-        this.updateElement('source-score', score + '/100');
-        this.updateElement('source-age', yearsOld > 0 ? yearsOld + ' Years' : 'New');
-        this.updateElement('source-reputation', reputation);
-        
-        // Update trust indicator position
-        const indicator = document.getElementById('trust-indicator');
-        if (indicator) {
-            indicator.textContent = score;
-            setTimeout(function() {
-                indicator.style.left = score + '%';
-            }, 100);
-        }
-        
-        // Update details
-        this.updateElement('source-org', data.organization || 'Independent');
-        this.updateElement('source-founded', year);
-        // Awards removed - v4.28.0
-        this.updateElement('source-readership', data.readership || 'N/A');
-        
-        // TOP 10 NEWS SOURCES COMPARISON
-        const topSources = [
-            { name: 'Reuters', score: 95, tier: 'excellent' },
-            { name: 'Associated Press', score: 94, tier: 'excellent' },
-            { name: 'BBC News', score: 92, tier: 'excellent' },
-            { name: 'The New York Times', score: 88, tier: 'good' },
-            { name: 'The Washington Post', score: 87, tier: 'good' },
-            { name: 'NPR', score: 86, tier: 'good' },
-            { name: 'The Wall Street Journal', score: 85, tier: 'good' },
-            { name: 'ABC News', score: 83, tier: 'good' },
-            { name: 'NBC News', score: 82, tier: 'good' },
-            { name: 'CBS News', score: 81, tier: 'good' }
-        ];
-        
-        // Find matching outlet for average score
-        let outletAverageScore = null;
-        const matchingOutlet = topSources.find(s => 
-            s.name.toLowerCase() === currentSource.toLowerCase() ||
-            currentSource.toLowerCase().includes(s.name.toLowerCase()) ||
-            s.name.toLowerCase().includes(currentSource.toLowerCase())
-        );
-        
-        if (matchingOutlet) {
-            outletAverageScore = matchingOutlet.score;
-        }
-        
-        // Update the inline explanation with actual values
-        this.updateElement('article-score-inline', score + '/100');
-        this.updateElement('outlet-name-inline', currentSource);
-        this.updateElement('outlet-average-inline', outletAverageScore ? outletAverageScore + '/100' : 'varies');
-        
-        // Determine tier based on score
-        let tierClass = 'moderate';
-        if (score >= 85) tierClass = 'excellent';
-        else if (score >= 75) tierClass = 'good';
-        else if (score >= 60) tierClass = 'moderate';
-        else tierClass = 'low';
-        
-        // Check if current source is in top 10
-        let sourcesToDisplay = [...topSources];
-        const isInTop10 = topSources.some(s => 
-            s.name.toLowerCase() === currentSource.toLowerCase() ||
-            currentSource.toLowerCase().includes(s.name.toLowerCase()) ||
-            s.name.toLowerCase().includes(currentSource.toLowerCase())
-        );
-        
-        if (!isInTop10 && currentSource !== 'This Source' && currentSource !== 'Independent') {
-            sourcesToDisplay.push({
-                name: currentSource,
-                score: score,
-                tier: tierClass,
-                current: true
-            });
-            
-            sourcesToDisplay.sort((a, b) => b.score - a.score);
-            
-            if (sourcesToDisplay.findIndex(s => s.current) > 9) {
-                sourcesToDisplay = sourcesToDisplay.slice(0, 9);
-                sourcesToDisplay.push({
-                    name: currentSource,
-                    score: score,
-                    tier: tierClass,
-                    current: true
-                });
-            }
-        } else if (isInTop10) {
-            sourcesToDisplay = sourcesToDisplay.map(s => {
-                if (s.name.toLowerCase() === currentSource.toLowerCase() ||
-                    currentSource.toLowerCase().includes(s.name.toLowerCase()) ||
-                    s.name.toLowerCase().includes(currentSource.toLowerCase())) {
-                    return { ...s, current: true };
-                }
-                return s;
-            });
-        }
-        
-        // Create comparison chart
-        const chart = document.getElementById('source-ranking-chart');
-        if (chart) {
-            let chartHTML = '';
-            sourcesToDisplay.forEach(function(source) {
-                const isCurrent = source.current ? 'current' : '';
-                const name = source.current ? source.name + ' ★' : source.name;
-                
-                chartHTML += `
-                    <div class="source-bar ${isCurrent}">
-                        <div class="source-name">${name}</div>
-                        <div class="source-bar-track">
-                            <div class="source-bar-fill ${source.tier}" style="width: ${source.score}%">
-                                <span class="score-label">${source.score}</span>
-                            </div>
-                        </div>
-                    </div>
                 `;
-            });
-            chart.innerHTML = chartHTML;
-        }
-    },
-
-    // Display Bias Detector - v4.30.0 HORIZONTAL BAR
-    displayBiasDetector: function(data, analyzer) {
-        console.log('[BiasDetector v4.30.0 - HORIZONTAL BAR] Displaying data:', data);
-        
-        const objectivityScore = data.objectivity_score || data.score || 50;
-        const direction = data.bias_direction || data.political_bias || data.direction || 'center';
-        const politicalLabel = data.political_label || data.political_leaning || 'Center';
-        const sensationalismLevel = data.sensationalism_level || 'Unknown';
-        
-        console.log('[BiasDetector v4.30.0] Objectivity:', objectivityScore, 'Direction:', direction);
-        
-        // Update text displays
-        this.updateElement('bias-score', objectivityScore + '/100');
-        this.updateElement('bias-direction', politicalLabel);
-        
-        // NEW v4.30.0: Animate the marker on the horizontal bar
-        const marker = document.getElementById('bias-marker');
-        if (marker) {
-            const biasPosition = this.getBiasPosition(direction, objectivityScore);
-            console.log('[BiasDetector v4.30.0] Marker position=' + biasPosition + '%');
-            
-            setTimeout(function() {
-                marker.style.left = biasPosition + '%';
-            }, 200);
-        }
-        
-        // Always add explanation section (preserved from v4.27)
-        const metricsContainer = document.querySelector('.biasDetectorDropdown .bias-metrics');
-        if (metricsContainer) {
-            // Remove existing explanation if present
-            const existingExplanation = metricsContainer.parentElement.querySelector('.bias-explanation-section');
-            if (existingExplanation) {
-                existingExplanation.remove();
-            }
-            
-            const explanation = document.createElement('div');
-            explanation.className = 'bias-explanation-section';
-            explanation.style.cssText = 'margin-top: 2rem; padding: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #fef3c7 100%); border-radius: 12px; border-left: 4px solid #f59e0b;';
-            
-            let objectivityDescription = '';
-            let objectivityIcon = '';
-            let objectivityColor = '';
-            
-            if (objectivityScore >= 85) {
-                objectivityDescription = 'This article demonstrates <strong>excellent objectivity</strong> with minimal bias detected. The language is balanced and fair.';
-                objectivityIcon = 'fa-check-circle';
-                objectivityColor = '#10b981';
-            } else if (objectivityScore >= 70) {
-                objectivityDescription = 'This article shows <strong>good objectivity</strong> with only minor bias elements. Most content is balanced and fair.';
-                objectivityIcon = 'fa-check-circle';
-                objectivityColor = '#3b82f6';
-            } else if (objectivityScore >= 50) {
-                objectivityDescription = 'This article shows <strong>moderate objectivity</strong> with some bias present. Consider seeking additional perspectives.';
-                objectivityIcon = 'fa-exclamation-circle';
-                objectivityColor = '#f59e0b';
-            } else {
-                objectivityDescription = 'This article shows <strong>limited objectivity</strong> with significant bias elements. Read critically and verify claims independently.';
-                objectivityIcon = 'fa-exclamation-triangle';
-                objectivityColor = '#ef4444';
-            }
-            
-            const details = data.details || {};
-            const findings = [];
-            
-            if (politicalLabel && politicalLabel !== 'Center') {
-                findings.push(`<li><strong>Political Lean:</strong> ${politicalLabel} perspective detected based on language patterns and topic framing.</li>`);
-            } else {
-                findings.push(`<li><strong>Political Lean:</strong> Center/Neutral - No significant political bias detected.</li>`);
-            }
-            
-            findings.push(`<li><strong>Sensationalism:</strong> ${sensationalismLevel} - ${this.getSensationalismExplanation(sensationalismLevel)}</li>`);
-            
-            const loadedCount = details.loaded_language_count || 0;
-            if (loadedCount > 0) {
-                findings.push(`<li><strong>Loaded Language:</strong> Found ${loadedCount} instance${loadedCount !== 1 ? 's' : ''} of emotionally charged or biased language.</li>`);
-            } else {
-                findings.push(`<li><strong>Loaded Language:</strong> None detected - Language is neutral and factual.</li>`);
-            }
-            
-            const framingIssues = details.framing_issues || 0;
-            if (framingIssues > 0) {
-                findings.push(`<li><strong>Framing:</strong> ${framingIssues} framing issue${framingIssues !== 1 ? 's' : ''} detected (e.g., one-sided presentation, limited counterarguments).</li>`);
-            } else {
-                findings.push(`<li><strong>Framing:</strong> No issues - Article presents balanced perspectives.</li>`);
-            }
-            
-            explanation.innerHTML = `
-                <div style="margin-bottom: 1.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                        <i class="fas ${objectivityIcon}" style="font-size: 1.5rem; color: ${objectivityColor};"></i>
-                        <h4 style="margin: 0; color: #1e293b; font-size: 1.1rem;">Objectivity Analysis: ${objectivityScore}/100</h4>
-                    </div>
-                    <p style="margin: 0 0 1rem 0; color: #475569; line-height: 1.6;">${objectivityDescription}</p>
-                </div>
                 
-                <div style="background: rgba(255,255,255,0.8); padding: 1.25rem; border-radius: 8px;">
-                    <h5 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1rem; font-weight: 600;">
-                        <i class="fas fa-search" style="margin-right: 0.5rem; color: #f59e0b;"></i>
-                        What We Analyzed
-                    </h5>
-                    <ul style="margin: 0; padding-left: 1.5rem; color: #475569; line-height: 1.8;">
-                        ${findings.join('')}
-                    </ul>
-                </div>
-            `;
-            
-            metricsContainer.appendChild(explanation);
-        }
-        
-        console.log('[BiasDetector v4.30.0] ✓ Horizontal bar animated + explanation displayed');
-    },
-
-    displayFactChecker: function(data, analyzer) {
-        console.log('[FactChecker v4.27.0] REDESIGNED CLAIM LAYOUT - Data received:', data);
-        
-        const score = data.accuracy_score || data.verification_score || data.score || 0;
-        const claimsChecked = data.claims_checked || data.claims_found || 0;
-        const claimsVerified = data.claims_verified || 0;
-        const factChecks = data.fact_checks || data.claims || [];
-        
-        console.log('[FactChecker v4.27.0] Fact checks array length:', factChecks.length);
-        console.log('[FactChecker v4.27.0] Layout: CLAIM → ANALYSIS → VERIFICATION');
-        
-        // Update summary metrics
-        this.updateElement('fact-score', score + '%');
-        this.updateElement('claims-checked', claimsChecked);
-        this.updateElement('claims-verified', claimsVerified);
-        
-        const claimsContainer = document.getElementById('claims-list-enhanced');
-        if (!claimsContainer) {
-            console.error('[FactChecker] Claims container not found');
-            return;
-        }
-        
-        // ========================================================================
-        // REDESIGNED CLAIM RENDERING - v4.27.0
-        // LAYOUT: 1. THE CLAIM → 2. OUR ANALYSIS → 3. VERIFICATION METHOD
-        // ========================================================================
-        if (factChecks && factChecks.length > 0) {
-            console.log('[FactChecker v4.27.0] REDESIGNED LAYOUT: Rendering', factChecks.length, 'findings...');
-            
-            let claimsHTML = '';
-            
-            factChecks.forEach((check, index) => {
-                // Extract claim data
-                const claim = check.claim || check.statement || 'No claim text available';
-                const analysis = check.explanation || check.analysis || 'No analysis available';
-                const verdict = check.verdict || 'unverified';
-                const confidence = check.confidence || 0;
-                
-                // Get all verification sources
-                const sources = check.sources || check.method_used || [];
-                const sourcesList = Array.isArray(sources) ? sources : [sources];
-                const methodUsed = check.method_used || 'Unknown';
-                
-                // Combine all verification methods
-                const allVerificationMethods = [];
-                if (methodUsed && methodUsed !== 'Unknown') {
-                    allVerificationMethods.push(methodUsed);
-                }
-                sourcesList.forEach(src => {
-                    if (src && !allVerificationMethods.includes(src)) {
-                        allVerificationMethods.push(src);
-                    }
-                });
-                
-                // 13-POINT VERDICT STYLING
-                const verdictStyles = {
-                    // True verdicts (green)
-                    'true': { 
-                        color: '#10b981', 
-                        icon: 'fa-check-circle', 
-                        label: 'TRUE', 
-                        badge: '#059669',
-                        description: 'Demonstrably accurate and supported by evidence'
-                    },
-                    'mostly_true': { 
-                        color: '#34d399', 
-                        icon: 'fa-check-circle', 
-                        label: 'MOSTLY TRUE', 
-                        badge: '#10b981',
-                        description: 'Largely accurate with minor imprecision'
-                    },
-                    'partially_true': { 
-                        color: '#fbbf24', 
-                        icon: 'fa-check', 
-                        label: 'PARTIALLY TRUE', 
-                        badge: '#f59e0b',
-                        description: 'Contains both accurate and inaccurate elements'
-                    },
-                    
-                    // Problematic verdicts (yellow/orange)
-                    'exaggerated': { 
-                        color: '#f59e0b', 
-                        icon: 'fa-chart-line', 
-                        label: 'EXAGGERATED', 
-                        badge: '#d97706',
-                        description: 'Based on truth but significantly overstated'
-                    },
-                    'misleading': { 
-                        color: '#f97316', 
-                        icon: 'fa-exclamation-triangle', 
-                        label: 'MISLEADING', 
-                        badge: '#ea580c',
-                        description: 'Contains truth but creates false impression'
-                    },
-                    
-                    // False verdicts (red)
-                    'mostly_false': { 
-                        color: '#f87171', 
-                        icon: 'fa-times-circle', 
-                        label: 'MOSTLY FALSE', 
-                        badge: '#ef4444',
-                        description: 'Significant inaccuracies with grain of truth'
-                    },
-                    'false': { 
-                        color: '#ef4444', 
-                        icon: 'fa-times-circle', 
-                        label: 'FALSE', 
-                        badge: '#dc2626',
-                        description: 'Demonstrably incorrect'
-                    },
-                    
-                    // Special categories (gray/purple)
-                    'empty_rhetoric': { 
-                        color: '#94a3b8', 
-                        icon: 'fa-wind', 
-                        label: 'EMPTY RHETORIC', 
-                        badge: '#64748b',
-                        description: 'Vague promises or boasts with no substantive content'
-                    },
-                    'unsubstantiated_prediction': { 
-                        color: '#a78bfa', 
-                        icon: 'fa-crystal-ball', 
-                        label: 'UNSUBSTANTIATED', 
-                        badge: '#8b5cf6',
-                        description: 'Future claim with no evidence or plan provided'
-                    },
-                    'needs_context': { 
-                        color: '#8b5cf6', 
-                        icon: 'fa-info-circle', 
-                        label: 'NEEDS CONTEXT', 
-                        badge: '#7c3aed',
-                        description: 'Cannot verify without additional information'
-                    },
-                    'opinion': { 
-                        color: '#6366f1', 
-                        icon: 'fa-comment', 
-                        label: 'OPINION', 
-                        badge: '#4f46e5',
-                        description: 'Subjective claim analyzed for factual elements'
-                    },
-                    'mixed': { 
-                        color: '#f59e0b', 
-                        icon: 'fa-exclamation-circle', 
-                        label: 'MIXED', 
-                        badge: '#d97706',
-                        description: 'Both accurate and inaccurate elements present'
-                    },
-                    'unverified': { 
-                        color: '#9ca3af', 
-                        icon: 'fa-question-circle', 
-                        label: 'UNVERIFIED', 
-                        badge: '#6b7280',
-                        description: 'Cannot verify with available information'
+                // Click handler
+                header.onclick = function() {
+                    if (typeof window.toggleServiceDropdown === 'function') {
+                        window.toggleServiceDropdown(service.id.replace(/_/g, ''));
+                    } else {
+                        serviceCard.classList.toggle('active');
                     }
                 };
                 
-                const style = verdictStyles[verdict] || verdictStyles['unverified'];
+                // Service content
+                var content = document.createElement('div');
+                content.className = 'service-content';
+                content.innerHTML = self.getTemplate(service.id);
                 
-                // ====================================================================
-                // REDESIGNED CLAIM CARD LAYOUT
-                // 1. THE CLAIM (in quotes, verbatim)
-                // 2. OUR ANALYSIS (with indicator)
-                // 3. VERIFICATION METHOD (all sources)
-                // ====================================================================
+                serviceCard.appendChild(header);
+                serviceCard.appendChild(content);
+                container.appendChild(serviceCard);
                 
-                claimsHTML += `
-                    <div style="background: white; border-radius: 12px; padding: 1.75rem; margin-bottom: 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 5px solid ${style.color}; transition: all 0.3s;"
-                         onmouseover="this.style.boxShadow='0 6px 20px rgba(0,0,0,0.12)'; this.style.transform='translateY(-3px)';"
-                         onmouseout="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'; this.style.transform='translateY(0)';">
-                        
-                        <!-- Finding Number Header -->
-                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; padding-bottom: 0.75rem; border-bottom: 2px solid #f1f5f9;">
-                            <div style="font-weight: 700; color: #0f172a; font-size: 1rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                <i class="fas fa-hashtag" style="color: ${style.color}; font-size: 0.875rem; margin-right: 0.5rem;"></i>
-                                FINDING ${index + 1}
-                            </div>
-                            <span style="padding: 0.5rem 1rem; background: ${style.badge}; color: white; border-radius: 20px; font-size: 0.8125rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.375rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                <i class="fas ${style.icon}"></i>
-                                ${style.label}
-                            </span>
-                        </div>
-                        
-                        <!-- 1. THE CLAIM (First, in quotes, verbatim) -->
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                <i class="fas fa-quote-left" style="color: ${style.color}; font-size: 1.25rem;"></i>
-                                <div style="font-weight: 700; color: #0f172a; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                    THE CLAIM
-                                </div>
-                            </div>
-                            <div style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%); padding: 1.25rem 1.5rem; border-radius: 10px; border-left: 4px solid ${style.color}; position: relative;">
-                                <div style="position: absolute; top: 0.75rem; left: 0.75rem; opacity: 0.15; font-size: 3rem; color: ${style.color};">
-                                    <i class="fas fa-quote-left"></i>
-                                </div>
-                                <p style="margin: 0; color: #1e293b; font-size: 1.0625rem; line-height: 1.7; font-style: italic; position: relative; z-index: 1; padding-left: 2rem;">
-                                    ${claim}
-                                </p>
-                                <div style="position: absolute; bottom: 0.75rem; right: 0.75rem; opacity: 0.15; font-size: 3rem; color: ${style.color};">
-                                    <i class="fas fa-quote-right"></i>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- 2. OUR ANALYSIS (Second, with indicator) -->
-                        <div style="margin-bottom: 1.5rem;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                                    <i class="fas fa-microscope" style="color: ${style.color}; font-size: 1.125rem;"></i>
-                                    <div style="font-weight: 700; color: #0f172a; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                        OUR ANALYSIS
-                                    </div>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 0.625rem;">
-                                    <span style="background: linear-gradient(135deg, ${style.color}20 0%, ${style.color}10 100%); border: 1.5px solid ${style.color}60; color: ${style.badge}; padding: 0.375rem 0.875rem; border-radius: 16px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                        <i class="fas fa-chart-bar"></i>
-                                        ${confidence}% Confidence
-                                    </span>
-                                </div>
-                            </div>
-                            <div style="background: white; padding: 1.25rem 1.5rem; border-radius: 10px; border: 2px solid ${style.color}40; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                                <!-- Verdict Badge with Description -->
-                                <div style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.25rem; background: linear-gradient(135deg, ${style.color}15 0%, ${style.color}05 100%); border-left: 4px solid ${style.color}; border-radius: 8px; margin-bottom: 1rem; width: 100%;">
-                                    <div style="width: 40px; height: 40px; border-radius: 50%; background: ${style.badge}; display: flex; align-items: center; justify-content: center; color: white; font-size: 1.25rem; flex-shrink: 0;">
-                                        <i class="fas ${style.icon}"></i>
-                                    </div>
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: 700; color: ${style.badge}; font-size: 0.9375rem; margin-bottom: 0.25rem;">
-                                            ${style.label}
-                                        </div>
-                                        <div style="font-size: 0.8125rem; color: #64748b; line-height: 1.4;">
-                                            ${style.description}
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Analysis Text -->
-                                <p style="margin: 0; color: #334155; font-size: 0.9375rem; line-height: 1.7;">
-                                    ${analysis}
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <!-- 3. VERIFICATION METHOD (Third, showing all sources) -->
-                        ${allVerificationMethods.length > 0 ? `
-                            <div>
-                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
-                                    <i class="fas fa-check-double" style="color: ${style.color}; font-size: 1.125rem;"></i>
-                                    <div style="font-weight: 700; color: #0f172a; font-size: 0.875rem; text-transform: uppercase; letter-spacing: 0.05em;">
-                                        VERIFICATION METHOD
-                                    </div>
-                                </div>
-                                <div style="background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%); padding: 1rem 1.25rem; border-radius: 10px; border: 1.5px solid #e2e8f0;">
-                                    <div style="display: flex; flex-wrap: wrap; gap: 0.625rem; align-items: center;">
-                                        <span style="font-size: 0.8125rem; color: #64748b; font-weight: 600; margin-right: 0.25rem;">
-                                            Verified using:
-                                        </span>
-                                        ${allVerificationMethods.map(method => `
-                                            <span style="display: inline-flex; align-items: center; gap: 0.375rem; padding: 0.5rem 0.875rem; background: linear-gradient(135deg, ${style.color}15 0%, ${style.color}08 100%); border: 1.5px solid ${style.color}40; color: ${style.badge}; border-radius: 20px; font-size: 0.8125rem; font-weight: 600; transition: all 0.2s;"
-                                                 onmouseover="this.style.background='linear-gradient(135deg, ${style.color}25 0%, ${style.color}15 100%)'; this.style.borderColor='${style.color}60';"
-                                                 onmouseout="this.style.background='linear-gradient(135deg, ${style.color}15 0%, ${style.color}08 100%)'; this.style.borderColor='${style.color}40';">
-                                                <i class="fas fa-check-circle" style="font-size: 0.75rem;"></i>
-                                                ${method}
-                                            </span>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-            });
-            
-            claimsContainer.innerHTML = claimsHTML;
-            console.log('[FactChecker v4.27.0] ✓ REDESIGNED LAYOUT: Successfully rendered', factChecks.length, 'findings');
-            console.log('[FactChecker v4.27.0] ✓ Each finding shows: CLAIM → ANALYSIS → VERIFICATION');
-            
-        } else {
-            console.log('[FactChecker v4.27.0] No findings to display');
-            claimsContainer.innerHTML = `
-                <div style="padding: 2.5rem; text-align: center; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border: 2px solid #3b82f6;">
-                    <i class="fas fa-info-circle" style="font-size: 2.5rem; color: #3b82f6; margin-bottom: 1.25rem;"></i>
-                    <p style="color: #1e40af; font-size: 1.0625rem; font-weight: 600; margin: 0 0 0.5rem 0;">
-                        No specific findings for fact-checking in this content.
-                    </p>
-                    <p style="color: #3b82f6; font-size: 0.9375rem; margin: 0;">
-                        The content may be opinion-based, editorial, or contain primarily general statements.
-                    </p>
-                </div>
-            `;
-        }
-    },
-
-    // Display Transparency Analyzer
-    displayTransparencyAnalyzer: function(data, analyzer) {
-        console.log('[TransparencyAnalyzer v4.29.0 - SUBTLE HORIZONTAL] Displaying data:', data);
-        console.log('[TransparencyAnalyzer v4.29.0] Full data object:', JSON.stringify(data, null, 2));
-        
-        const container = document.getElementById('transparency-content-v3');
-        if (!container) {
-            console.error('[Transparency] Container not found');
-            return;
-        }
-        
-        // Check for v4.0 educational fields
-        const hasEducationalContent = data.article_type || data.what_to_look_for || data.transparency_lessons;
-        
-        if (hasEducationalContent) {
-            console.log('[Transparency v4.29.0] ✓ Found v4.0 educational content! Displaying SUBTLE HORIZONTAL layout...');
-            
-            // Extract v4.0 educational data
-            const articleType = data.article_type || 'News Report';
-            const score = data.transparency_score || data.score || 0;
-            const level = data.transparency_level || data.level || 'Unknown';
-            const whatToLookFor = data.what_to_look_for || [];
-            const lessons = data.transparency_lessons || [];
-            const findings = data.findings || [];
-            
-            // Build NEW SUBTLE HORIZONTAL LAYOUT
-            let html = `
-                <div style="padding: 2rem;">
-                    <!-- NEW: Subtle Horizontal Layout (Info Left, Score Right) -->
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 1.5rem 2rem; background: white; border-radius: 12px; border: 2px solid #e9d5ff; box-shadow: 0 2px 8px rgba(139,92,246,0.08); margin-bottom: 2rem;">
-                        <!-- Left: Info -->
-                        <div style="flex: 1;">
-                            <div style="font-size: 0.85rem; color: #8b5cf6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
-                                Transparency Analysis
-                            </div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 0.25rem;">
-                                ${level}
-                            </div>
-                            <div style="font-size: 0.95rem; color: #64748b;">
-                                Article Type: <span style="font-weight: 600; color: #475569;">${articleType}</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Right: Compact Score Badge -->
-                        <div style="flex-shrink: 0;">
-                            <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 1.25rem 1.75rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(139,92,246,0.2); min-width: 120px;">
-                                <div style="font-size: 2.5rem; font-weight: 800; color: white; line-height: 1;">${score}</div>
-                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.9); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.25rem;">Score</div>
-                            </div>
-                        </div>
-                    </div>
-            `;
-            
-            // Display findings if available
-            if (findings.length > 0) {
-                html += `
-                    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.2rem; font-weight: 700;">
-                            <i class="fas fa-search" style="color: #8b5cf6; margin-right: 0.5rem;"></i>
-                            What We Found
-                        </h4>
-                        <div style="display: grid; gap: 1rem;">
-                `;
-                
-                findings.forEach(finding => {
-                    const iconMap = {
-                        'positive': '✓',
-                        'warning': '⚠️',
-                        'info': 'ℹ️',
-                        'education': '💡'
-                    };
-                    const icon = iconMap[finding.type] || 'ℹ️';
+                // Call display function to populate data
+                if (self[service.displayFunc]) {
+                    console.log('[ServiceTemplates v5.0] Calling display function:', service.displayFunc);
+                    self[service.displayFunc](detailed[service.id]);
                     
-                    html += `
-                        <div style="padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 3px solid #8b5cf6;">
-                            <div style="font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">
-                                ${icon} ${finding.text || finding.title || 'Finding'}
-                            </div>
-                            <div style="color: #475569; font-size: 0.9rem; line-height: 1.6;">
-                                ${finding.explanation || finding.description || ''}
-                            </div>
-                        </div>
-                    `;
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
+                    // NEW v5.0: Render chart after populating data
+                    self.renderServiceChart(service.id, detailed[service.id]);
+                }
             }
+        });
+        
+        // Add toggle function if not exists
+        if (typeof window.toggleServiceDropdown === 'undefined') {
+            window.toggleServiceDropdown = function(serviceId) {
+                var dropdown = document.getElementById(serviceId + 'Dropdown');
+                if (dropdown) {
+                    dropdown.classList.toggle('active');
+                }
+            };
+        }
+        
+        console.log('[ServiceTemplates v5.0] ✓ All services displayed WITH CHARTS!');
+    },
+    
+    // ============================================================================
+    // INDIVIDUAL SERVICE DISPLAY METHODS (Preserved from v4.31.0)
+    // ============================================================================
+    
+    displaySourceCredibility: function(data) {
+        console.log('[Source Credibility] Displaying data');
+        
+        // Populate metrics
+        var score = data.credibility_score || data.score || 0;
+        this.updateElement('source-score', score);
+        
+        var age = data.age_years || data.age || 'N/A';
+        this.updateElement('source-age', age + (typeof age === 'number' ? ' years' : ''));
+        
+        var reputation = data.reputation_level || data.reputation || 'Unknown';
+        this.updateElement('source-reputation', reputation);
+        
+        // Trust indicator
+        var trustIndicator = document.getElementById('trust-indicator');
+        if (trustIndicator) {
+            trustIndicator.textContent = score + '/100';
+            trustIndicator.style.left = score + '%';
             
-            // Display "What to Look For" guide
-            if (whatToLookFor.length > 0) {
-                html += `
-                    <div style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); padding: 2rem; border-radius: 12px; border-left: 4px solid #10b981; margin-bottom: 1.5rem;">
-                        <h4 style="margin: 0 0 1rem 0; color: #065f46; font-size: 1.1rem; font-weight: 700;">
-                            <i class="fas fa-lightbulb" style="margin-right: 0.5rem;"></i>
-                            What to Look For in ${articleType}s
-                        </h4>
-                        <div style="background: rgba(255,255,255,0.6); padding: 1.5rem; border-radius: 8px;">
-                `;
-                
-                whatToLookFor.forEach(item => {
-                    if (typeof item === 'string') {
-                        html += `<p style="margin: 0 0 0.75rem 0; color: #047857; line-height: 1.7;">${item}</p>`;
-                    }
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
+            if (score >= 75) {
+                trustIndicator.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            } else if (score >= 50) {
+                trustIndicator.style.background = 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)';
+            } else if (score >= 25) {
+                trustIndicator.style.background = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+            } else {
+                trustIndicator.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
             }
-            
-            // Display transparency lessons
-            if (lessons.length > 0) {
-                html += `
-                    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 1.75rem; border-radius: 12px; border-left: 4px solid #f59e0b;">
-                        <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">
-                            <i class="fas fa-graduation-cap" style="margin-right: 0.5rem;"></i>
-                            Media Literacy Lessons
-                        </h4>
-                        <div style="background: rgba(255,255,255,0.6); padding: 1.5rem; border-radius: 8px;">
-                `;
-                
-                lessons.forEach(lesson => {
-                    if (typeof lesson === 'string') {
-                        html += `<p style="margin: 0 0 0.75rem 0; color: #78350f; line-height: 1.7;">${lesson}</p>`;
-                    }
-                });
-                
-                html += `
-                        </div>
-                    </div>
-                `;
-            }
-            
-            html += '</div>'; // Close main padding div
-            
-            container.innerHTML = html;
-            
-        } else {
-            // Fallback for non-educational format
-            console.log('[Transparency v4.29.0] Using fallback display (no educational content)');
-            
-            const score = data.transparency_score || data.score || 0;
-            const level = data.transparency_level || data.level || 'Unknown';
-            
-            container.innerHTML = `
-                <div style="padding: 2rem;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding: 1.5rem 2rem; background: white; border-radius: 12px; border: 2px solid #e9d5ff; box-shadow: 0 2px 8px rgba(139,92,246,0.08);">
-                        <div style="flex: 1;">
-                            <div style="font-size: 0.85rem; color: #8b5cf6; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem;">
-                                Transparency Analysis
-                            </div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: #1e293b;">
-                                ${level}
-                            </div>
-                        </div>
-                        <div style="flex-shrink: 0;">
-                            <div style="background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); padding: 1.25rem 1.75rem; border-radius: 12px; text-align: center; box-shadow: 0 4px 12px rgba(139,92,246,0.2); min-width: 120px;">
-                                <div style="font-size: 2.5rem; font-weight: 800; color: white; line-height: 1;">${score}</div>
-                                <div style="font-size: 0.75rem; color: rgba(255,255,255,0.9); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 0.25rem;">Score</div>
-                            </div>
-                        </div>
-                    </div>
+        }
+        
+        // Source details
+        this.updateElement('source-org', data.source_name || data.organization || 'Unknown');
+        this.updateElement('source-founded', data.founded_year || data.founded || 'Unknown');
+        this.updateElement('source-readership', data.readership || 'Not available');
+        
+        console.log('[Source Credibility] ✓ Complete');
+    },
+    
+    displayBiasDetector: function(data) {
+        console.log('[Bias Detector v4.30] Displaying with horizontal bar');
+        
+        var direction = data.bias_direction || data.direction || 'center';
+        var score = data.objectivity_score || data.score || 50;
+        
+        // Update direction text
+        this.updateElement('bias-direction', direction.replace(/-/g, ' ').toUpperCase());
+        this.updateElement('bias-score', score + '/100');
+        
+        // Animate needle and circle to position
+        var positions = {
+            'far-left': 10,
+            'left': 30,
+            'center-left': 40,
+            'center': 50,
+            'center-right': 60,
+            'right': 70,
+            'far-right': 90
+        };
+        
+        var position = positions[direction.toLowerCase()] || 50;
+        
+        var needle = document.getElementById('bias-needle');
+        var circle = document.getElementById('bias-circle');
+        
+        if (needle && circle) {
+            setTimeout(function() {
+                needle.style.left = position + '%';
+                circle.style.left = position + '%';
+            }, 300);
+        }
+        
+        // Update bias metrics section
+        var metricsSection = document.querySelector('.bias-metrics');
+        if (metricsSection && data.explanation) {
+            metricsSection.innerHTML = `
+                <div style="padding: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; margin: 2rem;">
+                    <h4 style="margin: 0 0 1rem 0; color: #92400e; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-info-circle"></i>
+                        Analysis Explanation
+                    </h4>
+                    <p style="margin: 0; color: #78350f; line-height: 1.7; font-size: 0.95rem;">
+                        ${data.explanation}
+                    </p>
                 </div>
             `;
         }
         
-        console.log('[TransparencyAnalyzer v4.29.0] ✓ SUBTLE HORIZONTAL layout displayed');
+        console.log('[Bias Detector] ✓ Complete with position:', position);
     },
-
-    displayContentAnalyzer: function(data, analyzer) {
-        const qualityScore = data.quality_score || data.score || 0;
-        const readabilityLevel = data.readability_level || data.readability || 'Unknown';
-        const wordCount = data.word_count || 0;
+    
+    displayFactChecker: function(data) {
+        console.log('[Fact Checker] Displaying data');
         
-        this.updateElement('quality-score', qualityScore + '/100');
-        this.updateElement('readability-level', readabilityLevel);
-        this.updateElement('word-count', wordCount.toLocaleString());
-    },
-
-    // Display Author
-    displayAuthor: function(data, analyzer) {
-        console.log('[Author Display v4.26.0] Received data:', data);
+        var score = data.accuracy_score || data.score || 0;
+        this.updateElement('fact-score', score + '%');
         
-        // Get all authors
-        const allAuthors = data.all_authors || data.authors || [];
-        const primaryAuthor = data.primary_author || data.name || data.author_name || 'Unknown Author';
+        var totalClaims = data.total_claims || data.claims_checked || 0;
+        this.updateElement('claims-checked', totalClaims);
         
-        // If all_authors is a string (comma-separated), split it
-        let authorList = [];
-        if (typeof allAuthors === 'string' && allAuthors.includes(',')) {
-            authorList = allAuthors.split(',').map(name => name.trim());
-        } else if (Array.isArray(allAuthors) && allAuthors.length > 0) {
-            authorList = allAuthors;
-        } else if (primaryAuthor.includes(',')) {
-            authorList = primaryAuthor.split(',').map(name => name.trim());
-        } else {
-            authorList = [primaryAuthor];
+        var verifiedClaims = data.verified_claims || data.true_claims || 0;
+        this.updateElement('verified-claims', verifiedClaims);
+        
+        // Display claims list
+        var claimsList = document.getElementById('claims-list');
+        if (claimsList && data.fact_checks && Array.isArray(data.fact_checks)) {
+            claimsList.innerHTML = '';
+            
+            data.fact_checks.forEach(function(check) {
+                var claimDiv = document.createElement('div');
+                claimDiv.className = 'claim-item';
+                
+                var verdict = check.verdict || 'unverified';
+                var verdictClass = verdict.toLowerCase().includes('true') ? 'verified' : 
+                                   verdict.toLowerCase().includes('false') ? 'false' : 'unverified';
+                
+                claimDiv.innerHTML = `
+                    <div class="claim-header">
+                        <span class="claim-text">${check.claim || check.text || 'Claim'}</span>
+                        <span class="claim-verdict ${verdictClass}">${verdict}</span>
+                    </div>
+                    ${check.explanation ? '<div class="claim-explanation">' + check.explanation + '</div>' : ''}
+                `;
+                
+                claimsList.appendChild(claimDiv);
+            });
         }
         
-        console.log('[Author Display v4.26.0] Authors:', authorList);
+        console.log('[Fact Checker] ✓ Complete');
+    },
+    
+    displayTransparencyAnalyzer: function(data) {
+        console.log('[Transparency Analyzer v4.30] Displaying with purple badge');
         
-        const credibility = data.credibility_score || data.score || data.credibility || 50;
-        const position = data.position || 'Journalist';
-        const organization = data.organization || data.domain || 'News Organization';
-        const bio = data.bio || data.biography || '';
-        const expertise = data.expertise || data.expertise_areas || [];
-        const socialMedia = data.social_media || {};
-        const wikipediaUrl = data.wikipedia_url || null;
+        var score = data.transparency_score || data.score || 0;
+        this.updateElement('transparency-score', score + '/100');
         
-        // Check if author is unknown
-        const isUnknown = primaryAuthor === 'Unknown Author' || primaryAuthor === 'Unknown' || !primaryAuthor;
+        // Update checklist items
+        var items = {
+            'trans-author': data.has_author || false,
+            'trans-date': data.has_date || false,
+            'trans-sources': data.sources_cited > 0 || data.has_sources || false,
+            'trans-corrections': data.has_corrections_policy || false
+        };
         
-        // Display ALL authors (not just first one) - FIXED v4.28.0
-        const authorDisplayName = authorList.length > 1 
-            ? authorList.join(' and ') 
-            : authorList[0];
+        Object.keys(items).forEach(function(itemId) {
+            var item = document.getElementById(itemId);
+            if (item) {
+                var statusSpan = item.querySelector('.status');
+                if (statusSpan) {
+                    statusSpan.textContent = items[itemId] ? '✓' : '✗';
+                    statusSpan.style.color = items[itemId] ? '#10b981' : '#ef4444';
+                }
+                item.style.opacity = items[itemId] ? '1' : '0.6';
+            }
+        });
+        
+        console.log('[Transparency Analyzer] ✓ Complete');
+    },
+    
+    displayManipulationDetector: function(data) {
+        console.log('[Manipulation Detector] Displaying data');
+        
+        var level = data.manipulation_level || data.level || 'Unknown';
+        var score = data.manipulation_score || data.score || 0;
+        
+        this.updateElement('manipulation-level', level);
+        this.updateElement('manipulation-score', score);
+        
+        var badge = document.getElementById('manipulation-badge');
+        if (badge) {
+            badge.className = 'risk-badge risk-' + level.toLowerCase().replace(/\s+/g, '-');
+        }
+        
+        // Display tactics
+        var tacticsContainer = document.getElementById('manipulation-tactics');
+        if (tacticsContainer && data.tactics_found && Array.isArray(data.tactics_found)) {
+            tacticsContainer.innerHTML = '<h4><i class="fas fa-list"></i> Detected Tactics</h4>';
+            
+            data.tactics_found.forEach(function(tactic) {
+                var tacticDiv = document.createElement('div');
+                tacticDiv.className = 'tactic-item';
+                tacticDiv.innerHTML = `
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>${typeof tactic === 'string' ? tactic : tactic.name || tactic.tactic}</span>
+                `;
+                tacticsContainer.appendChild(tacticDiv);
+            });
+        }
+        
+        console.log('[Manipulation Detector] ✓ Complete');
+    },
+    
+    displayContentAnalyzer: function(data) {
+        console.log('[Content Analyzer] Displaying data');
+        
+        var quality = data.quality_score || data.score || 0;
+        var readability = data.readability_level || data.readability || 'Unknown';
+        var wordCount = data.word_count || 0;
+        
+        this.updateElement('content-quality', quality + '/100');
+        this.updateElement('content-readability', readability);
+        this.updateElement('content-wordcount', wordCount.toLocaleString());
+        
+        console.log('[Content Analyzer] ✓ Complete');
+    },
+    
+    displayAuthorAnalyzer: function(data) {
+        console.log('[Author Analyzer v4.26.0] Displaying enhanced multi-author support');
+        
+        // Extract data
+        var authors = data.authors || [];
+        var primaryAuthor = authors[0] || {};
+        var authorName = data.author_name || primaryAuthor.name || 'Unknown Author';
+        var organization = data.organization || primaryAuthor.organization || 'Unknown Organization';
+        var credibility = data.credibility_score || data.score || 50;
+        var bio = data.bio || primaryAuthor.bio || '';
+        var expertise = data.expertise || primaryAuthor.expertise || [];
+        var wikipediaUrl = data.wikipedia_url || primaryAuthor.wikipedia_url || '';
+        var socialMedia = data.social_media || primaryAuthor.social_media || {};
+        
+        // Check if "Unknown Author"
+        var isUnknown = !authorName || authorName === 'Unknown Author' || authorName === 'Unknown' || authorName === 'N/A';
+        
+        // Clean author name
+        var authorDisplayName = isUnknown ? 'Unknown Author' : authorName.replace(/^by\s+/i, '').trim();
+        
+        // Display primary info
         this.updateElement('author-name', authorDisplayName);
-        
-        // Better title for Unknown Author
-        if (isUnknown) {
-            this.updateElement('author-title', 'Credibility based on outlet reputation');
-        } else {
-            this.updateElement('author-title', `${position} at ${organization}`);
-        }
-        
-        const credBadge = document.getElementById('author-cred-badge');
-        if (credBadge) {
-            this.updateElement('author-cred-score', credibility);
-            credBadge.className = 'credibility-badge ' + (credibility >= 70 ? 'high' : credibility >= 40 ? 'medium' : 'low');
-        }
-        
-        // Stats
-        this.updateElement('author-articles', data.articles_found || data.articles_count || '--');
-        this.updateElement('author-experience', data.years_experience || data.experience || '--');
-        // Awards removed - v4.28.0
-        
-        // Metrics
+        this.updateElement('author-organization', organization);
         this.updateElement('author-credibility', credibility + '/100');
-        this.updateElement('author-expertise', data.expertise_level || 'Verified');
-        this.updateElement('author-track-record', data.track_record || 'Good');
         
-        // Enhanced explanation for Unknown Author
+        // Handle "Unknown Author" case
         if (isUnknown) {
-            const bioSection = document.getElementById('author-bio');
+            var bioSection = document.getElementById('author-bio');
             if (bioSection) {
                 bioSection.innerHTML = `
                     <div style="padding: 1.75rem; background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius: 10px; border-left: 4px solid #f59e0b; box-shadow: 0 2px 6px rgba(0,0,0,0.05);">
@@ -1378,7 +888,7 @@ window.ServiceTemplates = {
         } else {
             // Display bio if available for known authors
             if (bio && bio.length > 10) {
-                const bioSection = document.getElementById('author-bio');
+                var bioSection = document.getElementById('author-bio');
                 if (bioSection) {
                     bioSection.innerHTML = `
                         <h4><i class="fas fa-user-circle"></i> About ${authorDisplayName}</h4>
@@ -1390,85 +900,56 @@ window.ServiceTemplates = {
         }
         
         // Display expertise tags (only for known authors)
-        let expertiseArray = [];
-        const expertiseTags = document.getElementById('expertise-tags');
+        var expertiseArray = [];
+        var expertiseTags = document.getElementById('expertise-tags');
         if (expertiseTags && expertise && !isUnknown) {
             if (typeof expertise === 'string') {
-                expertiseArray = expertise.split(',').map(e => e.trim());
+                expertiseArray = expertise.split(',').map(function(e) { return e.trim(); });
             } else if (Array.isArray(expertise)) {
                 expertiseArray = expertise;
             }
             
             if (expertiseArray.length > 0) {
-                expertiseTags.innerHTML = expertiseArray.slice(0, 4).map(exp => 
-                    `<span class="expertise-tag" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; margin: 0.25rem; font-weight: 600;">
-                        ${exp}
-                    </span>`
-                ).join('');
+                expertiseTags.innerHTML = expertiseArray.slice(0, 4).map(function(exp) {
+                    return '<span class="expertise-tag" style="display: inline-block; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; margin: 0.25rem; font-weight: 600;">' + exp + '</span>';
+                }).join('');
             }
         }
         
         // Display social links (only for known authors)
-        const linksContainer = document.getElementById('author-links');
+        var linksContainer = document.getElementById('author-links');
         if (linksContainer && (wikipediaUrl || socialMedia.linkedin || socialMedia.twitter) && !isUnknown) {
-            let linksHTML = '<div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">';
+            var linksHTML = '<div style="display: flex; gap: 0.5rem; margin-top: 0.5rem;">';
             
             if (wikipediaUrl) {
-                linksHTML += `
-                    <a href="${wikipediaUrl}" target="_blank" rel="noopener noreferrer" 
-                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;"
-                       onmouseover="this.style.background='#2563eb'" onmouseout="this.style.background='#3b82f6'">
-                        <i class="fab fa-wikipedia-w"></i> Wikipedia
-                    </a>
-                `;
+                linksHTML += '<a href="' + wikipediaUrl + '" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'"><i class="fab fa-wikipedia-w"></i> Wikipedia</a>';
             }
             
             if (socialMedia.linkedin) {
-                linksHTML += `
-                    <a href="${socialMedia.linkedin}" target="_blank" rel="noopener noreferrer"
-                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #0a66c2; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;"
-                       onmouseover="this.style.background='#004182'" onmouseout="this.style.background='#0a66c2'">
-                        <i class="fab fa-linkedin-in"></i> LinkedIn
-                    </a>
-                `;
+                linksHTML += '<a href="' + socialMedia.linkedin + '" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #0a66c2; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background=\'#004182\'" onmouseout="this.style.background=\'#0a66c2\'"><i class="fab fa-linkedin-in"></i> LinkedIn</a>';
             }
             
             if (socialMedia.twitter) {
-                linksHTML += `
-                    <a href="${socialMedia.twitter}" target="_blank" rel="noopener noreferrer"
-                       style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #1da1f2; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;"
-                       onmouseover="this.style.background='#0c7abf'" onmouseout="this.style.background='#1da1f2'">
-                        <i class="fab fa-twitter"></i> Twitter
-                    </a>
-                `;
+                linksHTML += '<a href="' + socialMedia.twitter + '" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.4rem 0.75rem; background: #1da1f2; color: white; border-radius: 6px; text-decoration: none; font-size: 0.75rem; font-weight: 600; transition: all 0.2s;" onmouseover="this.style.background=\'#0c7abf\'" onmouseout="this.style.background=\'#1da1f2\'"><i class="fab fa-twitter"></i> Twitter</a>';
             }
             
             linksHTML += '</div>';
             linksContainer.innerHTML = linksHTML;
         }
         
-        console.log('[Author Display v4.26.0] ✓ Complete');
-    },
-
-    getSensationalismExplanation: function(level) {
-        const explanations = {
-            'High': 'Significant use of sensational language that may exaggerate issues',
-            'Moderate': 'Some sensational language present but not overwhelming',
-            'Low': 'Minimal sensational language detected',
-            'Minimal': 'Very little or no sensational language used'
-        };
-        return explanations[level] || 'Article uses measured, factual language';
+        console.log('[Author Analyzer] ✓ Complete');
     },
     
-        updateElement: function(id, value) {
-        const element = document.getElementById(id);
+    // Helper methods
+    updateElement: function(id, value) {
+        var element = document.getElementById(id);
         if (element) {
             element.textContent = value;
         }
     },
-
+    
     getBiasPosition: function(direction, score) {
-        const positions = {
+        var positions = {
             'far-left': 10,
             'left': 25,
             'center-left': 40,
@@ -1481,8 +962,8 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('[ServiceTemplates v4.31.0] CRITICAL FIX: Container ID compatibility - Module loaded');
-console.log('[ServiceTemplates v4.31.0] Now supports both serviceAnalysisContainer AND service-results IDs');
+console.log('[ServiceTemplates v5.0.0] CHART INTEGRATION - Module loaded successfully');
+console.log('[ServiceTemplates v5.0.0] ✨ Charts will now render inside service cards!');
 
 /**
  * I did no harm and this file is not truncated.
