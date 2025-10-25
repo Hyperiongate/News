@@ -2,25 +2,28 @@
 <html lang="en">
 <head>
     <!-- 
-    <!-- 
     File: transcript.html
-    Version: 4.0.0 - UNIFIED NAVIGATION UPDATE
-    Last Updated: October 24, 2025
-    Description: Standalone Transcript Fact-Checker Page with Unified Navigation
+    Version: 5.0.0 - ENTERTAINING PROGRESS BAR & PDF EXPORT FIX
+    Last Updated: October 25, 2025
+    Description: Standalone Transcript Fact-Checker Page with Enhanced Progress Display
     
-    CHANGES FROM 3.0:
-    - REMOVED: Pricing link from navigation
-    - ADDED: News Analysis link to /
-    - ADDED: Transcript/Youtube Analysis link (current page indicator)
+    LATEST CHANGES (October 25, 2025):
+    - ADDED: Entertaining progress display with percentage (line ~1414)
+    - ADDED: Animated pulsing progress bar
+    - ADDED: Bounce animation on message updates
+    - FIXED: PDF export with proper download mechanism (line ~1629)
+    - ADDED: CSS animations (fadeInBounce, pulse)
     - PRESERVED: ALL transcript functionality (DO NO HARM ✓)
     - PRESERVED: All input methods (text/file/microphone/YouTube)
-    - PRESERVED: Export functionality (JSON/TXT/PDF)
+    - PRESERVED: All existing features
     
-    NAVIGATION:
-    - News Analysis, Transcript/Youtube (active), Features, About, Debate Arena, Live Stream, Contact, Upgrade to Pro
+    PROGRESS MESSAGES:
+    - Shows emojis: 🔍 🎯 🤔 🎉
+    - Shows percentage: "45%"
+    - Animated and engaging
     
-    This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - Unified navigation update
+    This file is COMPLETE and ready to deploy to: templates/transcript.html
+    Last modified: October 25, 2025 - Progress bar and PDF export enhancements
     -->
     -->
     <meta charset="UTF-8">
@@ -1421,10 +1424,36 @@ Examples:
                 .then(data => {
                     console.log('[TranscriptApp] Job status:', data);
                     
-                    // Update progress
+                    // ENHANCED PROGRESS DISPLAY WITH PERCENTAGE & ANIMATIONS
                     const progress = data.progress || 0;
-                    document.getElementById('progress-fill').style.width = `${progress}%`;
-                    document.getElementById('progress-text').textContent = data.message || 'Processing...';
+                    const progressFill = document.getElementById('progress-fill');
+                    const progressText = document.getElementById('progress-text');
+                    
+                    // Smooth animated progress bar
+                    if (progressFill) {
+                        progressFill.style.width = `${progress}%`;
+                        progressFill.style.transition = 'width 0.5s ease-out';
+                        
+                        // Add pulsing animation during processing
+                        if (progress > 0 && progress < 100) {
+                            progressFill.style.animation = 'pulse 1.5s ease-in-out infinite';
+                        } else {
+                            progressFill.style.animation = 'none';
+                        }
+                    }
+                    
+                    // Display message WITH PERCENTAGE
+                    if (progressText) {
+                        const message = data.message || 'Processing...';
+                        const percentageDisplay = `<strong style="color: #667eea; font-size: 18px;">${Math.round(progress)}%</strong>`;
+                        progressText.innerHTML = `${message} ${percentageDisplay}`;
+                        
+                        // Add bounce animation on message change
+                        progressText.style.animation = 'none';
+                        setTimeout(() => {
+                            progressText.style.animation = 'fadeInBounce 0.5s ease-out';
+                        }, 10);
+                    }
                     
                     if (data.status === 'completed') {
                         // Stop polling
@@ -1463,6 +1492,7 @@ Examples:
                     document.getElementById('input-section').style.display = 'block';
                 });
         }
+
 
         // ============================================================================
         // DISPLAY RESULTS
@@ -1599,7 +1629,7 @@ Examples:
         // ============================================================================
         // EXPORT
         // ============================================================================
-        function exportResults(format) {
+        async function exportResults(format) {
             if (!currentJobId) {
                 alert('No analysis results to export.');
                 return;
@@ -1607,9 +1637,42 @@ Examples:
             
             console.log('[TranscriptApp] Exporting:', format);
             
-            const url = `/api/transcript/export/${currentJobId}/${format}`;
-            window.open(url, '_blank');
+            try {
+                const url = `/api/transcript/export/${currentJobId}/${format}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Export failed');
+                }
+                
+                // Get filename from header or use default
+                let filename = `transcript-analysis.${format}`;
+                const contentDisposition = response.headers.get('Content-Disposition');
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="?(.+)"?/);
+                    if (match) filename = match[1];
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+                
+                console.log('[TranscriptApp] ✓ Exported:', filename);
+                
+            } catch (error) {
+                console.error('[TranscriptApp] Export error:', error);
+                alert('Failed to export: ' + error.message);
+            }
         }
+
 
         // ============================================================================
         // UTILITIES
@@ -1655,6 +1718,23 @@ Examples:
                 menu.classList.remove('active');
             }
         });
+
+        // Add CSS animations for progress bar
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInBounce {
+                0% { opacity: 0; transform: translateY(-10px); }
+                50% { opacity: 1; transform: translateY(2px); }
+                100% { opacity: 1; transform: translateY(0); }
+            }
+            
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.7; }
+            }
+        `;
+        document.head.appendChild(style);
+
     </script>
 
     <!-- I did no harm and this file is not truncated -->
