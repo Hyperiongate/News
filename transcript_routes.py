@@ -1,9 +1,16 @@
 """
 File: transcript_routes.py
-Last Updated: October 25, 2025 - HOTFIX: Method Name Correction
+Last Updated: October 25, 2025 - CRITICAL HOTFIX: Fact Checker Method Name Correction
 Description: Flask routes for transcript fact-checking with Redis-backed job storage
 
-LATEST HOTFIX (October 25, 2025 - 6:15 PM):
+LATEST HOTFIX (October 25, 2025 - 6:30 PM):
+- FIXED: Changed fact_checker.check_claim() to fact_checker.check_claim_with_verdict()
+- FIXED: Now passing claim_text string instead of entire claim dict
+- FIXED: Added context parameter with transcript, speaker, and topics
+- REASON: AttributeError - 'TranscriptComprehensiveFactChecker' object has no attribute 'check_claim'
+- The correct method name is 'check_claim_with_verdict' which expects (claim_text: str, context: dict)
+
+PREVIOUS HOTFIX (October 25, 2025 - 6:15 PM):
 - FIXED: Changed claim_extractor.extract_claims() to claim_extractor.extract()
 - FIXED: Removed redundant speaker/topic extraction (now using results from extract())
 - FIXED: Updated claim text access to handle both 'text' and 'claim' keys
@@ -202,7 +209,7 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
         job_id: Unique job identifier
         
     Returns:
-        Job data dictionary or None if not found
+        Job data dictionary or None
     """
     try:
         if redis_client:
@@ -214,25 +221,23 @@ def get_job(job_id: str) -> Optional[Dict[str, Any]]:
                 logger.info(f"[TranscriptRoutes] ✓ Retrieved job {job_id} from Redis (Instance: {INSTANCE_ID})")
                 return json.loads(job_json)
             else:
-                logger.error(f"[TranscriptRoutes] ✗ Job {job_id} not found in Redis (Instance: {INSTANCE_ID})")
-                logger.error("[TranscriptRoutes] ✗ This could mean: job expired, invalid ID, or Redis issue")
+                logger.warning(f"[TranscriptRoutes] ⚠️  Job {job_id} not found in Redis (Instance: {INSTANCE_ID})")
                 return None
         else:
             # Get from memory
-            job_data = memory_jobs.get(job_id)
-            if job_data:
+            if job_id in memory_jobs:
                 logger.info(f"[TranscriptRoutes] ✓ Retrieved job {job_id} from memory (Instance: {INSTANCE_ID})")
+                return memory_jobs[job_id]
             else:
-                logger.error(f"[TranscriptRoutes] ✗ Job {job_id} not found in memory (Instance: {INSTANCE_ID})")
-                logger.error("[TranscriptRoutes] ✗ MULTI-INSTANCE ISSUE: Job probably created on different instance!")
-                logger.error("[TranscriptRoutes] ✗ FIX THIS: Set up Redis on Render to share jobs across instances")
-            return job_data
+                logger.warning(f"[TranscriptRoutes] ⚠️  Job {job_id} not found in memory (Instance: {INSTANCE_ID})")
+                logger.warning("[TranscriptRoutes] ⚠️  This could be a multi-instance issue!")
+                return None
     except Exception as e:
         logger.error(f"[TranscriptRoutes] ✗ Error retrieving job {job_id}: {e}")
         # Fallback to memory if Redis fails
-        if redis_client:
+        if redis_client and job_id in memory_jobs:
             logger.warning(f"[TranscriptRoutes] ⚠️  Falling back to memory for job {job_id}")
-            return memory_jobs.get(job_id)
+            return memory_jobs[job_id]
         return None
 
 
@@ -256,13 +261,13 @@ def delete_job(job_id: str) -> None:
         logger.error(f"[TranscriptRoutes] ✗ Error deleting job {job_id}: {e}")
 
 
-def create_job(transcript: str, source_type: str) -> str:
+def create_job(transcript: str, source_type: str = 'text') -> str:
     """
     Create a new analysis job
     
     Args:
-        transcript: The transcript text to analyze
-        source_type: Source type (text, file, youtube, live)
+        transcript: Transcript text
+        source_type: Source type (text, youtube, audio, etc.)
         
     Returns:
         Job ID
@@ -271,16 +276,12 @@ def create_job(transcript: str, source_type: str) -> str:
     
     job_data = {
         'id': job_id,
-        'status': 'pending',
+        'status': 'created',
         'progress': 0,
-        'message': 'Initializing analysis...',
+        'message': 'Job created',
         'created_at': datetime.now().isoformat(),
-        'updated_at': datetime.now().isoformat(),
-        'source_type': source_type,
         'transcript_length': len(transcript),
-        'instance_id': INSTANCE_ID,
-        'results': None,
-        'error': None
+        'source_type': source_type
     }
     
     save_job(job_id, job_data)
@@ -292,14 +293,15 @@ def create_job(transcript: str, source_type: str) -> str:
 
 
 # ============================================================================
-# ENTERTAINING PROGRESS MESSAGES
+# PROCESSING LOGIC
 # ============================================================================
 
+# Fun messages for progress updates
 STARTING_MESSAGES = [
-    "🔍 Starting analysis... Time to find the truth!",
-    "🎯 Analyzing transcript... Let's see what we've got!",
-    "🚀 Firing up the fact-checking engines...",
-    "🧐 Reading through the transcript carefully...",
+    "🚀 Starting analysis... Let's do this!",
+    "🎬 Lights, camera, fact-check!",
+    "🔍 Firing up the truth detector...",
+    "🧠 Warming up the AI brain cells...",
     "📝 Extracting claims... This is the fun part!"
 ]
 
@@ -382,8 +384,15 @@ def process_transcript_job(job_id: str, transcript: str) -> None:
             claim_text = claim.get('text') or claim.get('claim', '')
             logger.info(f"[TranscriptRoutes] Fact-checking claim {i+1}/{len(claims)}: {claim_text[:50]}...")
             
-            # Fact-check the claim
-            fact_check_result = fact_checker.check_claim(claim)
+            # FIXED: Build context for fact-checking
+            context = {
+                'transcript': transcript,
+                'speaker': claim.get('speaker', 'Unknown'),
+                'topics': topics
+            }
+            
+            # FIXED: Use check_claim_with_verdict() with claim_text string and context
+            fact_check_result = fact_checker.check_claim_with_verdict(claim_text, context)
             fact_checks.append(fact_check_result)
             
             # Update progress
