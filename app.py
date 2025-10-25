@@ -1,7 +1,14 @@
 """
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.0
+Version: 10.2.1
 Date: October 25, 2025
+
+HOTFIX FROM 10.2.0:
+1. FIXED: Made debate_models import optional with try-except
+2. FIXED: App no longer crashes if debate_models.py is missing
+3. REASON: Deployment was failing with "ModuleNotFoundError: No module named 'debate_models'"
+4. RESULT: Debate Arena gracefully disabled if models missing, rest of app works
+5. PRESERVED: All v10.2.0 functionality including YouTube endpoint (DO NO HARM ✓)
 
 CHANGES FROM 10.1.0:
 1. ADDED: /api/youtube/process endpoint for YouTube transcript extraction
@@ -43,7 +50,7 @@ PREVIOUS FEATURES PRESERVED:
 - All v8.x enhancements
 
 This file is complete and ready to deploy.
-Last modified: October 25, 2025 - Added /api/youtube/process endpoint v10.2.0
+Last modified: October 25, 2025 - HOTFIX: Optional debate_models import v10.2.1
 """
 
 import os
@@ -129,16 +136,24 @@ if database_url:
     from flask_sqlalchemy import SQLAlchemy
     db = SQLAlchemy(app)
     
-    # Import debate models
-    from debate_models import User, Debate, Argument, Vote
+    # Import debate models (optional - gracefully handle if missing)
+    try:
+        from debate_models import User, Debate, Argument, Vote
+        logger.info("  ✓ Debate models imported successfully")
+    except ImportError as e:
+        logger.warning(f"  ⚠ Debate models not found: {e}")
+        logger.warning("  ⚠ Debate Arena will be disabled")
+        db = None  # Disable debate features if models missing
     
-    # Initialize database
-    with app.app_context():
-        try:
-            db.create_all()
-            logger.info("  ✓ Database tables created/verified")
-        except Exception as e:
-            logger.error(f"  ✗ Database initialization error: {e}")
+    # Initialize database (only if models imported successfully)
+    if db is not None:
+        with app.app_context():
+            try:
+                db.create_all()
+                logger.info("  ✓ Database tables created/verified")
+            except Exception as e:
+                logger.error(f"  ✗ Database initialization error: {e}")
+                db = None  # Disable if initialization fails
 else:
     db = None
     logger.info("=" * 80)
@@ -334,7 +349,7 @@ def transcript_page():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '10.2.0',
+        'version': '10.2.1',
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
@@ -383,7 +398,7 @@ def analyze():
         text = data.get('text')
         
         logger.info("=" * 80)
-        logger.info("API /analyze endpoint called - Version 10.2.0")
+        logger.info("API /analyze endpoint called - Version 10.2.1")
         logger.info(f"URL provided: {bool(url)}")
         logger.info(f"Text provided: {bool(text)} ({len(text) if text else 0} chars)")
         
@@ -463,7 +478,7 @@ def process_youtube():
         url = data.get('url')
         
         logger.info("=" * 80)
-        logger.info("API /api/youtube/process endpoint called - Version 10.2.0")
+        logger.info("API /api/youtube/process endpoint called - Version 10.2.1")
         logger.info(f"YouTube URL: {url}")
         
         if not url:
@@ -530,7 +545,7 @@ def debug_api_keys():
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.0")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.1")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -596,6 +611,10 @@ if __name__ == '__main__':
     logger.info("  ✓ /api/youtube/process for video transcript analysis")
     logger.info("  ✓ Full integration with ScrapingBee service")
     logger.info("  ✓ Fixed 404 errors on YouTube processing")
+    logger.info("")
+    logger.info("HOTFIX IN v10.2.1:")
+    logger.info("  ✓ Optional debate_models import (no crash if missing)")
+    logger.info("  ✓ Graceful degradation if debate arena unavailable")
     logger.info("=" * 80)
     
     port = int(os.getenv('PORT', 5000))
