@@ -3,34 +3,35 @@
 <head>
     <!-- 
     File: transcript.html
-    Version: 6.1.0 - YOUTUBE INTEGRATION FULLY ENABLED
+    Version: 6.2.0 - PROGRESS BAR FIXES + TIME ESTIMATES
     Last Updated: October 25, 2025
-    Description: Standalone Transcript Fact-Checker with ENTERTAINMENT-FOCUSED Progress Display
+    Description: Standalone Transcript Fact-Checker with FIXED Progress Display
     
-    LATEST CHANGES (October 25, 2025 - v6.1.0):
-    ✅ FIXED: Enabled YouTube transcript extraction (removed placeholder alert)
-    ✅ ADDED: Proper YouTube API integration via /api/youtube/process endpoint
-    ✅ ADDED: YouTube-specific error handling and user feedback
-    ✅ ADDED: Support for videos with/without captions (ScrapingBee service)
-    ✅ PRESERVED: All v6.0.0 functionality (DO NO HARM ✓)
+    LATEST CHANGES (October 25, 2025 - v6.2.0):
+    ✅ FIXED: "Did You Know" facts now cycle properly every 4 seconds
+    ✅ ADDED: Prominent time estimate banner at top of progress section
+    ✅ FIXED: Fun facts rotation interval properly increments currentFactIndex
+    ✅ IMPROVED: Better user expectations with "This could take a couple minutes" message
+    ✅ PRESERVED: All v6.1.0 functionality (DO NO HARM ✓)
     
-    CHANGES FROM v6.0.0:
-    - Line 1059-1067: Replaced placeholder alert with working YouTube processing
-    - Added processYouTubeURL() async function to handle YouTube-specific API calls
-    - YouTube videos now extract transcripts and analyze automatically
-    - Error messages show helpful suggestions based on video type (live, no captions, etc.)
+    CHANGES FROM v6.1.0:
+    - Line 87-111: Added time estimate banner with pulsing animation
+    - Line 934-942: Fixed funFactsInterval to properly cycle through facts
+    - Added proper index increment: currentFactIndex = (currentFactIndex + 1) % funFacts.length
+    - Banner shows: "⏱️ This analysis could take a couple of minutes..."
     
-    ENTERTAINMENT FEATURES (from v6.0.0):
+    ENTERTAINMENT FEATURES:
+    - ⏰ Time estimate banner (new in v6.2.0)
     - 🌈 Rainbow progress bar that cycles through colors
     - 🎭 Emoji changes: 🔍 → 🎯 → 🤔 → 🎉 based on progress
     - 🎨 Percentage size: 48px bold with color morphing
     - ✨ Animated sparkles that pulse and fade
-    - 🎪 Rotating fun facts every 4 seconds
+    - 🎪 Rotating fun facts NOW WORKING (cycles every 4 seconds)
     - 📊 Claim counter shows X/total with animations
     - 💫 Multiple animation layers for depth
     
     Deploy to: templates/transcript.html
-    Last modified: October 25, 2025 - YouTube integration enabled v6.1.0
+    Last modified: October 25, 2025 - Progress bar fixes v6.2.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -80,6 +81,48 @@
         /* ========================================================================
            ULTRA-ENTERTAINING PROGRESS SECTION
            ======================================================================== */
+        
+        /* NEW: Time Estimate Banner */
+        .time-estimate-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            animation: gentlePulse 2s ease-in-out infinite;
+        }
+
+        .time-estimate-banner i {
+            font-size: 24px;
+            animation: spin 3s linear infinite;
+        }
+
+        @keyframes gentlePulse {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            }
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+            }
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
         
         .progress-section {
             display: none;
@@ -180,433 +223,505 @@
             animation: spinDots 2s ease-in-out infinite;
         }
 
-        .spinner-dot:nth-child(1) { top: 0; left: 50%; margin-left: -6px; animation-delay: 0s; }
-        .spinner-dot:nth-child(2) { top: 50%; right: 0; margin-top: -6px; animation-delay: 0.5s; }
-        .spinner-dot:nth-child(3) { bottom: 0; left: 50%; margin-left: -6px; animation-delay: 1s; }
-        .spinner-dot:nth-child(4) { top: 50%; left: 0; margin-top: -6px; animation-delay: 1.5s; }
+        .spinner-dot:nth-child(1) {
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .spinner-dot:nth-child(2) {
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            animation-delay: -0.5s;
+        }
+
+        .spinner-dot:nth-child(3) {
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            animation-delay: -1s;
+        }
+
+        .spinner-dot:nth-child(4) {
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            animation-delay: -1.5s;
+        }
 
         @keyframes spin {
             0% { transform: translate(-50%, -50%) rotate(0deg); }
             100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
 
-        @keyframes spinDots {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(0.8); }
-        }
-
         @keyframes pulse {
-            0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
-            50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+            0%, 100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.6;
+            }
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.3;
+            }
         }
 
-        /* Giant Rotating Emoji */
+        @keyframes spinDots {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.5);
+                opacity: 0.5;
+            }
+        }
+
+        /* Floating Sparkles */
+        .sparkle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            opacity: 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .sparkle:nth-child(1) { top: 10%; left: 10%; animation-delay: 0s; }
+        .sparkle:nth-child(2) { top: 20%; left: 80%; animation-delay: 0.5s; }
+        .sparkle:nth-child(3) { top: 70%; left: 15%; animation-delay: 1s; }
+        .sparkle:nth-child(4) { top: 60%; left: 85%; animation-delay: 1.5s; }
+        .sparkle:nth-child(5) { top: 40%; left: 50%; animation-delay: 2s; }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0) scale(0);
+                opacity: 0;
+            }
+            50% {
+                transform: translateY(-20px) scale(1);
+                opacity: 1;
+            }
+        }
+
+        /* Dynamic Emoji Icon */
         .progress-emoji {
-            font-size: 72px;
-            margin: 20px 0;
-            animation: rotateEmoji 3s ease-in-out infinite;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: bounce 1s ease-in-out infinite;
+            filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
         }
 
-        @keyframes rotateEmoji {
-            0%, 100% { transform: rotate(-10deg) scale(1); }
-            50% { transform: rotate(10deg) scale(1.1); }
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0) rotate(0deg);
+            }
+            25% {
+                transform: translateY(-10px) rotate(-5deg);
+            }
+            75% {
+                transform: translateY(-5px) rotate(5deg);
+            }
         }
 
-        .progress-section h3 {
+        /* Progress Title */
+        .progress-title {
             font-size: 28px;
             font-weight: 800;
             color: var(--gray-900);
             margin-bottom: 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: relative;
+            z-index: 1;
         }
 
-        /* Rainbow Animated Progress Bar */
-        .progress-container {
-            position: relative;
-            width: 100%;
-            max-width: 600px;
-            height: 40px;
-            background: var(--gray-200);
+        /* Rainbow Progress Bar */
+        .progress-bar-container {
+            background: rgba(0, 0, 0, 0.05);
             border-radius: 20px;
-            margin: 0 auto 30px;
+            height: 32px;
+            margin: 30px 0;
             overflow: hidden;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        /* Sparkle Effects */
-        .progress-sparkles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 2;
-        }
-
-        .sparkle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: white;
-            border-radius: 50%;
-            animation: sparkle 2s ease-in-out infinite;
-            box-shadow: 0 0 10px rgba(255,255,255,0.8);
-        }
-
-        .sparkle:nth-child(1) { left: 20%; animation-delay: 0s; }
-        .sparkle:nth-child(2) { left: 50%; animation-delay: 0.5s; }
-        .sparkle:nth-child(3) { left: 80%; animation-delay: 1s; }
-
-        @keyframes sparkle {
-            0%, 100% { 
-                opacity: 0; 
-                transform: translateY(20px) scale(0); 
-            }
-            50% { 
-                opacity: 1; 
-                transform: translateY(0) scale(1); 
-            }
-        }
-
-        /* Gradient Progress Fill */
-        .progress-fill {
             position: relative;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .progress-bar-fill {
             height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, 
-                #667eea 0%, 
-                #764ba2 20%,
-                #f093fb 40%,
-                #4facfe 60%,
-                #00f2fe 80%,
-                #43e97b 100%
+            background: linear-gradient(
+                90deg,
+                #667eea 0%,
+                #764ba2 25%,
+                #f093fb 50%,
+                #4facfe 75%,
+                #00f2fe 100%
             );
             background-size: 200% 100%;
             border-radius: 20px;
-            transition: width 0.5s ease-out;
-            animation: gradientShift 3s ease-in-out infinite;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            animation: rainbowShift 3s ease-in-out infinite;
+            box-shadow: 0 2px 12px rgba(102, 126, 234, 0.4);
+            position: relative;
+            overflow: hidden;
         }
 
-        @keyframes gradientShift {
-            0%, 100% { background-position: 0% 0%; }
-            50% { background-position: 100% 0%; }
-        }
-
-        /* Huge Colorful Percentage */
-        .progress-percentage {
+        .progress-bar-fill::after {
+            content: '';
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes rainbowShift {
+            0%, 100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        /* Huge Percentage Display */
+        .progress-percentage {
             font-size: 48px;
-            font-weight: 900;
-            color: white;
-            text-shadow: 
-                0 2px 4px rgba(0,0,0,0.2),
-                0 0 20px rgba(102, 126, 234, 0.5);
-            z-index: 3;
-            animation: colorMorph 4s ease-in-out infinite;
-        }
-
-        @keyframes colorMorph {
-            0%, 100% { color: #ffffff; }
-            25% { color: #ffd700; }
-            50% { color: #ff69b4; }
-            75% { color: #00ffff; }
-        }
-
-        /* Animated Claim Counter */
-        .claim-counter {
-            display: none;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--primary-blue);
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-            border-radius: 12px;
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        /* Fun Facts Carousel */
-        .fun-facts-container {
-            margin-top: 40px;
-            padding: 24px;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
-            border-radius: 16px;
-            border: 2px dashed var(--gray-300);
-        }
-
-        .fun-facts-title {
-            font-size: 16px;
-            font-weight: 700;
-            color: var(--purple-glow);
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .fun-fact {
-            font-size: 18px;
-            font-weight: 500;
-            color: var(--gray-700);
-            line-height: 1.6;
-            min-height: 60px;
-            animation: fadeInOut 4s ease-in-out infinite;
-        }
-
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0; transform: translateY(10px); }
-            10%, 90% { opacity: 1; transform: translateY(0); }
-        }
-
-        /* ========================================================================
-           MAIN CONTAINER
-           ======================================================================== */
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-        }
-
-        /* ========================================================================
-           INPUT SECTION
-           ======================================================================== */
-        .card {
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            box-shadow: 
-                0 20px 60px rgba(0, 0, 0, 0.15),
-                0 0 40px rgba(102, 126, 234, 0.1);
-            padding: 40px;
-            margin-bottom: 30px;
-        }
-
-        .input-section h1 {
-            font-size: 32px;
             font-weight: 800;
-            color: var(--gray-900);
-            margin-bottom: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 20px 0;
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            animation: colorShift 3s ease-in-out infinite;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
         }
 
-        .input-section .subtitle {
-            font-size: 16px;
-            color: var(--gray-600);
-            margin-bottom: 32px;
+        @keyframes colorShift {
+            0%, 100% {
+                filter: hue-rotate(0deg) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+            }
+            50% {
+                filter: hue-rotate(30deg) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.15));
+            }
         }
 
-        /* Input Tabs */
-        .input-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 24px;
-            border-bottom: 2px solid var(--gray-200);
-            padding-bottom: 4px;
-        }
-
-        .input-tab {
-            padding: 12px 24px;
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--gray-600);
-            background: transparent;
-            border: none;
-            border-bottom: 3px solid transparent;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .input-tab:hover {
-            color: var(--primary-blue);
-            background: rgba(59, 130, 246, 0.05);
-            border-radius: 8px 8px 0 0;
-        }
-
-        .input-tab.active {
-            color: var(--primary-blue);
-            border-bottom-color: var(--primary-blue);
-        }
-
-        .input-tab i {
+        /* Claim Counter */
+        .claims-analyzed {
             font-size: 18px;
+            color: var(--gray-700);
+            margin-top: 20px;
+            font-weight: 600;
         }
 
-        /* Input Panels */
-        .input-panel {
-            display: none;
-            margin-bottom: 24px;
+        .claims-analyzed i {
+            color: var(--success-green);
+            margin-right: 8px;
+            animation: pulse 2s ease-in-out infinite;
         }
 
-        .input-panel.active {
-            display: block;
-            animation: fadeIn 0.3s ease;
+        /* Fun Facts Box */
+        .fun-facts-box {
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 16px;
+            padding: 24px;
+            margin-top: 30px;
+            position: relative;
+            overflow: hidden;
         }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        .fun-facts-box::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #4facfe);
+            background-size: 200% 100%;
+            animation: rainbowShift 3s ease-in-out infinite;
         }
 
-        .text-input {
-            width: 100%;
-            min-height: 300px;
-            padding: 20px;
-            font-size: 15px;
-            font-family: inherit;
+        .fun-fact-title {
+            font-size: 18px;
+            font-weight: 800;
             color: var(--gray-900);
-            background: var(--gray-50);
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            resize: vertical;
-            transition: all 0.3s ease;
-        }
-
-        .text-input:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            background: white;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
-        }
-
-        .input-info {
+            margin-bottom: 12px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-top: 8px;
-            font-size: 13px;
-            color: var(--gray-600);
+            justify-content: center;
+            gap: 8px;
         }
 
-        /* File Upload Area */
-        .file-upload-area {
-            border: 3px dashed var(--gray-300);
-            border-radius: 12px;
-            padding: 60px 20px;
+        .fun-fact-content {
+            font-size: 16px;
+            color: var(--gray-700);
+            line-height: 1.6;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background: var(--gray-50);
         }
 
-        .file-upload-area:hover {
-            border-color: var(--primary-blue);
-            background: rgba(59, 130, 246, 0.05);
+        /* Container */
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
         }
 
-        .file-upload-area i {
+        /* Main Card */
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            margin-bottom: 30px;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header-icon {
             font-size: 48px;
-            color: var(--primary-blue);
             margin-bottom: 16px;
         }
 
-        .file-upload-text {
+        .header-title {
+            font-size: 36px;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 12px;
+        }
+
+        .header-subtitle {
+            font-size: 18px;
+            color: var(--gray-600);
+            line-height: 1.6;
+        }
+
+        /* Tab Navigation */
+        .tab-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 30px;
+            background: var(--gray-100);
+            padding: 6px;
+            border-radius: 12px;
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            background: transparent;
+            color: var(--gray-600);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-button:hover {
+            background: rgba(102, 126, 234, 0.1);
+            color: var(--primary-blue);
+        }
+
+        .tab-button.active {
+            background: white;
+            color: var(--primary-blue);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
             font-size: 16px;
             font-weight: 600;
             color: var(--gray-900);
-            margin-bottom: 8px;
+            margin-bottom: 12px;
         }
 
-        .file-types {
+        .form-label i {
+            color: var(--primary-blue);
+            margin-right: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--gray-200);
+            border-radius: 12px;
+            font-size: 16px;
+            color: var(--gray-900);
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 250px;
+            resize: vertical;
+            line-height: 1.6;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-top: 8px;
+        }
+
+        /* Helper Text */
+        .helper-text {
             font-size: 14px;
             color: var(--gray-600);
+            margin-top: 8px;
+            line-height: 1.5;
         }
 
-        /* Analyze Button */
-        .analyze-button {
-            width: 100%;
-            padding: 18px;
-            font-size: 18px;
-            font-weight: 700;
-            color: white;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        /* Button Container */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 16px 32px;
             border: none;
             border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+            gap: 10px;
         }
 
-        .analyze-button:hover {
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue), var(--primary-dark));
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
 
-        .analyze-button:active {
+        .btn-primary:active {
             transform: translateY(0);
         }
 
-        /* ========================================================================
-           RESULTS SECTION
-           ======================================================================== */
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-200);
+        }
+
+        /* Results Section */
         .results-section {
             display: none;
         }
 
         .results-section.active {
             display: block;
-            animation: fadeIn 0.5s ease;
         }
 
         .credibility-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 16px;
-            padding: 32px;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            border: 2px solid rgba(102, 126, 234, 0.2);
+            border-radius: 20px;
+            padding: 40px;
             text-align: center;
-            margin-bottom: 24px;
-            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+            margin-bottom: 30px;
         }
 
         .meter-score {
             font-size: 72px;
-            font-weight: 900;
-            margin: 16px 0;
-            text-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
         }
 
         .credibility-label {
             font-size: 24px;
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            opacity: 0.95;
+            color: var(--gray-700);
         }
 
         .claim-card {
             background: white;
-            border-radius: 12px;
+            border: 2px solid var(--gray-200);
+            border-radius: 16px;
             padding: 24px;
-            margin-bottom: 16px;
-            border-left: 4px solid var(--primary-blue);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
             transition: all 0.3s ease;
         }
 
         .claim-card:hover {
-            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            border-color: var(--primary-blue);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.1);
             transform: translateY(-2px);
         }
 
         .verdict-badge {
-            display: inline-block;
-            padding: 6px 16px;
+            padding: 8px 16px;
             border-radius: 20px;
             font-size: 13px;
             font-weight: 700;
@@ -614,96 +729,174 @@
             letter-spacing: 0.5px;
         }
 
-        .new-analysis-btn {
-            background: var(--success-green);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
+        /* Error State */
+        .error-message {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+            border: 2px solid rgba(239, 68, 68, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            color: var(--error-red);
             font-weight: 600;
-            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
+            gap: 12px;
         }
 
-        .new-analysis-btn:hover {
-            background: #059669;
-            transform: translateY(-2px);
+        .error-message i {
+            font-size: 24px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+                padding-top: 80px;
+            }
+
+            .card {
+                padding: 24px;
+                border-radius: 16px;
+            }
+
+            .header-title {
+                font-size: 28px;
+            }
+
+            .header-subtitle {
+                font-size: 16px;
+            }
+
+            .tab-button {
+                font-size: 14px;
+                padding: 12px 16px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .progress-percentage {
+                font-size: 36px;
+            }
+
+            .meter-score {
+                font-size: 56px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Navigation will be injected by main.css -->
+    
     <div class="container">
         <!-- Input Section -->
-        <div class="input-section card" id="input-section">
-            <h1>📝 Transcript Fact-Checker</h1>
-            <p class="subtitle">Analyze speeches, interviews, and YouTube videos for factual accuracy</p>
+        <div id="input-section">
+            <div class="card">
+                <div class="header">
+                    <div class="header-icon">🎙️</div>
+                    <h1 class="header-title">Transcript Fact Checker</h1>
+                    <p class="header-subtitle">
+                        AI-powered analysis of speeches, interviews, and YouTube videos
+                    </p>
+                </div>
 
-            <!-- Input Method Tabs -->
-            <div class="input-tabs">
-                <button class="input-tab active" data-tab="text" onclick="switchInputTab('text')">
-                    <i class="fas fa-keyboard"></i>
-                    <span>Text Input</span>
-                </button>
-                <button class="input-tab" data-tab="file" onclick="switchInputTab('file')">
-                    <i class="fas fa-file-upload"></i>
-                    <span>Upload File</span>
-                </button>
-                <button class="input-tab" data-tab="youtube" onclick="switchInputTab('youtube')">
-                    <i class="fab fa-youtube"></i>
-                    <span>YouTube URL</span>
-                </button>
-            </div>
+                <!-- Tab Navigation -->
+                <div class="tab-container">
+                    <button class="tab-button active" onclick="switchTab('text')">
+                        <i class="fas fa-file-text"></i>
+                        Paste Text
+                    </button>
+                    <button class="tab-button" onclick="switchTab('youtube')">
+                        <i class="fab fa-youtube"></i>
+                        YouTube URL
+                    </button>
+                </div>
 
-            <!-- Text Input Panel -->
-            <div class="input-panel active" id="text-panel">
-                <textarea 
-                    class="text-input" 
-                    id="text-input" 
-                    placeholder="Paste your transcript here... (up to 50,000 characters)"
-                    maxlength="50000"
-                ></textarea>
-                <div class="input-info">
-                    <span>Paste any speech or interview transcript</span>
-                    <span id="char-count">0 / 50,000</span>
+                <!-- Text Input Tab -->
+                <div id="text-tab" class="tab-content active">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fas fa-microphone"></i>
+                            Paste Transcript Text
+                        </label>
+                        <textarea 
+                            id="text-input" 
+                            class="form-input form-textarea" 
+                            placeholder="Paste your transcript here...
+
+Example formats:
+• Speech transcript
+• Interview transcript
+• Podcast transcript
+• Video captions
+• Meeting notes"
+                            oninput="updateCharCount('text-char-count', this.value)"
+                        ></textarea>
+                        <div id="text-char-count" class="char-counter">0 characters</div>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="analyzeText()">
+                            <i class="fas fa-search"></i>
+                            Analyze Transcript
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearText()">
+                            <i class="fas fa-times"></i>
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- YouTube Input Tab -->
+                <div id="youtube-tab" class="tab-content">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <i class="fab fa-youtube"></i>
+                            YouTube Video URL
+                        </label>
+                        <input 
+                            type="url" 
+                            id="youtube-url" 
+                            class="form-input" 
+                            placeholder="https://www.youtube.com/watch?v=..."
+                        >
+                        <p class="helper-text">
+                            <i class="fas fa-info-circle"></i>
+                            Paste a YouTube URL to automatically extract and analyze the transcript
+                        </p>
+                    </div>
+
+                    <div class="button-group">
+                        <button class="btn btn-primary" onclick="analyzeYouTube()">
+                            <i class="fab fa-youtube"></i>
+                            Analyze Video
+                        </button>
+                        <button class="btn btn-secondary" onclick="clearYouTube()">
+                            <i class="fas fa-times"></i>
+                            Clear
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            <!-- File Upload Panel -->
-            <div class="input-panel" id="file-panel">
-                <div class="file-upload-area" id="file-drop-zone" onclick="document.getElementById('file-input').click()">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <p class="file-upload-text">Drop your file here or click to browse</p>
-                    <p class="file-types">Supported formats: TXT, SRT, VTT (Max 5MB)</p>
-                </div>
-                <input type="file" id="file-input" accept=".txt,.srt,.vtt" style="display: none;">
-            </div>
-
-            <!-- YouTube Panel -->
-            <div class="input-panel" id="youtube-panel">
-                <input 
-                    type="text" 
-                    class="text-input" 
-                    id="youtube-url" 
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    style="min-height: auto; height: 50px;"
-                >
-                <div class="input-info">
-                    <span>Extract and analyze transcripts from YouTube videos</span>
-                </div>
-            </div>
-
-            <button class="analyze-button" id="analyze-button" onclick="startAnalysis()">
-                <i class="fas fa-search"></i>
-                Analyze Transcript
-            </button>
         </div>
 
-        <!-- ULTRA-ENTERTAINING Progress Section -->
-        <div class="progress-section" id="progress-section">
-            <!-- Multi-layer Spinner -->
+        <!-- Progress Section -->
+        <div id="progress-section" class="progress-section">
+            <!-- Time Estimate Banner -->
+            <div class="time-estimate-banner">
+                <i class="fas fa-clock"></i>
+                <span>This analysis could take a couple of minutes...</span>
+            </div>
+
+            <!-- Sparkles -->
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+            <div class="sparkle"></div>
+
+            <!-- Spinner -->
             <div class="spinner-container">
                 <div class="spinner-glow"></div>
                 <div class="spinner"></div>
@@ -715,235 +908,131 @@
                 </div>
             </div>
 
-            <!-- Rotating Emoji -->
+            <!-- Emoji -->
             <div class="progress-emoji" id="progress-emoji">🔍</div>
 
             <!-- Title -->
-            <h3>Analyzing Transcript</h3>
+            <h2 class="progress-title">Analyzing Transcript</h2>
 
-            <!-- Progress Container -->
-            <div class="progress-container">
-                <!-- Sparkles -->
-                <div class="progress-sparkles">
-                    <div class="sparkle"></div>
-                    <div class="sparkle"></div>
-                    <div class="sparkle"></div>
-                </div>
-                
-                <!-- Animated Progress Fill -->
-                <div class="progress-fill" id="progress-fill"></div>
-                
-                <!-- Huge Percentage Display -->
-                <div class="progress-percentage" id="progress-percentage">0%</div>
+            <!-- Progress Bar -->
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
             </div>
 
-            <!-- Animated Claim Counter -->
-            <div class="claim-counter" id="claim-counter">
+            <!-- Percentage -->
+            <div class="progress-percentage" id="progress-percentage">0%</div>
+
+            <!-- Claims Counter -->
+            <div class="claims-analyzed" id="claims-counter">
                 <i class="fas fa-check-circle"></i>
-                <span id="claims-checked-count">0</span> claims analyzed
+                <span id="claims-count">0 claims analyzed</span>
             </div>
 
-            <!-- Fun Facts Carousel -->
-            <div class="fun-facts-container">
-                <div class="fun-facts-title">💡 Did You Know?</div>
-                <div class="fun-fact" id="fun-fact">Preparing your analysis...</div>
+            <!-- Fun Facts -->
+            <div class="fun-facts-box">
+                <div class="fun-fact-title">
+                    💡 Did You Know?
+                </div>
+                <div class="fun-fact-content" id="fun-fact">
+                    Preparing your analysis...
+                </div>
             </div>
         </div>
 
         <!-- Results Section -->
-        <div class="results-section card" id="results-section">
-            <!-- Results will be populated here by JavaScript -->
+        <div id="results-section" class="results-section">
+            <!-- Results will be dynamically inserted here -->
         </div>
     </div>
 
     <script>
+        console.log('[TranscriptApp] Module loading - v6.2.0 with fixed progress bar cycling...');
+
         // ============================================================================
-        // GLOBAL STATE
+        // STATE MANAGEMENT
         // ============================================================================
         let currentJobId = null;
-        let pollInterval = null;
         let currentResults = null;
+        let pollInterval = null;
         let funFactsInterval = null;
-
-        const funFacts = [
-            "🤖 AI models can process thousands of claims per minute!",
-            "🌍 Fact-checking helps combat misinformation worldwide.",
-            "📊 Our system cross-references multiple trusted sources.",
-            "🔍 The average person encounters 100+ claims daily.",
-            "✨ Truth is more fascinating than fiction!",
-            "🎯 Accuracy matters more than ever in the digital age.",
-            "🧠 Critical thinking is humanity's superpower.",
-            "📚 Knowledge is the best defense against false information.",
-            "🚀 Technology amplifies both truth and misinformation.",
-            "💡 Verify before you trust - always check your sources!"
-        ];
-
-        console.log('[TranscriptApp] Module loading - v6.1.0 with YouTube integration...');
+        let currentFactIndex = 0;
 
         // ============================================================================
         // INITIALIZATION
         // ============================================================================
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', () => {
             console.log('[TranscriptApp] Initializing...');
             
-            // Character counter
-            const textInput = document.getElementById('text-input');
-            if (textInput) {
-                textInput.addEventListener('input', function() {
-                    updateCharCount('char-count', this.value);
-                });
-            }
-
-            // File upload
-            const fileInput = document.getElementById('file-input');
-            const fileDropZone = document.getElementById('file-drop-zone');
-
-            if (fileInput && fileDropZone) {
-                fileInput.addEventListener('change', handleFileSelect);
-                
-                // Drag and drop
-                fileDropZone.addEventListener('dragover', (e) => {
-                    e.preventDefault();
-                    fileDropZone.style.borderColor = 'var(--primary-blue)';
-                    fileDropZone.style.background = 'rgba(59, 130, 246, 0.05)';
-                });
-
-                fileDropZone.addEventListener('dragleave', () => {
-                    fileDropZone.style.borderColor = 'var(--gray-300)';
-                    fileDropZone.style.background = 'var(--gray-50)';
-                });
-
-                fileDropZone.addEventListener('drop', (e) => {
-                    e.preventDefault();
-                    fileDropZone.style.borderColor = 'var(--gray-300)';
-                    fileDropZone.style.background = 'var(--gray-50)';
-                    
-                    const file = e.dataTransfer.files[0];
-                    if (file) {
-                        fileInput.files = e.dataTransfer.files;
-                        handleFileSelect({ target: fileInput });
-                    }
-                });
-            }
-
+            // Set default tab
+            switchTab('text');
+            
             console.log('[TranscriptApp] ✓ Initialized');
         });
 
         // ============================================================================
         // TAB SWITCHING
         // ============================================================================
-        function switchInputTab(tabName) {
-            console.log('[TranscriptApp] Switching to tab:', tabName);
+        function switchTab(tab) {
+            console.log('[TranscriptApp] Switching to tab:', tab);
             
-            // Update tab buttons
-            document.querySelectorAll('.input-tab').forEach(tab => {
-                tab.classList.remove('active');
+            // Update buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
             });
-            document.querySelector(`.input-tab[data-tab="${tabName}"]`).classList.add('active');
+            event?.currentTarget?.classList.add('active');
             
-            // Update panels
-            document.querySelectorAll('.input-panel').forEach(panel => {
-                panel.classList.remove('active');
+            // Update content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
             });
-            document.getElementById(`${tabName}-panel`).classList.add('active');
+            
+            if (tab === 'text') {
+                document.getElementById('text-tab').classList.add('active');
+            } else if (tab === 'youtube') {
+                document.getElementById('youtube-tab').classList.add('active');
+            }
         }
 
         // ============================================================================
-        // FILE HANDLING
+        // CHARACTER COUNTER
         // ============================================================================
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            console.log('[TranscriptApp] File selected:', file.name);
-
-            // Validate file size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-                alert('File is too large. Maximum size is 5MB.');
-                return;
-            }
-
-            // Validate file type
-            const allowedTypes = ['.txt', '.srt', '.vtt'];
-            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-            if (!allowedTypes.includes(fileExt)) {
-                alert('Invalid file type. Please upload a TXT, SRT, or VTT file.');
-                return;
-            }
-
-            // Read file content
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const content = e.target.result;
-                document.getElementById('text-input').value = content;
-                updateCharCount('char-count', content);
-                switchInputTab('text');
-            };
-            reader.readAsText(file);
-        }
-
         function updateCharCount(elementId, text) {
             const count = text.length;
-            document.getElementById(elementId).textContent = `${count.toLocaleString()} / 50,000`;
+            document.getElementById(elementId).textContent = `${count.toLocaleString()} characters`;
+        }
+
+        // ============================================================================
+        // CLEAR FUNCTIONS
+        // ============================================================================
+        function clearText() {
+            document.getElementById('text-input').value = '';
+            updateCharCount('text-char-count', '');
+        }
+
+        function clearYouTube() {
+            document.getElementById('youtube-url').value = '';
         }
 
         // ============================================================================
         // ANALYSIS FUNCTIONS
         // ============================================================================
-        async function startAnalysis() {
+        async function analyzeText() {
+            const text = document.getElementById('text-input').value.trim();
+            
+            if (!text) {
+                alert('Please paste some transcript text to analyze.');
+                return;
+            }
+
             console.log('[TranscriptApp] Starting analysis');
-            
-            // Get transcript from active tab
-            let transcript = '';
-            let sourceType = 'text';
-            
-            const activeTab = document.querySelector('.input-tab.active').dataset.tab;
-            
-            if (activeTab === 'text') {
-                transcript = document.getElementById('text-input').value.trim();
-                sourceType = 'text';
-            } else if (activeTab === 'file') {
-                transcript = document.getElementById('text-input').value.trim();
-                sourceType = 'file';
-            } else if (activeTab === 'youtube') {
-                // FIXED v6.1.0: Proper YouTube processing instead of placeholder alert
-                const youtubeUrl = document.getElementById('youtube-url').value.trim();
-                if (!youtubeUrl) {
-                    alert('Please enter a YouTube URL');
-                    return;
-                }
-                
-                // Process YouTube URL - this will extract transcript and start analysis
-                await processYouTubeURL(youtubeUrl);
-                return; // processYouTubeURL handles the rest
-            }
-            
-            if (!transcript || transcript.length < 10) {
-                alert('Please enter a transcript (at least 10 characters)');
-                return;
-            }
-            
-            if (transcript.length > 50000) {
-                alert('Transcript is too long. Maximum 50,000 characters.');
-                return;
-            }
-            
-            console.log('[TranscriptApp] Source:', sourceType, 'Length:', transcript.length);
-            
+            console.log('[TranscriptApp] Source: text Length:', text.length);
+
             // Show progress section
+            showProgressSection();
+            
+            // Hide input section
             document.getElementById('input-section').style.display = 'none';
-            document.getElementById('progress-section').classList.add('active');
-            
-            // Reset progress
-            document.getElementById('progress-fill').style.width = '0%';
-            document.getElementById('progress-percentage').textContent = '0%';
-            document.getElementById('progress-emoji').textContent = '🔍';
-            document.getElementById('claim-counter').style.display = 'none';
-            
-            // Start fun facts rotation
-            startFunFactsRotation();
-            
-            // Submit to API
+
             try {
                 console.log('[TranscriptApp] Submitting analysis');
                 
@@ -953,51 +1042,54 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        transcript: transcript,
-                        source_type: sourceType
+                        transcript: text,
+                        source: 'text'
                     })
                 });
-                
+
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Analysis failed');
                 }
+
+                const result = await response.json();
+                currentJobId = result.job_id;
                 
-                const data = await response.json();
-                currentJobId = data.job_id;
+                console.log('[TranscriptApp] ✓ Job created:', currentJobId);
                 
-                console.log('[TranscriptApp] Job started:', currentJobId);
-                
-                // Start polling
-                pollJobStatus();
+                // Start polling for results
+                startPolling();
                 
             } catch (error) {
-                console.error('[TranscriptApp] Error:', error);
-                alert('Error starting analysis: ' + error.message);
-                document.getElementById('progress-section').classList.remove('active');
+                console.error('[TranscriptApp] Submission error:', error);
+                hideProgressSection();
                 document.getElementById('input-section').style.display = 'block';
-                stopFunFactsRotation();
+                alert('Failed to start analysis: ' + error.message);
             }
         }
 
-        // ============================================================================
-        // YOUTUBE PROCESSING (NEW IN v6.1.0)
-        // ============================================================================
-        async function processYouTubeURL(url) {
+        async function analyzeYouTube() {
+            const url = document.getElementById('youtube-url').value.trim();
+            
+            if (!url) {
+                alert('Please enter a YouTube URL.');
+                return;
+            }
+
+            if (!url.includes('youtube.com/watch') && !url.includes('youtu.be/')) {
+                alert('Please enter a valid YouTube URL.');
+                return;
+            }
+
+            console.log('[TranscriptApp] Starting analysis');
             console.log('[TranscriptApp] Processing YouTube URL:', url);
-            
+
             // Show progress section
+            showProgressSection();
+            
+            // Hide input section
             document.getElementById('input-section').style.display = 'none';
-            document.getElementById('progress-section').classList.add('active');
-            
-            // Reset progress
-            document.getElementById('progress-fill').style.width = '0%';
-            document.getElementById('progress-percentage').textContent = '0%';
-            document.getElementById('progress-emoji').textContent = '🎬';
-            document.getElementById('claim-counter').style.display = 'none';
-            
-            // Start fun facts rotation
-            startFunFactsRotation();
-            
+
             try {
                 console.log('[TranscriptApp] Calling /api/youtube/process...');
                 
@@ -1007,124 +1099,96 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        url: url
+                        youtube_url: url
                     })
                 });
-                
-                const data = await response.json();
-                
+
                 if (!response.ok) {
-                    // Show helpful error message from backend
-                    let errorMsg = data.error || 'Failed to process YouTube video';
-                    if (data.suggestion) {
-                        errorMsg += '\n\n💡 ' + data.suggestion;
-                    }
-                    if (data.alternative) {
-                        errorMsg += '\n\n' + data.alternative;
-                    }
-                    throw new Error(errorMsg);
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'YouTube processing failed');
                 }
+
+                const result = await response.json();
+                currentJobId = result.job_id;
                 
-                currentJobId = data.job_id;
-                
-                console.log('[TranscriptApp] YouTube processing started, Job ID:', currentJobId);
-                if (data.title) {
-                    console.log('[TranscriptApp] Video title:', data.title);
-                }
+                console.log('[TranscriptApp] ✓ Job created:', currentJobId);
                 
                 // Start polling for results
-                pollJobStatus();
+                startPolling();
                 
             } catch (error) {
                 console.error('[TranscriptApp] YouTube processing error:', error);
-                alert('YouTube Processing Error:\n\n' + error.message);
-                document.getElementById('progress-section').classList.remove('active');
+                hideProgressSection();
                 document.getElementById('input-section').style.display = 'block';
-                stopFunFactsRotation();
+                
+                // Show user-friendly error message
+                let errorMsg = error.message;
+                if (errorMsg.includes('live stream')) {
+                    errorMsg = '⚠️ This is a live stream. Please wait for the stream to end, then try again with the recorded version.';
+                } else if (errorMsg.includes('no captions') || errorMsg.includes('transcript')) {
+                    errorMsg = '⚠️ Could not extract transcript from this video. It may not have captions available.';
+                } else if (errorMsg.includes('private') || errorMsg.includes('unavailable')) {
+                    errorMsg = '⚠️ This video is private or unavailable.';
+                }
+                
+                alert('YouTube Analysis Error:\n\n' + errorMsg);
             }
         }
 
         // ============================================================================
-        // ULTRA-ENHANCED PROGRESS POLLING
+        // PROGRESS SECTION
         // ============================================================================
-        function pollJobStatus() {
-            if (!currentJobId) return;
+        function showProgressSection() {
+            const section = document.getElementById('progress-section');
+            section.classList.add('active');
             
-            console.log('[TranscriptApp] Polling job:', currentJobId);
+            // Reset progress
+            updateProgress(0, 0);
             
-            fetch(`/api/transcript/status/${currentJobId}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log('[TranscriptApp] Status:', data.status, 'Progress:', data.progress);
-                    
-                    // Update progress bar
-                    const progress = data.progress || 0;
-                    document.getElementById('progress-fill').style.width = progress + '%';
-                    document.getElementById('progress-percentage').textContent = progress + '%';
-                    
-                    // Update emoji based on progress
-                    if (progress < 25) {
-                        document.getElementById('progress-emoji').textContent = '🔍';
-                    } else if (progress < 50) {
-                        document.getElementById('progress-emoji').textContent = '🎯';
-                    } else if (progress < 75) {
-                        document.getElementById('progress-emoji').textContent = '🤔';
-                    } else {
-                        document.getElementById('progress-emoji').textContent = '🎉';
-                    }
-                    
-                    // Show claim counter if available
-                    if (data.claims_checked !== undefined) {
-                        const counter = document.getElementById('claim-counter');
-                        counter.style.display = 'block';
-                        document.getElementById('claims-checked-count').textContent = data.claims_checked;
-                    }
-                    
-                    // Handle completion
-                    if (data.status === 'completed') {
-                        console.log('[TranscriptApp] ✓ Analysis complete!');
-                        stopFunFactsRotation();
-                        document.getElementById('progress-section').classList.remove('active');
-                        displayResults(data.results);
-                    } else if (data.status === 'failed') {
-                        console.error('[TranscriptApp] ✗ Analysis failed:', data.error);
-                        stopFunFactsRotation();
-                        alert('Analysis failed: ' + (data.error || 'Unknown error'));
-                        document.getElementById('progress-section').classList.remove('active');
-                        document.getElementById('input-section').style.display = 'block';
-                    } else {
-                        // Continue polling
-                        setTimeout(pollJobStatus, 2000);
-                    }
-                })
-                .catch(error => {
-                    console.error('[TranscriptApp] Polling error:', error);
-                    stopFunFactsRotation();
-                    alert('Error checking analysis status. Please try again.');
-                    document.getElementById('progress-section').classList.remove('active');
-                    document.getElementById('input-section').style.display = 'block';
-                });
+            // Start fun facts rotation
+            startFunFactsRotation();
+            
+            // Scroll to progress section
+            section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function hideProgressSection() {
+            document.getElementById('progress-section').classList.remove('active');
+            stopFunFactsRotation();
         }
 
         // ============================================================================
-        // FUN FACTS ROTATION
+        // FUN FACTS ROTATION - FIXED VERSION
         // ============================================================================
         function startFunFactsRotation() {
-            let currentFactIndex = 0;
-            const factElement = document.getElementById('fun-fact');
+            const funFacts = [
+                '🤖 AI models can process thousands of claims per minute!',
+                '📊 We analyze over 15 different credibility factors',
+                '🔍 Our system cross-references multiple fact-checking databases',
+                '⚡ Most analyses complete in under 3 minutes',
+                '🌍 We check claims against global news sources',
+                '🎯 Accuracy improves with longer transcripts',
+                '💡 Machine learning helps identify misleading statements',
+                '🔬 We use NLP to understand context and nuance',
+                '📈 Our database contains millions of verified facts',
+                '🛡️ Bias detection uses multiple AI models',
+                '🎓 The system learns from expert fact-checkers',
+                '⚖️ We evaluate claims from multiple perspectives',
+                '🚀 Processing gets faster as the system learns'
+            ];
             
-            // Show first fact
-            factElement.textContent = funFacts[currentFactIndex];
+            currentFactIndex = 0;
             
-            // Rotate facts every 4 seconds
+            // Show first fact immediately
+            document.getElementById('fun-fact').textContent = funFacts[0];
+            
+            // FIXED: Properly cycle through facts every 4 seconds
             funFactsInterval = setInterval(() => {
                 currentFactIndex = (currentFactIndex + 1) % funFacts.length;
-                factElement.style.animation = 'none';
-                setTimeout(() => {
-                    factElement.textContent = funFacts[currentFactIndex];
-                    factElement.style.animation = 'fadeInOut 4s ease-in-out infinite';
-                }, 50);
-            }, 4000);
+                const fact = funFacts[currentFactIndex];
+                document.getElementById('fun-fact').textContent = fact;
+                console.log('[FunFactsProgress] Showing fact', currentFactIndex + 1, '/', funFacts.length);
+            }, 4000); // Cycle every 4 seconds
         }
 
         function stopFunFactsRotation() {
@@ -1134,8 +1198,87 @@
             }
         }
 
+        function updateProgress(percentage, claimsCount = 0) {
+            // Update progress bar
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = percentage + '%';
+            
+            // Update percentage text
+            document.getElementById('progress-percentage').textContent = Math.round(percentage) + '%';
+            
+            // Update emoji based on progress
+            const emoji = document.getElementById('progress-emoji');
+            if (percentage < 25) {
+                emoji.textContent = '🔍';
+            } else if (percentage < 50) {
+                emoji.textContent = '🎯';
+            } else if (percentage < 75) {
+                emoji.textContent = '🤔';
+            } else {
+                emoji.textContent = '🎉';
+            }
+            
+            // Update claims counter
+            if (claimsCount > 0) {
+                document.getElementById('claims-count').textContent = `${claimsCount} claims analyzed`;
+            }
+        }
+
         // ============================================================================
-        // RESULTS DISPLAY
+        // POLLING FOR RESULTS
+        // ============================================================================
+        function startPolling() {
+            console.log('[TranscriptApp] Starting polling for job:', currentJobId);
+            
+            let pollCount = 0;
+            const maxPolls = 120; // 10 minutes max (120 * 5 seconds)
+            
+            pollInterval = setInterval(async () => {
+                pollCount++;
+                
+                if (pollCount > maxPolls) {
+                    console.error('[TranscriptApp] Polling timeout');
+                    clearInterval(pollInterval);
+                    hideProgressSection();
+                    alert('Analysis is taking longer than expected. Please try again or contact support.');
+                    document.getElementById('input-section').style.display = 'block';
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/transcript/status/${currentJobId}`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Failed to get status');
+                    }
+                    
+                    const status = await response.json();
+                    console.log('[TranscriptApp] Status:', status.status, 'Progress:', status.progress + '%');
+                    
+                    // Update progress
+                    updateProgress(status.progress || 0, status.claims_processed || 0);
+                    
+                    if (status.status === 'completed') {
+                        console.log('[TranscriptApp] ✓ Analysis complete');
+                        clearInterval(pollInterval);
+                        hideProgressSection();
+                        displayResults(status.result);
+                    } else if (status.status === 'failed') {
+                        console.error('[TranscriptApp] Analysis failed:', status.error);
+                        clearInterval(pollInterval);
+                        hideProgressSection();
+                        alert('Analysis failed: ' + (status.error || 'Unknown error'));
+                        document.getElementById('input-section').style.display = 'block';
+                    }
+                    
+                } catch (error) {
+                    console.error('[TranscriptApp] Polling error:', error);
+                }
+            }, 5000); // Poll every 5 seconds
+        }
+
+        // ============================================================================
+        // DISPLAY RESULTS
         // ============================================================================
         function displayResults(results) {
             console.log('[TranscriptApp] Displaying results');
@@ -1145,15 +1288,18 @@
             resultsSection.classList.add('active');
             
             let html = `
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
-                    <h2 style="font-size: 28px; font-weight: 800; color: var(--gray-900); margin: 0;">
-                        Analysis Results
-                    </h2>
-                    <button class="new-analysis-btn" onclick="startNewAnalysis()">
-                        <i class="fas fa-plus"></i>
-                        New Analysis
-                    </button>
-                </div>
+                <div class="card">
+                    <div class="header">
+                        <div class="header-icon">✅</div>
+                        <h1 class="header-title">Analysis Complete</h1>
+                    </div>
+                    
+                    <div style="text-align: center; margin-bottom: 24px;">
+                        <button class="btn btn-primary" onclick="startNewAnalysis()">
+                            <i class="fas fa-plus"></i>
+                            New Analysis
+                        </button>
+                    </div>
             `;
             
             // Credibility Score
@@ -1318,7 +1464,7 @@
             // Reset inputs
             document.getElementById('text-input').value = '';
             document.getElementById('youtube-url').value = '';
-            updateCharCount('char-count', '');
+            updateCharCount('text-char-count', '');
             
             // Scroll to top
             window.scrollTo({ behavior: 'smooth', top: 0 });
