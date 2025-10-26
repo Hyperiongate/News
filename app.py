@@ -1,40 +1,37 @@
 """
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.3
+Version: 10.2.4 - NAVIGATION FIX
 Date: October 26, 2025
 
-CRITICAL FIX FROM 10.2.2:
+CRITICAL FIX FROM 10.2.3:
 ========================
-ROOT CAUSE: /api/youtube/process endpoint was NOT integrated with job system
-  - It returned raw transcript instead of creating a job
-  - Frontend got 'undefined' as job_id
-  - Resulted in 404 errors on /api/transcript/status/undefined
+ROOT CAUSE: Missing static page routes for navigation menu items
+  - Navigation header showed: Features, About, Live Stream, Debate Arena, Contact
+  - But app.py only had routes for: News Analysis (/) and Transcript
+  - Users got 404 errors clicking on Features, About, Contact, Live Stream, Debate Arena
 
 THE FIX:
 ========
-1. ADDED: Job management to /api/youtube/process endpoint
-2. FIXED: Now creates job_id properly and returns it to frontend
-3. FIXED: Starts background processing in thread
-4. RESULT: YouTube analysis now works end-to-end!
-5. PRESERVED: All v10.2.2 functionality (DO NO HARM ✓)
+1. ADDED: 5 missing static page routes:
+   - /features → features.html
+   - /about → about.html
+   - /contact → contact.html
+   - /live-stream → live-stream.html
+   - /debate-arena → debate-arena.html
 
-HOW IT WORKS NOW:
-=================
-1. Frontend calls /api/youtube/process with YouTube URL
-2. Backend extracts transcript using ScrapingBee
-3. Backend creates a job_id via transcript_routes job system
-4. Backend starts background fact-checking in thread
-5. Backend returns {job_id: "...", message: "..."}
-6. Frontend polls /api/transcript/status/{job_id}
-7. ✅ No more 404 errors!
+2. PRESERVED: All v10.2.3 functionality (DO NO HARM ✓)
+   - YouTube job integration still works
+   - News analysis still works
+   - Transcript analysis still works
+   - API routes unchanged
 
 DEPLOYMENT:
 ===========
 Replace existing app.py completely with this file.
-No other changes needed - this is a drop-in replacement.
+All navigation menu items will now work properly.
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 26, 2025 - v10.2.3 YOUTUBE JOB INTEGRATION FIX
+Last modified: October 26, 2025 - v10.2.4 NAVIGATION FIX
 """
 
 import os
@@ -240,17 +237,44 @@ except ImportError as e:
     logger.info("=" * 80)
 
 # ============================================================================
-# STATIC PAGE ROUTES
+# STATIC PAGE ROUTES (v10.2.4) - NAVIGATION FIX
 # ============================================================================
 
 @app.route('/')
 def index():
+    """News Analysis page (main page)"""
     return render_template('index.html')
 
 @app.route('/transcript')
 def transcript_page():
     """Standalone transcript analysis page"""
     return render_template('transcript.html')
+
+# NEW IN v10.2.4: Added missing static page routes for navigation menu
+@app.route('/features')
+def features_page():
+    """Features page"""
+    return render_template('features.html')
+
+@app.route('/about')
+def about_page():
+    """About page"""
+    return render_template('about.html')
+
+@app.route('/contact')
+def contact_page():
+    """Contact page"""
+    return render_template('contact.html')
+
+@app.route('/live-stream')
+def live_stream_page():
+    """Live Stream Analysis page"""
+    return render_template('live-stream.html')
+
+@app.route('/debate-arena')
+def debate_arena_page():
+    """Debate Arena page"""
+    return render_template('debate-arena.html')
 
 # ============================================================================
 # DEBATE ARENA ROUTES (v9.0.0) - Optional
@@ -494,14 +518,15 @@ def process_youtube():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '10.2.3',
+        'version': '10.2.4',
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
             'debate_arena': 'v9.0.0 - Challenge & Pick-a-Fight modes' if database_url and db else 'disabled',
             'live_streaming': 'v10.0.0 - YouTube Live analysis with AssemblyAI',
             'youtube_transcripts': 'v10.2.3 - YouTube URL transcript extraction (FIXED with job integration)',
-            'transcript_analysis': 'v10.2.3 - Full transcript fact-checking with proper job management'
+            'transcript_analysis': 'v10.2.3 - Full transcript fact-checking with proper job management',
+            'navigation': 'v10.2.4 - All menu items work (Features, About, Contact, Live Stream, Debate Arena)'
         }
     })
 
@@ -549,7 +574,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.3")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.4")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -590,21 +615,30 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arena - Disabled (set DATABASE_URL to enable)")
     
     logger.info("")
+    logger.info("STATIC PAGE ROUTES:")
+    logger.info("  ✓ / (News Analysis)")
+    logger.info("  ✓ /transcript (Transcript Analysis)")
+    logger.info("  ✓ /features (Features Page) - NEW IN v10.2.4")
+    logger.info("  ✓ /about (About Page) - NEW IN v10.2.4")
+    logger.info("  ✓ /contact (Contact Page) - NEW IN v10.2.4")
+    logger.info("  ✓ /live-stream (Live Stream Page) - NEW IN v10.2.4")
+    logger.info("  ✓ /debate-arena (Debate Arena Page) - NEW IN v10.2.4")
+    logger.info("")
+    
     logger.info("VERSION HISTORY:")
-    logger.info("NEW IN v10.2.3 (CRITICAL FIX):")
+    logger.info("NEW IN v10.2.4 (NAVIGATION FIX):")
+    logger.info("  ✅ FIXED: Added 5 missing static page routes")
+    logger.info("  ✅ ADDED: /features route")
+    logger.info("  ✅ ADDED: /about route")
+    logger.info("  ✅ ADDED: /contact route")
+    logger.info("  ✅ ADDED: /live-stream route")
+    logger.info("  ✅ ADDED: /debate-arena route")
+    logger.info("  ✅ RESULT: All navigation menu items now work!")
+    logger.info("")
+    logger.info("NEW IN v10.2.3 (YOUTUBE JOB FIX):")
     logger.info("  ✅ FIXED: YouTube endpoint now creates job_id properly")
     logger.info("  ✅ FIXED: Integrated /api/youtube/process with job management")
     logger.info("  ✅ FIXED: No more 'undefined' job_id or 404 polling errors")
-    logger.info("  ✅ ADDED: create_job_via_api import from transcript_routes")
-    logger.info("  ✅ RESULT: YouTube analysis now works end-to-end!")
-    logger.info("")
-    logger.info("NEW IN v10.2.2:")
-    logger.info("  ✓ Added transcript_routes registration")
-    logger.info("  ✓ Fixed YouTube parameter mismatch (url vs youtube_url)")
-    logger.info("")
-    logger.info("NEW IN v10.2.1:")
-    logger.info("  ✓ Optional debate_models import (no crash if missing)")
-    logger.info("  ✓ Graceful degradation if debate arena unavailable")
     logger.info("=" * 80)
     
     port = int(os.getenv('PORT', 5000))
