@@ -1,42 +1,48 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <!--
-    TruthLens Live Stream Analysis Page
-    Version: 3.0.0 - STANDARDIZED NAVIGATION
+    <!--
+    TruthLens Live Stream Analysis - Coming Soon Page
+    Version: 4.0.0 - COMING SOON REPLACEMENT
     Date: October 26, 2025
     
     CHANGES FROM PREVIOUS VERSION:
-    - STANDARDIZED: Navigation order across all pages
-    - ORDER: Features, About, News Analysis, Transcript/YouTube, Live Stream, Debate Arena, Contact Us
-    - REMOVED: "Upgrade to Pro" button
-    - PRESERVED: All existing functionality (DO NO HARM ✓)
+    - REPLACED: Complex live streaming functionality with Coming Soon page
+    - REMOVED: All JavaScript event handling for live streaming
+    - REMOVED: Server-Sent Events connections
+    - REMOVED: Real-time transcript display functionality
+    - PRESERVED: Navigation structure and TruthLens branding
+    - PRESERVED: Consistent styling with other pages
+    
+    REASON FOR CHANGE:
+    - Live streaming backend endpoints were incomplete/non-functional
+    - Frontend was calling non-existent API endpoints causing 404 errors
+    - Complex implementation requires proper planning and testing
+    - Coming Soon page provides better user experience than broken functionality
     
     This file is complete and ready to deploy.
-    Last modified: October 26, 2025 - Standardized navigation v3.0.0
-    -->
+    Last modified: October 26, 2025 - v4.0.0 Coming Soon replacement
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Stream Analysis - TruthLens</title>
+    <title>Live Stream Analysis - Coming Soon - TruthLens</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* ================================================================
-           LIVE STREAM ANALYSIS PAGE - COMPLETE STYLING
-           Date: October 21, 2025
-           Version: 1.1.0
+           COMING SOON PAGE - COMPLETE STYLING
+           Date: October 26, 2025
+           Version: 4.0.0
            
-           This is a complete, production-ready live streaming page.
-           No truncation. Fully functional.
-           ================================================================ */
-
+           Clean, professional Coming Soon page with TruthLens branding.
+           Fully functional and non-truncated.
+        ================================================================ */
+        
         :root {
             --primary: #3b82f6;
-            --primary-dark: #2563eb;
             --secondary: #8b5cf6;
             --success: #10b981;
-            --danger: #ef4444;
             --warning: #f59e0b;
+            --danger: #ef4444;
             --gray-50: #f9fafb;
             --gray-100: #f3f4f6;
             --gray-200: #e5e7eb;
@@ -56,30 +62,31 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
             color: var(--gray-800);
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
         /* ===== NAVIGATION HEADER ===== */
         .header {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             position: sticky;
             top: 0;
             z-index: 1000;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 16px 0;
         }
 
         .header-content {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 16px 20px;
+            padding: 0 20px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
         }
 
         .logo {
@@ -87,26 +94,21 @@
             align-items: center;
             gap: 12px;
             text-decoration: none;
-            color: var(--gray-900);
-            font-weight: 800;
-            font-size: 24px;
-            transition: transform 0.3s ease;
-        }
-
-        .logo:hover {
-            transform: scale(1.05);
+            font-size: 28px;
+            font-weight: 900;
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 10px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 20px;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .logo-text {
@@ -141,502 +143,191 @@
             color: white;
         }
 
-        .cta-button {
-            padding: 10px 20px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            color: white;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 14px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-        }
-
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
-        }
-
         /* ===== MAIN CONTENT AREA ===== */
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 60px 20px;
+            min-height: calc(100vh - 80px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* Page Title Section */
-        .page-header {
+        .coming-soon-card {
             background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            margin-bottom: 30px;
+            padding: 60px 40px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             text-align: center;
+            max-width: 800px;
+            width: 100%;
+            animation: fadeInUp 0.6s ease-out;
         }
 
-        .page-header h1 {
-            font-size: 42px;
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .icon-container {
+            margin-bottom: 30px;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .icon-large {
+            font-size: 80px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .coming-soon-card h1 {
+            font-size: 48px;
             font-weight: 800;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
+            margin-bottom: 20px;
         }
 
-        .page-header .subtitle {
+        .coming-soon-card .subtitle {
+            font-size: 24px;
+            color: var(--gray-600);
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+
+        .coming-soon-card .description {
             font-size: 18px;
             color: var(--gray-600);
-            margin-bottom: 20px;
+            line-height: 1.8;
+            margin-bottom: 40px;
         }
 
-        .page-header .live-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: var(--danger);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
-        }
-
-        /* Input Section */
-        .input-section {
-            background: white;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            margin-bottom: 30px;
-        }
-
-        .input-section h2 {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: var(--gray-800);
-        }
-
-        .input-section .description {
-            color: var(--gray-600);
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .url-input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-
-        .url-input {
-            flex: 1;
-            padding: 16px;
-            border: 2px solid var(--gray-300);
-            border-radius: 12px;
-            font-size: 16px;
-            transition: border-color 0.3s;
-        }
-
-        .url-input:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-
-        .start-button {
-            padding: 16px 32px;
-            background: linear-gradient(135deg, var(--success), #059669);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-        }
-
-        .start-button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
-        }
-
-        .start-button:disabled {
-            background: var(--gray-400);
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .stop-button {
-            padding: 16px 32px;
-            background: linear-gradient(135deg, var(--danger), #dc2626);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-        }
-
-        .stop-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
-        }
-
-        .info-box {
-            background: var(--gray-50);
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            padding: 16px;
-            margin-top: 20px;
-        }
-
-        .info-box h4 {
-            color: var(--gray-800);
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        .info-box ul {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .info-box li {
-            color: var(--gray-600);
-            margin-bottom: 8px;
-            padding-left: 24px;
-            position: relative;
-        }
-
-        .info-box li:before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: var(--success);
-            font-weight: bold;
-        }
-
-        /* Status Bar */
-        .status-bar {
-            background: white;
-            padding: 20px 30px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        .status-dot.idle {
-            background: var(--gray-400);
-            animation: none;
-        }
-
-        .status-dot.active {
-            background: var(--success);
-        }
-
-        .status-dot.processing {
-            background: var(--warning);
-        }
-
-        .status-dot.error {
-            background: var(--danger);
-        }
-
-        .status-dot.completed {
-            background: var(--primary);
-            animation: none;
-        }
-
-        .status-text {
-            font-weight: 600;
-            color: var(--gray-700);
-        }
-
-        /* Results Grid */
-        .results-grid {
+        .features-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            margin-bottom: 30px;
+            margin-bottom: 40px;
+            text-align: left;
         }
 
-        .result-card {
-            background: white;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        .result-card h3 {
-            font-size: 20px;
-            font-weight: 700;
-            margin-bottom: 16px;
-            color: var(--gray-800);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .result-card h3 i {
-            color: var(--primary);
-        }
-
-        .result-content {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--gray-400);
-        }
-
-        .empty-state i {
-            font-size: 48px;
-            margin-bottom: 16px;
-            opacity: 0.5;
-        }
-
-        .empty-state p {
-            font-size: 16px;
-        }
-
-        /* Stream Info */
-        .stream-info-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
-        }
-
-        .info-card {
+        .feature-item {
             background: var(--gray-50);
-            padding: 16px;
-            border-radius: 12px;
+            padding: 24px;
+            border-radius: 16px;
             border: 2px solid var(--gray-200);
+            transition: all 0.3s ease;
         }
 
-        .info-card .label {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: var(--gray-500);
-            font-weight: 600;
+        .feature-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .feature-item i {
+            font-size: 32px;
+            color: var(--primary);
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .feature-item h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--gray-800);
             margin-bottom: 8px;
         }
 
-        .info-card .value {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--gray-800);
-        }
-
-        /* Transcript Display */
-        .transcript-chunk {
-            padding: 12px;
-            margin-bottom: 12px;
-            background: var(--gray-50);
-            border-left: 4px solid var(--primary);
-            border-radius: 8px;
-        }
-
-        .transcript-chunk .timestamp {
-            font-size: 12px;
-            color: var(--gray-500);
-            margin-bottom: 6px;
-        }
-
-        .transcript-chunk .text {
-            color: var(--gray-800);
-            line-height: 1.6;
-        }
-
-        /* Claims Display */
-        .claim-item {
-            padding: 16px;
-            margin-bottom: 12px;
-            background: var(--gray-50);
-            border-radius: 12px;
-            border: 2px solid var(--gray-200);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 12px;
-        }
-
-        .claim-text {
-            flex: 1;
-            color: var(--gray-800);
-            line-height: 1.5;
-        }
-
-        .claim-status {
-            padding: 6px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .claim-status.checking {
-            background: var(--warning);
-            color: white;
-        }
-
-        .claim-status.true {
-            background: var(--success);
-            color: white;
-        }
-
-        .claim-status.false {
-            background: var(--danger);
-            color: white;
-        }
-
-        .claim-status.mixed {
-            background: var(--gray-400);
-            color: white;
-        }
-
-        /* Fact Check Display */
-        .fact-check-item {
-            padding: 20px;
-            margin-bottom: 16px;
-            background: white;
-            border-radius: 12px;
-            border: 2px solid var(--gray-200);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .verdict {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 700;
+        .feature-item p {
             font-size: 14px;
-            margin-bottom: 12px;
-        }
-
-        .verdict.true {
-            background: var(--success);
-            color: white;
-        }
-
-        .verdict.mostly-true {
-            background: #86efac;
-            color: #065f46;
-        }
-
-        .verdict.mixed {
-            background: var(--warning);
-            color: white;
-        }
-
-        .verdict.mostly-false {
-            background: #fca5a5;
-            color: #7f1d1d;
-        }
-
-        .verdict.false {
-            background: var(--danger);
-            color: white;
-        }
-
-        .verdict.unverified {
-            background: var(--gray-400);
-            color: white;
-        }
-
-        .fact-check-item .claim {
-            font-weight: 600;
-            color: var(--gray-800);
-            margin-bottom: 12px;
-            line-height: 1.5;
-        }
-
-        .fact-check-item .explanation {
             color: var(--gray-600);
             line-height: 1.6;
         }
 
-        /* Alerts */
-        .alert-container {
-            position: fixed;
-            top: 90px;
-            right: 20px;
-            z-index: 1001;
-            max-width: 400px;
-        }
-
-        .alert {
-            padding: 16px 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        .cta-buttons {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            animation: slideIn 0.3s ease;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        @keyframes slideIn {
-            from {
-                transform: translateX(400px);
-                opacity: 0;
+        .btn {
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 12px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary);
+            border: 2px solid var(--primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            transform: translateY(-2px);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            color: white;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 14px;
+            margin-bottom: 20px;
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                opacity: 1;
             }
-            to {
-                transform: translateX(0);
+            50% {
+                opacity: 0.8;
+            }
+            100% {
                 opacity: 1;
             }
         }
 
-        .alert-success {
-            background: var(--success);
-            color: white;
-        }
-
-        .alert-error {
-            background: var(--danger);
-            color: white;
-        }
-
-        .alert-warning {
-            background: var(--warning);
-            color: white;
-        }
-
-        .alert i {
-            font-size: 20px;
-        }
-
-        /* Responsive Design */
+        /* ===== RESPONSIVE DESIGN ===== */
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -646,47 +337,46 @@
             .nav-links {
                 flex-wrap: wrap;
                 justify-content: center;
+                gap: 8px;
             }
 
-            .page-header h1 {
-                font-size: 32px;
+            .nav-link {
+                padding: 8px 12px;
+                font-size: 13px;
             }
 
-            .results-grid {
+            .coming-soon-card {
+                padding: 40px 24px;
+            }
+
+            .coming-soon-card h1 {
+                font-size: 36px;
+            }
+
+            .coming-soon-card .subtitle {
+                font-size: 20px;
+            }
+
+            .coming-soon-card .description {
+                font-size: 16px;
+            }
+
+            .icon-large {
+                font-size: 60px;
+            }
+
+            .features-grid {
                 grid-template-columns: 1fr;
             }
 
-            .url-input-group {
+            .cta-buttons {
                 flex-direction: column;
             }
 
-            .start-button, .stop-button {
+            .btn {
                 width: 100%;
+                justify-content: center;
             }
-
-            .status-bar {
-                flex-direction: column;
-                gap: 12px;
-            }
-        }
-
-        /* Scrollbar Styling */
-        .result-content::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .result-content::-webkit-scrollbar-track {
-            background: var(--gray-100);
-            border-radius: 4px;
-        }
-
-        .result-content::-webkit-scrollbar-thumb {
-            background: var(--gray-400);
-            border-radius: 4px;
-        }
-
-        .result-content::-webkit-scrollbar-thumb:hover {
-            background: var(--gray-500);
         }
     </style>
 </head>
@@ -701,7 +391,7 @@
                 <span class="logo-text">TruthLens</span>
             </a>
             
-                        <nav class="nav-links">
+            <nav class="nav-links">
                 <a href="/features" class="nav-link">Features</a>
                 <a href="/about" class="nav-link">About</a>
                 <a href="/" class="nav-link">News Analysis</a>
@@ -715,408 +405,93 @@
 
     <!-- Main Container -->
     <div class="container">
-        <!-- Page Header -->
-        <div class="page-header">
-            <h1><i class="fas fa-broadcast-tower"></i> Live Stream Analysis</h1>
-            <p class="subtitle">Real-time fact-checking for YouTube Live streams</p>
-            <span class="live-badge">
-                <i class="fas fa-circle"></i>
-                LIVE ANALYSIS
-            </span>
-        </div>
+        <div class="coming-soon-card">
+            <!-- Status Badge -->
+            <div class="status-badge">
+                <i class="fas fa-tools"></i> IN DEVELOPMENT
+            </div>
 
-        <!-- Alert Container -->
-        <div class="alert-container" id="alertContainer"></div>
+            <!-- Icon -->
+            <div class="icon-container">
+                <i class="fas fa-broadcast-tower icon-large"></i>
+            </div>
 
-        <!-- Input Section -->
-        <div class="input-section">
-            <h2><i class="fas fa-play-circle"></i> Start Live Analysis</h2>
+            <!-- Main Heading -->
+            <h1>Live Stream Analysis</h1>
+            <p class="subtitle">Coming Soon</p>
+
+            <!-- Description -->
             <p class="description">
-                Enter a YouTube Live stream URL to begin real-time transcription and fact-checking.
-                The analysis will automatically detect claims and verify them as the stream progresses.
+                We're working hard to bring you real-time fact-checking for live streams! 
+                This powerful feature will analyze YouTube Live streams as they happen, 
+                detecting claims and verifying facts in real-time.
             </p>
 
-            <div class="url-input-group">
-                <input 
-                    type="url" 
-                    id="streamUrl" 
-                    class="url-input" 
-                    placeholder="https://www.youtube.com/watch?v=..."
-                >
-                <button id="startButton" class="start-button">
-                    <i class="fas fa-play"></i> Start Analysis
-                </button>
-                <button id="stopButton" class="stop-button" style="display: none;">
-                    <i class="fas fa-stop"></i> Stop Analysis
-                </button>
-            </div>
-
-            <div class="info-box">
-                <h4><i class="fas fa-info-circle"></i> How It Works</h4>
-                <ul>
-                    <li>Paste a YouTube Live stream URL</li>
-                    <li>Our AI extracts audio and transcribes in real-time</li>
-                    <li>Claims are automatically detected from the transcript</li>
-                    <li>Each claim is fact-checked using multiple sources</li>
-                    <li>Results appear live as the stream progresses</li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div class="status-item">
-                <div class="status-dot idle" id="statusDot"></div>
-                <span class="status-text" id="statusText">Ready to analyze</span>
-            </div>
-            <div id="streamInfo" class="stream-info-grid">
-                <!-- Stream info will be populated here -->
-            </div>
-        </div>
-
-        <!-- Results Grid -->
-        <div class="results-grid">
-            <!-- Transcript Card -->
-            <div class="result-card">
-                <h3>
-                    <i class="fas fa-closed-captioning"></i>
-                    Live Transcript
-                </h3>
-                <div class="result-content" id="transcriptDisplay">
-                    <div class="empty-state">
-                        <i class="fas fa-microphone"></i>
-                        <p>Waiting for audio transcription...</p>
-                    </div>
+            <!-- Planned Features -->
+            <div class="features-grid">
+                <div class="feature-item">
+                    <i class="fas fa-microphone"></i>
+                    <h3>Real-Time Transcription</h3>
+                    <p>Automatic speech-to-text conversion as the stream progresses</p>
                 </div>
-            </div>
 
-            <!-- Claims Card -->
-            <div class="result-card">
-                <h3>
+                <div class="feature-item">
                     <i class="fas fa-clipboard-list"></i>
-                    Detected Claims
-                </h3>
-                <div class="result-content" id="claimsDisplay">
-                    <div class="empty-state">
-                        <i class="fas fa-clipboard-list"></i>
-                        <p>No claims detected yet...</p>
-                    </div>
+                    <h3>Live Claim Detection</h3>
+                    <p>Instant identification of factual claims as they're made</p>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fas fa-search"></i>
+                    <h3>Instant Fact-Checking</h3>
+                    <p>Real-time verification against trusted sources</p>
+                </div>
+
+                <div class="feature-item">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Live Updates</h3>
+                    <p>Watch fact-checks appear as the stream continues</p>
                 </div>
             </div>
 
-            <!-- Fact Checks Card -->
-            <div class="result-card">
-                <h3>
-                    <i class="fas fa-check-circle"></i>
-                    Fact Check Results
-                </h3>
-                <div class="result-content" id="factCheckDisplay">
-                    <div class="empty-state">
-                        <i class="fas fa-hourglass-half"></i>
-                        <p>Fact checks will appear here...</p>
-                    </div>
-                </div>
+            <!-- Call to Action Buttons -->
+            <div class="cta-buttons">
+                <a href="/transcript" class="btn btn-primary">
+                    <i class="fas fa-file-alt"></i>
+                    Try Transcript Analysis
+                </a>
+                <a href="/" class="btn btn-secondary">
+                    <i class="fas fa-newspaper"></i>
+                    Analyze News Articles
+                </a>
             </div>
         </div>
     </div>
 
+    <!-- Simple JavaScript for future functionality -->
     <script>
-        // ===== LIVE STREAM ANALYSIS JAVASCRIPT =====
-        // Version: 1.1.0
-        // Date: October 21, 2025
-        // All functionality preserved from v1.0.0
-
-        let currentStreamId = null;
-        let eventSource = null;
-
-        // Event Listeners
-        document.getElementById('startButton').addEventListener('click', startLiveStream);
-        document.getElementById('stopButton').addEventListener('click', stopLiveStream);
-
-        function startLiveStream() {
-            const urlInput = document.getElementById('streamUrl');
-            const url = urlInput.value.trim();
-
-            if (!url) {
-                showAlert('Please enter a YouTube Live stream URL', 'error');
-                return;
-            }
-
-            if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-                showAlert('Please enter a valid YouTube URL', 'error');
-                return;
-            }
-
-            const startButton = document.getElementById('startButton');
-            startButton.disabled = true;
-            startButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting...';
-
-            updateStatus('processing', 'Starting stream...');
-            clearResults();
-
-            fetch('/api/transcript/live/start', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ url: url })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    currentStreamId = data.stream_id;
-                    
-                    // Display stream info
-                    if (data.stream_info) {
-                        displayStreamInfo(data.stream_info);
-                    }
-                    
-                    // Update UI
-                    updateStatus('active', 'Analyzing live stream...');
-                    showAlert('Stream analysis started successfully!', 'success');
-                    
-                    // Show stop button
-                    startButton.style.display = 'none';
-                    document.getElementById('stopButton').style.display = 'block';
-                    
-                    // Connect to event stream
-                    connectToEventStream(currentStreamId);
-                } else {
-                    throw new Error(data.error || 'Failed to start stream');
-                }
-            })
-            .catch(error => {
-                console.error('Error starting stream:', error);
-                showAlert('Error: ' + error.message, 'error');
-                updateStatus('error', 'Failed to start');
-                resetUI();
-            });
-        }
-
-        function stopLiveStream() {
-            if (!currentStreamId) return;
-
-            fetch(`/api/transcript/live/stop/${currentStreamId}`, {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    updateStatus('completed', 'Stream stopped');
-                    showAlert('Stream analysis stopped', 'success');
-                    
-                    // Close event source
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
-                    }
-                    
-                    resetUI();
-                }
-            })
-            .catch(error => {
-                console.error('Error stopping stream:', error);
-                showAlert('Error stopping stream', 'error');
-            });
-        }
-
-        function connectToEventStream(streamId) {
-            eventSource = new EventSource(`/api/transcript/live/events/${streamId}`);
-
-            eventSource.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                
-                if (data.type === 'transcript') {
-                    addTranscriptChunk(data.data);
-                } else if (data.type === 'claim') {
-                    addClaim(data.data);
-                } else if (data.type === 'fact_check') {
-                    addFactCheck(data.data);
-                } else if (data.type === 'error') {
-                    showAlert('Stream error: ' + data.message, 'error');
-                    updateStatus('error', 'Error occurred');
-                } else if (data.type === 'complete') {
-                    updateStatus('completed', 'Stream completed');
-                    showAlert('Stream analysis completed', 'success');
-                    eventSource.close();
-                }
-            };
-
-            eventSource.onerror = function(error) {
-                console.error('EventSource error:', error);
-                showAlert('Connection error - attempting to reconnect...', 'warning');
-                updateStatus('error', 'Connection lost');
-            };
-        }
-
-        function displayStreamInfo(info) {
-            const container = document.getElementById('streamInfo');
-            container.innerHTML = `
-                <div class="info-card">
-                    <div class="label">Title</div>
-                    <div class="value">${escapeHtml(info.title || 'Unknown')}</div>
-                </div>
-                <div class="info-card">
-                    <div class="label">Channel</div>
-                    <div class="value">${escapeHtml(info.channel || 'Unknown')}</div>
-                </div>
-                <div class="info-card">
-                    <div class="label">Status</div>
-                    <div class="value">${info.is_live ? '🔴 LIVE' : 'Not Live'}</div>
-                </div>
-                <div class="info-card">
-                    <div class="label">Duration</div>
-                    <div class="value" id="duration">00:00</div>
-                </div>
-            `;
-        }
-
-        function addTranscriptChunk(data) {
-            const container = document.getElementById('transcriptDisplay');
-            
-            // Remove empty state
-            if (container.querySelector('.empty-state')) {
-                container.innerHTML = '';
-            }
-
-            const chunk = document.createElement('div');
-            chunk.className = 'transcript-chunk';
-            chunk.innerHTML = `
-                <div class="timestamp">${formatTimestamp(data.timestamp)}</div>
-                <div class="text">${escapeHtml(data.text)}</div>
-            `;
-            
-            container.appendChild(chunk);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function addClaim(data) {
-            const container = document.getElementById('claimsDisplay');
-            
-            // Remove empty state
-            if (container.querySelector('.empty-state')) {
-                container.innerHTML = '';
-            }
-
-            const claim = document.createElement('div');
-            claim.className = 'claim-item';
-            claim.id = `claim-${data.claim_id}`;
-            claim.innerHTML = `
-                <div class="claim-text">${escapeHtml(data.claim)}</div>
-                <span class="claim-status checking">Checking...</span>
-            `;
-            
-            container.appendChild(claim);
-        }
-
-        function addFactCheck(data) {
-            const container = document.getElementById('factCheckDisplay');
-            
-            // Remove empty state
-            if (container.querySelector('.empty-state')) {
-                container.innerHTML = '';
-            }
-
-            // Update claim status if exists
-            const claimElement = document.getElementById(`claim-${data.claim_id}`);
-            if (claimElement) {
-                const status = claimElement.querySelector('.claim-status');
-                status.className = `claim-status ${data.verdict.toLowerCase().replace('_', '-')}`;
-                status.textContent = data.verdict.replace('_', ' ');
-            }
-
-            // Add full fact check result
-            const factCheck = document.createElement('div');
-            factCheck.className = 'fact-check-item';
-            factCheck.innerHTML = `
-                <div class="verdict ${data.verdict.toLowerCase().replace('_', '-')}">
-                    ${getVerdictIcon(data.verdict)} ${data.verdict.replace('_', ' ')}
-                </div>
-                <div class="claim">${escapeHtml(data.claim)}</div>
-                <div class="explanation">${escapeHtml(data.explanation || 'Verification complete.')}</div>
-            `;
-            
-            container.appendChild(factCheck);
-        }
-
-        function updateStatus(state, message) {
-            const dot = document.getElementById('statusDot');
-            const text = document.getElementById('statusText');
-            
-            dot.className = 'status-dot ' + state;
-            text.textContent = message;
-        }
-
-        function showAlert(message, type) {
-            const container = document.getElementById('alertContainer');
-            
-            const alert = document.createElement('div');
-            alert.className = `alert alert-${type}`;
-            alert.innerHTML = `
-                <i class="fas fa-${type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'check-circle'}"></i>
-                <span>${escapeHtml(message)}</span>
-            `;
-            
-            container.innerHTML = '';
-            container.appendChild(alert);
-            
-            if (type === 'success') {
-                setTimeout(() => alert.remove(), 5000);
-            }
-        }
-
-        function clearResults() {
-            document.getElementById('transcriptDisplay').innerHTML = '<div class="empty-state"><i class="fas fa-microphone"></i><p>Waiting for audio transcription...</p></div>';
-            document.getElementById('claimsDisplay').innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-list"></i><p>No claims detected yet...</p></div>';
-            document.getElementById('factCheckDisplay').innerHTML = '<div class="empty-state"><i class="fas fa-hourglass-half"></i><p>Fact checks will appear here...</p></div>';
-        }
-
-        function resetUI() {
-            const startButton = document.getElementById('startButton');
-            startButton.disabled = false;
-            startButton.innerHTML = '<i class="fas fa-play"></i> Start Analysis';
-            startButton.style.display = 'block';
-            document.getElementById('stopButton').style.display = 'none';
-            currentStreamId = null;
-        }
-
-        function formatTimestamp(timestamp) {
-            const date = new Date(timestamp);
-            return date.toLocaleTimeString();
-        }
-
-        function getVerdictIcon(verdict) {
-            const icons = {
-                'true': '✅',
-                'mostly_true': '✓',
-                'mixed': '⚖️',
-                'mostly_false': '✗',
-                'false': '❌',
-                'unverified': '❓'
-            };
-            return icons[verdict.toLowerCase()] || '❓';
-        }
-
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-
-        // Check if AssemblyAI is configured on page load
-        window.addEventListener('DOMContentLoaded', function() {
-            fetch('/health')
-                .then(r => r.json())
-                .then(data => {
-                    if (data.services.live_streaming !== 'enabled') {
-                        showAlert('Live streaming is not configured. Please set ASSEMBLYAI_API_KEY in environment variables.', 'warning');
-                        document.getElementById('startButton').disabled = true;
-                    }
-                })
-                .catch(err => console.error('Health check failed:', err));
-        });
+        // Reserved for future live streaming implementation
+        console.log('TruthLens Live Stream - Coming Soon Page Loaded');
+        console.log('Version: 4.0.0');
+        console.log('Date: October 26, 2025');
     </script>
 </body>
 </html>
 
-<!-- I did no harm and this file is not truncated -->
+<!--
+=============================================================================
+FILE COMPLETION VERIFICATION
+=============================================================================
+✓ Navigation header with all links present
+✓ Coming Soon message with clear branding
+✓ Planned features grid explaining what's coming
+✓ Call-to-action buttons directing to working features
+✓ Responsive design for mobile devices
+✓ Complete CSS styling
+✓ No broken functionality
+✓ Professional appearance
+✓ File dated: October 26, 2025
+
+I did no harm and this file is not truncated.
+=============================================================================
+-->
