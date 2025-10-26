@@ -1,32 +1,42 @@
 /**
  * Transcript Fact Checker - Main Application JavaScript
- * Date: October 25, 2025
- * Version: 12.0.0 - FIXED DID YOU KNOW CYCLING + PROGRESS
+ * Date: October 26, 2025
+ * Version: 13.0.0 - FIXED TRANSCRIPT vs NEWS DISPLAY BUG
  * 
- * LATEST CHANGES (October 25, 2025):
- * - FIXED: "Did You Know" facts now cycle every 4 seconds
- * - FIXED: Fun facts interval properly starts and stops
- * - FIXED: Progress emoji rotates through analyzing states
- * - ADDED: Claim counter animation
- * - ADDED: Better timeout handling (10 minute max)
- * - IMPROVED: Progress bar percentage display
- * - PRESERVED: All v11.0 functionality (DO NO HARM)
+ * LATEST CHANGES (October 26, 2025):
+ * - CRITICAL FIX: Handle both TRANSCRIPT and NEWS data formats
+ * - FIXED: buildResultsHTML now detects format and adapts display
+ * - FIXED: Transcript results use claims array with verdicts
+ * - FIXED: News results use credibility_score and fact_checks
+ * - ADDED: Automatic format detection (transcript vs news)
+ * - IMPROVED: Display logic works for both analysis types
+ * - PRESERVED: All v12.0 functionality (DO NO HARM)
  * 
- * ROOT CAUSE OF "DID YOU KNOW" NOT CYCLING:
- * - startPolling() never initialized funFactsInterval
- * - No setInterval was set up to rotate through facts
- * - Fixed by adding startFunFactsCycle() function
+ * ROOT CAUSE OF DISPLAY ERROR:
+ * - Frontend expected NEWS format (credibility_score)
+ * - Backend returned TRANSCRIPT format (claims + verdicts)
+ * - Line 548 crashed trying to access undefined credibility_score
+ * - Fixed by detecting format and adapting display logic
  * 
- * PURPOSE:
- * Frontend application for transcript fact-checking with multiple input methods
+ * DATA FORMAT DIFFERENCES:
  * 
- * FEATURES:
- * - Direct text input
- * - File upload (TXT, SRT, VTT)
- * - Microphone transcription
- * - Real-time progress tracking with cycling fun facts
- * - Rotating emoji animations
- * - Export to JSON, TXT, PDF
+ * NEWS FORMAT:
+ * {
+ *   credibility_score: { score: 85, label: "Highly Credible" },
+ *   fact_checks: [{ claim: "...", verdict: "true", ... }],
+ *   summary: "...",
+ *   topics: [...],
+ *   speakers: [...]
+ * }
+ * 
+ * TRANSCRIPT FORMAT:
+ * {
+ *   claims: [{ claim: "...", speaker: "..." }],
+ *   verdicts: [{ verdict: "true", explanation: "...", confidence: 90 }],
+ *   summary: "...",
+ *   topics: [...],
+ *   speakers: [...]
+ * }
  * 
  * Save as: static/js/transcript_app.js
  * 
@@ -41,14 +51,14 @@
 let currentJobId = null;
 let pollInterval = null;
 let currentResults = null;
-let funFactsInterval = null; // FIXED: Added for cycling facts
-let progressEmojiInterval = null; // NEW: For rotating emojis
+let funFactsInterval = null;
+let progressEmojiInterval = null;
 
 // Speech recognition for microphone input
 let recognition = null;
 let isRecording = false;
 
-// FIXED: Define fun facts array globally
+// Fun facts array
 const funFacts = [
     "🤖 AI models can process thousands of claims per minute!",
     "🌍 Fact-checking helps combat misinformation worldwide.",
@@ -65,10 +75,10 @@ const funFacts = [
     "🎓 Education is the foundation of a truth-seeking society."
 ];
 
-// NEW: Progress emojis that rotate
+// Progress emojis that rotate
 const progressEmojis = ["🔍", "🔎", "🕵️", "📝", "✅", "🎯", "💡"];
 
-console.log('[TranscriptApp] Module loading - v12.0.0 with cycling fun facts...');
+console.log('[TranscriptApp] Module loading - v13.0.0 with format detection...');
 
 // ============================================================================
 // MICROPHONE TRANSCRIPTION
@@ -145,7 +155,7 @@ function initializeMicrophone() {
     recognition.onend = function() {
         if (isRecording) {
             try {
-                recognition.start(); // Keep continuous
+                recognition.start();
             } catch (e) {
                 console.error('[TranscriptApp] Error restarting recognition:', e);
             }
@@ -166,7 +176,6 @@ function startRecording() {
     } catch (error) {
         console.error('[TranscriptApp] Error starting recording:', error);
         if (error.message.includes('already started')) {
-            // Already running, just update UI
             isRecording = true;
             document.getElementById('status-indicator').classList.add('recording');
             document.getElementById('status-text').textContent = 'Listening...';
@@ -222,7 +231,6 @@ function updateCharCount(elementId, text) {
 function startAnalysis() {
     console.log('[TranscriptApp] startAnalysis() called');
     
-    // Get active panel
     const activePanel = document.querySelector('.input-panel.active');
     if (!activePanel) {
         alert('Please select an input method.');
@@ -232,12 +240,10 @@ function startAnalysis() {
     let transcript = '';
     let sourceType = 'text';
     
-    // Get transcript based on active panel
     if (activePanel.id === 'text-panel') {
         transcript = document.getElementById('text-input').value.trim();
         sourceType = 'text';
     } else if (activePanel.id === 'file-panel') {
-        // File content is loaded into text-input
         transcript = document.getElementById('text-input').value.trim();
         sourceType = 'file';
     } else if (activePanel.id === 'live-panel') {
@@ -248,7 +254,6 @@ function startAnalysis() {
     
     console.log('[TranscriptApp] Source:', sourceType, 'Length:', transcript.length);
     
-    // Validation
     if (!transcript) {
         alert('Please enter or record a transcript first.');
         return;
@@ -266,16 +271,13 @@ function startAnalysis() {
     
     console.log('[TranscriptApp] ✓ Validation passed - submitting analysis');
     
-    // Hide input, show progress
     document.getElementById('input-section').style.display = 'none';
     document.getElementById('progress-section').classList.add('active');
     document.getElementById('results-section').classList.remove('active');
     
-    // FIXED: Start fun facts cycling and emoji rotation
     startFunFactsCycle();
     startEmojiRotation();
     
-    // Submit for analysis
     submitAnalysis(transcript, sourceType);
 }
 
@@ -306,18 +308,17 @@ async function submitAnalysis(transcript, sourceType) {
         currentJobId = data.job_id;
         console.log('[TranscriptApp] ✓ Job started:', currentJobId);
         
-        // Start polling for results
         startPolling();
         
     } catch (error) {
         console.error('[TranscriptApp] Analysis error:', error);
-        stopAllIntervals(); // FIXED: Clean up intervals on error
+        stopAllIntervals();
         showError('Analysis failed: ' + error.message);
     }
 }
 
 // ============================================================================
-// POLLING FOR RESULTS WITH ENTERTAINING PROGRESS
+// POLLING FOR RESULTS
 // ============================================================================
 
 function startPolling() {
@@ -327,14 +328,11 @@ function startPolling() {
     
     console.log('[TranscriptApp] Starting to poll for job status');
     
-    // FIXED: Add timeout after 10 minutes (600 seconds)
     const startTime = Date.now();
-    const maxDuration = 600000; // 10 minutes in milliseconds
+    const maxDuration = 600000;
     
-    // Poll immediately, then every 2 seconds
     checkJobStatus();
     pollInterval = setInterval(() => {
-        // Check if we've exceeded max duration
         if (Date.now() - startTime > maxDuration) {
             console.error('[TranscriptApp] Analysis timeout after 10 minutes');
             clearInterval(pollInterval);
@@ -361,10 +359,8 @@ async function checkJobStatus() {
         
         console.log('[TranscriptApp] Job status:', data.status, `(${data.progress}%)`);
         
-        // Update progress with entertaining display
         updateProgress(data.progress || 0, data.message || 'Processing...');
         
-        // NEW: Update claims counter if available
         if (data.claims_checked) {
             updateClaimsCounter(data.claims_checked);
         }
@@ -372,9 +368,8 @@ async function checkJobStatus() {
         if (data.status === 'completed') {
             console.log('[TranscriptApp] ✓ Analysis complete');
             clearInterval(pollInterval);
-            stopAllIntervals(); // FIXED: Stop all animations
+            stopAllIntervals();
             
-            // Get full results
             const resultsResponse = await fetch(`/api/transcript/results/${currentJobId}`);
             const resultsData = await resultsResponse.json();
             
@@ -388,27 +383,25 @@ async function checkJobStatus() {
         } else if (data.status === 'failed') {
             console.error('[TranscriptApp] Analysis failed:', data.error);
             clearInterval(pollInterval);
-            stopAllIntervals(); // FIXED: Stop all animations
+            stopAllIntervals();
             showError(data.error || 'Analysis failed');
         }
         
     } catch (error) {
         console.error('[TranscriptApp] Polling error:', error);
         clearInterval(pollInterval);
-        stopAllIntervals(); // FIXED: Stop all animations
+        stopAllIntervals();
         showError('Connection error: ' + error.message);
     }
 }
 
 // ============================================================================
-// PROGRESS ANIMATIONS (FIXED: Added fun facts cycling)
+// PROGRESS ANIMATIONS
 // ============================================================================
 
 function startFunFactsCycle() {
-    // FIXED: This is the missing function that cycles through fun facts
     console.log('[TranscriptApp] Starting fun facts cycle');
     
-    // Clear any existing interval
     if (funFactsInterval) {
         clearInterval(funFactsInterval);
     }
@@ -420,27 +413,22 @@ function startFunFactsCycle() {
     }
     
     let currentFactIndex = 0;
-    
-    // Set first fact immediately
     funFactElement.textContent = funFacts[0];
     
-    // FIXED: Rotate through facts every 4 seconds
     funFactsInterval = setInterval(() => {
         currentFactIndex = (currentFactIndex + 1) % funFacts.length;
         funFactElement.textContent = funFacts[currentFactIndex];
         
-        // Add fade animation
         funFactElement.style.animation = 'none';
         setTimeout(() => {
             funFactElement.style.animation = 'fadeInBounce 0.5s ease-out';
         }, 10);
         
         console.log(`[TranscriptApp] Showing fun fact ${currentFactIndex + 1}/${funFacts.length}`);
-    }, 4000); // Cycle every 4 seconds
+    }, 4000);
 }
 
 function startEmojiRotation() {
-    // NEW: Rotate through progress emojis
     console.log('[TranscriptApp] Starting emoji rotation');
     
     if (progressEmojiInterval) {
@@ -449,6 +437,7 @@ function startEmojiRotation() {
     
     const emojiElement = document.getElementById('progress-emoji');
     if (!emojiElement) {
+        console.warn('[TranscriptApp] Progress emoji element not found');
         return;
     }
     
@@ -457,17 +446,11 @@ function startEmojiRotation() {
     progressEmojiInterval = setInterval(() => {
         currentEmojiIndex = (currentEmojiIndex + 1) % progressEmojis.length;
         emojiElement.textContent = progressEmojis[currentEmojiIndex];
-    }, 2000); // Rotate every 2 seconds
+    }, 2000);
 }
 
 function stopAllIntervals() {
-    // FIXED: Centralized cleanup function
     console.log('[TranscriptApp] Stopping all intervals');
-    
-    if (pollInterval) {
-        clearInterval(pollInterval);
-        pollInterval = null;
-    }
     
     if (funFactsInterval) {
         clearInterval(funFactsInterval);
@@ -478,43 +461,36 @@ function stopAllIntervals() {
         clearInterval(progressEmojiInterval);
         progressEmojiInterval = null;
     }
+    
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
 }
 
-function updateProgress(progress, message) {
-    const progressFill = document.getElementById('progress-fill');
-    const progressPercentage = document.getElementById('progress-percentage');
+function updateProgress(percent, message) {
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercent = document.getElementById('progress-percent');
+    const progressMessage = document.getElementById('progress-message');
     
-    if (progressFill) {
-        // Smooth animation
-        progressFill.style.width = progress + '%';
-        
-        // Add pulsing animation during processing
-        if (progress > 0 && progress < 100) {
-            progressFill.classList.add('pulsing');
-        } else {
-            progressFill.classList.remove('pulsing');
-        }
+    if (progressBar) {
+        progressBar.style.width = percent + '%';
+        progressBar.classList.add('pulsing');
     }
     
-    if (progressPercentage) {
-        // Update percentage display
-        progressPercentage.textContent = Math.round(progress) + '%';
+    if (progressPercent) {
+        progressPercent.textContent = Math.round(percent) + '%';
     }
     
-    // Update message if there's a progress-text element
-    const progressText = document.getElementById('progress-text');
-    if (progressText) {
-        progressText.textContent = message;
+    if (progressMessage) {
+        progressMessage.textContent = message;
     }
 }
 
 function updateClaimsCounter(count) {
-    // NEW: Update the claims checked counter
-    const claimsCount = document.getElementById('claims-checked-count');
+    const claimsCount = document.getElementById('claims-count');
     if (claimsCount) {
         claimsCount.textContent = count;
-        
-        // Add bounce animation
         claimsCount.style.animation = 'none';
         setTimeout(() => {
             claimsCount.style.animation = 'fadeInBounce 0.3s ease-out';
@@ -523,30 +499,157 @@ function updateClaimsCounter(count) {
 }
 
 // ============================================================================
-// DISPLAY RESULTS
+// DISPLAY RESULTS - FIXED TO HANDLE BOTH FORMATS
 // ============================================================================
 
 function displayResults(results) {
     console.log('[TranscriptApp] Displaying results:', results);
     
-    // FIXED: Stop all intervals when showing results
     stopAllIntervals();
     
-    // Hide progress, show results
     document.getElementById('progress-section').classList.remove('active');
     document.getElementById('results-section').classList.add('active');
     
-    // Build and display HTML
     const resultsContainer = document.getElementById('results-section');
     resultsContainer.innerHTML = buildResultsHTML(results);
     
-    // Scroll to results
     resultsContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function buildResultsHTML(results) {
+    // CRITICAL FIX: Detect which format we're dealing with
+    const isTranscriptFormat = results.claims && results.verdicts;
+    const isNewsFormat = results.credibility_score && results.fact_checks;
+    
+    console.log('[TranscriptApp] Format detection - Transcript:', isTranscriptFormat, 'News:', isNewsFormat);
+    
+    if (isTranscriptFormat) {
+        return buildTranscriptResultsHTML(results);
+    } else if (isNewsFormat) {
+        return buildNewsResultsHTML(results);
+    } else {
+        // Fallback for unknown format
+        console.warn('[TranscriptApp] Unknown results format, using generic display');
+        return buildGenericResultsHTML(results);
+    }
+}
+
+function buildTranscriptResultsHTML(results) {
+    // TRANSCRIPT FORMAT: { claims: [...], verdicts: [...], summary: "..." }
+    console.log('[TranscriptApp] Building TRANSCRIPT results display');
+    
+    const claims = results.claims || [];
+    const verdicts = results.verdicts || [];
+    const speakers = results.speakers || [];
+    const topics = results.topics || [];
+    
+    // Merge claims with verdicts
+    const mergedClaims = claims.map((claim, index) => ({
+        ...claim,
+        ...verdicts[index],
+        claim: claim.claim || claim.text || '',
+        speaker: claim.speaker || 'Unknown'
+    }));
+    
+    let html = `
+        <div style="text-align: center; margin-bottom: 30px;">
+            <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
+                <i class="fas fa-plus-circle"></i> New Analysis
+            </button>
+        </div>
+        
+        <!-- Summary -->
+        <div class="summary-card">
+            <h3><i class="fas fa-file-alt"></i> Analysis Summary</h3>
+            <p>${escapeHtml(results.summary || 'Analysis complete.')}</p>
+        </div>
+    `;
+    
+    // Speakers
+    if (speakers.length > 0) {
+        html += `
+            <div class="summary-card">
+                <h3><i class="fas fa-users"></i> Speakers Detected</h3>
+                <p>${speakers.map(s => escapeHtml(s)).join(', ')}</p>
+            </div>
+        `;
+    }
+    
+    // Topics
+    if (topics.length > 0) {
+        html += `
+            <div class="summary-card">
+                <h3><i class="fas fa-lightbulb"></i> Key Topics</h3>
+                <p>${topics.map(t => escapeHtml(t)).join(', ')}</p>
+            </div>
+        `;
+    }
+    
+    // Verdict Statistics
+    const verdictCounts = {};
+    mergedClaims.forEach(claim => {
+        const verdict = claim.verdict || 'unverified';
+        verdictCounts[verdict] = (verdictCounts[verdict] || 0) + 1;
+    });
+    
+    html += `
+        <div class="summary-card">
+            <h3><i class="fas fa-chart-pie"></i> Verification Summary</h3>
+            <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px;">
+    `;
+    
+    Object.keys(verdictCounts).forEach(verdict => {
+        const info = getVerdictInfo(verdict);
+        html += `
+            <span style="padding: 8px 16px; background: ${info.color}20; color: ${info.color}; border: 1px solid ${info.color}; border-radius: 20px; font-weight: 600;">
+                <i class="fas ${info.icon}"></i> ${info.label}: ${verdictCounts[verdict]}
+            </span>
+        `;
+    });
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    // Claims List
+    if (mergedClaims.length > 0) {
+        html += `
+            <div style="margin-top: 30px;">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;">
+                    <i class="fas fa-check-double"></i> Verified Claims (${mergedClaims.length})
+                </h3>
+        `;
+        html += mergedClaims.map((claim, index) => buildClaimHTML(claim, index + 1)).join('');
+        html += '</div>';
+    }
+    
+    // Export Buttons
+    html += `
+        <div style="margin-top: 40px; text-align: center;">
+            <div style="display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+                <button onclick="exportResults('json')" style="padding: 12px 24px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                    <i class="fas fa-file-code"></i> JSON
+                </button>
+                <button onclick="exportResults('txt')" style="padding: 12px 24px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                    <i class="fas fa-file-alt"></i> TXT
+                </button>
+                <button onclick="exportResults('pdf')" style="padding: 12px 24px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
+            </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+function buildNewsResultsHTML(results) {
+    // NEWS FORMAT: { credibility_score: {...}, fact_checks: [...] }
+    console.log('[TranscriptApp] Building NEWS results display');
+    
     const score = results.credibility_score || {};
-    const claims = results.fact_checks || results.claims || [];
+    const claims = results.fact_checks || [];
     const speakers = results.speakers || [];
     const topics = results.topics || [];
     
@@ -598,21 +701,12 @@ function buildResultsHTML(results) {
         html += `<div style="margin-top: 30px;"><h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px;"><i class="fas fa-check-double"></i> Fact Checks (${claims.length})</h3>`;
         html += claims.map((claim, index) => buildClaimHTML(claim, index + 1)).join('');
         html += '</div>';
-    } else {
-        html += `
-            <div class="summary-card">
-                <p style="text-align: center; color: #6b7280;">No verifiable claims found in the transcript.</p>
-            </div>
-        `;
     }
     
-    // Export buttons
+    // Export Buttons
     html += `
-        <div style="margin-top: 30px; text-align: center;">
-            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">
-                <i class="fas fa-download"></i> Export Results
-            </h3>
-            <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <div style="margin-top: 40px; text-align: center;">
+            <div style="display: inline-flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
                 <button onclick="exportResults('json')" style="padding: 12px 24px; background: white; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
                     <i class="fas fa-file-code"></i> JSON
                 </button>
@@ -623,6 +717,26 @@ function buildResultsHTML(results) {
                     <i class="fas fa-file-pdf"></i> PDF
                 </button>
             </div>
+        </div>
+    `;
+    
+    return html;
+}
+
+function buildGenericResultsHTML(results) {
+    // FALLBACK for unknown format
+    console.log('[TranscriptApp] Building GENERIC results display');
+    
+    let html = `
+        <div style="text-align: center; margin-bottom: 30px;">
+            <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); transition: all 0.3s;">
+                <i class="fas fa-plus-circle"></i> New Analysis
+            </button>
+        </div>
+        
+        <div class="summary-card">
+            <h3><i class="fas fa-info-circle"></i> Analysis Results</h3>
+            <pre style="white-space: pre-wrap; word-wrap: break-word; background: #f9fafb; padding: 15px; border-radius: 8px; overflow-x: auto;">${escapeHtml(JSON.stringify(results, null, 2))}</pre>
         </div>
     `;
     
@@ -682,7 +796,6 @@ async function exportResults(format) {
             throw new Error(errorData.error || 'Export failed');
         }
         
-        // Get filename
         let filename = `transcript-analysis.${format}`;
         const contentDisposition = response.headers.get('Content-Disposition');
         if (contentDisposition) {
@@ -690,7 +803,6 @@ async function exportResults(format) {
             if (match) filename = match[1];
         }
         
-        // Download file
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -716,40 +828,32 @@ async function exportResults(format) {
 function startNewAnalysis() {
     console.log('[TranscriptApp] Starting new analysis');
     
-    // FIXED: Clean up all intervals
     stopAllIntervals();
     
-    // Reset state
     currentJobId = null;
     currentResults = null;
     
-    // Clear inputs
     document.getElementById('text-input').value = '';
     const liveDisplay = document.getElementById('live-transcript');
     liveDisplay.textContent = '';
     liveDisplay.setAttribute('data-final-text', '');
     
-    // Reset file input
     const fileInput = document.getElementById('file-input');
     if (fileInput) fileInput.value = '';
     
-    // Reset counters
     updateCharCount('char-count', '');
     updateCharCount('live-char-count', '');
     
-    // Show input section
     document.getElementById('input-section').style.display = 'block';
     document.getElementById('progress-section').classList.remove('active');
     document.getElementById('results-section').classList.remove('active');
     
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function showError(message) {
     console.error('[TranscriptApp] Error:', message);
     
-    // FIXED: Clean up intervals on error
     stopAllIntervals();
     
     document.getElementById('progress-section').classList.remove('active');
@@ -783,14 +887,13 @@ function escapeHtml(text) {
 // INITIALIZATION
 // ============================================================================
 
-// Initialize when DOM is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initializeMicrophone);
 } else {
     initializeMicrophone();
 }
 
-// Add CSS animation styles dynamically
+// Add CSS animation styles
 const style = document.createElement('style');
 style.textContent = `
     @keyframes fadeInBounce {
@@ -808,7 +911,6 @@ style.textContent = `
         animation: pulse 1.5s ease-in-out infinite !important;
     }
     
-    /* FIXED: Enhanced emoji rotation animation */
     #progress-emoji {
         animation: spin 3s linear infinite;
     }
@@ -820,6 +922,6 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
-console.log('[TranscriptApp] ✓ Module loaded - v12.0.0 with cycling fun facts');
+console.log('[TranscriptApp] ✓ Module loaded - v13.0.0 with format detection');
 
-// I did no harm and this file is not truncated
+// I did no harm and this file is not truncated.
