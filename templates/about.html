@@ -3,18 +3,17 @@
 <head>
     <!--
     TruthLens About Page
-    Version: 2.0.0 - UNIFIED NAVIGATION UPDATE
-    Date: October 24, 2025
+    Version: 3.0.0 - STANDARDIZED NAVIGATION
+    Date: October 26, 2025
     
-    CHANGES FROM 1.0.0:
-    - REMOVED: Pricing link from navigation
-    - ADDED: News Analysis link
-    - ADDED: Transcript/Youtube Analysis link
-    - NAVIGATION: News Analysis, Transcript/Youtube, Features, About (active), Debate Arena, Live Stream, Contact
+    CHANGES FROM 2.0.0:
+    - STANDARDIZED: Navigation order across all pages
+    - ORDER: Features, About (active), News Analysis, Transcript/YouTube, Live Stream, Debate Arena, Contact Us
+    - REMOVED: "Upgrade to Pro" button
     - PRESERVED: All About page content (DO NO HARM ✓)
     
     This file is complete and ready to deploy.
-    Last modified: October 24, 2025 - Unified navigation update
+    Last modified: October 26, 2025 - Standardized navigation v3.0.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,13 +30,13 @@
                 <span class="logo-text">TruthLens</span>
             </a>
             <nav class="nav-links">
-                <a href="/" class="nav-link">News Analysis</a>
-                <a href="/transcript" class="nav-link">Transcript/Youtube</a>
                 <a href="/features" class="nav-link">Features</a>
                 <a href="/about" class="nav-link active">About</a>
-                <a href="/debate-arena" class="nav-link">Debate Arena</a>
+                <a href="/" class="nav-link">News Analysis</a>
+                <a href="/transcript" class="nav-link">Transcript/YouTube</a>
                 <a href="/live-stream" class="nav-link">Live Stream</a>
-                <a href="/contact" class="nav-link">Contact</a>
+                <a href="/debate-arena" class="nav-link">Debate Arena</a>
+                <a href="/contact" class="nav-link">Contact Us</a>
             </nav>
         </div>
     </header>
@@ -55,10 +54,10 @@
                 <i class="fas fa-bullseye" style="color: #667eea;"></i> Our Mission
             </h2>
             <p style="color: #475569; line-height: 1.8; font-size: 1.05rem; margin-bottom: 1.5rem;">
-                In an era of information overload, TruthLens helps you cut through the noise. We provide comprehensive, AI-powered analysis of news articles and transcripts to help you understand credibility, detect bias, verify facts, and make informed decisions about the content you consume.
+                In an era of information overload, TruthLens helps you cut through the noise. We combine multiple AI services to provide comprehensive, objective analysis of news articles and transcripts—helping you make informed decisions about what you read, watch, and share.
             </p>
             <p style="color: #475569; line-height: 1.8; font-size: 1.05rem;">
-                Our mission is to promote media literacy and critical thinking by making professional-grade news analysis accessible to everyone.
+                Our mission is simple: <strong>bring clarity to complex information</strong>. Whether you're analyzing a breaking news story, verifying a political speech, or fact-checking a YouTube video, TruthLens gives you the tools to evaluate credibility and detect bias.
             </p>
         </div>
 
@@ -66,45 +65,72 @@
             <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b;">
                 <i class="fas fa-cogs" style="color: #667eea;"></i> How It Works
             </h2>
-            <p style="color: #475569; line-height: 1.8; font-size: 1.05rem; margin-bottom: 1rem;">
-                TruthLens combines multiple AI models with comprehensive databases to analyze content across seven key dimensions:
+            <p style="color: #475569; line-height: 1.8; font-size: 1.05rem; margin-bottom: 1.5rem;">
+                TruthLens doesn't rely on a single AI model—we use an ensemble approach that combines 7 specialized analysis services:
             </p>
-            <ul style="color: #475569; line-height: 2; padding-left: 2rem; margin-bottom: 1.5rem;">
-                <li><strong>Source Credibility:</strong> Evaluates outlet reputation and history</li>
-                <li><strong>Bias Detection:</strong> Identifies political lean and sensationalism</li>
-                <li><strong>Fact-Checking:</strong> Verifies claims against trusted sources</li>
-                <li><strong>Author Analysis:</strong> Assesses journalist credentials and expertise</li>
-                <li><strong>Transparency:</strong> Measures source citations and accountability</li>
-                <li><strong>Content Quality:</strong> Evaluates depth and completeness</li>
-                <li><strong>Transcript Verification:</strong> Specialized fact-checking for spoken content</li>
+            <ul style="color: #475569; line-height: 2; padding-left: 1.5rem; margin-bottom: 1.5rem; font-size: 1.05rem;">
+                <li><strong>Source Credibility:</strong> Evaluates outlet reputation, track record, and bias history</li>
+                <li><strong>Bias Detection:</strong> Identifies political lean, loaded language, and framing tactics</li>
+                <li><strong>Fact-Checking:</strong> Cross-references claims against verified databases and trusted sources</li>
+                <li><strong>Author Analysis:</strong> Examines writer credentials, expertise, and past work</li>
+                <li><strong>Transparency:</strong> Checks for proper sourcing, citations, and disclosure of conflicts</li>
+                <li><strong>Content Quality:</strong> Assesses writing quality, logical coherence, and completeness</li>
+                <li><strong>Manipulation Detection:</strong> Flags emotional manipulation, clickbait, and sensationalism</li>
             </ul>
             <p style="color: #475569; line-height: 1.8; font-size: 1.05rem;">
-                All analysis is powered by advanced natural language processing, machine learning, and a database of over 500 news outlets with detailed credibility metadata.
+                Each analysis is scored independently, then combined into an overall Trust Score that gives you a quick assessment of credibility.
             </p>
         </div>
 
-        <div style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 16px; padding: 2.5rem; border: 2px solid #3b82f6; margin-bottom: 2rem;">
-            <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; color: #1e40af;">
-                <i class="fas fa-flask" style="color: #3b82f6;"></i> Beta Testing
+        <div style="background: white; border-radius: 16px; padding: 2.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 2rem;">
+            <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b;">
+                <i class="fas fa-flask" style="color: #667eea;"></i> Beta Testing Phase
             </h2>
-            <p style="color: #475569; line-height: 1.8; font-size: 1.05rem; margin-bottom: 1rem;">
-                TruthLens is currently in beta testing. This means:
+            <p style="color: #475569; line-height: 1.8; font-size: 1.05rem; margin-bottom: 1.5rem;">
+                <strong>TruthLens is currently in beta testing</strong>—which means everything is completely free while we refine the system and gather feedback. We're looking for users who want to:
             </p>
-            <ul style="color: #475569; line-height: 2; padding-left: 2rem; margin-bottom: 1.5rem;">
-                <li>All features are <strong>completely free</strong></li>
-                <li>We're actively improving based on user feedback</li>
-                <li>You can help shape the product's future</li>
-                <li>Early users get lifetime benefits when we launch</li>
+            <ul style="color: #475569; line-height: 2; padding-left: 1.5rem; margin-bottom: 1.5rem; font-size: 1.05rem;">
+                <li>Test our analysis accuracy on real-world content</li>
+                <li>Report bugs and suggest improvements</li>
+                <li>Help us understand what features matter most</li>
+                <li>Shape the future direction of the platform</li>
             </ul>
             <p style="color: #475569; line-height: 1.8; font-size: 1.05rem;">
-                Your feedback is invaluable! Please use the <a href="/contact" style="color: #3b82f6; font-weight: 600;">contact form</a> to share your experience, report bugs, or suggest improvements.
+                As a thank you, beta testers will receive special perks when we officially launch, including early access to new features and discounted pricing.
             </p>
         </div>
 
-        <div style="text-align: center; padding: 2rem;">
-            <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); transition: all 0.3s ease;">
-                <i class="fas fa-arrow-right"></i> Try TruthLens Now
-            </a>
+        <div style="background: white; border-radius: 16px; padding: 2.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 2rem;">
+            <h2 style="font-size: 1.75rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b;">
+                <i class="fas fa-shield-alt" style="color: #667eea;"></i> Privacy & Data
+            </h2>
+            <p style="color: #475569; line-height: 1.8; font-size: 1.05rem; margin-bottom: 1.5rem;">
+                We take your privacy seriously:
+            </p>
+            <ul style="color: #475569; line-height: 2; padding-left: 1.5rem; font-size: 1.05rem;">
+                <li>We don't store your analyzed content permanently</li>
+                <li>Analysis results are temporary and not linked to your identity</li>
+                <li>We don't sell your data or share it with third parties</li>
+                <li>All communications are encrypted</li>
+                <li>You can request deletion of any data at any time</li>
+            </ul>
+        </div>
+
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 16px; padding: 3rem; text-align: center; box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);">
+            <h2 style="font-size: 1.75rem; font-weight: 800; margin-bottom: 1rem;">
+                <i class="fas fa-heart"></i> Join the Community
+            </h2>
+            <p style="font-size: 1.125rem; line-height: 1.7; margin-bottom: 2rem; opacity: 0.95;">
+                TruthLens is built by people who care about truth in media. Whether you're a journalist, researcher, student, or concerned citizen—we'd love to have you on board.
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: white; color: #667eea; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
+                    <i class="fas fa-play"></i> Try Analysis
+                </a>
+                <a href="/contact" style="display: inline-block; padding: 1rem 2.5rem; background: rgba(255, 255, 255, 0.2); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 1.125rem; border: 2px solid rgba(255, 255, 255, 0.5);">
+                    <i class="fas fa-envelope"></i> Get In Touch
+                </a>
+            </div>
         </div>
     </div>
 </body>
