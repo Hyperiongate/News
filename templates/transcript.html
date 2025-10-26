@@ -3,11 +3,11 @@
 <head>
     <!-- 
     File: transcript.html
-    Version: 6.2.0 - PROGRESS BAR FIXES + TIME ESTIMATES
+    Version: 6.2.1 - PROGRESS BAR FIXES + TIME ESTIMATES
     Last Updated: October 25, 2025
     Description: Standalone Transcript Fact-Checker with FIXED Progress Display
     
-    LATEST CHANGES (October 25, 2025 - v6.2.0):
+    LATEST CHANGES (October 25, 2025 - v6.2.1):
     ✅ FIXED: "Did You Know" facts now cycle properly every 4 seconds
     ✅ ADDED: Prominent time estimate banner at top of progress section
     ✅ FIXED: Fun facts rotation interval properly increments currentFactIndex
@@ -21,7 +21,7 @@
     - Banner shows: "⏱️ This analysis could take a couple of minutes..."
     
     ENTERTAINMENT FEATURES:
-    - ⏰ Time estimate banner (new in v6.2.0)
+    - ⏰ Time estimate banner (new in v6.2.1)
     - 🌈 Rainbow progress bar that cycles through colors
     - 🎭 Emoji changes: 🔍 → 🎯 → 🤔 → 🎉 based on progress
     - 🎨 Percentage size: 48px bold with color morphing
@@ -31,7 +31,7 @@
     - 💫 Multiple animation layers for depth
     
     Deploy to: templates/transcript.html
-    Last modified: October 25, 2025 - Progress bar fixes v6.2.0
+    Last modified: October 25, 2025 - Progress bar fixes v6.2.1
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -946,7 +946,7 @@ Example formats:
     </div>
 
     <script>
-        console.log('[TranscriptApp] Module loading - v6.2.0 with fixed progress bar cycling...');
+        console.log('[TranscriptApp] Module loading - v6.2.1 with fixed progress bar cycling...');
 
         // ============================================================================
         // STATE MANAGEMENT
@@ -972,14 +972,26 @@ Example formats:
         // ============================================================================
         // TAB SWITCHING
         // ============================================================================
-        function switchTab(tab) {
+        function switchTab(tab, event) {
             console.log('[TranscriptApp] Switching to tab:', tab);
             
-            // Update buttons
+            // Update buttons - FIXED: handle missing event object
             document.querySelectorAll('.tab-button').forEach(btn => {
                 btn.classList.remove('active');
             });
-            event?.currentTarget?.classList.add('active');
+            
+            // If event is provided, use it; otherwise find the button by matching the tab parameter
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            } else {
+                // Find the correct button based on the tab name
+                document.querySelectorAll('.tab-button').forEach(btn => {
+                    const onclick = btn.getAttribute('onclick');
+                    if (onclick && onclick.includes("'" + tab + "'")) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
             
             // Update content
             document.querySelectorAll('.tab-content').forEach(content => {
