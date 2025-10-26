@@ -1,20 +1,27 @@
 """
 File: transcript_routes.py
-Last Updated: October 25, 2025 - CRITICAL HOTFIX: Fact Checker Method Name Correction
+Last Updated: October 26, 2025 - YouTube Integration Fix v10.2.3
 Description: Flask routes for transcript fact-checking with Redis-backed job storage
 
-LATEST HOTFIX (October 25, 2025 - 6:30 PM):
+LATEST UPDATE (October 26, 2025 - v10.2.3):
+========================================
+- ADDED: create_job_via_api() function for external job creation (line ~295)
+- PURPOSE: Allows app.py's /api/youtube/process endpoint to create jobs
+- FIXED: YouTube transcript analysis now works end-to-end with job tracking
+- REASON: YouTube endpoint was returning raw data without creating job_id
+- RESULT: No more "undefined" job_id or 404 polling errors!
+- PRESERVED: All v10.2.2 functionality (DO NO HARM ✓)
+
+PREVIOUS HOTFIX (October 25, 2025 - 6:30 PM):
 - FIXED: Changed fact_checker.check_claim() to fact_checker.check_claim_with_verdict()
 - FIXED: Now passing claim_text string instead of entire claim dict
 - FIXED: Added context parameter with transcript, speaker, and topics
 - REASON: AttributeError - 'TranscriptComprehensiveFactChecker' object has no attribute 'check_claim'
-- The correct method name is 'check_claim_with_verdict' which expects (claim_text: str, context: dict)
 
 PREVIOUS HOTFIX (October 25, 2025 - 6:15 PM):
 - FIXED: Changed claim_extractor.extract_claims() to claim_extractor.extract()
 - FIXED: Removed redundant speaker/topic extraction (now using results from extract())
 - FIXED: Updated claim text access to handle both 'text' and 'claim' keys
-- REASON: AttributeError - extract_claims() method doesn't exist, correct method is extract()
 
 PREVIOUS CHANGES (October 25, 2025):
 - ADDED: Redis persistent job storage (works across multiple instances)
@@ -48,6 +55,7 @@ SETUP REDIS ON RENDER:
 Deploy to: transcript_routes.py (root directory)
 
 This is a COMPLETE file ready for deployment.
+Last modified: October 26, 2025 - v10.2.3 YouTube Integration Fix
 I did no harm and this file is not truncated.
 """
 
@@ -290,6 +298,91 @@ def create_job(transcript: str, source_type: str = 'text') -> str:
     logger.info(f"[TranscriptRoutes] ✓ Created job {job_id} (Instance: {INSTANCE_ID})")
     
     return job_id
+
+
+# ============================================================================
+# API WRAPPER FOR EXTERNAL JOB CREATION (NEW IN v10.2.3)
+# ============================================================================
+
+def create_job_via_api(transcript: str, source_type: str = 'text', metadata: Optional[Dict] = None) -> Dict:
+    """
+    Create a job and start background processing - API wrapper for external use
+    
+    NEW IN v10.2.3: Added for /api/youtube/process endpoint integration
+    
+    This function is specifically designed to be imported by app.py for the
+    /api/youtube/process endpoint to integrate with the job system.
+    
+    Args:
+        transcript: Transcript text to analyze
+        source_type: Source type ('text', 'youtube', 'audio', etc.)
+        metadata: Optional metadata dictionary (e.g., YouTube video info)
+        
+    Returns:
+        Dict with structure:
+            {
+                'success': bool,
+                'job_id': str (if successful),
+                'message': str,
+                'status_url': str (if successful),
+                'error': str (if failed)
+            }
+    
+    Usage from app.py:
+        from transcript_routes import create_job_via_api
+        result = create_job_via_api(transcript, 'youtube', youtube_metadata)
+        if result['success']:
+            job_id = result['job_id']
+    
+    Last modified: October 26, 2025 - Added for YouTube integration
+    """
+    try:
+        # Validate transcript
+        if not transcript or len(transcript) < 10:
+            return {
+                'success': False,
+                'error': 'Transcript too short (minimum 10 characters)'
+            }
+        
+        if len(transcript) > 50000:
+            return {
+                'success': False,
+                'error': 'Transcript too long (maximum 50,000 characters)'
+            }
+        
+        # Create job
+        job_id = create_job(transcript, source_type)
+        
+        # Add metadata if provided (e.g., YouTube video info)
+        if metadata:
+            job = get_job(job_id)
+            if job:
+                job['metadata'] = metadata
+                job['instance_id'] = INSTANCE_ID
+                save_job(job_id, job)
+                logger.info(f"[TranscriptRoutes] ✓ Added metadata to job {job_id}")
+        
+        # Start background processing
+        thread = Thread(target=process_transcript_job, args=(job_id, transcript))
+        thread.daemon = True
+        thread.start()
+        
+        logger.info(f"[TranscriptRoutes] ✓ API job created: {job_id} - Type: {source_type} - Length: {len(transcript)} chars")
+        
+        return {
+            'success': True,
+            'job_id': job_id,
+            'message': f'Analysis started for {source_type} transcript',
+            'status_url': f'/api/transcript/status/{job_id}'
+        }
+        
+    except Exception as e:
+        logger.error(f"[TranscriptRoutes] ✗ Error creating job via API: {e}", exc_info=True)
+        return {
+            'success': False,
+            'error': f'Failed to create job: {str(e)}'
+        }
+
 
 
 # ============================================================================
