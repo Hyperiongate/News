@@ -1,28 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- 
-    File: transcript.html
-    Version: 13.0.0 - FIXED YOUTUBE TRANSCRIPT DISPLAY
-    Last Updated: October 26, 2025
-    Description: Standalone Transcript Fact-Checker with FORMAT DETECTION
+        <!--
+    TruthLens Transcript Analysis Page
+    Version: 3.0.0 - STANDARDIZED NAVIGATION
+    Date: October 26, 2025
     
-    LATEST CHANGES (October 26, 2025 - v13.0.0):
-    ✅ CRITICAL FIX: Added format detection for transcript vs news results
-    ✅ FIXED: YouTube transcripts now display correctly
-    ✅ FIXED: displayResults() now handles both data formats
-    ✅ ADDED: buildTranscriptResultsHTML() for transcript format
-    ✅ ADDED: buildNewsResultsHTML() for news format
-    ✅ PRESERVED: All v6.2.1 functionality (DO NO HARM ✓)
+    CHANGES FROM PREVIOUS VERSION:
+    - STANDARDIZED: Navigation order across all pages
+    - ORDER: Features, About, News Analysis, Transcript/YouTube, Live Stream, Debate Arena, Contact Us
+    - REMOVED: "Upgrade to Pro" button
+    - PRESERVED: All existing functionality (DO NO HARM ✓)
     
-    ROOT CAUSE:
-    - Backend returned TRANSCRIPT format: {claims: [...], verdicts: [...]}
-    - Frontend expected NEWS format: {credibility_score: {...}, fact_checks: [...]}
-    - Line 1318 crashed trying to access undefined credibility_score
-    - Fixed by detecting format and routing to appropriate display function
-    
-    Deploy to: templates/transcript.html
-    Last modified: October 26, 2025 - YouTube transcript fix v13.0.0
+    This file is complete and ready to deploy.
+    Last modified: October 26, 2025 - Standardized navigation v3.0.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -576,13 +567,33 @@
                 <span>TruthLens AI</span>
             </div>
             <div class="nav-links">
+                <a href="/features" class="nav-link">
+                    <i class="fas fa-star"></i>
+                    Features
+                </a>
+                <a href="/about" class="nav-link">
+                    <i class="fas fa-info-circle"></i>
+                    About
+                </a>
                 <a href="/" class="nav-link">
                     <i class="fas fa-newspaper"></i>
-                    News
+                    News Analysis
                 </a>
                 <a href="/transcript" class="nav-link active">
                     <i class="fas fa-file-alt"></i>
-                    Transcript
+                    Transcript/YouTube
+                </a>
+                <a href="/live-stream" class="nav-link">
+                    <i class="fas fa-video"></i>
+                    Live Stream
+                </a>
+                <a href="/debate-arena" class="nav-link">
+                    <i class="fas fa-comments"></i>
+                    Debate Arena
+                </a>
+                <a href="/contact" class="nav-link">
+                    <i class="fas fa-envelope"></i>
+                    Contact Us
                 </a>
             </div>
         </div>
