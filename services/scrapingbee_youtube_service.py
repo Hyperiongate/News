@@ -1,37 +1,36 @@
 """
 File: services/scrapingbee_youtube_service.py
-Last Updated: October 26, 2025 - v4.0.0 CRITICAL API ENDPOINT FIX
-Description: YouTube transcript extraction using ScrapingBee's actual working API
+Last Updated: October 26, 2025 - v5.0.0 FINAL FIX - CORRECT ENDPOINT
+Description: YouTube transcript extraction using ScrapingBee's YouTube Transcript API
 
-CRITICAL FIX FROM v3.0.0:
+CRITICAL FIX FROM v4.0.0:
 =======================
-ROOT CAUSE: v3.0 used endpoint /api/v1/youtube/transcript but ScrapingBee's 
-            ACTUAL working API (per their docs examples) uses /api/v1/ with 
-            video_id parameter. This was causing 400/500 errors.
+ROOT CAUSE: v4.0.0 mistakenly used /api/v1/ (general web scraping endpoint)
+            which expects 'url' parameter, not 'video_id'. This caused 400 error:
+            {"errors":{"video_id":["Unknown field."],"url":["Missing data"]}}
 
-THE SOLUTION (v4.0.0):
+THE SOLUTION (v5.0.0):
 =====================
-Based on ScrapingBee's official documentation examples (lines 1709-1722):
-- Endpoint: https://app.scrapingbee.com/api/v1/ (NOT /youtube/transcript)
-- Parameters: api_key, video_id (NOT url or full endpoint path)
+Based on ScrapingBee's OFFICIAL documentation at scrapingbee.com/documentation/youtube/:
+- There ARE dedicated YouTube endpoints!
+- Endpoint: https://app.scrapingbee.com/api/v1/youtube/transcript
+- Parameters: api_key, video_id, language (optional), transcript_origin (optional)
 - Response: JSON with "text" field containing full transcript
-- Cost: 5 credits per request (not 25!)
+- Cost: 5 credits per request
 
-CHANGES FROM v3.0.0:
+CHANGES FROM v4.0.0:
 ===================
-1. FIXED: Changed endpoint from /api/v1/youtube/transcript to /api/v1/
-2. FIXED: Changed parameters to match working examples (video_id, not full URL)
-3. FIXED: Updated response parsing to handle actual API response format
-4. FIXED: Cost tracking (5 credits, not 25)
-5. IMPROVED: Better error handling with actual status codes
-6. PRESERVED: All v3.0.0 functionality (DO NO HARM ✓)
+1. FIXED: Changed endpoint from /api/v1/ to /api/v1/youtube/transcript
+2. FIXED: This is the CORRECT YouTube-specific endpoint
+3. PRESERVED: All v4.0.0 functionality (DO NO HARM ✓)
+4. NOTE: v3.0.0 had the right endpoint, v4.0.0 broke it, v5.0.0 fixes it!
 
-API ENDPOINT DETAILS (FROM ACTUAL DOCS):
-=======================================
-Endpoint: https://app.scrapingbee.com/api/v1/
+API ENDPOINT DETAILS (FROM OFFICIAL DOCS):
+=========================================
+Endpoint: https://app.scrapingbee.com/api/v1/youtube/transcript
 Required Parameters:
   - api_key: Your ScrapingBee API key
-  - video_id: YouTube video ID (11 characters, extracted from URL)
+  - video_id: YouTube video ID (11 characters)
 Optional Parameters:
   - language: Language code (default: 'en')
   - transcript_origin: 'auto_generated' or 'uploader_provided'
@@ -49,7 +48,7 @@ Replace existing file completely.
 Restart your application after deploying.
 
 This is a COMPLETE file ready for deployment.
-Last modified: October 26, 2025 - v4.0.0 ACTUAL API ENDPOINT FIX
+Last modified: October 26, 2025 - v5.0.0 CORRECT YOUTUBE TRANSCRIPT ENDPOINT
 I did no harm and this file is not truncated.
 """
 
@@ -65,10 +64,10 @@ logger = logging.getLogger(__name__)
 
 class ScrapingBeeYouTubeService:
     """
-    YouTube transcript extraction using ScrapingBee's API
+    YouTube transcript extraction using ScrapingBee's YouTube Transcript API
     
-    This service uses ScrapingBee's actual working endpoint as documented
-    in their official examples, not the endpoint mentioned in headers.
+    This service uses ScrapingBee's DEDICATED YouTube Transcript endpoint
+    as documented at: https://www.scrapingbee.com/documentation/youtube/
     
     Features:
     - Automatic video ID extraction from various URL formats
@@ -78,7 +77,7 @@ class ScrapingBeeYouTubeService:
     - Usage statistics tracking
     
     Technical Details:
-    - Endpoint: https://app.scrapingbee.com/api/v1/
+    - Endpoint: https://app.scrapingbee.com/api/v1/youtube/transcript
     - Method: GET
     - Auth: API key in params
     - Cost: 5 credits per request
@@ -88,15 +87,15 @@ class ScrapingBeeYouTubeService:
         """Initialize ScrapingBee YouTube service"""
         self.api_key = os.getenv('SCRAPINGBEE_API_KEY')
         
-        # FIXED v4.0: Use the ACTUAL working endpoint from documentation
-        self.api_url = "https://app.scrapingbee.com/api/v1/"
+        # FIXED v5.0: Use the CORRECT YouTube Transcript endpoint
+        self.api_url = "https://app.scrapingbee.com/api/v1/youtube/transcript"
         
         if not self.api_key:
             logger.warning("⚠️ ScrapingBee API key not found - YouTube service disabled")
             self.available = False
         else:
             self.available = True
-            logger.info("✅ ScrapingBee YouTube API initialized (v4.0.0 - Fixed endpoint)")
+            logger.info("✅ ScrapingBee YouTube Transcript API initialized (v5.0.0 - Correct endpoint)")
         
         # Statistics tracking
         self.stats = {
@@ -110,7 +109,7 @@ class ScrapingBeeYouTubeService:
         """
         Main entry point: Extract transcript from YouTube video URL
         
-        FIXED IN v4.0: Uses ScrapingBee's actual working API endpoint
+        FIXED IN v5.0: Uses the CORRECT YouTube Transcript endpoint
         
         Args:
             url: YouTube video URL (supports various formats)
@@ -155,7 +154,7 @@ class ScrapingBeeYouTubeService:
                     'suggestion': 'Please provide a standard YouTube video URL (e.g., youtube.com/watch?v=...)'
                 }
             
-            logger.info(f"[ScrapingBee v4.0] Processing video ID: {video_id}")
+            logger.info(f"[ScrapingBee v5.0] Processing video ID: {video_id}")
             
             # Step 2: Check if this is a live stream (reject immediately)
             if self._is_likely_live_stream(url):
@@ -167,7 +166,7 @@ class ScrapingBeeYouTubeService:
                     'alternative': 'Use the microphone feature to transcribe live audio from your speakers'
                 }
             
-            # Step 3: Get transcript using ScrapingBee's API
+            # Step 3: Get transcript using ScrapingBee's YouTube API
             result = self._extract_transcript_via_api(video_id)
             
             if not result['success']:
@@ -179,13 +178,13 @@ class ScrapingBeeYouTubeService:
             self.stats['credits_used'] += 5  # ScrapingBee charges 5 credits for YouTube
             
             transcript_length = len(result.get('transcript', ''))
-            logger.info(f"✅ [ScrapingBee v4.0] Successfully extracted transcript for {video_id} ({transcript_length} chars)")
+            logger.info(f"✅ [ScrapingBee v5.0] Successfully extracted transcript for {video_id} ({transcript_length} chars)")
             
             return result
             
         except requests.exceptions.Timeout:
             self.stats['failed_requests'] += 1
-            logger.error(f"❌ [ScrapingBee v4.0] Timeout processing {url}")
+            logger.error(f"❌ [ScrapingBee v5.0] Timeout processing {url}")
             return {
                 'success': False,
                 'error': 'Request timed out',
@@ -194,7 +193,7 @@ class ScrapingBeeYouTubeService:
         
         except requests.exceptions.RequestException as e:
             self.stats['failed_requests'] += 1
-            logger.error(f"❌ [ScrapingBee v4.0] Network error: {e}")
+            logger.error(f"❌ [ScrapingBee v5.0] Network error: {e}")
             return {
                 'success': False,
                 'error': 'Network error occurred',
@@ -203,7 +202,7 @@ class ScrapingBeeYouTubeService:
         
         except Exception as e:
             self.stats['failed_requests'] += 1
-            logger.error(f"❌ [ScrapingBee v4.0] Unexpected error: {e}", exc_info=True)
+            logger.error(f"❌ [ScrapingBee v5.0] Unexpected error: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': f'Failed to process video: {str(e)}',
@@ -212,9 +211,9 @@ class ScrapingBeeYouTubeService:
     
     def _extract_transcript_via_api(self, video_id: str, language: str = 'en') -> Dict:
         """
-        Extract transcript using ScrapingBee's API
+        Extract transcript using ScrapingBee's YouTube Transcript API
         
-        FIXED IN v4.0: Uses the correct endpoint and parameters
+        FIXED IN v5.0: Uses the CORRECT dedicated YouTube endpoint
         
         Args:
             video_id: YouTube video ID (11 characters)
@@ -224,17 +223,17 @@ class ScrapingBeeYouTubeService:
             Dict with success status and transcript data
         """
         try:
-            logger.info(f"[ScrapingBee v4.0] Calling API with video_id: {video_id}")
+            logger.info(f"[ScrapingBee v5.0] Calling YouTube Transcript API with video_id: {video_id}")
             
-            # FIXED v4.0: Use the ACTUAL working parameters from documentation
+            # FIXED v5.0: Use the CORRECT YouTube Transcript endpoint with proper parameters
             params = {
                 'api_key': self.api_key,
                 'video_id': video_id,
                 'language': language
             }
             
-            logger.info(f"[ScrapingBee v4.0] Endpoint: {self.api_url}")
-            logger.info(f"[ScrapingBee v4.0] Parameters: video_id={video_id}, language={language}")
+            logger.info(f"[ScrapingBee v5.0] Endpoint: {self.api_url}")
+            logger.info(f"[ScrapingBee v5.0] Parameters: video_id={video_id}, language={language}")
             
             response = requests.get(
                 self.api_url,
@@ -242,17 +241,17 @@ class ScrapingBeeYouTubeService:
                 timeout=60
             )
             
-            logger.info(f"[ScrapingBee v4.0] Response status: {response.status_code}")
+            logger.info(f"[ScrapingBee v5.0] Response status: {response.status_code}")
             
             # Handle different response status codes
             if response.status_code == 200:
                 # Success! Parse the response
                 try:
                     data = response.json()
-                    logger.info(f"[ScrapingBee v4.0] Successfully parsed JSON response")
+                    logger.info(f"[ScrapingBee v5.0] Successfully parsed JSON response")
                 except ValueError:
-                    logger.error("[ScrapingBee v4.0] Response is not valid JSON")
-                    logger.error(f"[ScrapingBee v4.0] Response text: {response.text[:500]}")
+                    logger.error("[ScrapingBee v5.0] Response is not valid JSON")
+                    logger.error(f"[ScrapingBee v5.0] Response text: {response.text[:500]}")
                     return {
                         'success': False,
                         'error': 'Invalid response from ScrapingBee',
@@ -263,8 +262,8 @@ class ScrapingBeeYouTubeService:
                 transcript = self._extract_transcript_from_response(data)
                 
                 if not transcript:
-                    logger.warning("[ScrapingBee v4.0] No transcript found in response")
-                    logger.warning(f"[ScrapingBee v4.0] Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}")
+                    logger.warning("[ScrapingBee v5.0] No transcript found in response")
+                    logger.warning(f"[ScrapingBee v5.0] Response keys: {list(data.keys()) if isinstance(data, dict) else 'not a dict'}")
                     return {
                         'success': False,
                         'error': 'No transcript available for this video',
@@ -274,7 +273,7 @@ class ScrapingBeeYouTubeService:
                 # Extract metadata from response
                 metadata = self._extract_metadata_from_response(data, video_id)
                 
-                logger.info(f"✅ [ScrapingBee v4.0] Transcript extracted: {len(transcript)} characters")
+                logger.info(f"✅ [ScrapingBee v5.0] Transcript extracted: {len(transcript)} characters")
                 
                 return {
                     'success': True,
@@ -289,7 +288,7 @@ class ScrapingBeeYouTubeService:
             
             elif response.status_code == 400:
                 error_text = response.text[:500] if response.text else 'No error details'
-                logger.error(f"❌ [ScrapingBee v4.0] Bad Request (400): {error_text}")
+                logger.error(f"❌ [ScrapingBee v5.0] Bad Request (400): {error_text}")
                 return {
                     'success': False,
                     'error': 'Invalid request parameters',
@@ -327,7 +326,7 @@ class ScrapingBeeYouTubeService:
             
             else:
                 error_text = response.text[:500] if response.text else 'No error details'
-                logger.error(f"❌ [ScrapingBee v4.0] API error {response.status_code}: {error_text}")
+                logger.error(f"❌ [ScrapingBee v5.0] API error {response.status_code}: {error_text}")
                 return {
                     'success': False,
                     'error': f'API error: {response.status_code}',
@@ -336,7 +335,7 @@ class ScrapingBeeYouTubeService:
                 }
                 
         except Exception as e:
-            logger.error(f"❌ [ScrapingBee v4.0] Error calling API: {e}", exc_info=True)
+            logger.error(f"❌ [ScrapingBee v5.0] Error calling API: {e}", exc_info=True)
             return {
                 'success': False,
                 'error': f'Failed to call API: {str(e)}',
@@ -346,8 +345,6 @@ class ScrapingBeeYouTubeService:
     def _extract_transcript_from_response(self, data: Dict) -> str:
         """
         Extract transcript text from ScrapingBee's JSON response
-        
-        FIXED IN v4.0: Handles the actual response format from the working API
         
         According to the documentation, the response has:
         - "text": Full transcript as one string (BEST option)
@@ -360,7 +357,7 @@ class ScrapingBeeYouTubeService:
             if isinstance(data, dict) and 'text' in data:
                 text = data['text']
                 if isinstance(text, str) and text.strip():
-                    logger.info(f"[ScrapingBee v4.0] Found transcript in 'text' field: {len(text)} chars")
+                    logger.info(f"[ScrapingBee v5.0] Found transcript in 'text' field: {len(text)} chars")
                     return self._clean_transcript(text)
             
             # Priority 2: Check for "transcript" field (array of segments)
@@ -368,11 +365,11 @@ class ScrapingBeeYouTubeService:
                 transcript_data = data['transcript']
                 
                 if isinstance(transcript_data, str):
-                    logger.info(f"[ScrapingBee v4.0] Found transcript as string: {len(transcript_data)} chars")
+                    logger.info(f"[ScrapingBee v5.0] Found transcript as string: {len(transcript_data)} chars")
                     return self._clean_transcript(transcript_data)
                 
                 elif isinstance(transcript_data, list):
-                    logger.info(f"[ScrapingBee v4.0] Found transcript as array: {len(transcript_data)} segments")
+                    logger.info(f"[ScrapingBee v5.0] Found transcript as array: {len(transcript_data)} segments")
                     segments = []
                     for segment in transcript_data:
                         if isinstance(segment, dict):
@@ -394,24 +391,24 @@ class ScrapingBeeYouTubeService:
                     
                     if segments:
                         full_transcript = ' '.join(segments)
-                        logger.info(f"[ScrapingBee v4.0] Assembled transcript from segments: {len(full_transcript)} chars")
+                        logger.info(f"[ScrapingBee v5.0] Assembled transcript from segments: {len(full_transcript)} chars")
                         return self._clean_transcript(full_transcript)
             
             # Priority 3: Check if the entire response is a string (unlikely but possible)
             if isinstance(data, str) and data.strip():
-                logger.info(f"[ScrapingBee v4.0] Response is a string: {len(data)} chars")
+                logger.info(f"[ScrapingBee v5.0] Response is a string: {len(data)} chars")
                 return self._clean_transcript(data)
             
             # No transcript found
-            logger.warning("[ScrapingBee v4.0] Could not extract transcript from response")
-            logger.warning(f"[ScrapingBee v4.0] Response type: {type(data)}")
+            logger.warning("[ScrapingBee v5.0] Could not extract transcript from response")
+            logger.warning(f"[ScrapingBee v5.0] Response type: {type(data)}")
             if isinstance(data, dict):
-                logger.warning(f"[ScrapingBee v4.0] Response keys: {list(data.keys())}")
+                logger.warning(f"[ScrapingBee v5.0] Response keys: {list(data.keys())}")
             
             return ''
             
         except Exception as e:
-            logger.error(f"[ScrapingBee v4.0] Error extracting transcript: {e}", exc_info=True)
+            logger.error(f"[ScrapingBee v5.0] Error extracting transcript: {e}", exc_info=True)
             return ''
     
     def _extract_metadata_from_response(self, data: Dict, video_id: str) -> Dict:
@@ -431,16 +428,16 @@ class ScrapingBeeYouTubeService:
                 'upload_date': data.get('upload_date', 'Unknown'),
                 'description': (data.get('description', '')[:200] + '...') if data.get('description') else '',
                 'language': data.get('language', 'en'),
-                'method': 'scrapingbee_v4',
-                'api_endpoint': 'v1/',
+                'method': 'scrapingbee_v5',
+                'api_endpoint': 'youtube/transcript',
                 'extraction_date': datetime.now().isoformat()
             }
             
-            logger.info(f"[ScrapingBee v4.0] Extracted metadata: title='{metadata['title']}'")
+            logger.info(f"[ScrapingBee v5.0] Extracted metadata: title='{metadata['title']}'")
             return metadata
             
         except Exception as e:
-            logger.error(f"[ScrapingBee v4.0] Error extracting metadata: {e}")
+            logger.error(f"[ScrapingBee v5.0] Error extracting metadata: {e}")
             return {
                 'video_id': video_id,
                 'title': 'Unknown',
@@ -451,8 +448,8 @@ class ScrapingBeeYouTubeService:
                 'upload_date': 'Unknown',
                 'description': '',
                 'language': 'en',
-                'method': 'scrapingbee_v4_error',
-                'api_endpoint': 'v1/',
+                'method': 'scrapingbee_v5_error',
+                'api_endpoint': 'youtube/transcript',
                 'extraction_date': datetime.now().isoformat()
             }
     
@@ -513,15 +510,15 @@ class ScrapingBeeYouTubeService:
             match = re.search(pattern, url)
             if match:
                 video_id = match.group(1)
-                logger.info(f"[ScrapingBee v4.0] Extracted video ID: {video_id}")
+                logger.info(f"[ScrapingBee v5.0] Extracted video ID: {video_id}")
                 return video_id
         
         # If URL is just the video ID
         if re.match(r'^[\w-]{11}$', url):
-            logger.info(f"[ScrapingBee v4.0] URL is video ID: {url}")
+            logger.info(f"[ScrapingBee v5.0] URL is video ID: {url}")
             return url
         
-        logger.warning(f"[ScrapingBee v4.0] Could not extract video ID from: {url}")
+        logger.warning(f"[ScrapingBee v5.0] Could not extract video ID from: {url}")
         return None
     
     def _is_likely_live_stream(self, url: str) -> bool:
@@ -535,7 +532,7 @@ class ScrapingBeeYouTubeService:
         is_live = any(indicator in url_lower for indicator in live_indicators)
         
         if is_live:
-            logger.info(f"[ScrapingBee v4.0] Detected live stream URL")
+            logger.info(f"[ScrapingBee v5.0] Detected live stream URL")
         
         return is_live
     
@@ -577,9 +574,9 @@ class ScrapingBeeYouTubeService:
             'success_rate': round(success_rate, 2),
             'credits_used': self.stats['credits_used'],
             'available': self.available,
-            'api_endpoint': '/api/v1/',
-            'version': '4.0.0',
-            'note': 'Fixed to use actual working endpoint from documentation'
+            'api_endpoint': '/api/v1/youtube/transcript',
+            'version': '5.0.0',
+            'note': 'Uses CORRECT YouTube Transcript endpoint from official documentation'
         }
 
 
