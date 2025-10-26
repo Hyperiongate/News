@@ -1,16 +1,16 @@
 """
 File: services/youtube_scraper.py
-Last Updated: October 24, 2025 - NEW FILE CREATION
+Last Updated: October 26, 2025 - v1.0.0
 Description: Wrapper for YouTube transcript extraction using ScrapingBee service
 
 PURPOSE:
-This file acts as an adapter/wrapper between transcript_routes.py and the 
+This file acts as an adapter/wrapper between app.py and the 
 ScrapingBeeYouTubeService. It provides the extract_youtube_transcript() function
-that transcript_routes.py expects to import.
+that app.py expects to import.
 
-CHANGES (October 24, 2025):
-- CREATED: New wrapper file to fix import error in transcript_routes.py
-- ROOT CAUSE: transcript_routes.py was importing from non-existent youtube_scraper.py
+CHANGES (October 26, 2025):
+- CREATED: New wrapper file to fix import error in app.py
+- ROOT CAUSE: app.py was importing from non-existent youtube_scraper.py
 - SOLUTION: Created this file as a clean interface to ScrapingBeeYouTubeService
 - DO NO HARM: All existing functionality preserved, just fixing the import path
 
@@ -43,7 +43,7 @@ def extract_youtube_transcript(url: str) -> Dict:
     """
     Extract transcript from a YouTube URL
     
-    This is the main function that transcript_routes.py expects to import.
+    This is the main function that app.py expects to import.
     It wraps the ScrapingBeeYouTubeService.process_youtube_url() method.
     
     Args:
@@ -73,7 +73,7 @@ def extract_youtube_transcript(url: str) -> Dict:
                 'upload_date': '2025-01-15',
                 'description': 'Video description...',
                 'method': 'scrapingbee',
-                'extraction_date': '2025-10-24T12:00:00'
+                'extraction_date': '2025-10-26T12:00:00'
             },
             'stats': {
                 'transcript_length': 5000,
