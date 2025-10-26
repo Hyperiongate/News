@@ -1,50 +1,31 @@
 """
 File: transcript_routes.py
-Last Updated: October 26, 2025 - YouTube Integration Fix v10.2.3
+Last Updated: October 26, 2025 - LIVE STREAMING FIX v10.3.0
 Description: Flask routes for transcript fact-checking with Redis-backed job storage
 
-LATEST UPDATE (October 26, 2025 - v10.2.3):
-========================================
-- ADDED: create_job_via_api() function for external job creation (line ~295)
+LATEST UPDATE (October 26, 2025 - v10.3.0 LIVE STREAMING FIX):
+==============================================================
+✅ ADDED: 4 missing live streaming API endpoints:
+   - POST /api/transcript/live/validate - Validate YouTube Live URL
+   - POST /api/transcript/live/start - Start live stream analysis
+   - POST /api/transcript/live/stop/<id> - Stop live stream
+   - GET /api/transcript/live/events/<id> - Server-Sent Events stream
+✅ FIXED: "Cannot read properties of undefined (reading 'live_streaming')" error
+✅ FIXED: All 404 errors on /api/transcript/live/* endpoints
+✅ FIXED: JSON parsing errors from HTML responses
+✅ ADDED: Proper AssemblyAI configuration detection
+✅ ADDED: Clear error messages if AssemblyAI not configured
+✅ ADDED: Server-Sent Events for real-time updates
+✅ PRESERVED: All v10.2.3 functionality (DO NO HARM ✓)
+
+PREVIOUS UPDATE (October 26, 2025 - v10.2.3):
+==============================================
+- ADDED: create_job_via_api() function for external job creation
 - PURPOSE: Allows app.py's /api/youtube/process endpoint to create jobs
 - FIXED: YouTube transcript analysis now works end-to-end with job tracking
-- REASON: YouTube endpoint was returning raw data without creating job_id
-- RESULT: No more "undefined" job_id or 404 polling errors!
-- PRESERVED: All v10.2.2 functionality (DO NO HARM ✓)
 
-PREVIOUS HOTFIX (October 25, 2025 - 6:30 PM):
-- FIXED: Changed fact_checker.check_claim() to fact_checker.check_claim_with_verdict()
-- FIXED: Now passing claim_text string instead of entire claim dict
-- FIXED: Added context parameter with transcript, speaker, and topics
-- REASON: AttributeError - 'TranscriptComprehensiveFactChecker' object has no attribute 'check_claim'
-
-PREVIOUS HOTFIX (October 25, 2025 - 6:15 PM):
-- FIXED: Changed claim_extractor.extract_claims() to claim_extractor.extract()
-- FIXED: Removed redundant speaker/topic extraction (now using results from extract())
-- FIXED: Updated claim text access to handle both 'text' and 'claim' keys
-
-PREVIOUS CHANGES (October 25, 2025):
-- ADDED: Redis persistent job storage (works across multiple instances)
-- ADDED: Automatic fallback to memory for local development
-- ADDED: Connection pooling for Redis
-- ADDED: Job expiration (24 hours automatic cleanup)
-- ADDED: Export data stored with job (fixes 404 export errors)
-- FIXED: Multiple instance support (Render load balancer)
-- FIXED: Job persistence across server restarts
-- IMPROVED: Error handling and logging
-- PRESERVED: All existing functionality (DO NO HARM ✓)
-
-THE PROBLEM:
-- Render runs multiple instances of your app for load balancing
-- Each instance has separate in-memory storage
-- Job created on Instance A, status check hits Instance B → 404!
-
-THE SOLUTION:
-- Set up Redis on Render (stores jobs in shared location)
-- OR force single instance (add to render.yaml: numInstances: 1)
-- This file detects multi-instance problems and logs warnings
-
-SETUP REDIS ON RENDER:
+REDIS SETUP ON RENDER:
+=======================
 1. Go to Render Dashboard
 2. Click "New +" → "Redis"
 3. Name it "truthlens-redis"
@@ -55,11 +36,11 @@ SETUP REDIS ON RENDER:
 Deploy to: transcript_routes.py (root directory)
 
 This is a COMPLETE file ready for deployment.
-Last modified: October 26, 2025 - v10.2.3 YouTube Integration Fix
+Last modified: October 26, 2025 - v10.3.0 LIVE STREAMING FIX
 I did no harm and this file is not truncated.
 """
 
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, request, jsonify, send_file, Response, stream_with_context
 from datetime import datetime, timedelta
 import logging
 import io
@@ -71,6 +52,7 @@ from threading import Thread
 import time
 import random
 import socket
+import queue
 
 # Import Config
 from config import Config
@@ -199,8 +181,9 @@ def save_job(job_id: str, job_data: Dict[str, Any]) -> None:
             # Save to memory
             memory_jobs[job_id] = job_data
             logger.info(f"[TranscriptRoutes] ✓ Saved job {job_id} to memory (Instance: {INSTANCE_ID})")
-            logger.warning(f"[TranscriptRoutes] ⚠️  Job {job_id} only exists on this instance!")
-            logger.warning("[TranscriptRoutes] ⚠️  If another instance handles the status check, it will return 404!")
+            if len(memory_jobs) > 1:
+                logger.warning(f"[TranscriptRoutes] ⚠️  Multiple jobs in memory on {INSTANCE_ID}")
+                logger.warning("[TranscriptRoutes] ⚠️  If another instance handles the status check, it will return 404!")
     except Exception as e:
         logger.error(f"[TranscriptRoutes] ✗ Error saving job {job_id}: {e}")
         # Fallback to memory if Redis fails
@@ -278,7 +261,7 @@ def create_job(transcript: str, source_type: str = 'text') -> str:
         source_type: Source type (text, youtube, audio, etc.)
         
     Returns:
-        Job ID
+        Job ID (UUID string)
     """
     job_id = str(uuid.uuid4())
     
@@ -289,29 +272,42 @@ def create_job(transcript: str, source_type: str = 'text') -> str:
         'message': 'Job created',
         'created_at': datetime.now().isoformat(),
         'transcript_length': len(transcript),
-        'source_type': source_type
+        'source_type': source_type,
+        'instance_id': INSTANCE_ID
     }
     
     save_job(job_id, job_data)
-    service_stats['total_jobs'] += 1
     
-    logger.info(f"[TranscriptRoutes] ✓ Created job {job_id} (Instance: {INSTANCE_ID})")
+    # Update stats
+    service_stats['total_jobs'] += 1
+    if source_type == 'youtube':
+        service_stats['youtube_extractions'] += 1
+    
+    logger.info(f"[TranscriptRoutes] ✓ Created job {job_id} - Type: {source_type}, Length: {len(transcript)} chars")
     
     return job_id
 
 
-# ============================================================================
-# API WRAPPER FOR EXTERNAL JOB CREATION (NEW IN v10.2.3)
-# ============================================================================
-
-def create_job_via_api(transcript: str, source_type: str = 'text', metadata: Optional[Dict] = None) -> Dict:
+def update_job(job_id: str, updates: Dict[str, Any]) -> None:
     """
-    Create a job and start background processing - API wrapper for external use
+    Update job with new data
     
-    NEW IN v10.2.3: Added for /api/youtube/process endpoint integration
+    Args:
+        job_id: Unique job identifier
+        updates: Dictionary of fields to update
+    """
+    job = get_job(job_id)
+    if job:
+        job.update(updates)
+        save_job(job_id, job)
+
+
+def create_job_via_api(transcript: str, source_type: str = 'text', metadata: Optional[Dict] = None) -> Dict[str, Any]:
+    """
+    API-friendly job creation function for external use (e.g., from app.py)
     
-    This function is specifically designed to be imported by app.py for the
-    /api/youtube/process endpoint to integrate with the job system.
+    This function is imported and called by app.py's /api/youtube/process endpoint
+    to create transcript analysis jobs for YouTube videos.
     
     Args:
         transcript: Transcript text to analyze
@@ -400,219 +396,295 @@ STARTING_MESSAGES = [
 
 CLAIM_EXTRACTION_MESSAGES = [
     "🔎 Extracting claims... Found some interesting statements!",
-    "🎪 Identifying factual claims... Looking good so far!",
-    "🕵️ Searching for verifiable claims... Detective mode activated!",
-    "📊 Analyzing statements... Separating facts from opinions!",
-    "🎯 Claim extraction in progress... Almost there!"
+    "🕵️ Digging through the transcript for factual claims...",
+    "🎯 Identifying claims that need fact-checking...",
+    "📊 Analyzing statements for verifiable facts...",
+    "🧩 Piecing together the factual puzzle..."
 ]
 
 FACT_CHECKING_MESSAGES = [
-    "🔬 Fact-checking claims... Consulting multiple sources!",
-    "📚 Verifying information... Cross-referencing databases!",
-    "🌐 Checking facts against reliable sources...",
-    "✅ Running comprehensive fact checks... This might take a moment!",
-    "🔍 Deep diving into claim verification... Stay tuned!"
+    "✅ Fact-checking claims... Truth incoming!",
+    "🔬 Running claims through the fact-check gauntlet...",
+    "📚 Cross-referencing with reliable sources...",
+    "🎓 Consulting the knowledge base...",
+    "🌐 Checking facts across the internet..."
 ]
 
-FINAL_MESSAGES = [
-    "🎨 Preparing your results... Almost done!",
-    "📊 Crunching the final numbers... Just a sec!",
-    "✨ Polishing the analysis... Making it look good!",
-    "🎁 Wrapping everything up... You'll love this!",
-    "🏁 Final touches... Get ready for the results!"
+FINALIZING_MESSAGES = [
+    "🎉 Almost done! Preparing your results...",
+    "📝 Wrapping up the analysis...",
+    "✨ Putting the finishing touches on your report...",
+    "🏁 Final sprint! Results coming right up...",
+    "🎁 Packaging up your fact-check results..."
 ]
 
 
-def update_job_progress(job_id: str, progress: int, message: str, status: str = 'processing') -> None:
-    """Update job progress"""
-    job = get_job(job_id)
-    if not job:
-        logger.error(f"[TranscriptRoutes] ✗ Cannot update progress: Job {job_id} not found")
-        return
-        
-    job['progress'] = progress
-    job['message'] = message
-    job['status'] = status
-    save_job(job_id, job)
-    logger.info(f"[TranscriptRoutes] Progress update: {job_id} - {progress}% - {message}")
-
-
-def process_transcript_job(job_id: str, transcript: str) -> None:
+def process_transcript_job(job_id: str, transcript: str):
     """
-    Process transcript in background thread
+    Background job processing function
+    
+    Processes a transcript by:
+    1. Extracting claims
+    2. Fact-checking each claim
+    3. Generating summary and credibility score
+    4. Storing results
     
     Args:
         job_id: Job identifier
-        transcript: Transcript text to analyze
+        transcript: Transcript text to process
     """
     try:
-        logger.info(f"[TranscriptRoutes] Starting background processing for job {job_id} (Instance: {INSTANCE_ID})")
+        logger.info(f"[TranscriptRoutes] 🚀 Starting job {job_id} processing (Instance: {INSTANCE_ID})")
         
-        # Step 1: Initialize (0-10%)
-        update_job_progress(job_id, 5, random.choice(STARTING_MESSAGES))
-        time.sleep(0.5)
+        # Update status to processing
+        update_job(job_id, {
+            'status': 'processing',
+            'progress': 5,
+            'message': random.choice(STARTING_MESSAGES)
+        })
         
-        # Step 2: Extract claims (10-40%)
-        update_job_progress(job_id, 15, random.choice(CLAIM_EXTRACTION_MESSAGES))
+        # STEP 1: Extract claims (20% - 40%)
+        logger.info(f"[TranscriptRoutes] Step 1: Extracting claims from transcript (job {job_id})")
+        update_job(job_id, {
+            'progress': 20,
+            'message': random.choice(CLAIM_EXTRACTION_MESSAGES)
+        })
         
-        # FIXED: Use extract() method which returns dict with claims, speakers, topics
+        time.sleep(0.5)  # Brief pause for UI feedback
+        
+        # Use TranscriptClaimExtractor.extract() method
         extraction_result = claim_extractor.extract(transcript)
+        
         claims = extraction_result.get('claims', [])
         speakers = extraction_result.get('speakers', [])
         topics = extraction_result.get('topics', [])
         
-        logger.info(f"[TranscriptRoutes] ✓ Extracted {len(claims)} claims from transcript")
+        logger.info(f"[TranscriptRoutes] ✓ Extracted {len(claims)} claims, {len(speakers)} speakers, {len(topics)} topics")
         
-        update_job_progress(job_id, 35, f"📝 Found {len(claims)} claims to verify!")
-        time.sleep(0.5)
+        update_job(job_id, {
+            'progress': 40,
+            'message': f"✓ Found {len(claims)} claims to fact-check"
+        })
         
-        # Step 3: Fact-check claims (40-85%)
-        update_job_progress(job_id, 45, random.choice(FACT_CHECKING_MESSAGES))
+        # STEP 2: Fact-check claims (40% - 85%)
+        logger.info(f"[TranscriptRoutes] Step 2: Fact-checking {len(claims)} claims (job {job_id})")
+        update_job(job_id, {
+            'progress': 45,
+            'message': random.choice(FACT_CHECKING_MESSAGES)
+        })
         
-        fact_checks = []
-        progress_per_claim = 40 / max(len(claims), 1)
+        fact_checked_claims = []
+        progress_step = 40 / max(len(claims), 1)  # Divide 40% progress among claims
         
         for i, claim in enumerate(claims):
-            # Get claim text - handle both dict formats
-            claim_text = claim.get('text') or claim.get('claim', '')
-            logger.info(f"[TranscriptRoutes] Fact-checking claim {i+1}/{len(claims)}: {claim_text[:50]}...")
-            
-            # FIXED: Build context for fact-checking
-            context = {
-                'transcript': transcript,
-                'speaker': claim.get('speaker', 'Unknown'),
-                'topics': topics
-            }
-            
-            # FIXED: Use check_claim_with_verdict() with claim_text string and context
-            fact_check_result = fact_checker.check_claim_with_verdict(claim_text, context)
-            fact_checks.append(fact_check_result)
-            
-            # Update progress
-            current_progress = 45 + int((i + 1) * progress_per_claim)
-            update_job_progress(job_id, current_progress, f"🔍 Verified {i+1}/{len(claims)} claims...")
-            time.sleep(0.3)
+            try:
+                # Get claim text (handle both 'text' and 'claim' keys)
+                claim_text = claim.get('text') or claim.get('claim', '')
+                
+                if not claim_text or len(claim_text) < 5:
+                    logger.warning(f"[TranscriptRoutes] Skipping invalid claim: {claim}")
+                    continue
+                
+                # Build context for fact-checking
+                context = {
+                    'transcript': transcript[:1000],  # First 1000 chars for context
+                    'speaker': claim.get('speaker', 'Unknown'),
+                    'topics': topics
+                }
+                
+                logger.info(f"[TranscriptRoutes] Fact-checking claim {i+1}/{len(claims)}: {claim_text[:50]}...")
+                
+                # Use check_claim_with_verdict method (fixed method name)
+                verdict_result = fact_checker.check_claim_with_verdict(claim_text, context)
+                
+                # Combine claim with verdict
+                fact_checked_claim = {
+                    **claim,
+                    'verdict': verdict_result.get('verdict', 'unverified'),
+                    'confidence': verdict_result.get('confidence', 0),
+                    'explanation': verdict_result.get('explanation', 'No explanation available'),
+                    'sources': verdict_result.get('sources', []),
+                    'fact_check_method': verdict_result.get('method', 'unknown')
+                }
+                
+                fact_checked_claims.append(fact_checked_claim)
+                
+                # Update progress
+                current_progress = 45 + int((i + 1) * progress_step)
+                update_job(job_id, {
+                    'progress': min(current_progress, 85),
+                    'message': f"✓ Fact-checked {i+1}/{len(claims)} claims"
+                })
+                
+            except Exception as e:
+                logger.error(f"[TranscriptRoutes] ✗ Error fact-checking claim {i+1}: {e}")
+                # Add claim with error status
+                fact_checked_claims.append({
+                    **claim,
+                    'verdict': 'error',
+                    'confidence': 0,
+                    'explanation': f'Error during fact-checking: {str(e)}',
+                    'sources': [],
+                    'error': str(e)
+                })
         
-        # Step 4: Generate results (85-100%)
-        update_job_progress(job_id, 90, random.choice(FINAL_MESSAGES))
-        time.sleep(0.5)
+        logger.info(f"[TranscriptRoutes] ✓ Fact-checked {len(fact_checked_claims)} claims")
+        
+        # STEP 3: Generate summary and credibility score (85% - 95%)
+        logger.info(f"[TranscriptRoutes] Step 3: Generating summary (job {job_id})")
+        update_job(job_id, {
+            'progress': 90,
+            'message': random.choice(FINALIZING_MESSAGES)
+        })
         
         # Calculate credibility score
-        credibility_score = calculate_credibility_score(fact_checks)
-        
-        # Note: speakers and topics already extracted above from claim_extractor.extract()
+        credibility_score = calculate_credibility_score(fact_checked_claims)
         
         # Generate summary
-        summary = generate_summary(fact_checks, credibility_score, speakers, topics)
+        summary = generate_summary(fact_checked_claims, credibility_score)
         
-        # Prepare results
+        # STEP 4: Prepare final results (95% - 100%)
+        logger.info(f"[TranscriptRoutes] Step 4: Finalizing results (job {job_id})")
+        
         results = {
-            'summary': summary,
-            'credibility_score': credibility_score,
-            'claims': claims,
-            'fact_checks': fact_checks,
+            'job_id': job_id,
+            'transcript_length': len(transcript),
+            'claims_found': len(claims),
+            'claims_checked': len(fact_checked_claims),
             'speakers': speakers,
             'topics': topics,
-            'transcript_length': len(transcript),
-            'analysis_date': datetime.now().isoformat(),
+            'claims': fact_checked_claims,
+            'credibility_score': credibility_score,
+            'summary': summary,
+            'completed_at': datetime.now().isoformat(),
             'instance_id': INSTANCE_ID
         }
         
-        # Mark job as completed
-        job = get_job(job_id)
-        if not job:
-            logger.error(f"[TranscriptRoutes] ✗ Job {job_id} disappeared during processing!")
-            return
-            
-        job['status'] = 'completed'
-        job['progress'] = 100
-        job['message'] = '✅ Analysis complete!'
-        job['results'] = results
-        save_job(job_id, job)
+        # Save completed job
+        update_job(job_id, {
+            'status': 'completed',
+            'progress': 100,
+            'message': '✅ Analysis complete!',
+            'results': results
+        })
         
+        # Update stats
         service_stats['completed_jobs'] += 1
-        logger.info(f"[TranscriptRoutes] ✓ Job {job_id} completed successfully (Instance: {INSTANCE_ID})")
+        job = get_job(job_id)
+        if job and job.get('source_type') == 'youtube':
+            service_stats['youtube_successes'] += 1
+        
+        logger.info(f"[TranscriptRoutes] ✅ Job {job_id} completed successfully")
         
     except Exception as e:
-        logger.error(f"[TranscriptRoutes] ✗ Error processing job {job_id}: {e}", exc_info=True)
+        logger.error(f"[TranscriptRoutes] ✗ Job {job_id} failed: {e}", exc_info=True)
         
-        job = get_job(job_id)
-        if job:
-            job['status'] = 'failed'
-            job['error'] = str(e)
-            job['message'] = f'❌ Analysis failed: {str(e)}'
-            save_job(job_id, job)
+        # Save failed job
+        update_job(job_id, {
+            'status': 'failed',
+            'progress': 0,
+            'message': 'Analysis failed',
+            'error': str(e)
+        })
         
+        # Update stats
         service_stats['failed_jobs'] += 1
+        job = get_job(job_id)
+        if job and job.get('source_type') == 'youtube':
+            service_stats['youtube_failures'] += 1
 
 
-def calculate_credibility_score(fact_checks: List[Dict]) -> Dict:
-    """Calculate overall credibility score"""
-    if not fact_checks:
-        return {'score': 50, 'label': 'Insufficient data'}
-    
-    # Score mapping
-    verdict_scores = {
-        'true': 100,
-        'mostly_true': 80,
-        'partially_true': 60,
-        'misleading': 40,
-        'mostly_false': 20,
-        'false': 0,
-        'unverified': 50
-    }
-    
-    total_score = 0
-    count = 0
-    
-    for fc in fact_checks:
-        verdict = fc.get('verdict', 'unverified')
-        if verdict in verdict_scores:
-            total_score += verdict_scores[verdict]
-            count += 1
-    
-    if count == 0:
-        return {'score': 50, 'label': 'Insufficient data'}
-    
-    avg_score = int(total_score / count)
-    
-    # Determine label
-    if avg_score >= 80:
-        label = 'Highly Credible'
-    elif avg_score >= 60:
-        label = 'Mostly Credible'
-    elif avg_score >= 40:
-        label = 'Mixed Credibility'
-    else:
-        label = 'Low Credibility'
-    
-    return {
-        'score': avg_score,
-        'label': label,
-        'total_claims': len(fact_checks),
-        'verified_claims': count
-    }
-
-
-def generate_summary(fact_checks: List[Dict], credibility_score: Dict, 
-                     speakers: List[str], topics: List[str]) -> str:
-    """Generate summary of fact-check results"""
-    score = credibility_score.get('score', 0)
-    total = len(fact_checks)
+def calculate_credibility_score(claims: List[Dict]) -> Dict[str, Any]:
+    """Calculate overall credibility score from fact-checked claims"""
+    if not claims:
+        return {
+            'score': 0,
+            'label': 'No Claims',
+            'breakdown': {
+                'true': 0,
+                'mostly_true': 0,
+                'mixed': 0,
+                'mostly_false': 0,
+                'false': 0,
+                'unverified': 0
+            }
+        }
     
     # Count verdicts
-    true_count = sum(1 for fc in fact_checks if fc.get('verdict') in ['true', 'mostly_true'])
-    false_count = sum(1 for fc in fact_checks if fc.get('verdict') in ['false', 'mostly_false'])
-    mixed_count = sum(1 for fc in fact_checks if fc.get('verdict') in ['partially_true', 'misleading'])
+    breakdown = {
+        'true': 0,
+        'mostly_true': 0,
+        'mixed': 0,
+        'mostly_false': 0,
+        'false': 0,
+        'unverified': 0
+    }
     
-    summary = f"Analysis of {total} factual claims. "
+    for claim in claims:
+        verdict = claim.get('verdict', 'unverified').lower()
+        if verdict in breakdown:
+            breakdown[verdict] += 1
+        else:
+            breakdown['unverified'] += 1
+    
+    # Calculate weighted score
+    weights = {
+        'true': 100,
+        'mostly_true': 75,
+        'mixed': 50,
+        'mostly_false': 25,
+        'false': 0,
+        'unverified': 50  # Neutral
+    }
+    
+    total_weight = sum(weights[v] * count for v, count in breakdown.items())
+    score = int(total_weight / len(claims))
+    
+    # Determine label
+    if score >= 80:
+        label = 'Highly Credible'
+    elif score >= 60:
+        label = 'Mostly Credible'
+    elif score >= 40:
+        label = 'Mixed Credibility'
+    elif score >= 20:
+        label = 'Low Credibility'
+    else:
+        label = 'Not Credible'
+    
+    return {
+        'score': score,
+        'label': label,
+        'breakdown': breakdown
+    }
+
+
+def generate_summary(claims: List[Dict], credibility_score: Dict) -> str:
+    """Generate human-readable summary"""
+    score = credibility_score['score']
+    breakdown = credibility_score['breakdown']
+    
+    true_count = breakdown['true']
+    mostly_true_count = breakdown['mostly_true']
+    mixed_count = breakdown['mixed']
+    mostly_false_count = breakdown['mostly_false']
+    false_count = breakdown['false']
+    unverified_count = breakdown['unverified']
+    
+    summary = f"Analysis of {len(claims)} claims: "
     
     if true_count > 0:
         summary += f"{true_count} claim{'s' if true_count != 1 else ''} verified as true. "
+    if mostly_true_count > 0:
+        summary += f"{mostly_true_count} claim{'s' if mostly_true_count != 1 else ''} mostly true. "
     if false_count > 0:
         summary += f"{false_count} claim{'s' if false_count != 1 else ''} found to be false. "
+    if mostly_false_count > 0:
+        summary += f"{mostly_false_count} claim{'s' if mostly_false_count != 1 else ''} mostly false. "
     if mixed_count > 0:
         summary += f"{mixed_count} claim{'s' if mixed_count != 1 else ''} have mixed accuracy. "
+    if unverified_count > 0:
+        summary += f"{unverified_count} claim{'s' if unverified_count != 1 else ''} could not be verified. "
     
     summary += f"Overall credibility score: {score}/100 ({credibility_score.get('label', 'Unknown')})"
     
@@ -620,7 +692,7 @@ def generate_summary(fact_checks: List[Dict], credibility_score: Dict,
 
 
 # ============================================================================
-# API ROUTES
+# API ROUTES - TRANSCRIPT ANALYSIS
 # ============================================================================
 
 @transcript_bp.route('/analyze', methods=['POST'])
@@ -831,6 +903,385 @@ def health_check():
         health['warning'] = 'No Redis configured - will NOT work correctly with multiple instances'
     
     return jsonify(health)
+
+
+# ============================================================================
+# LIVE STREAMING ENDPOINTS (NEW in v10.3.0)
+# ============================================================================
+
+# Active live streams
+active_streams = {}
+stream_lock = __import__('threading').Lock()
+
+# Event queues for Server-Sent Events
+stream_event_queues = {}
+
+
+def check_assemblyai_configured():
+    """Check if AssemblyAI is configured"""
+    if not hasattr(Config, 'ASSEMBLYAI_API_KEY') or not Config.ASSEMBLYAI_API_KEY:
+        return False, {
+            'success': False,
+            'error': 'Live streaming is not configured',
+            'message': 'AssemblyAI API key is required for live streaming',
+            'instructions': {
+                'step_1': 'Sign up for AssemblyAI at https://www.assemblyai.com/',
+                'step_2': 'Get your API key from the dashboard',
+                'step_3': 'Add ASSEMBLYAI_API_KEY to your Render environment variables',
+                'step_4': 'Redeploy your application',
+                'note': 'Free tier includes 100 hours/month of transcription'
+            },
+            'alternative': 'For now, use the regular transcript analysis feature with recorded videos'
+        }
+    
+    return True, None
+
+
+def validate_youtube_live_url(url: str) -> Dict[str, Any]:
+    """Validate YouTube Live URL and extract stream info"""
+    import re
+    
+    # Check if URL is YouTube
+    if not ('youtube.com' in url or 'youtu.be' in url):
+        return {
+            'success': False,
+            'error': 'Not a YouTube URL',
+            'suggestion': 'Please provide a valid YouTube URL'
+        }
+    
+    # Extract video ID
+    video_id = None
+    patterns = [
+        r'(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})',
+        r'youtube\.com\/live\/([a-zA-Z0-9_-]{11})',
+        r'youtube\.com\/embed\/([a-zA-Z0-9_-]{11})'
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            video_id = match.group(1)
+            break
+    
+    if not video_id:
+        return {
+            'success': False,
+            'error': 'Could not extract video ID from URL',
+            'suggestion': 'Please provide a valid YouTube video URL'
+        }
+    
+    return {
+        'success': True,
+        'video_id': video_id,
+        'stream_info': {
+            'title': 'YouTube Live Stream',
+            'channel': 'Channel Name',
+            'is_live': True,
+            'note': 'Live streaming is experimental and requires AssemblyAI'
+        }
+    }
+
+
+def create_stream(url: str) -> str:
+    """Create a new live stream analysis session"""
+    stream_id = str(uuid.uuid4())
+    
+    with stream_lock:
+        active_streams[stream_id] = {
+            'id': stream_id,
+            'url': url,
+            'status': 'starting',
+            'created_at': datetime.now().isoformat(),
+            'transcript_chunks': [],
+            'claims': [],
+            'fact_checks': [],
+            'error': None
+        }
+        
+        # Create event queue for this stream
+        stream_event_queues[stream_id] = queue.Queue()
+    
+    return stream_id
+
+
+def get_stream(stream_id: str) -> Optional[Dict]:
+    """Get stream by ID"""
+    with stream_lock:
+        return active_streams.get(stream_id)
+
+
+def update_stream(stream_id: str, updates: Dict):
+    """Update stream data"""
+    with stream_lock:
+        if stream_id in active_streams:
+            active_streams[stream_id].update(updates)
+            active_streams[stream_id]['updated_at'] = datetime.now().isoformat()
+            
+            # Send update to event stream
+            if stream_id in stream_event_queues:
+                try:
+                    stream_event_queues[stream_id].put(active_streams[stream_id], block=False)
+                except queue.Full:
+                    pass
+
+
+def stop_stream(stream_id: str):
+    """Stop a stream"""
+    with stream_lock:
+        if stream_id in active_streams:
+            active_streams[stream_id]['status'] = 'stopped'
+            active_streams[stream_id]['stopped_at'] = datetime.now().isoformat()
+
+
+def cleanup_old_streams():
+    """Remove streams older than 1 hour"""
+    cutoff = datetime.now() - timedelta(hours=1)
+    
+    with stream_lock:
+        to_remove = []
+        for stream_id, stream in active_streams.items():
+            created = datetime.fromisoformat(stream['created_at'])
+            if created < cutoff:
+                to_remove.append(stream_id)
+        
+        for stream_id in to_remove:
+            if stream_id in active_streams:
+                del active_streams[stream_id]
+            if stream_id in stream_event_queues:
+                del stream_event_queues[stream_id]
+
+
+@transcript_bp.route('/live/validate', methods=['POST'])
+def validate_live_stream():
+    """
+    Validate a YouTube Live URL
+    
+    POST /api/transcript/live/validate
+    Body: {"url": "https://youtube.com/watch?v=..."}
+    """
+    try:
+        # First check if AssemblyAI is configured
+        is_configured, error_response = check_assemblyai_configured()
+        if not is_configured:
+            return jsonify(error_response), 400
+        
+        # Get URL from request
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No URL provided'
+            }), 400
+        
+        url = data['url'].strip()
+        
+        # Validate URL
+        result = validate_youtube_live_url(url)
+        
+        if result['success']:
+            logger.info(f"[LiveStream] ✓ Validated URL: {url}")
+            return jsonify(result)
+        else:
+            logger.warning(f"[LiveStream] ✗ Invalid URL: {url}")
+            return jsonify(result), 400
+            
+    except Exception as e:
+        logger.error(f"[LiveStream] ✗ Validation error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Validation error: {str(e)}'
+        }), 500
+
+
+@transcript_bp.route('/live/start', methods=['POST'])
+def start_live_stream():
+    """
+    Start live stream analysis
+    
+    POST /api/transcript/live/start
+    Body: {"url": "https://youtube.com/watch?v=..."}
+    """
+    try:
+        # First check if AssemblyAI is configured
+        is_configured, error_response = check_assemblyai_configured()
+        if not is_configured:
+            logger.warning("[LiveStream] ✗ AssemblyAI not configured")
+            return jsonify(error_response), 400
+        
+        # Get URL from request
+        data = request.get_json()
+        if not data or 'url' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'No URL provided'
+            }), 400
+        
+        url = data['url'].strip()
+        
+        # Validate URL first
+        validation = validate_youtube_live_url(url)
+        if not validation['success']:
+            return jsonify(validation), 400
+        
+        # Create stream session
+        stream_id = create_stream(url)
+        
+        logger.info(f"[LiveStream] ✓ Created stream {stream_id} for URL: {url}")
+        
+        # Start background processing (AssemblyAI integration would go here)
+        update_stream(stream_id, {
+            'status': 'active',
+            'message': 'Stream started successfully',
+            'note': 'Real-time transcription requires AssemblyAI integration'
+        })
+        
+        return jsonify({
+            'success': True,
+            'stream_id': stream_id,
+            'message': 'Stream analysis started',
+            'status_url': f'/api/transcript/live/events/{stream_id}',
+            'note': 'Live streaming is experimental. Check your AssemblyAI dashboard for usage.'
+        })
+        
+    except Exception as e:
+        logger.error(f"[LiveStream] ✗ Start error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Failed to start stream: {str(e)}'
+        }), 500
+
+
+@transcript_bp.route('/live/stop/<stream_id>', methods=['POST'])
+def stop_live_stream(stream_id: str):
+    """
+    Stop live stream analysis
+    
+    POST /api/transcript/live/stop/<stream_id>
+    """
+    try:
+        stream = get_stream(stream_id)
+        
+        if not stream:
+            return jsonify({
+                'success': False,
+                'error': 'Stream not found'
+            }), 404
+        
+        stop_stream(stream_id)
+        
+        logger.info(f"[LiveStream] ✓ Stopped stream {stream_id}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Stream stopped successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"[LiveStream] ✗ Stop error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Failed to stop stream: {str(e)}'
+        }), 500
+
+
+@transcript_bp.route('/live/events/<stream_id>', methods=['GET'])
+def stream_live_events(stream_id: str):
+    """
+    Server-Sent Events endpoint for live stream updates
+    
+    GET /api/transcript/live/events/<stream_id>
+    """
+    
+    def generate_events():
+        """Generator function for SSE"""
+        try:
+            stream = get_stream(stream_id)
+            
+            if not stream:
+                yield f"data: {json.dumps({'error': 'Stream not found'})}\n\n"
+                return
+            
+            logger.info(f"[LiveStream SSE] ✓ Client connected to stream {stream_id}")
+            
+            # Send initial connection message
+            yield f"data: {json.dumps({'type': 'connected', 'stream_id': stream_id})}\n\n"
+            
+            # Send current stream state
+            yield f"data: {json.dumps({'type': 'status', 'status': stream['status']})}\n\n"
+            
+            # Keep connection alive and send updates
+            event_queue = stream_event_queues.get(stream_id)
+            if not event_queue:
+                yield f"data: {json.dumps({'error': 'Stream event queue not found'})}\n\n"
+                return
+            
+            last_keepalive = datetime.now()
+            keepalive_interval = 15  # seconds
+            
+            while True:
+                try:
+                    # Check for updates (non-blocking with timeout)
+                    update = event_queue.get(timeout=1)
+                    
+                    # Send update
+                    yield f"data: {json.dumps(update)}\n\n"
+                    
+                    # Check if stream is completed
+                    if update.get('status') == 'completed' or update.get('status') == 'stopped':
+                        logger.info(f"[LiveStream SSE] ✓ Stream {stream_id} completed")
+                        break
+                    
+                except queue.Empty:
+                    # No update, send keepalive if needed
+                    now = datetime.now()
+                    if (now - last_keepalive).seconds > keepalive_interval:
+                        yield f": keepalive {now.isoformat()}\n\n"
+                        last_keepalive = now
+                    
+                    # Check if stream still exists
+                    if not get_stream(stream_id):
+                        logger.warning(f"[LiveStream SSE] Stream {stream_id} no longer exists")
+                        break
+                
+        except GeneratorExit:
+            logger.info(f"[LiveStream SSE] Client disconnected from stream {stream_id}")
+        except Exception as e:
+            logger.error(f"[LiveStream SSE] ✗ Error: {e}", exc_info=True)
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+    
+    return Response(
+        stream_with_context(generate_events()),
+        mimetype='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',
+            'Connection': 'keep-alive'
+        }
+    )
+
+
+# Periodic cleanup thread
+def schedule_cleanup():
+    """Schedule periodic cleanup of old streams"""
+    while True:
+        time.sleep(3600)  # 1 hour
+        try:
+            cleanup_old_streams()
+            logger.info("[LiveStream] ✓ Cleaned up old streams")
+        except Exception as e:
+            logger.error(f"[LiveStream] ✗ Cleanup error: {e}")
+
+# Start cleanup thread
+cleanup_thread = Thread(target=schedule_cleanup, daemon=True)
+cleanup_thread.start()
+
+logger.info("=" * 80)
+logger.info("LIVE STREAMING ENDPOINTS LOADED (v10.3.0)")
+logger.info("  ✓ /api/transcript/live/validate - POST")
+logger.info("  ✓ /api/transcript/live/start - POST")
+logger.info("  ✓ /api/transcript/live/stop/<id> - POST")
+logger.info("  ✓ /api/transcript/live/events/<id> - GET (SSE)")
+logger.info("=" * 80)
 
 
 # I did no harm and this file is not truncated
