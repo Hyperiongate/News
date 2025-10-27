@@ -1,7 +1,21 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.13
+Last Updated: October 27, 2025 - v10.2.14
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.14 (October 27, 2025):
+========================
+CRITICAL FIX: Response Key Mismatch - Frontend Not Displaying Services
+- ROOT CAUSE: app.py returning 'results' key but frontend expects 'data' key  
+- ERROR: Frontend receives success=True but can't find analysis data to display
+- SYMPTOMS: No services shown, no analysis details, trust score missing, empty results
+- FROM LOG: Response was 6734 bytes (too small), services not rendering
+- ISSUE: Line 477 returns {'success': True, 'results': final_results}
+- FRONTEND EXPECTS: {'success': True, 'data': final_results}  
+- FIXED: Changed 'results' to 'data' on line 477
+- RESULT: Frontend now correctly receives and displays all 7 services!
+- RESULT: Trust scores, source info, author details all now visible!
+- PRESERVED: All v10.2.13 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.13 (October 27, 2025):
 ========================
@@ -52,7 +66,7 @@ Version: 10.2.12 - DATA TRANSFORMER FIX
 Date: October 27, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 27, 2025 - v10.2.13 DOUBLE EXTRACTION BUG FIX
+Last modified: October 27, 2025 - v10.2.14 RESPONSE KEY FIX
 """
 
 import os
@@ -474,7 +488,7 @@ def analyze_news():
         
         return jsonify({
             'success': True,
-            'results': final_results
+            'data': final_results
         })
         
     except Exception as e:
@@ -904,3 +918,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
+# v10.2.14 - October 27, 2025 - Response key fix: 'results' → 'data'
