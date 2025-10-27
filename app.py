@@ -1,7 +1,16 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.6
+Last Updated: October 27, 2025 - v10.2.7
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.7 (October 27, 2025):
+========================
+CRITICAL FIX: Error Handling for Missing Debate Files
+- FIXED: /debate-arena now redirects to /simple-debate-arena if old system unavailable
+- FIXED: /simple-debate-arena shows inline error page instead of requiring error.html template
+- REASON: error.html template doesn't exist, causing 500 errors
+- RESULT: Graceful degradation when debate files are missing
+- PRESERVED: All v10.2.6 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.6 (October 27, 2025):
 ========================
@@ -337,10 +346,17 @@ def live_stream():
 
 @app.route('/debate-arena')
 def debate_arena():
-    """Old Debate Arena page (v9.0.0 - with authentication)"""
+    """
+    Old Debate Arena page (v9.0.0 - with authentication)
+    
+    NOTE: This route redirects to the new Simple Debate Arena if old system is unavailable.
+    The old debate arena requires authentication and debate_models.py.
+    Most users should use /simple-debate-arena instead (no auth required).
+    """
     if not old_debate_available:
-        return render_template('error.html', 
-                             message="Old Debate Arena is not available. Please set DATABASE_URL and ensure debate_models.py exists."), 503
+        # Redirect to new simple debate arena instead of showing error
+        from flask import redirect
+        return redirect('/simple-debate-arena', code=302)
     return render_template('debate-arena.html')
 
 @app.route('/simple-debate-arena')
@@ -357,8 +373,36 @@ def simple_debate_arena():
     - Real-time voting bar chart
     """
     if not simple_debate_available:
-        return render_template('error.html', 
-                             message="Simple Debate Arena is not available. Please set DATABASE_URL and ensure simple_debate_models.py and simple_debate_routes.py exist."), 503
+        # Return simple HTML error instead of requiring error.html template
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Simple Debate Arena - Not Available</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+                .error-box { background: white; padding: 40px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                h1 { color: #dc2626; margin-bottom: 20px; }
+                p { color: #666; line-height: 1.6; margin-bottom: 15px; }
+                .code { background: #f3f4f6; padding: 3px 8px; border-radius: 4px; font-family: monospace; }
+                a { color: #2563eb; text-decoration: none; font-weight: 600; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <h1>⚠️ Simple Debate Arena Not Available</h1>
+                <p>The Simple Debate Arena feature is not currently enabled on this server.</p>
+                <p><strong>Required:</strong></p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>Set <span class="code">DATABASE_URL</span> environment variable in Render</li>
+                    <li>Upload <span class="code">simple_debate_models.py</span> to project root</li>
+                    <li>Upload <span class="code">simple_debate_routes.py</span> to project root</li>
+                </ul>
+                <p style="margin-top: 30px;"><a href="/">← Back to Home</a></p>
+            </div>
+        </body>
+        </html>
+        ''', 503
     return render_template('simple-debate-arena.html')
 
 # ============================================================================
@@ -759,7 +803,7 @@ def test_transcript_setup():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '10.2.6',
+        'version': '10.2.7',
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
@@ -817,7 +861,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.6")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.7")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -883,6 +927,12 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.7 (ERROR HANDLING FIX):")
+    logger.info("  ✅ FIXED: /debate-arena redirects to /simple-debate-arena when unavailable")
+    logger.info("  ✅ FIXED: Removed dependency on error.html template")
+    logger.info("  ✅ FIXED: Inline error pages for graceful degradation")
+    logger.info("  ✅ RESULT: No more 500 errors when debate files missing")
+    logger.info("")
     logger.info("NEW IN v10.2.6 (SIMPLE DEBATE ARENA):")
     logger.info("  ✅ ADDED: Simple Debate Arena - completely anonymous")
     logger.info("  ✅ ADDED: /simple-debate-arena route and template")
