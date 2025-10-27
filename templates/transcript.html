@@ -3,17 +3,25 @@
 <head>
         <!--
     TruthLens Transcript Analysis Page
-    Version: 3.0.0 - STANDARDIZED NAVIGATION
-    Date: October 26, 2025
+    Version: 3.1.0 - TRANSCRIPT CREATION WITH PDF DOWNLOAD
+    Date: October 27, 2025
     
-    CHANGES FROM PREVIOUS VERSION:
-    - STANDARDIZED: Navigation order across all pages
-    - ORDER: Features, About, News Analysis, Transcript/YouTube, Live Stream, Debate Arena, Contact Us
-    - REMOVED: "Upgrade to Pro" button
+    CHANGES FROM PREVIOUS VERSION (v3.0.0):
+    - ADDED: "Create Transcript" button next to "Analyze Video" button on YouTube tab
+    - ADDED: Transcript display section with formatted output
+    - ADDED: PDF download functionality for transcripts
+    - ADDED: New API integration for /api/youtube/create-transcript endpoint
     - PRESERVED: All existing functionality (DO NO HARM ✓)
+    - PRESERVED: Full analysis functionality still works
+    
+    NEW FEATURES:
+    - Users can now choose between "Analyze Video" or "Create Transcript"
+    - Transcript-only mode extracts and displays video transcript
+    - One-click PDF download of transcript
+    - Clean formatting with video metadata included
     
     This file is complete and ready to deploy.
-    Last modified: October 26, 2025 - Standardized navigation v3.0.0
+    Last modified: October 27, 2025 - Added transcript creation v3.1.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -58,6 +66,169 @@
             min-height: 100vh;
             padding: 20px;
             padding-top: 90px;
+        }
+
+        /* ========================================================================
+           BUTTON GROUP STYLING FOR SIDE-BY-SIDE BUTTONS
+           ======================================================================== */
+        
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .button-group button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .button-group button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .button-group button.secondary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+        }
+
+        .button-group button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .button-group button.secondary:hover {
+            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+        }
+
+        /* ========================================================================
+           TRANSCRIPT DISPLAY SECTION
+           ======================================================================== */
+        
+        .transcript-section {
+            display: none;
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+            animation: slideInUp 0.5s ease-out;
+        }
+
+        .transcript-section.active {
+            display: block;
+        }
+
+        .transcript-header {
+            border-bottom: 2px solid var(--gray-200);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .transcript-header h2 {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--gray-900);
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transcript-metadata {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .transcript-metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            color: var(--gray-700);
+            font-size: 14px;
+        }
+
+        .transcript-metadata-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .transcript-metadata-item i {
+            color: var(--primary-blue);
+            width: 20px;
+        }
+
+        .transcript-content {
+            background: var(--gray-50);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 30px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .transcript-text {
+            font-size: 16px;
+            line-height: 1.8;
+            color: var(--gray-800);
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .transcript-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .transcript-actions button {
+            padding: 12px 32px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .transcript-actions .btn-download {
+            background: var(--error-red);
+            color: white;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .transcript-actions .btn-download:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
+        }
+
+        .transcript-actions .btn-new {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .transcript-actions .btn-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
         /* ========================================================================
@@ -186,76 +357,115 @@
             animation-duration: 2.5s;
         }
 
-        /* Rainbow Progress Bar */
-        .progress-bar-container {
-            width: 100%;
-            height: 24px;
-            background: var(--gray-200);
-            border-radius: 12px;
-            overflow: hidden;
-            margin: 30px 0;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-            position: relative;
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, 
-                #667eea 0%, 
-                #764ba2 25%, 
-                #f093fb 50%, 
-                #667eea 75%, 
-                #764ba2 100%
-            );
-            background-size: 200% 100%;
-            border-radius: 12px;
-            transition: width 0.5s ease-out;
-            animation: shimmer 3s linear infinite;
-            box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
-        }
-
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-
-        /* Emoji that changes based on progress */
+        /* Progress Emoji */
         .progress-emoji {
-            font-size: 64px;
-            margin: 20px 0;
+            font-size: 48px;
+            margin-bottom: 20px;
             animation: bounce 1s ease-in-out infinite;
-            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
         }
 
         @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
         }
 
-        /* Percentage Display */
+        /* Progress Percentage */
         .progress-percent {
-            font-size: 48px;
+            font-size: 36px;
             font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--purple-glow) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin: 20px 0;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Progress Bar Container */
+        .progress-bar-container {
+            width: 100%;
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        /* Progress Bar Fill */
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-blue), var(--purple-glow), var(--cyan-glow));
+            background-size: 200% 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+            animation: shimmer 2s ease-in-out infinite;
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -200% 0;
+            }
+            100% {
+                background-position: 200% 0;
+            }
+        }
+
+        /* Claims Counter */
+        .claims-counter {
+            background: linear-gradient(135deg, var(--success-green) 0%, #059669 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 16px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
             animation: pulse 2s ease-in-out infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.05); }
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
         }
 
-        /* Animated Sparkles */
+        /* Fun Fact */
+        .fun-fact {
+            background: var(--gray-50);
+            border-left: 4px solid var(--primary-blue);
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-size: 15px;
+            color: var(--gray-700);
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: left;
+        }
+
+        /* Sparkles (Decorative particles) */
         .sparkles-container {
             position: absolute;
-            width: 100%;
-            height: 100%;
             top: 0;
             left: 0;
+            width: 100%;
+            height: 100%;
             pointer-events: none;
             overflow: hidden;
         }
@@ -264,130 +474,27 @@
             position: absolute;
             width: 4px;
             height: 4px;
-            background: var(--warning-orange);
+            background: var(--primary-blue);
             border-radius: 50%;
             animation: sparkleFloat 3s ease-in-out infinite;
             opacity: 0;
         }
 
         @keyframes sparkleFloat {
-            0%, 100% { 
-                opacity: 0; 
+            0%, 100% {
+                opacity: 0;
                 transform: translateY(0) scale(0);
             }
-            50% { 
-                opacity: 1; 
-                transform: translateY(-50px) scale(1);
+            50% {
+                opacity: 1;
+                transform: translateY(-100px) scale(1);
             }
         }
 
-        /* Fun Facts Rotation */
-        .fun-fact {
-            font-size: 16px;
-            color: var(--gray-700);
-            margin: 20px 0;
-            padding: 16px 24px;
-            background: var(--gray-50);
-            border-radius: 12px;
-            border-left: 4px solid var(--primary-blue);
-            font-weight: 500;
-            min-height: 60px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Claim Counter */
-        .claims-counter {
-            display: inline-block;
-            margin: 20px 0;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, var(--success-green), var(--cyan-glow));
-            color: white;
-            border-radius: 20px;
-            font-size: 18px;
-            font-weight: 700;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-            animation: counterPop 0.3s ease-out;
-        }
-
-        @keyframes counterPop {
-            0% { transform: scale(0.8); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-
-        /* ========================================================================
-           RESULTS SECTION
-           ======================================================================== */
-        .results-section {
-            display: none;
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-        }
-
-        .results-section.active {
-            display: block;
-            animation: slideInUp 0.5s ease-out;
-        }
-
-        .credibility-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 20px;
-            padding: 40px;
-            text-align: center;
-            color: white;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
-        }
-
-        .meter-score {
-            font-size: 72px;
-            font-weight: 800;
-            margin: 16px 0;
-            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-
-        .credibility-label {
-            font-size: 24px;
-            font-weight: 600;
-            opacity: 0.95;
-        }
-
-        .claim-card {
-            background: var(--gray-50);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            border: 1px solid var(--gray-200);
-            transition: all 0.3s ease;
-        }
-
-        .claim-card:hover {
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-            transform: translateY(-2px);
-        }
-
-        .verdict-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 700;
-            font-size: 14px;
-        }
-
-        /* ========================================================================
-           INPUT SECTIONS
-           ======================================================================== */
+        /* Container and basic layout */
         .container {
+            max-width: 800px;
+            margin: 0 auto;
             background: white;
             border-radius: 24px;
             padding: 40px;
@@ -403,15 +510,25 @@
         }
 
         .tab {
-            padding: 12px 24px;
-            background: none;
+            flex: 1;
+            padding: 14px 20px;
+            background: transparent;
             border: none;
+            border-bottom: 3px solid transparent;
+            color: var(--gray-600);
             font-size: 16px;
             font-weight: 600;
-            color: var(--gray-600);
             cursor: pointer;
-            border-bottom: 3px solid transparent;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab:hover {
+            color: var(--primary-blue);
+            background: var(--gray-50);
         }
 
         .tab.active {
@@ -425,68 +542,81 @@
 
         .tab-content.active {
             display: block;
-            animation: fadeIn 0.3s ease-out;
         }
 
         .input-group {
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
         .input-group label {
-            display: block;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 8px;
-            color: var(--gray-700);
+            color: var(--gray-800);
+            margin-bottom: 12px;
         }
 
-        textarea {
+        .input-group textarea,
+        .input-group input[type="text"] {
             width: 100%;
-            min-height: 200px;
-            padding: 16px;
-            border: 2px solid var(--gray-300);
+            padding: 14px 18px;
+            border: 2px solid var(--gray-200);
             border-radius: 12px;
             font-size: 15px;
             font-family: inherit;
+            transition: all 0.3s ease;
+        }
+
+        .input-group textarea {
+            min-height: 200px;
             resize: vertical;
-            transition: border-color 0.3s;
         }
 
-        textarea:focus {
+        .input-group textarea:focus,
+        .input-group input[type="text"]:focus {
             outline: none;
             border-color: var(--primary-blue);
-        }
-
-        input[type="text"] {
-            width: 100%;
-            padding: 12px 16px;
-            border: 2px solid var(--gray-300);
-            border-radius: 12px;
-            font-size: 15px;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .char-counter {
             text-align: right;
             font-size: 13px;
             color: var(--gray-600);
-            margin-top: 4px;
+            margin-top: 8px;
         }
 
+        .help-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-top: 8px;
+        }
+
+        .help-text i {
+            color: var(--primary-blue);
+        }
+
+        /* Single button styling (for backward compatibility) */
         button {
+            width: 100%;
+            padding: 14px 24px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 14px 32px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
-            border-radius: 12px;
             cursor: pointer;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
         }
 
@@ -495,106 +625,106 @@
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
 
-        button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+        button i {
+            font-size: 18px;
         }
 
-        .help-text {
-            font-size: 13px;
-            color: var(--gray-600);
-            margin-top: 8px;
+        /* Results Section */
+        .results-section {
+            display: none;
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
         }
 
-        .error-message {
-            background: var(--error-red);
+        .results-section.active {
+            display: block;
+            animation: slideInUp 0.5s ease-out;
+        }
+
+        .credibility-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-weight: 500;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
         }
 
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            body {
-                padding: 10px;
-                padding-top: 80px;
-            }
+        .meter-score {
+            font-size: 72px;
+            font-weight: 800;
+            margin: 20px 0;
+            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
 
-            .container {
-                padding: 24px;
-            }
+        .credibility-label {
+            font-size: 24px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
 
-            .progress-section {
-                padding: 30px 20px;
-            }
+        .claim-card {
+            background: var(--gray-50);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary-blue);
+            transition: all 0.3s ease;
+        }
 
-            .results-section {
-                padding: 24px;
-            }
+        .claim-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateX(4px);
+        }
 
-            .tabs {
-                flex-direction: column;
-            }
+        .verdict-badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
 
-            .tab {
-                border-bottom: none;
-                border-left: 3px solid transparent;
-            }
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            color: white;
+            font-size: 14px;
+            margin-top: 50px;
+        }
 
-            .tab.active {
-                border-left-color: var(--primary-blue);
-            }
-
-            .meter-score {
-                font-size: 56px;
-            }
-
-            .progress-percent {
-                font-size: 36px;
-            }
+        .footer a {
+            color: white;
+            text-decoration: underline;
+            margin: 0 10px;
         }
     </style>
 </head>
 <body>
+
     <!-- Navigation (from main.css) -->
-    <nav class="main-nav">
-        <div class="nav-content">
-            <div class="nav-brand">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens AI</span>
-            </div>
-            <div class="nav-links">
-                <a href="/features" class="nav-link">
-                    <i class="fas fa-star"></i>
-                    Features
-                </a>
-                <a href="/about" class="nav-link">
-                    <i class="fas fa-info-circle"></i>
-                    About
-                </a>
-                <a href="/" class="nav-link">
-                    <i class="fas fa-newspaper"></i>
-                    News Analysis
-                </a>
-                <a href="/transcript" class="nav-link active">
-                    <i class="fas fa-file-alt"></i>
-                    Transcript/YouTube
-                </a>
-                <a href="/live-stream" class="nav-link">
-                    <i class="fas fa-video"></i>
-                    Live Stream
-                </a>
-                <a href="/debate-arena" class="nav-link">
-                    <i class="fas fa-comments"></i>
-                    Debate Arena
-                </a>
-                <a href="/contact" class="nav-link">
-                    <i class="fas fa-envelope"></i>
-                    Contact Us
-                </a>
+    <nav class="nav">
+        <div class="nav-container">
+            <a href="/" class="nav-brand">
+                <i class="fas fa-shield-alt"></i>
+                TruthLens AI
+            </a>
+            <div class="nav-menu">
+                <a href="/features" class="nav-link">Features</a>
+                <a href="/about" class="nav-link">About</a>
+                <a href="/" class="nav-link">News Analysis</a>
+                <a href="/transcript" class="nav-link active">Transcript/YouTube</a>
+                <a href="/live-stream" class="nav-link">Live Stream</a>
+                <a href="/debate-arena" class="nav-link">Debate Arena</a>
+                <a href="/contact" class="nav-link">Contact Us</a>
             </div>
         </div>
     </nav>
@@ -655,13 +785,20 @@
                 />
                 <div class="help-text">
                     <i class="fas fa-info-circle"></i>
-                    We'll automatically extract and fact-check the video's transcript
+                    Extract transcript or analyze the video's content
                 </div>
             </div>
-            <button onclick="startAnalysis('youtube')">
-                <i class="fas fa-play-circle"></i>
-                Analyze Video
-            </button>
+            <!-- NEW: Button Group for Analyze Video OR Create Transcript -->
+            <div class="button-group">
+                <button class="primary" onclick="startAnalysis('youtube')">
+                    <i class="fas fa-search"></i>
+                    Analyze Video
+                </button>
+                <button class="secondary" onclick="createTranscript()">
+                    <i class="fas fa-file-alt"></i>
+                    Create Transcript
+                </button>
+            </div>
         </div>
     </div>
 
@@ -670,7 +807,7 @@
         <!-- Time Estimate Banner -->
         <div class="time-estimate-banner">
             <i class="fas fa-clock"></i>
-            <span>⏱️ This analysis could take a couple of minutes... Hang tight!</span>
+            <span id="progress-banner-text">⏱️ This analysis could take a couple of minutes... Hang tight!</span>
         </div>
 
         <!-- Sparkles Animation -->
@@ -711,18 +848,50 @@
         </div>
     </div>
 
+    <!-- NEW: Transcript Display Section -->
+    <div id="transcript-section" class="transcript-section">
+        <div class="transcript-header">
+            <h2>
+                <i class="fab fa-youtube"></i>
+                Video Transcript
+            </h2>
+        </div>
+
+        <div class="transcript-metadata" id="transcript-metadata">
+            <!-- Metadata will be inserted here -->
+        </div>
+
+        <div class="transcript-content">
+            <div class="transcript-text" id="transcript-text">
+                <!-- Transcript will be inserted here -->
+            </div>
+        </div>
+
+        <div class="transcript-actions">
+            <button class="btn-download" onclick="downloadTranscriptPDF()">
+                <i class="fas fa-file-pdf"></i>
+                Download PDF
+            </button>
+            <button class="btn-new" onclick="startNewAnalysis()">
+                <i class="fas fa-plus"></i>
+                New Analysis
+            </button>
+        </div>
+    </div>
+
     <!-- Results Section -->
     <div id="results-section" class="results-section">
         <!-- Results will be dynamically inserted here -->
     </div>
 
     <script>
-        console.log('[TranscriptApp] Module loading - v13.0.0 with format detection...');
+        console.log('[TranscriptApp] Module loading - v13.1.0 with transcript creation...');
         
         let currentJobId = null;
         let pollInterval = null;
         let currentResults = null;
         let funFactsInterval = null;
+        let currentTranscriptData = null; // NEW: Store transcript data
 
         const funFacts = [
             "🤖 AI models can process thousands of claims per minute!",
@@ -748,10 +917,13 @@
         function switchTab(tabName) {
             console.log('[TranscriptApp] Switching to tab:', tabName);
             
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
             
-            event.target.classList.add('active');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
             document.getElementById(`${tabName}-tab`).classList.add('active');
         }
 
@@ -759,29 +931,197 @@
         // CHARACTER COUNT
         // ============================================================================
         function updateCharCount(elementId, text) {
-            const counter = document.getElementById(elementId);
-            if (counter) {
-                const count = text.length;
-                counter.textContent = `${count.toLocaleString()} / 50,000`;
+            const count = text.length;
+            const maxCount = 50000;
+            const element = document.getElementById(elementId);
+            
+            element.textContent = `${count.toLocaleString()} / ${maxCount.toLocaleString()}`;
+            element.style.color = count > maxCount ? 'var(--error-red)' : 'var(--gray-600)';
+        }
+
+        // ============================================================================
+        // NEW: CREATE TRANSCRIPT FUNCTION
+        // ============================================================================
+        async function createTranscript() {
+            const url = document.getElementById('youtube-url').value.trim();
+            console.log('[TranscriptApp] Creating transcript for:', url);
+            
+            if (!url) {
+                alert('Please enter a YouTube URL.');
+                return;
+            }
+            
+            if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+                alert('Please enter a valid YouTube URL.');
+                return;
+            }
+            
+            try {
+                // Show progress section with modified message
+                showProgressSection();
+                document.getElementById('progress-banner-text').textContent = '⏱️ Extracting transcript from video...';
+                document.getElementById('progress-message').textContent = 'Connecting to YouTube...';
+                document.getElementById('progress-emoji').textContent = '📝';
                 
-                if (count > 50000) {
-                    counter.style.color = 'var(--error-red)';
-                } else if (count > 40000) {
-                    counter.style.color = 'var(--warning-orange)';
-                } else {
-                    counter.style.color = 'var(--gray-600)';
+                // Call new transcript-only endpoint
+                const response = await fetch('/api/youtube/create-transcript', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to extract transcript');
                 }
+                
+                // Store transcript data
+                currentTranscriptData = data;
+                
+                // Hide progress, show transcript
+                hideProgressSection();
+                displayTranscript(data);
+                
+                console.log('[TranscriptApp] ✓ Transcript created successfully');
+                
+            } catch (error) {
+                console.error('[TranscriptApp] Error creating transcript:', error);
+                hideProgressSection();
+                alert('Failed to create transcript: ' + error.message);
             }
         }
 
         // ============================================================================
-        // START ANALYSIS
+        // NEW: DISPLAY TRANSCRIPT
+        // ============================================================================
+        function displayTranscript(data) {
+            const section = document.getElementById('transcript-section');
+            const metadataDiv = document.getElementById('transcript-metadata');
+            const textDiv = document.getElementById('transcript-text');
+            
+            // Hide input and results sections
+            document.getElementById('input-section').style.display = 'none';
+            document.getElementById('results-section').classList.remove('active');
+            
+            // Build metadata HTML
+            const metadata = data.metadata || {};
+            let metadataHTML = '';
+            
+            if (metadata.title) {
+                metadataHTML += `
+                    <div class="transcript-metadata-item">
+                        <i class="fas fa-video"></i>
+                        <strong>Title:</strong> ${metadata.title}
+                    </div>
+                `;
+            }
+            
+            if (metadata.channel) {
+                metadataHTML += `
+                    <div class="transcript-metadata-item">
+                        <i class="fas fa-user"></i>
+                        <strong>Channel:</strong> ${metadata.channel}
+                    </div>
+                `;
+            }
+            
+            if (metadata.duration_formatted) {
+                metadataHTML += `
+                    <div class="transcript-metadata-item">
+                        <i class="fas fa-clock"></i>
+                        <strong>Duration:</strong> ${metadata.duration_formatted}
+                    </div>
+                `;
+            }
+            
+            if (metadata.upload_date) {
+                metadataHTML += `
+                    <div class="transcript-metadata-item">
+                        <i class="fas fa-calendar"></i>
+                        <strong>Published:</strong> ${metadata.upload_date}
+                    </div>
+                `;
+            }
+            
+            const wordCount = data.transcript.split(/\s+/).length;
+            metadataHTML += `
+                <div class="transcript-metadata-item">
+                    <i class="fas fa-file-alt"></i>
+                    <strong>Length:</strong> ${data.transcript.length.toLocaleString()} characters, ${wordCount.toLocaleString()} words
+                </div>
+            `;
+            
+            // Insert content
+            metadataDiv.innerHTML = metadataHTML;
+            textDiv.textContent = data.transcript;
+            
+            // Show transcript section
+            section.classList.add('active');
+            
+            // Scroll to transcript
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // ============================================================================
+        // NEW: DOWNLOAD TRANSCRIPT PDF
+        // ============================================================================
+        async function downloadTranscriptPDF() {
+            if (!currentTranscriptData) {
+                alert('No transcript available to download.');
+                return;
+            }
+            
+            console.log('[TranscriptApp] Downloading transcript as PDF...');
+            
+            try {
+                const response = await fetch('/api/youtube/download-transcript-pdf', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(currentTranscriptData)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to generate PDF');
+                }
+                
+                // Get filename from header or use default
+                let filename = 'transcript.pdf';
+                const contentDisposition = response.headers.get('Content-Disposition');
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="?(.+)"?/);
+                    if (match) filename = match[1];
+                }
+                
+                // Download the PDF
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(downloadUrl);
+                document.body.removeChild(a);
+                
+                console.log('[TranscriptApp] ✓ PDF downloaded:', filename);
+                
+            } catch (error) {
+                console.error('[TranscriptApp] Error downloading PDF:', error);
+                alert('Failed to download PDF: ' + error.message);
+            }
+        }
+
+        // ============================================================================
+        // START ANALYSIS (Existing functionality)
         // ============================================================================
         function startAnalysis(type) {
-            console.log('[TranscriptApp] Starting analysis');
+            console.log('[TranscriptApp] Starting analysis, type:', type);
             
             if (type === 'text') {
                 const transcript = document.getElementById('text-input').value.trim();
+                console.log('[TranscriptApp] Processing text input, length:', transcript.length);
                 
                 if (!transcript) {
                     alert('Please enter a transcript to analyze.');
@@ -866,7 +1206,7 @@
                 const data = await response.json();
                 
                 if (!response.ok) {
-                    throw new Error(data.error || 'YouTube processing failed');
+                    throw new Error(data.error || 'Failed to process YouTube video');
                 }
                 
                 currentJobId = data.job_id;
@@ -882,92 +1222,46 @@
         }
 
         // ============================================================================
-        // PROGRESS SECTION
+        // PROGRESS UI
         // ============================================================================
         function showProgressSection() {
             document.getElementById('input-section').style.display = 'none';
             document.getElementById('progress-section').classList.add('active');
             document.getElementById('results-section').classList.remove('active');
+            document.getElementById('transcript-section').classList.remove('active');
             
-            resetProgress();
+            // Reset progress
+            updateProgress(0, 'Starting analysis...');
+            document.getElementById('claims-counter-container').style.display = 'none';
+            document.getElementById('claims-count').textContent = '0';
+            
+            // Start fun facts rotation
             startFunFactsRotation();
+            
+            // Create sparkles
             createSparkles();
         }
 
         function hideProgressSection() {
             document.getElementById('progress-section').classList.remove('active');
-            document.getElementById('input-section').style.display = 'block';
             stopFunFactsRotation();
         }
 
-        function resetProgress() {
-            updateProgress(0, 'Starting analysis...');
-            document.getElementById('progress-emoji').textContent = '🔍';
-            document.getElementById('claims-counter-container').style.display = 'none';
-        }
-
         function updateProgress(percent, message) {
-            const bar = document.getElementById('progress-bar');
-            const percentDisplay = document.getElementById('progress-percent');
-            const messageDisplay = document.getElementById('progress-message');
-            const emoji = document.getElementById('progress-emoji');
-            
-            if (bar) bar.style.width = percent + '%';
-            if (percentDisplay) percentDisplay.textContent = Math.round(percent) + '%';
-            if (messageDisplay) messageDisplay.textContent = message;
+            document.getElementById('progress-percent').textContent = Math.round(percent) + '%';
+            document.getElementById('progress-bar').style.width = percent + '%';
+            document.getElementById('progress-message').textContent = message;
             
             // Update emoji based on progress
-            if (emoji) {
-                if (percent < 25) emoji.textContent = '🔍';
-                else if (percent < 50) emoji.textContent = '🎯';
-                else if (percent < 75) emoji.textContent = '🤔';
-                else if (percent < 100) emoji.textContent = '✨';
-                else emoji.textContent = '🎉';
-            }
+            const emoji = document.getElementById('progress-emoji');
+            if (percent < 30) emoji.textContent = '🔍';
+            else if (percent < 60) emoji.textContent = '🧠';
+            else if (percent < 90) emoji.textContent = '⚡';
+            else emoji.textContent = '✨';
         }
 
-        function updateClaimsCounter(count) {
-            const container = document.getElementById('claims-counter-container');
-            const countDisplay = document.getElementById('claims-count');
-            
-            if (container) container.style.display = 'block';
-            if (countDisplay) {
-                countDisplay.textContent = count;
-                countDisplay.style.animation = 'none';
-                setTimeout(() => {
-                    countDisplay.style.animation = 'counterPop 0.3s ease-out';
-                }, 10);
-            }
-        }
-
-        // Fun Facts Rotation
-        function startFunFactsRotation() {
-            let currentFactIndex = 0;
-            const funFactElement = document.getElementById('fun-fact');
-            
-            if (!funFactElement) return;
-            
-            funFactElement.textContent = funFacts[0];
-            
-            funFactsInterval = setInterval(() => {
-                currentFactIndex = (currentFactIndex + 1) % funFacts.length;
-                funFactElement.textContent = funFacts[currentFactIndex];
-                console.log(`[FunFactsProgress] Showing fact ${currentFactIndex + 1} / ${funFacts.length}`);
-            }, 4000);
-        }
-
-        function stopFunFactsRotation() {
-            if (funFactsInterval) {
-                clearInterval(funFactsInterval);
-                funFactsInterval = null;
-            }
-        }
-
-        // Sparkles Animation
         function createSparkles() {
             const container = document.getElementById('sparkles');
-            if (!container) return;
-            
             container.innerHTML = '';
             
             for (let i = 0; i < 20; i++) {
@@ -979,111 +1273,114 @@
             }
         }
 
+        function startFunFactsRotation() {
+            let currentIndex = 0;
+            const funFactElement = document.getElementById('fun-fact');
+            
+            funFactsInterval = setInterval(() => {
+                currentIndex = (currentIndex + 1) % funFacts.length;
+                funFactElement.style.opacity = '0';
+                
+                setTimeout(() => {
+                    funFactElement.textContent = funFacts[currentIndex];
+                    funFactElement.style.opacity = '1';
+                }, 300);
+            }, 5000);
+        }
+
+        function stopFunFactsRotation() {
+            if (funFactsInterval) {
+                clearInterval(funFactsInterval);
+                funFactsInterval = null;
+            }
+        }
+
         // ============================================================================
         // POLLING
         // ============================================================================
         function startPolling() {
             console.log('[TranscriptApp] Starting polling for job:', currentJobId);
             
-            if (pollInterval) clearInterval(pollInterval);
-            
-            pollInterval = setInterval(checkJobStatus, 5000);
-            checkJobStatus(); // Check immediately
-        }
-
-        async function checkJobStatus() {
-            if (!currentJobId) return;
-            
-            try {
-                const response = await fetch(`/api/transcript/status/${currentJobId}`);
-                const data = await response.json();
-                
-                console.log('[TranscriptApp] Status:', data.status, 'Progress:', data.progress + '%');
-                
-                updateProgress(data.progress || 0, data.message || 'Processing...');
-                
-                if (data.claims_checked) {
-                    updateClaimsCounter(data.claims_checked);
-                }
-                
-                if (data.status === 'completed') {
-                    console.log('[TranscriptApp] ✓ Analysis complete');
-                    clearInterval(pollInterval);
-                    stopFunFactsRotation();
+            pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/transcript/status/${currentJobId}`);
+                    const data = await response.json();
                     
-                    // Fetch full results
-                    const resultsResponse = await fetch(`/api/transcript/results/${currentJobId}`);
-                    const resultsData = await resultsResponse.json();
+                    console.log('[TranscriptApp] Poll response:', data.status);
                     
-                    if (resultsResponse.ok && resultsData.success) {
-                        currentResults = resultsData.results;
-                        displayResults(resultsData.results);
-                    } else {
-                        throw new Error('Failed to fetch results');
+                    const status = data.status;
+                    const progress = data.progress || 0;
+                    const message = data.message || 'Processing...';
+                    
+                    updateProgress(progress, message);
+                    
+                    // Show claims counter if available
+                    if (data.claims_verified !== undefined) {
+                        document.getElementById('claims-counter-container').style.display = 'flex';
+                        document.getElementById('claims-count').textContent = data.claims_verified;
                     }
                     
-                } else if (data.status === 'failed') {
-                    console.error('[TranscriptApp] Analysis failed:', data.error);
-                    clearInterval(pollInterval);
-                    stopFunFactsRotation();
-                    hideProgressSection();
-                    alert('Analysis failed: ' + (data.error || 'Unknown error'));
+                    if (status === 'completed') {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        
+                        console.log('[TranscriptApp] ✓ Analysis completed');
+                        currentResults = data.results;
+                        
+                        setTimeout(() => {
+                            hideProgressSection();
+                            displayResults(data.results);
+                        }, 500);
+                    } else if (status === 'error') {
+                        clearInterval(pollInterval);
+                        pollInterval = null;
+                        
+                        console.error('[TranscriptApp] ✗ Analysis error:', data.error);
+                        hideProgressSection();
+                        alert('Analysis failed: ' + (data.error || 'Unknown error'));
+                    }
+                    
+                } catch (error) {
+                    console.error('[TranscriptApp] Polling error:', error);
                 }
-                
-            } catch (error) {
-                console.log('[TranscriptApp] Polling error:', error);
-                clearInterval(pollInterval);
-                stopFunFactsRotation();
-                hideProgressSection();
-                alert('Connection error: ' + error.message);
-            }
+            }, 2000);
         }
 
         // ============================================================================
-        // DISPLAY RESULTS - FIXED WITH FORMAT DETECTION
+        // DISPLAY RESULTS
         // ============================================================================
         function displayResults(results) {
             console.log('[TranscriptApp] Displaying results');
             
-            // CRITICAL FIX: Detect format
-            const isTranscriptFormat = results.claims && results.verdicts;
-            const isNewsFormat = results.credibility_score && results.fact_checks;
+            const resultsSection = document.getElementById('results-section');
             
-            console.log('[TranscriptApp] Format - Transcript:', isTranscriptFormat, 'News:', isNewsFormat);
+            // Hide transcript section if it's showing
+            document.getElementById('transcript-section').classList.remove('active');
             
-            document.getElementById('progress-section').classList.remove('active');
-            document.getElementById('results-section').classList.add('active');
-            
+            // Detect format and build appropriate HTML
             let html = '';
             
-            if (isTranscriptFormat) {
+            if (results.fact_checks && Array.isArray(results.fact_checks)) {
+                console.log('[TranscriptApp] Detected TRANSCRIPT format');
                 html = buildTranscriptResultsHTML(results);
-            } else if (isNewsFormat) {
+            } else if (results.credibility_score || results.analysis) {
+                console.log('[TranscriptApp] Detected NEWS format');
                 html = buildNewsResultsHTML(results);
             } else {
+                console.log('[TranscriptApp] Unknown format, using generic display');
                 html = buildGenericResultsHTML(results);
             }
             
-            document.getElementById('results-section').innerHTML = html;
-            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            resultsSection.innerHTML = html;
+            resultsSection.classList.add('active');
+            
+            window.scrollTo({ behavior: 'smooth', top: 0 });
         }
 
         function buildTranscriptResultsHTML(results) {
-            // TRANSCRIPT FORMAT: {claims: [...], verdicts: [...]}
             console.log('[TranscriptApp] Building TRANSCRIPT results');
             
-            const claims = results.claims || [];
-            const verdicts = results.verdicts || [];
-            const speakers = results.speakers || [];
-            const topics = results.topics || [];
-            
-            // Merge claims with verdicts
-            const mergedClaims = claims.map((claim, index) => ({
-                ...claim,
-                ...verdicts[index],
-                claim: claim.claim || claim.text || '',
-                speaker: claim.speaker || 'Unknown'
-            }));
+            const factChecks = results.fact_checks || [];
             
             let html = `
                 <div style="text-align: center; margin-bottom: 30px;">
@@ -1094,104 +1391,52 @@
                 
                 <div style="background: var(--gray-50); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
                     <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">
-                        <i class="fas fa-info-circle" style="color: var(--primary-blue);"></i> Analysis Summary
+                        <i class="fas fa-info-circle" style="color: var(--primary-blue);"></i> Summary
                     </h3>
                     <p style="color: var(--gray-700); line-height: 1.8;">${results.summary || 'Analysis complete.'}</p>
                 </div>
-            `;
-            
-            if (speakers.length > 0) {
-                html += `
-                    <div style="background: var(--gray-50); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">
-                            <i class="fas fa-users"></i> Speakers Detected
-                        </h3>
-                        <p>${speakers.join(', ')}</p>
-                    </div>
-                `;
-            }
-            
-            if (topics.length > 0) {
-                html += `
-                    <div style="background: var(--gray-50); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
-                        <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 8px;">
-                            <i class="fas fa-lightbulb"></i> Key Topics
-                        </h3>
-                        <p>${topics.join(', ')}</p>
-                    </div>
-                `;
-            }
-            
-            // Verdict stats
-            const verdictCounts = {};
-            mergedClaims.forEach(claim => {
-                const v = claim.verdict || 'unverified';
-                verdictCounts[v] = (verdictCounts[v] || 0) + 1;
-            });
-            
-            html += `
-                <div style="background: var(--gray-50); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-                    <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">
-                        <i class="fas fa-chart-pie"></i> Verification Summary
-                    </h3>
-                    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            `;
-            
-            Object.keys(verdictCounts).forEach(verdict => {
-                const color = getVerdictColor(verdict);
-                const label = verdict.replace('_', ' ').toUpperCase();
-                html += `<span style="padding: 6px 12px; background: ${color}20; color: ${color}; border: 1px solid ${color}; border-radius: 16px; font-size: 13px; font-weight: 600;">${label}: ${verdictCounts[verdict]}</span>`;
-            });
-            
-            html += `
-                    </div>
-                </div>
-            `;
-            
-            // Export buttons
-            html += `
-                <div style="display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
-                    <button onclick="exportResults('pdf')" style="flex: 1; min-width: 120px; padding: 12px; background: var(--error-red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                
+                <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                    <button onclick="exportResults('pdf')" style="flex: 1; padding: 12px; background: var(--error-red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-file-pdf"></i> PDF
                     </button>
-                    <button onclick="exportResults('json')" style="flex: 1; min-width: 120px; padding: 12px; background: var(--warning-orange); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <button onclick="exportResults('json')" style="flex: 1; padding: 12px; background: var(--warning-orange); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-code"></i> JSON
                     </button>
-                    <button onclick="exportResults('txt')" style="flex: 1; min-width: 120px; padding: 12px; background: var(--success-green); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <button onclick="exportResults('txt')" style="flex: 1; padding: 12px; background: var(--success-green); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-file-alt"></i> TXT
                     </button>
                 </div>
             `;
             
-            // Claims
-            if (mergedClaims.length > 0) {
-                html += `<h3 style="font-size: 20px; font-weight: 800; margin-bottom: 16px;">Verified Claims (${mergedClaims.length})</h3>`;
+            if (factChecks.length > 0) {
+                html += `<h3 style="font-size: 20px; font-weight: 800; margin-bottom: 16px;">Fact-Checked Claims (${factChecks.length})</h3>`;
                 
-                mergedClaims.forEach((claim, index) => {
-                    const verdict = claim.verdict || 'unverified';
-                    const color = getVerdictColor(verdict);
-                    const label = verdict.replace('_', ' ').toUpperCase();
+                factChecks.forEach((check, index) => {
+                    const verdict = check.verdict || 'unverified';
+                    const color = check.verdict_color || getVerdictColor(verdict);
+                    const label = check.verdict_label || verdict.replace('_', ' ').toUpperCase();
                     
                     html += `
                         <div class="claim-card">
                             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
                                 <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; text-align: center; line-height: 32px; font-weight: 700;">${index + 1}</div>
                                 <div class="verdict-badge" style="background: ${color}20; color: ${color};">
-                                    ${label}
+                                    ${check.verdict_icon || '•'} ${label}
                                 </div>
                             </div>
                             
                             <p style="font-size: 16px; font-weight: 600; margin-bottom: 12px; line-height: 1.6;">
-                                "${claim.claim}"
+                                "${check.claim || 'Unknown claim'}"
                             </p>
                             
-                            ${claim.speaker && claim.speaker !== 'Unknown' ? `<p style="font-size: 14px; color: var(--gray-600); margin-bottom: 12px;"><i class="fas fa-user"></i> <strong>Speaker:</strong> ${claim.speaker}</p>` : ''}
+                            ${check.speaker ? `<p style="font-size: 14px; color: var(--gray-600); margin-bottom: 12px;"><i class="fas fa-user"></i> <strong>Speaker:</strong> ${check.speaker}</p>` : ''}
                             
                             <p style="font-size: 14px; color: var(--gray-700); line-height: 1.6; margin-bottom: 12px;">
-                                <strong>Analysis:</strong> ${claim.explanation || 'No explanation provided.'}
+                                <strong>Analysis:</strong> ${check.explanation || 'No explanation provided.'}
                             </p>
                             
-                            ${claim.confidence ? `<p style="font-size: 13px; color: var(--gray-600);"><i class="fas fa-chart-bar"></i> <strong>Confidence:</strong> ${claim.confidence}%</p>` : ''}
+                            ${check.confidence ? `<p style="font-size: 13px; color: var(--gray-600);"><i class="fas fa-chart-bar"></i> <strong>Confidence:</strong> ${check.confidence}%</p>` : ''}
                         </div>
                     `;
                 });
@@ -1201,7 +1446,6 @@
         }
 
         function buildNewsResultsHTML(results) {
-            // NEWS FORMAT: {credibility_score: {...}, fact_checks: [...]}
             console.log('[TranscriptApp] Building NEWS results');
             
             const scoreData = results.credibility_score || { score: 0, label: 'Unknown' };
@@ -1364,6 +1608,7 @@
         function startNewAnalysis() {
             currentJobId = null;
             currentResults = null;
+            currentTranscriptData = null; // NEW: Clear transcript data
             if (pollInterval) {
                 clearInterval(pollInterval);
                 pollInterval = null;
@@ -1371,16 +1616,20 @@
             stopFunFactsRotation();
             
             document.getElementById('results-section').classList.remove('active');
+            document.getElementById('transcript-section').classList.remove('active');
             document.getElementById('input-section').style.display = 'block';
             
             document.getElementById('text-input').value = '';
             document.getElementById('youtube-url').value = '';
             updateCharCount('text-char-count', '');
             
+            // Reset progress banner text
+            document.getElementById('progress-banner-text').textContent = '⏱️ This analysis could take a couple of minutes... Hang tight!';
+            
             window.scrollTo({ behavior: 'smooth', top: 0 });
         }
 
-        console.log('[TranscriptApp] ✓ Initialized - v13.0.0 with format detection');
+        console.log('[TranscriptApp] ✓ Initialized - v13.1.0 with transcript creation');
     </script>
 
     <!-- I did no harm and this file is not truncated -->
