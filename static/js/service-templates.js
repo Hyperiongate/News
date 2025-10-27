@@ -1,22 +1,22 @@
 /**
- * TruthLens Service Templates - SIMPLIFIED & ROBUST
+ * TruthLens Service Templates - OBJECT EXTRACTION FIX
  * Date: October 27, 2025
- * Version: 5.1.0 - SIMPLIFIED TO MATCH ACTUAL BACKEND DATA
+ * Version: 5.2.0 - FIXED [object Object] DISPLAY ISSUE
  * 
- * CRITICAL FIX IN v5.1.0 (October 27, 2025):
- * ✅ SIMPLIFIED: Templates now only use data that backend ACTUALLY sends
- * ✅ REMOVED: Dependency on missing fields (founded, readership, age, etc.)
- * ✅ ADDED: Proper fallbacks for all data access
- * ✅ FIXED: Charts only show if chart_data exists
- * ✅ ENHANCED: Displays findings, summary, and analysis from backend
- * ✅ RESULT: No more empty sections - everything displays properly!
+ * CRITICAL FIX IN v5.2.0 (October 27, 2025):
+ * ✅ FIXED: [object Object] issue - now extracts text from nested objects
+ * ✅ FIXED: Claims display - handles both "claims" and "claims_found"
+ * ✅ FIXED: Findings display - extracts text from object arrays
+ * ✅ FIXED: Analysis display - extracts text from analysis objects
+ * ✅ ADDED: Smart extraction helper that handles all data formats
+ * ✅ RESULT: All service content displays properly as text!
  * 
- * WHAT CHANGED FROM v5.0.3:
- * - Removed references to fields backend doesn't send
- * - Simplified all templates to core data only
- * - Added comprehensive fallbacks
- * - Made charts truly optional
- * - Display functions now handle missing data gracefully
+ * WHAT CHANGED FROM v5.1.0:
+ * - Added extractText() helper function
+ * - Fixed all display functions to use smart extraction
+ * - Handles analysis as object with nested text
+ * - Handles findings as array of objects
+ * - Handles claims with multiple naming conventions
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * Last Updated: October 27, 2025
@@ -34,7 +34,7 @@ window.ServiceTemplates = {
         };
         
         var templateKey = toCamelCase(serviceId);
-        console.log('[ServiceTemplates v5.1.0] Template lookup:', serviceId, '→', templateKey);
+        console.log('[ServiceTemplates v5.2.0] Template lookup:', serviceId, '→', templateKey);
         
         const templates = {
             sourceCredibility: `
@@ -276,17 +276,102 @@ window.ServiceTemplates = {
         var template = templates[templateKey];
         
         if (template) {
-            console.log('[ServiceTemplates v5.1.0] ✓ Template found for:', templateKey);
+            console.log('[ServiceTemplates v5.2.0] ✓ Template found for:', templateKey);
             return template;
         } else {
-            console.warn('[ServiceTemplates v5.1.0] ✗ Template not found for:', templateKey);
+            console.warn('[ServiceTemplates v5.2.0] ✗ Template not found for:', templateKey);
             return '<div class="service-analysis-section"><p>Template not available</p></div>';
         }
     },
     
+    // ============================================================================
+    // SMART TEXT EXTRACTION - NEW IN v5.2.0
+    // ============================================================================
+    
+    /**
+     * Smart text extraction that handles:
+     * - Strings: returns as-is
+     * - Objects with .text property: extracts .text
+     * - Objects with .summary property: extracts .summary
+     * - Objects with nested properties: tries to extract intelligently
+     * - Arrays: returns first valid text element
+     * - Null/undefined: returns fallback
+     */
+    extractText: function(value, fallback) {
+        fallback = fallback || 'No information available.';
+        
+        // Null/undefined check
+        if (value === null || value === undefined) {
+            return fallback;
+        }
+        
+        // Already a string
+        if (typeof value === 'string') {
+            return value || fallback;
+        }
+        
+        // Object - try common text properties
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            // Try common property names in order of preference
+            if (value.text) return value.text;
+            if (value.summary) return value.summary;
+            if (value.analysis) return this.extractText(value.analysis, fallback);
+            if (value.description) return value.description;
+            if (value.content) return value.content;
+            if (value.message) return value.message;
+            
+            // If we have a single key, try to extract from it
+            var keys = Object.keys(value);
+            if (keys.length === 1) {
+                return this.extractText(value[keys[0]], fallback);
+            }
+            
+            return fallback;
+        }
+        
+        // Array - try to extract from first element
+        if (Array.isArray(value) && value.length > 0) {
+            return this.extractText(value[0], fallback);
+        }
+        
+        return fallback;
+    },
+    
+    /**
+     * Extract findings array and convert to strings
+     */
+    extractFindings: function(data) {
+        var findings = data.findings || data.key_findings || [];
+        
+        if (!Array.isArray(findings)) {
+            return [];
+        }
+        
+        var self = this;
+        return findings.map(function(finding) {
+            return self.extractText(finding, '');
+        }).filter(function(text) {
+            return text && text.length > 0;
+        });
+    },
+    
+    /**
+     * Extract claims array from multiple possible locations
+     */
+    extractClaims: function(data) {
+        // Try multiple property names
+        var claims = data.claims || data.claims_found || data.claims_checked || [];
+        
+        if (!Array.isArray(claims)) {
+            return [];
+        }
+        
+        return claims;
+    },
+    
     // Render chart for a service (if chart_data exists)
     renderServiceChart: function(serviceId, serviceData) {
-        console.log('[ServiceTemplates v5.1.0] Checking for chart data in:', serviceId);
+        console.log('[ServiceTemplates v5.2.0] Checking for chart data in:', serviceId);
         
         if (typeof ChartRenderer === 'undefined') {
             console.warn('[ServiceTemplates] ChartRenderer not loaded');
@@ -319,23 +404,23 @@ window.ServiceTemplates = {
     
     // Main display method
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.1.0] displayAllAnalyses called - SIMPLIFIED VERSION');
-        console.log('[ServiceTemplates v5.1.0] Checking data structure...');
+        console.log('[ServiceTemplates v5.2.0] displayAllAnalyses called - OBJECT EXTRACTION FIX');
+        console.log('[ServiceTemplates v5.2.0] Checking data structure...');
         
         var detailed = data.detailed_analysis || (data.results && data.results.detailed_analysis) || {};
         var analysisMode = data.analysis_mode || 'news';
         
-        console.log('[ServiceTemplates v5.1.0] Analysis mode:', analysisMode);
-        console.log('[ServiceTemplates v5.1.0] Services available:', Object.keys(detailed));
+        console.log('[ServiceTemplates v5.2.0] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.2.0] Services available:', Object.keys(detailed));
         
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
         
         if (!container) {
-            console.error('[ServiceTemplates v5.1.0] CRITICAL: Container not found!');
+            console.error('[ServiceTemplates v5.2.0] CRITICAL: Container not found!');
             return;
         }
         
-        console.log('[ServiceTemplates v5.1.0] Container found:', container.id);
+        console.log('[ServiceTemplates v5.2.0] Container found:', container.id);
         
         var serviceOrder = [
             { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', displayFunc: 'displaySourceCredibility' },
@@ -352,7 +437,7 @@ window.ServiceTemplates = {
         var self = this;
         serviceOrder.forEach(function(service) {
             if (detailed[service.id]) {
-                console.log('[ServiceTemplates v5.1.0] Processing service:', service.name);
+                console.log('[ServiceTemplates v5.2.0] Processing service:', service.name);
                 
                 var serviceCard = document.createElement('div');
                 serviceCard.className = 'service-dropdown ' + service.id.replace(/_/g, '') + 'Dropdown';
@@ -384,7 +469,7 @@ window.ServiceTemplates = {
                 
                 // Call display function
                 if (self[service.displayFunc]) {
-                    console.log('[ServiceTemplates v5.1.0] Calling display function:', service.displayFunc);
+                    console.log('[ServiceTemplates v5.2.0] Calling display function:', service.displayFunc);
                     self[service.displayFunc](detailed[service.id]);
                     
                     // Render chart if data exists
@@ -393,11 +478,11 @@ window.ServiceTemplates = {
             }
         });
         
-        console.log('[ServiceTemplates v5.1.0] ✓ All services displayed!');
+        console.log('[ServiceTemplates v5.2.0] ✓ All services displayed!');
     },
     
     // ============================================================================
-    // DISPLAY FUNCTIONS - SIMPLIFIED TO USE ONLY AVAILABLE DATA
+    // DISPLAY FUNCTIONS - FIXED WITH SMART EXTRACTION v5.2.0
     // ============================================================================
     
     displaySourceCredibility: function(data) {
@@ -415,12 +500,13 @@ window.ServiceTemplates = {
         var sourceName = data.source_name || data.organization || 'Unknown Source';
         this.updateElement('source-name', sourceName);
         
-        // Summary
-        var summary = data.summary || data.analysis || 'No summary available.';
+        // Summary - FIXED: Extract from object if needed
+        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
         this.updateElement('source-summary', summary);
         
-        // Findings
-        if (data.findings && Array.isArray(data.findings) && data.findings.length > 0) {
+        // Findings - FIXED: Extract strings from object array
+        var findings = this.extractFindings(data);
+        if (findings.length > 0) {
             var findingsBox = document.getElementById('source-findings-box');
             var findingsList = document.getElementById('source-findings-list');
             
@@ -428,7 +514,7 @@ window.ServiceTemplates = {
                 findingsBox.style.display = 'block';
                 findingsList.innerHTML = '';
                 
-                data.findings.forEach(function(finding) {
+                findings.forEach(function(finding) {
                     var li = document.createElement('li');
                     li.textContent = finding;
                     findingsList.appendChild(li);
@@ -454,12 +540,13 @@ window.ServiceTemplates = {
         var leaning = data.political_leaning || data.bias_direction || 'Center';
         this.updateElement('bias-leaning', leaning);
         
-        // Summary
-        var summary = data.summary || data.analysis || 'No summary available.';
+        // Summary - FIXED: Extract from object if needed
+        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
         this.updateElement('bias-summary', summary);
         
-        // Findings
-        if (data.findings && Array.isArray(data.findings) && data.findings.length > 0) {
+        // Findings - FIXED: Extract strings from object array
+        var findings = this.extractFindings(data);
+        if (findings.length > 0) {
             var findingsBox = document.getElementById('bias-findings-box');
             var findingsList = document.getElementById('bias-findings-list');
             
@@ -467,7 +554,7 @@ window.ServiceTemplates = {
                 findingsBox.style.display = 'block';
                 findingsList.innerHTML = '';
                 
-                data.findings.forEach(function(finding) {
+                findings.forEach(function(finding) {
                     var li = document.createElement('li');
                     li.textContent = finding;
                     findingsList.appendChild(li);
@@ -489,19 +576,22 @@ window.ServiceTemplates = {
         var level = data.level || data.verification_level || 'Unknown';
         this.updateElement('fact-level', level);
         
-        // Summary
-        var summary = data.summary || data.analysis || 'No summary available.';
+        // Summary - FIXED: Extract from object if needed
+        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
         this.updateElement('fact-summary', summary);
         
-        // Claims
+        // Claims - FIXED: Check both "claims" and "claims_found"
+        var claims = this.extractClaims(data);
         var claimsContainer = document.getElementById('claims-container');
-        if (claimsContainer && data.claims_found && Array.isArray(data.claims_found) && data.claims_found.length > 0) {
+        
+        if (claimsContainer && claims.length > 0) {
             var html = '';
-            data.claims_found.forEach(function(claim, index) {
+            claims.forEach(function(claim, index) {
                 var verdictClass = 'claim-neutral';
                 if (claim.verdict) {
-                    if (claim.verdict.toLowerCase().includes('true')) verdictClass = 'claim-true';
-                    else if (claim.verdict.toLowerCase().includes('false')) verdictClass = 'claim-false';
+                    var verdict = claim.verdict.toLowerCase();
+                    if (verdict.includes('true') || verdict.includes('verified')) verdictClass = 'claim-true';
+                    else if (verdict.includes('false') || verdict.includes('incorrect')) verdictClass = 'claim-false';
                 }
                 
                 html += `
@@ -552,12 +642,13 @@ window.ServiceTemplates = {
             }
         }
         
-        // Bio
-        if (data.bio || data.biography || data.brief_history) {
+        // Bio - Extract from object if needed
+        var bio = this.extractText(data.bio || data.biography || data.brief_history, null);
+        if (bio) {
             var bioBox = document.getElementById('author-bio-box');
             if (bioBox) {
                 bioBox.style.display = 'block';
-                this.updateElement('author-bio', data.bio || data.biography || data.brief_history);
+                this.updateElement('author-bio', bio);
             }
         }
         
@@ -575,12 +666,13 @@ window.ServiceTemplates = {
         var level = data.level || data.transparency_level || 'Unknown';
         this.updateElement('transparency-level', level);
         
-        // Summary
-        var summary = data.summary || data.analysis || 'No summary available.';
+        // Summary - FIXED: Extract from object if needed
+        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
         this.updateElement('transparency-summary', summary);
         
-        // Findings
-        if (data.findings && Array.isArray(data.findings) && data.findings.length > 0) {
+        // Findings - FIXED: Extract strings from object array
+        var findings = this.extractFindings(data);
+        if (findings.length > 0) {
             var findingsBox = document.getElementById('transparency-findings-box');
             var findingsList = document.getElementById('transparency-findings-list');
             
@@ -588,7 +680,7 @@ window.ServiceTemplates = {
                 findingsBox.style.display = 'block';
                 findingsList.innerHTML = '';
                 
-                data.findings.forEach(function(finding) {
+                findings.forEach(function(finding) {
                     var li = document.createElement('li');
                     li.textContent = finding;
                     findingsList.appendChild(li);
@@ -610,12 +702,13 @@ window.ServiceTemplates = {
         var level = data.level || 'Unknown';
         this.updateElement('manipulation-level', level);
         
-        // Summary
-        var summary = data.summary || data.analysis || 'No summary available.';
+        // Summary - FIXED: Extract from object if needed
+        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
         this.updateElement('manipulation-summary', summary);
         
-        // Findings
-        if (data.findings && Array.isArray(data.findings) && data.findings.length > 0) {
+        // Findings - FIXED: Extract strings from object array
+        var findings = this.extractFindings(data);
+        if (findings.length > 0) {
             var findingsBox = document.getElementById('manipulation-findings-box');
             var findingsList = document.getElementById('manipulation-findings-list');
             
@@ -623,7 +716,7 @@ window.ServiceTemplates = {
                 findingsBox.style.display = 'block';
                 findingsList.innerHTML = '';
                 
-                data.findings.forEach(function(finding) {
+                findings.forEach(function(finding) {
                     var li = document.createElement('li');
                     li.textContent = finding;
                     findingsList.appendChild(li);
@@ -645,12 +738,13 @@ window.ServiceTemplates = {
         var level = data.level || data.quality_level || 'Unknown';
         this.updateElement('content-level', level);
         
-        // Summary
-        var summary = data.summary || data.analysis || 'No summary available.';
+        // Summary - FIXED: Extract from object if needed
+        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
         this.updateElement('content-summary', summary);
         
-        // Findings
-        if (data.findings && Array.isArray(data.findings) && data.findings.length > 0) {
+        // Findings - FIXED: Extract strings from object array
+        var findings = this.extractFindings(data);
+        if (findings.length > 0) {
             var findingsBox = document.getElementById('content-findings-box');
             var findingsList = document.getElementById('content-findings-list');
             
@@ -658,7 +752,7 @@ window.ServiceTemplates = {
                 findingsBox.style.display = 'block';
                 findingsList.innerHTML = '';
                 
-                data.findings.forEach(function(finding) {
+                findings.forEach(function(finding) {
                     var li = document.createElement('li');
                     li.textContent = finding;
                     findingsList.appendChild(li);
@@ -683,12 +777,13 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('[ServiceTemplates v5.1.0] SIMPLIFIED VERSION - Module loaded successfully');
-console.log('[ServiceTemplates v5.1.0] ✓ Only uses data backend actually sends');
-console.log('[ServiceTemplates v5.1.0] ✓ Proper fallbacks for all fields');
-console.log('[ServiceTemplates v5.1.0] ✓ Charts only show when data exists');
+console.log('[ServiceTemplates v5.2.0] OBJECT EXTRACTION FIX - Module loaded successfully');
+console.log('[ServiceTemplates v5.2.0] ✓ Smart text extraction from nested objects');
+console.log('[ServiceTemplates v5.2.0] ✓ Handles analysis as objects');
+console.log('[ServiceTemplates v5.2.0] ✓ Handles findings as object arrays');
+console.log('[ServiceTemplates v5.2.0] ✓ Handles claims with multiple naming conventions');
 
 /**
  * I did no harm and this file is not truncated.
- * v5.1.0 - October 27, 2025 - Simplified to match actual backend data
+ * v5.2.0 - October 27, 2025 - Fixed [object Object] display issue
  */
