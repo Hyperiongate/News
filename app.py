@@ -1,16 +1,22 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.7
+Last Updated: October 27, 2025 - v10.2.8
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.8 (October 27, 2025):
+========================
+CRITICAL DATABASE FIX: Simple Debate Arena 500 Errors
+- ROOT CAUSE: simple_debate_models.py database instance was not initialized with Flask app
+- FIXED: Added init_simple_debate_db(app) call in app.py line 168
+- FIXED: Now imports init_simple_debate_db function from simple_debate_models
+- ERROR: Was getting "The current Flask app is not registered with this 'SQLAlchemy' instance"
+- RESULT: All simple debate routes now work (pick-fight, join-fight, vote)
+- TESTING: Verified database initialization, table creation, API endpoints
+- PRESERVED: All v10.2.7 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.7 (October 27, 2025):
 ========================
 CRITICAL FIX: Error Handling for Missing Debate Files
-- FIXED: /debate-arena now redirects to /simple-debate-arena if old system unavailable
-- FIXED: /simple-debate-arena shows inline error page instead of requiring error.html template
-- REASON: error.html template doesn't exist, causing 500 errors
-- RESULT: Graceful degradation when debate files are missing
-- PRESERVED: All v10.2.6 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.6 (October 27, 2025):
 ========================
@@ -57,7 +63,7 @@ HOW IT WORKS:
 6. No job creation, no analysis, instant results
 
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.6 - SIMPLE DEBATE ARENA INTEGRATION
+Version: 10.2.8 - SIMPLE DEBATE ARENA INTEGRATION
 Date: October 27, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
@@ -160,14 +166,18 @@ if database_url:
     # Import NEW simple debate models (v10.2.6)
     simple_debate_available = False
     try:
-        from simple_debate_models import SimpleDebate, SimpleArgument, SimpleVote
+        from simple_debate_models import SimpleDebate, SimpleArgument, SimpleVote, init_simple_debate_db
         from simple_debate_routes import simple_debate_bp
         
         # Register the simple debate blueprint
+        # CRITICAL FIX v10.2.8: Initialize the simple debate database with Flask app
+        init_simple_debate_db(app)
+
         app.register_blueprint(simple_debate_bp)
         
         logger.info("  ✓ Simple debate models imported successfully")
         logger.info("  ✓ Simple debate routes registered at /api/simple-debate")
+        logger.info("  ✓ Simple debate database initialized with Flask app")
         simple_debate_available = True
     except ImportError as e:
         logger.warning(f"  ⚠ Simple debate models not found: {e}")
@@ -803,7 +813,7 @@ def test_transcript_setup():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '10.2.7',
+        'version': '10.2.8',
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
@@ -861,7 +871,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.7")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.8")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -927,6 +937,17 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.8 (DATABASE INITIALIZATION FIX):")
+    logger.info("  ✅ CRITICAL FIX: simple_debate database initialization")
+    logger.info("  ✅ FIXED: Added init_simple_debate_db(app) call")
+    logger.info("  ✅ RESULT: All simple debate routes now work (pick-fight, join-fight, vote)")
+    logger.info("  ✅ PRESERVED: All v10.2.7 functionality (DO NO HARM)")
+    logger.info("")
+    logger.info("NEW IN v10.2.8 (DATABASE INITIALIZATION FIX):")
+    logger.info("  ✅ CRITICAL FIX: simple_debate database initialization")
+    logger.info("  ✅ FIXED: Added init_simple_debate_db(app) call")
+    logger.info("  ✅ RESULT: All simple debate routes now work (pick-fight, join-fight, vote)")
+    logger.info("  ✅ PRESERVED: All v10.2.7 functionality (DO NO HARM)")
     logger.info("NEW IN v10.2.7 (ERROR HANDLING FIX):")
     logger.info("  ✅ FIXED: /debate-arena redirects to /simple-debate-arena when unavailable")
     logger.info("  ✅ FIXED: Removed dependency on error.html template")
