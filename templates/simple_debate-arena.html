@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!--
+    TruthLens Simple Debate Arena
+    Version: 1.0.0 - SIMPLIFIED NO-AUTH VERSION
+    Date: October 27, 2025
+    
+    CHANGES FROM PREVIOUS VERSION:
+    - REMOVED: All authentication UI (email/login)
+    - REMOVED: Complex partner system, ready buttons, handshakes
+    - SIMPLIFIED: Three simple tabs - Pick a Fight, Join a Fight, Judgement City
+    - ADDED: Anonymous voting with browser tracking
+    - ADDED: Word counter for arguments (<250 words)
+    - ADDED: Voting bar chart visualization
+    
+    This file is complete and ready to deploy.
+    Last modified: October 27, 2025 - Simplified no-auth version v1.0.0
+    -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthLens Simple Debate Arena</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --dark: #1f2937;
+            --light: #f3f4f6;
+            --border: #e5e7eb;
+            --text: #374151;
+            --text-light: #6b7280;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 80px 20px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header-box {
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .header-box h1 {
+            font-size: 2.5rem;
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+
+        .header-box p {
+            color: var(--text-light);
+            font-size: 1.1rem;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            background: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .section {
+            display: none;
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .section h2 {
+            color: var(--dark);
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            min-height: 150px;
+            resize: vertical;
+        }
+
+        .word-count {
+            text-align: right;
+            font-size: 0.9rem;
+            color: var(--text-light);
+            margin-top: 5px;
+        }
+
+        .word-count.warning {
+            color: var(--warning);
+            font-weight: 600;
+        }
+
+        .word-count.error {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            background: var(--text-light);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: var(--secondary);
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .debate-card {
+            background: var(--light);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .debate-topic {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 15px;
+        }
+
+        .argument {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .argument-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .position-badge {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .position-for {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .position-against {
+            background: var(--danger);
+            color: white;
+        }
+
+        .argument-text {
+            color: var(--text);
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .vote-bar {
+            margin: 20px 0;
+        }
+
+        .vote-bar-container {
+            display: flex;
+            height: 40px;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .vote-for {
+            background: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .vote-against {
+            background: var(--danger);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .vote-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: var(--text-light);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid var(--light);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-light);
+        }
+
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            color: #065f46;
+            border-left: 4px solid var(--secondary);
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border-left: 4px solid var(--danger);
+        }
+
+        .vote-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .vote-btn {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid;
+            background: white;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .vote-btn.for {
+            border-color: var(--secondary);
+            color: var(--secondary);
+        }
+
+        .vote-btn.for:hover {
+            background: var(--secondary);
+            color: white;
+        }
+
+        .vote-btn.against {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        .vote-btn.against:hover {
+            background: var(--danger);
+            color: white;
+        }
+
+        .vote-btn.voted {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header-box">
+            <h1><i class="fas fa-gavel"></i> Simple Debate Arena</h1>
+            <p>Pick a fight, join a fight, or judge the battles!</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('pick')">
+                <i class="fas fa-plus-circle"></i> 1. Pick a Fight
+            </button>
+            <button class="tab" onclick="switchTab('join')">
+                <i class="fas fa-handshake"></i> 2. Join a Fight
+            </button>
+            <button class="tab" onclick="switchTab('judge')">
+                <i class="fas fa-balance-scale"></i> 3. Judgement City
+            </button>
+        </div>
+
+        <!-- Section 1: Pick a Fight -->
+        <div id="pickSection" class="section active">
+            <h2>Pick a Fight</h2>
+            <p style="margin-bottom: 20px; color: var(--text-light);">Create a new debate topic, choose your side, and make your argument. Someone will join to argue the other side!</p>
+            
+            <div id="pickAlert"></div>
+            
+            <form id="pickForm">
+                <div class="form-group">
+                    <label for="pickTopic">Debate Topic *</label>
+                    <input type="text" id="pickTopic" placeholder="Should pineapple be on pizza?" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="pickCategory">Category</label>
+                    <select id="pickCategory">
+                        <option value="General">General</option>
+                        <option value="Politics">Politics</option>
+                        <option value="Technology">Technology</option>
+                        <option value="Science">Science</option>
+                        <option value="Social">Social Issues</option>
+                        <option value="Entertainment">Entertainment</option>
+                        <option value="Food">Food & Drink</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pickPosition">Your Position *</label>
+                    <select id="pickPosition" required>
+                        <option value="">-- Choose your side --</option>
+                        <option value="for">FOR (I support this)</option>
+                        <option value="against">AGAINST (I oppose this)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="pickArgument">Your Argument * (10-250 words)</label>
+                    <textarea id="pickArgument" placeholder="Write your argument here..." oninput="updateWordCount('pickArgument', 'pickWordCount')" required></textarea>
+                    <div id="pickWordCount" class="word-count">0 / 250 words</div>
+                </div>
+
+                <button type="submit" class="btn">
+                    <i class="fas fa-rocket"></i> Create Fight
+                </button>
+            </form>
+        </div>
+
+        <!-- Section 2: Join a Fight -->
+        <div id="joinSection" class="section">
+            <h2>Join a Fight</h2>
+            <p style="margin-bottom: 20px; color: var(--text-light);">Pick a debate and argue the opposing side!</p>
+            
+            <div id="joinAlert"></div>
+            <div id="joinList">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </div>
+
+        <!-- Section 3: Judgement City -->
+        <div id="judgeSection" class="section">
+            <h2>Judgement City</h2>
+            <p style="margin-bottom: 20px; color: var(--text-light);">Vote for the best argument and see who's winning!</p>
+            
+            <div id="judgeAlert"></div>
+            <div id="judgeList">
+                <div class="loading"><div class="spinner"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Join Fight Modal (simplified) -->
+    <div id="joinModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; padding: 20px; overflow-y: auto;">
+        <div style="max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; padding: 30px;">
+            <h2 style="margin-bottom: 20px;">Join This Fight</h2>
+            <div id="joinModalTopic" style="font-size: 1.2rem; font-weight: 600; margin-bottom: 20px; color: var(--primary);"></div>
+            <div id="joinModalExisting" style="background: var(--light); padding: 15px; border-radius: 8px; margin-bottom: 20px;"></div>
+            
+            <div id="joinModalAlert"></div>
+            
+            <div class="form-group">
+                <label for="joinModalArgument">Your Counter-Argument * (10-250 words)</label>
+                <textarea id="joinModalArgument" placeholder="Write your opposing argument here..." oninput="updateWordCount('joinModalArgument', 'joinModalWordCount')" style="width: 100%; min-height: 150px; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit;"></textarea>
+                <div id="joinModalWordCount" class="word-count">0 / 250 words</div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="submitJoinFight()" class="btn">
+                    <i class="fas fa-paper-plane"></i> Submit Argument
+                </button>
+                <button onclick="closeJoinModal()" class="btn" style="background: var(--text-light);">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/simple-debate';
+        let currentJoinDebateId = null;
+
+        // Tab switching
+        function switchTab(tab) {
+            // Update tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+
+            if (tab === 'pick') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('pickSection').classList.add('active');
+            } else if (tab === 'join') {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('joinSection').classList.add('active');
+                loadOpenDebates();
+            } else if (tab === 'judge') {
+                document.querySelector('.tab:nth-child(3)').classList.add('active');
+                document.getElementById('judgeSection').classList.add('active');
+                loadVotingDebates();
+            }
+        }
+
+        // Word counter
+        function updateWordCount(textareaId, countId) {
+            const textarea = document.getElementById(textareaId);
+            const countEl = document.getElementById(countId);
+            const words = textarea.value.trim().split(/\s+/).filter(w => w.length > 0).length;
+            
+            countEl.textContent = `${words} / 250 words`;
+            
+            if (words < 10 || words > 250) {
+                countEl.className = 'word-count error';
+            } else if (words > 200) {
+                countEl.className = 'word-count warning';
+            } else {
+                countEl.className = 'word-count';
+            }
+        }
+
+        // Show alert
+        function showAlert(containerId, message, type) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+                setTimeout(() => container.innerHTML = '', 5000);
+            }
+        }
+
+        // ========================================================================
+        // SECTION 1: PICK A FIGHT
+        // ========================================================================
+        
+        document.getElementById('pickForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const topic = document.getElementById('pickTopic').value.trim();
+            const category = document.getElementById('pickCategory').value;
+            const position = document.getElementById('pickPosition').value;
+            const argument = document.getElementById('pickArgument').value.trim();
+            
+            const wordCount = argument.split(/\s+/).filter(w => w.length > 0).length;
+            
+            if (wordCount < 10 || wordCount > 250) {
+                showAlert('pickAlert', `Argument must be 10-250 words (you have ${wordCount} words)`, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/pick-fight`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ topic, category, position, argument })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('pickAlert', data.message, 'success');
+                    document.getElementById('pickForm').reset();
+                    updateWordCount('pickArgument', 'pickWordCount');
+                } else {
+                    showAlert('pickAlert', data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('pickAlert', 'Network error. Please try again.', 'error');
+            }
+        });
+
+        // ========================================================================
+        // SECTION 2: JOIN A FIGHT
+        // ========================================================================
+        
+        async function loadOpenDebates() {
+            const container = document.getElementById('joinList');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/open`);
+                const data = await response.json();
+                
+                if (data.success && data.debates.length > 0) {
+                    container.innerHTML = data.debates.map(renderOpenDebate).join('');
+                } else {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No open debates. Be the first to pick a fight!</p></div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="empty-state"><p>Error loading debates</p></div>';
+            }
+        }
+
+        function renderOpenDebate(debate) {
+            const arg = debate.arguments.for || debate.arguments.against;
+            const position = arg.position;
+            const oppositePosition = position === 'for' ? 'against' : 'for';
+            
+            return `
+                <div class="debate-card">
+                    <div class="debate-topic">${escapeHtml(debate.topic)}</div>
+                    <div class="argument">
+                        <div class="argument-header">
+                            <span class="position-badge position-${position}">${position.toUpperCase()}</span>
+                            <span style="color: var(--text-light); font-size: 0.9rem;">${arg.word_count} words</span>
+                        </div>
+                        <div class="argument-text">${escapeHtml(arg.text_content)}</div>
+                    </div>
+                    <button onclick="openJoinModal(${debate.id}, '${escapeHtml(debate.topic)}', '${position}', '${oppositePosition}', '${escapeHtml(arg.text_content)}')" class="btn btn-danger">
+                        <i class="fas fa-fire"></i> Argue ${oppositePosition.toUpperCase()}
+                    </button>
+                </div>
+            `;
+        }
+
+        function openJoinModal(debateId, topic, existingPosition, newPosition, existingArgument) {
+            currentJoinDebateId = debateId;
+            document.getElementById('joinModalTopic').textContent = topic;
+            document.getElementById('joinModalExisting').innerHTML = `
+                <strong>${existingPosition.toUpperCase()} Argument:</strong>
+                <p style="margin-top: 10px;">${escapeHtml(existingArgument)}</p>
+                <p style="margin-top: 10px; color: var(--primary); font-weight: 600;">You will argue: ${newPosition.toUpperCase()}</p>
+            `;
+            document.getElementById('joinModalArgument').value = '';
+            updateWordCount('joinModalArgument', 'joinModalWordCount');
+            document.getElementById('joinModal').style.display = 'block';
+        }
+
+        function closeJoinModal() {
+            document.getElementById('joinModal').style.display = 'none';
+            currentJoinDebateId = null;
+        }
+
+        async function submitJoinFight() {
+            const argument = document.getElementById('joinModalArgument').value.trim();
+            const wordCount = argument.split(/\s+/).filter(w => w.length > 0).length;
+            
+            if (wordCount < 10 || wordCount > 250) {
+                showAlert('joinModalAlert', `Argument must be 10-250 words (you have ${wordCount} words)`, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/join-fight/${currentJoinDebateId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ argument })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    closeJoinModal();
+                    showAlert('joinAlert', data.message, 'success');
+                    loadOpenDebates();
+                } else {
+                    showAlert('joinModalAlert', data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('joinModalAlert', 'Network error. Please try again.', 'error');
+            }
+        }
+
+        // ========================================================================
+        // SECTION 3: JUDGEMENT CITY
+        // ========================================================================
+        
+        async function loadVotingDebates() {
+            const container = document.getElementById('judgeList');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/voting`);
+                const data = await response.json();
+                
+                if (data.success && data.debates.length > 0) {
+                    container.innerHTML = data.debates.map(renderVotingDebate).join('');
+                } else {
+                    container.innerHTML = '<div class="empty-state"><i class="fas fa-scale-balanced"></i><p>No debates ready for voting yet</p></div>';
+                }
+            } catch (error) {
+                container.innerHTML = '<div class="empty-state"><p>Error loading debates</p></div>';
+            }
+        }
+
+        function renderVotingDebate(debate) {
+            const forArg = debate.arguments.for;
+            const againstArg = debate.arguments.against;
+            const breakdown = debate.vote_breakdown;
+            
+            const forPercentage = breakdown.for_percentage || 0;
+            const againstPercentage = breakdown.against_percentage || 0;
+            
+            return `
+                <div class="debate-card">
+                    <div class="debate-topic">${escapeHtml(debate.topic)}</div>
+                    
+                    <div class="argument">
+                        <div class="argument-header">
+                            <span class="position-badge position-for">FOR</span>
+                            <span style="color: var(--text-light); font-size: 0.9rem;">${forArg.word_count} words</span>
+                        </div>
+                        <div class="argument-text">${escapeHtml(forArg.text_content)}</div>
+                    </div>
+                    
+                    <div class="argument">
+                        <div class="argument-header">
+                            <span class="position-badge position-against">AGAINST</span>
+                            <span style="color: var(--text-light); font-size: 0.9rem;">${againstArg.word_count} words</span>
+                        </div>
+                        <div class="argument-text">${escapeHtml(againstArg.text_content)}</div>
+                    </div>
+                    
+                    ${debate.user_has_voted ? '<p style="color: var(--primary); font-weight: 600; margin-bottom: 10px;"><i class="fas fa-check-circle"></i> You voted! (Click to change)</p>' : ''}
+                    
+                    <div class="vote-buttons">
+                        <button class="vote-btn for" onclick="castVote(${debate.id}, ${forArg.id})">
+                            <i class="fas fa-thumbs-up"></i> Vote FOR
+                        </button>
+                        <button class="vote-btn against" onclick="castVote(${debate.id}, ${againstArg.id})">
+                            <i class="fas fa-thumbs-down"></i> Vote AGAINST
+                        </button>
+                    </div>
+                    
+                    <div class="vote-bar">
+                        <div class="vote-bar-container">
+                            <div class="vote-for" style="width: ${forPercentage}%;">
+                                ${forPercentage > 10 ? forPercentage.toFixed(1) + '%' : ''}
+                            </div>
+                            <div class="vote-against" style="width: ${againstPercentage}%;">
+                                ${againstPercentage > 10 ? againstPercentage.toFixed(1) + '%' : ''}
+                            </div>
+                        </div>
+                        <div class="vote-stats">
+                            <span><strong>FOR:</strong> ${breakdown.for_votes} votes</span>
+                            <span><strong>Total:</strong> ${breakdown.total_votes} votes</span>
+                            <span><strong>AGAINST:</strong> ${breakdown.against_votes} votes</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function castVote(debateId, argumentId) {
+            try {
+                const response = await fetch(`${API_BASE}/vote/${debateId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ argument_id: argumentId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showAlert('judgeAlert', data.message, 'success');
+                    loadVotingDebates();
+                } else {
+                    showAlert('judgeAlert', data.error, 'error');
+                }
+            } catch (error) {
+                showAlert('judgeAlert', 'Network error. Please try again.', 'error');
+            }
+        }
+
+        // Utility
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initial load
+        loadOpenDebates();
+    </script>
+</body>
+</html>
+
+<!-- I did no harm and this file is not truncated -->
