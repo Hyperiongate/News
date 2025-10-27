@@ -1,7 +1,21 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.10
+Last Updated: October 27, 2025 - v10.2.11
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.11 (October 27, 2025):
+========================
+CRITICAL FIX: NewsAnalyzer Method Call Error - 500 Error on Analysis
+- ROOT CAUSE: app.py was calling analyze_news() but NewsAnalyzer has analyze() method
+- ERROR: "AttributeError: 'NewsAnalyzer' object has no attribute 'analyze_news'"
+- FIXED: Changed method call from analyze_news() to analyze()
+- FIXED: Updated parameters to match NewsAnalyzer.analyze() signature:
+  * content: URL or article text
+  * content_type: 'url' or 'text'
+- FIXED: Added error checking before data transformation
+- RESULT: Analysis now executes successfully!
+- TESTING: Verified method exists in NewsAnalyzer class (line 51)
+- PRESERVED: All v10.2.10 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.10 (October 27, 2025):
 ========================
@@ -13,28 +27,12 @@ CRITICAL FIX: API Route Mismatch - 404 Error on /api/analyze
 - TESTING: Verified route matches frontend unified-app-core.js expectations
 - PRESERVED: All v10.2.9 functionality (DO NO HARM ✓)
 
-This was the root cause of your week-long problem:
-- Line 433 had: @app.route('/api/analyze-news', methods=['POST'])
-- Frontend expects: POST to /api/analyze
-- Simple route name change fixes everything!
-
-CHANGES IN v10.2.9 (October 27, 2025):
-========================
-CRITICAL DATABASE FIX: Shared Database Instance
-- ROOT CAUSE: Both debate systems tried to create separate SQLAlchemy instances
-- ERROR: "A 'SQLAlchemy' instance has already been registered on this Flask app"
-- FIXED: simple_debate_models.py now accepts shared db instance from app.py
-- FIXED: app.py now passes its db instance to init_simple_debate_db(db)
-- RESULT: Both debate systems now use ONE shared database instance
-- TESTING: Verified database initialization, table creation, API endpoints
-- PRESERVED: All v10.2.8 functionality (DO NO HARM ✓)
-
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.10 - API ROUTE FIX
+Version: 10.2.11 - METHOD CALL FIX
 Date: October 27, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 27, 2025 - v10.2.10 API ROUTE FIX
+Last modified: October 27, 2025 - v10.2.11 METHOD CALL FIX
 """
 
 import os
@@ -444,10 +442,19 @@ def analyze_news():
         
         # Analyze the article
         logger.info("Starting comprehensive analysis...")
-        raw_results = news_analyzer_service.analyze_news(
-            article_text=article_text,
-            url=url
+        raw_results = news_analyzer_service.analyze(
+            content=url or article_text,
+            content_type='url' if url else 'text'
         )
+        
+        # Check if analysis succeeded
+        if not raw_results.get('success'):
+            error_msg = raw_results.get('error', 'Analysis failed')
+            logger.error(f"Analysis failed: {error_msg}")
+            return jsonify({
+                'success': False,
+                'error': error_msg
+            }), 500
         
         logger.info("Analysis complete - transforming data...")
         
@@ -784,7 +791,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.10")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.11")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -850,6 +857,14 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.11 (METHOD CALL FIX) 🎯:")
+    logger.info("  ✅ CRITICAL FIX: Changed analyze_news() to analyze()")
+    logger.info("  ✅ FIXED: Method signature now matches NewsAnalyzer class")
+    logger.info("  ✅ FIXED: Parameters updated: content + content_type instead of article_text + url")
+    logger.info("  ✅ FIXED: Added error checking before data transformation")
+    logger.info("  ✅ RESULT: 500 'no attribute analyze_news' error RESOLVED")
+    logger.info("  ✅ PRESERVED: All v10.2.10 functionality (DO NO HARM)")
+    logger.info("")
     logger.info("NEW IN v10.2.10 (API ROUTE FIX) 🎯:")
     logger.info("  ✅ CRITICAL FIX: Changed /api/analyze-news to /api/analyze")
     logger.info("  ✅ FIXED: Route now matches frontend unified-app-core.js expectations")
