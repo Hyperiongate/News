@@ -1,7 +1,35 @@
 """
+File: app.py
+Last Updated: October 27, 2025 - v10.2.5
+Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.5 (October 27, 2025):
+========================
+NEW FEATURE: Transcript Creation Without Analysis
+- ADDED: /api/youtube/create-transcript endpoint - Extract transcript only, no fact-checking
+- ADDED: /api/youtube/download-transcript-pdf endpoint - Generate formatted PDF from transcript
+- ADDED: PDF generation using reportlab library
+- FEATURE: Users can now choose "Create Transcript" or "Analyze Video"
+- FEATURE: One-click PDF download with video metadata
+- PRESERVED: All existing functionality (DO NO HARM ✓)
+
+HOW IT WORKS:
+1. User enters YouTube URL
+2. User clicks "Create Transcript" button (new)
+3. System extracts transcript using ScrapingBee
+4. Transcript displayed with metadata (title, channel, duration, date)
+5. User can download as formatted PDF
+6. No job creation, no analysis, instant results
+
+DEPLOYMENT REQUIREMENTS:
+- Add to requirements.txt: reportlab
+- Deploy updated app.py
+- Deploy updated templates/transcript.html
+- All existing functionality preserved
+
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.4 - NAVIGATION FIX
-Date: October 26, 2025
+Version: 10.2.5 - TRANSCRIPT CREATION WITH PDF DOWNLOAD
+Date: October 27, 2025
 
 CRITICAL FIX FROM 10.2.3:
 ========================
@@ -511,6 +539,245 @@ def process_youtube():
         }), 500
 
 # ============================================================================
+
+@app.route('/api/youtube/create-transcript', methods=['POST'])
+def create_transcript():
+    """
+    NEW ENDPOINT v3.1.0 (October 27, 2025): Extract YouTube transcript WITHOUT analysis.
+    This endpoint only extracts and returns the transcript with metadata.
+    No job creation, no background processing, no fact-checking.
+    
+    Returns:
+        - transcript: Full transcript text
+        - metadata: Video information (title, channel, duration, etc.)
+    """
+    try:
+        logger.info("=" * 80)
+        logger.info("TRANSCRIPT CREATION REQUEST (NO ANALYSIS)")
+        logger.info("=" * 80)
+        
+        # Get and validate URL
+        data = request.get_json()
+        if not data:
+            logger.error("No data provided in request")
+            return jsonify({
+                'success': False,
+                'error': 'No data provided',
+                'suggestion': 'Please include YouTube URL in request body'
+            }), 400
+        
+        url = data.get('url', '').strip()
+        logger.info(f"URL received: {url}")
+        
+        if not url:
+            logger.error("No URL provided")
+            return jsonify({
+                'success': False,
+                'error': 'No YouTube URL provided',
+                'suggestion': 'Please provide a valid YouTube video URL'
+            }), 400
+        
+        # Extract transcript
+        logger.info("Calling extract_youtube_transcript()...")
+        result = extract_youtube_transcript(url)
+        
+        if not result.get('success'):
+            error_msg = result.get('error', 'Failed to extract transcript')
+            logger.error(f"Transcript extraction failed - {error_msg}")
+            logger.info("=" * 80)
+            return jsonify({
+                'success': False,
+                'error': error_msg,
+                'suggestion': result.get('suggestion', 'Please try again')
+            }), 400
+        
+        # Extract transcript text
+        transcript = result.get('transcript', '')
+        if not transcript:
+            logger.error("No transcript extracted from video")
+            logger.info("=" * 80)
+            return jsonify({
+                'success': False,
+                'error': 'No transcript available for this video',
+                'suggestion': 'This video may not have captions enabled'
+            }), 400
+        
+        transcript_length = len(transcript)
+        word_count = len(transcript.split())
+        video_title = result.get('metadata', {}).get('title', 'Unknown')
+        video_channel = result.get('metadata', {}).get('channel', 'Unknown')
+        
+        logger.info(f"✓ Success! Extracted {transcript_length} characters ({word_count} words)")
+        logger.info(f"  - Video Title: {video_title}")
+        logger.info(f"  - Channel: {video_channel}")
+        logger.info("=" * 80)
+        
+        # Return transcript data immediately (no job creation)
+        return jsonify({
+            'success': True,
+            'transcript': transcript,
+            'metadata': result.get('metadata', {}),
+            'stats': {
+                'character_count': transcript_length,
+                'word_count': word_count
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Transcript creation error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Unexpected error: {str(e)}',
+            'suggestion': 'Please try again later or contact support'
+        }), 500
+
+@app.route('/api/youtube/download-transcript-pdf', methods=['POST'])
+def download_transcript_pdf():
+    """
+    NEW ENDPOINT v3.1.0 (October 27, 2025): Generate and download transcript as PDF.
+    Receives transcript data and metadata, generates formatted PDF.
+    
+    Requires: pip install reportlab
+    """
+    try:
+        logger.info("=" * 80)
+        logger.info("PDF GENERATION REQUEST")
+        logger.info("=" * 80)
+        
+        # Import reportlab for PDF generation
+        try:
+            from reportlab.lib.pagesizes import letter
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+            from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
+            from io import BytesIO
+        except ImportError:
+            logger.error("reportlab not installed")
+            return jsonify({
+                'success': False,
+                'error': 'PDF generation library not available',
+                'suggestion': 'Server needs reportlab installed: pip install reportlab'
+            }), 500
+        
+        # Get transcript data
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': 'No data provided'
+            }), 400
+        
+        transcript = data.get('transcript', '')
+        metadata = data.get('metadata', {})
+        
+        if not transcript:
+            return jsonify({
+                'success': False,
+                'error': 'No transcript provided'
+            }), 400
+        
+        # Extract metadata
+        video_title = metadata.get('title', 'YouTube Video Transcript')
+        channel_name = metadata.get('channel', 'Unknown Channel')
+        duration = metadata.get('duration_formatted', 'Unknown')
+        upload_date = metadata.get('upload_date', 'Unknown')
+        
+        logger.info(f"Generating PDF for: {video_title}")
+        
+        # Create PDF in memory
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter,
+                              topMargin=0.75*inch, bottomMargin=0.75*inch,
+                              leftMargin=0.75*inch, rightMargin=0.75*inch)
+        
+        # Build PDF content
+        styles = getSampleStyleSheet()
+        story = []
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            textColor='#3b82f6',
+            spaceAfter=12,
+            alignment=TA_CENTER
+        )
+        
+        metadata_style = ParagraphStyle(
+            'Metadata',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor='#4b5563',
+            spaceAfter=6,
+            alignment=TA_CENTER
+        )
+        
+        content_style = ParagraphStyle(
+            'Content',
+            parent=styles['Normal'],
+            fontSize=11,
+            leading=16,
+            alignment=TA_JUSTIFY,
+            spaceAfter=12
+        )
+        
+        # Add title
+        story.append(Paragraph(video_title, title_style))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Add metadata
+        story.append(Paragraph(f"<b>Channel:</b> {channel_name}", metadata_style))
+        story.append(Paragraph(f"<b>Duration:</b> {duration}", metadata_style))
+        story.append(Paragraph(f"<b>Published:</b> {upload_date}", metadata_style))
+        story.append(Paragraph(f"<b>Transcript Length:</b> {len(transcript):,} characters", metadata_style))
+        story.append(Spacer(1, 0.3*inch))
+        
+        # Add separator line
+        story.append(Paragraph("<hr/>", styles['Normal']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Add transcript content
+        # Split into paragraphs for better formatting
+        paragraphs = transcript.split('\n\n')
+        for para in paragraphs:
+            if para.strip():
+                # Clean up the text for PDF
+                clean_para = para.strip().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                story.append(Paragraph(clean_para, content_style))
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF data
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        
+        # Create safe filename
+        safe_title = ''.join(c for c in video_title if c.isalnum() or c in (' ', '-', '_')).strip()
+        safe_title = safe_title[:50]  # Limit length
+        filename = f"{safe_title}_transcript.pdf"
+        
+        logger.info(f"✓ PDF generated: {filename} ({len(pdf_data)} bytes)")
+        logger.info("=" * 80)
+        
+        # Return PDF as download
+        from flask import Response
+        response = Response(pdf_data, mimetype='application/pdf')
+        response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response.headers['Content-Length'] = len(pdf_data)
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"PDF generation error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'PDF generation failed: {str(e)}'
+        }), 500
+
+
 # HEALTH CHECK & DEBUG ROUTES
 # ============================================================================
 
@@ -518,7 +785,7 @@ def process_youtube():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '10.2.4',
+        'version': '10.2.5',
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
@@ -526,6 +793,7 @@ def health():
             'live_streaming': 'v10.0.0 - YouTube Live analysis with AssemblyAI',
             'youtube_transcripts': 'v10.2.3 - YouTube URL transcript extraction (FIXED with job integration)',
             'transcript_analysis': 'v10.2.3 - Full transcript fact-checking with proper job management',
+            'transcript_creation': 'v3.1.0 - Create transcript without analysis + PDF download',
             'navigation': 'v10.2.4 - All menu items work (Features, About, Contact, Live Stream, Debate Arena)'
         }
     })
@@ -574,7 +842,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.4")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.5")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -626,6 +894,12 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.5 (TRANSCRIPT CREATION):")
+    logger.info("  ✅ ADDED: /api/youtube/create-transcript endpoint")
+    logger.info("  ✅ ADDED: /api/youtube/download-transcript-pdf endpoint")
+    logger.info("  ✅ FEATURE: Create transcript without full analysis")
+    logger.info("  ✅ FEATURE: Download transcripts as formatted PDF")
+    logger.info("")
     logger.info("NEW IN v10.2.4 (NAVIGATION FIX):")
     logger.info("  ✅ FIXED: Added 5 missing static page routes")
     logger.info("  ✅ ADDED: /features route")
@@ -643,5 +917,7 @@ if __name__ == '__main__':
     
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+# I did no harm and this file is not truncated
 
 # I did no harm and this file is not truncated
