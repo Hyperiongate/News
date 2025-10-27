@@ -1,5 +1,5 @@
 """
-TruthLens Simple Debate Arena - Database Models
+TruthLens Debate Arena - Database Models
 File: simple_debate_models.py
 Date: October 27, 2025
 Version: 1.0.0 - SIMPLIFIED NO-AUTH VERSION
@@ -85,40 +85,19 @@ class SimpleDebate(db.Model):
         """Get AGAINST argument"""
         return self.arguments.filter_by(position='against').first()
     
-    def is_complete(self):
-        """Check if debate has both arguments"""
-        return self.arguments.count() == 2
-    
     def get_vote_breakdown(self):
-        """Get vote counts and percentages"""
+        """Get vote breakdown by argument"""
         for_arg = self.get_argument_for()
         against_arg = self.get_argument_against()
         
-        if not for_arg or not against_arg:
-            return None
-        
-        for_votes = for_arg.vote_count
-        against_votes = against_arg.vote_count
-        total = self.total_votes
-        
-        if total == 0:
-            return {
-                'for_votes': 0,
-                'against_votes': 0,
-                'for_percentage': 0,
-                'against_percentage': 0,
-                'total_votes': 0
-            }
-        
         return {
-            'for_votes': for_votes,
-            'against_votes': against_votes,
-            'for_percentage': round((for_votes / total) * 100, 1),
-            'against_percentage': round((against_votes / total) * 100, 1),
-            'total_votes': total
+            'for_votes': for_arg.vote_count if for_arg else 0,
+            'against_votes': against_arg.vote_count if against_arg else 0,
+            'for_percentage': for_arg.get_vote_percentage() if for_arg else 0,
+            'against_percentage': against_arg.get_vote_percentage() if against_arg else 0
         }
     
-    def to_dict(self, include_arguments=True, include_votes=False):
+    def to_dict(self, include_arguments=False, include_votes=False):
         """Convert to dictionary for JSON responses"""
         result = {
             'id': self.id,
@@ -127,14 +106,12 @@ class SimpleDebate(db.Model):
             'status': self.status,
             'total_votes': self.total_votes,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'voting_opened_at': self.voting_opened_at.isoformat() if self.voting_opened_at else None,
-            'is_complete': self.is_complete()
+            'voting_opened_at': self.voting_opened_at.isoformat() if self.voting_opened_at else None
         }
         
         if include_arguments:
             for_arg = self.get_argument_for()
             against_arg = self.get_argument_against()
-            
             result['arguments'] = {
                 'for': for_arg.to_dict(include_votes=include_votes) if for_arg else None,
                 'against': against_arg.to_dict(include_votes=include_votes) if against_arg else None
