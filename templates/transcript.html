@@ -963,6 +963,8 @@
                 document.getElementById('progress-message').textContent = 'Connecting to YouTube...';
                 document.getElementById('progress-emoji').textContent = '📝';
                 
+                console.log('[TranscriptApp] Calling /api/youtube/create-transcript...');
+                
                 // Call new transcript-only endpoint
                 const response = await fetch('/api/youtube/create-transcript', {
                     method: 'POST',
@@ -970,10 +972,29 @@
                     body: JSON.stringify({ url: url })
                 });
                 
+                console.log('[TranscriptApp] Response status:', response.status);
+                
                 const data = await response.json();
+                console.log('[TranscriptApp] Response data:', data);
                 
                 if (!response.ok) {
-                    throw new Error(data.error || 'Failed to extract transcript');
+                    const errorMsg = data.error || 'Failed to extract transcript';
+                    const suggestion = data.suggestion || '';
+                    const technicalDetails = data.technical_details || '';
+                    
+                    console.error('[TranscriptApp] Server returned error:', errorMsg);
+                    console.error('[TranscriptApp] Suggestion:', suggestion);
+                    if (technicalDetails) {
+                        console.error('[TranscriptApp] Technical details:', technicalDetails);
+                    }
+                    
+                    // Build user-friendly error message
+                    let userMessage = errorMsg;
+                    if (suggestion) {
+                        userMessage += '\n\n' + suggestion;
+                    }
+                    
+                    throw new Error(userMessage);
                 }
                 
                 // Store transcript data
@@ -988,7 +1009,7 @@
             } catch (error) {
                 console.error('[TranscriptApp] Error creating transcript:', error);
                 hideProgressSection();
-                alert('Failed to create transcript: ' + error.message);
+                alert('Failed to create transcript:\n\n' + error.message);
             }
         }
 
