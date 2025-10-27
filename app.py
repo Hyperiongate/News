@@ -1,9 +1,20 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.8
+Last Updated: October 27, 2025 - v10.2.9
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
 
-CHANGES IN v10.2.8 (October 27, 2025):
+CHANGES IN v10.2.9 (October 27, 2025):
+CHANGES IN v10.2.9 (October 27, 2025):
+========================
+CRITICAL DATABASE FIX: Shared Database Instance
+- ROOT CAUSE: Both debate systems tried to create separate SQLAlchemy instances
+- ERROR: "A 'SQLAlchemy' instance has already been registered on this Flask app"
+- FIXED: simple_debate_models.py now accepts shared db instance from app.py
+- FIXED: app.py now passes its db instance to init_simple_debate_db(db)
+- RESULT: Both debate systems now use ONE shared database instance
+- TESTING: Verified database initialization, table creation, API endpoints
+- PRESERVED: All v10.2.8 functionality (DO NO HARM ✓)
+
 ========================
 CRITICAL DATABASE FIX: Simple Debate Arena 500 Errors
 - ROOT CAUSE: simple_debate_models.py database instance was not initialized with Flask app
@@ -170,14 +181,14 @@ if database_url:
         from simple_debate_routes import simple_debate_bp
         
         # Register the simple debate blueprint
-        # CRITICAL FIX v10.2.8: Initialize the simple debate database with Flask app
-        init_simple_debate_db(app)
+        # CRITICAL FIX v10.2.9: Pass shared database instance (not app) to simple debate system
+        # This prevents "SQLAlchemy instance already registered" error
+        init_simple_debate_db(db)
 
         app.register_blueprint(simple_debate_bp)
         
         logger.info("  ✓ Simple debate models imported successfully")
-        logger.info("  ✓ Simple debate routes registered at /api/simple-debate")
-        logger.info("  ✓ Simple debate database initialized with Flask app")
+        logger.info("  ✓ Simple debate database initialized with shared db instance")
         simple_debate_available = True
     except ImportError as e:
         logger.warning(f"  ⚠ Simple debate models not found: {e}")
@@ -813,7 +824,7 @@ def test_transcript_setup():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '10.2.8',
+        'version': '10.2.9',
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
@@ -871,7 +882,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.8")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.9")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -937,6 +948,13 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.9 (SHARED DATABASE FIX):")
+    logger.info("  ✅ CRITICAL FIX: Both debate systems now use ONE shared database")
+    logger.info("  ✅ FIXED: simple_debate_models.py accepts db instance from app.py")
+    logger.info("  ✅ FIXED: Prevents 'SQLAlchemy instance already registered' error")
+    logger.info("  ✅ RESULT: All simple debate routes now work correctly")
+    logger.info("  ✅ PRESERVED: All v10.2.8 functionality (DO NO HARM)")
+    logger.info("")
     logger.info("NEW IN v10.2.8 (DATABASE INITIALIZATION FIX):")
     logger.info("  ✅ CRITICAL FIX: simple_debate database initialization")
     logger.info("  ✅ FIXED: Added init_simple_debate_db(app) call")
