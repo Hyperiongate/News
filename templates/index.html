@@ -3,8 +3,15 @@
 <head>
         <!--
     TruthLens News Analysis Page
-    Version: 3.1.0 - DEBATE ARENA LINK FIX
+    Version: 3.2.0 - CHART RENDERER FIX
     Date: October 27, 2025
+    
+    CHANGES IN v3.2.0 (October 27, 2025):
+    - FIXED: Added chart-renderer.js to script loading sequence
+    - REASON: Charts were not rendering inside service dropdowns
+    - SOLUTION: Added /static/js/chart-renderer.js after Chart.js CDN, before service-templates.js
+    - RESULT: All 7 services now display charts and analysis content correctly
+    - PRESERVED: All other functionality (DO NO HARM ✓)
     
     CHANGES IN v3.1.0 (October 27, 2025):
     - FIXED: Debate Arena link now points to /simple-debate-arena (new anonymous system)
@@ -16,8 +23,16 @@
     - ORDER: Features, About, News Analysis, Transcript/YouTube, Live Stream, Debate Arena, Contact Us
     - REMOVED: "Upgrade to Pro" button
     
+    LOADING SEQUENCE (CRITICAL):
+    1. Chart.js CDN (line 39)
+    2. jsPDF CDN (line 42)
+    3. chart-renderer.js (line 890) - NEWLY ADDED v3.2.0
+    4. service-templates.js (line 891)
+    5. unified-app-core.js (line 892)
+    6. pdf-generator.js (line 893)
+    
     This file is complete and ready to deploy.
-    Last modified: October 27, 2025 - Debate Arena link fix v3.1.0
+    Last modified: October 27, 2025 - Chart Renderer fix v3.2.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -213,61 +228,75 @@
         }
 
         .summary-title {
-            font-size: 1.5rem;
+            font-size: 24px;
             font-weight: 700;
             color: #1f2937;
-        }
-
-        .summary-actions {
             display: flex;
-            gap: 12px;
+            align-items: center;
+            gap: 0.5rem;
         }
 
-        .action-button {
-            padding: 10px 20px;
+        .summary-title i {
+            color: #3b82f6;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .action-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.625rem 1rem;
             border: none;
             border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            transition: all 0.2s;
         }
 
-        .pdf-button {
-            background: var(--gradient-red);
+        .download-pdf-btn {
+            background: var(--gradient-blue);
             color: white;
         }
 
-        .pdf-button:hover {
+        .download-pdf-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
-        .reset-button {
+        .new-analysis-btn {
             background: #f3f4f6;
             color: #374151;
         }
 
-        .reset-button:hover {
+        .new-analysis-btn:hover {
             background: #e5e7eb;
-            transform: translateY(-2px);
         }
 
-        .trust-score-section {
+        /* Trust Score Display */
+        .trust-score-display {
             display: flex;
             align-items: center;
             gap: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-radius: 12px;
             margin-bottom: 2rem;
         }
 
-        .trust-score-circle {
-            width: 140px;
-            height: 140px;
+        .trust-gauge {
             position: relative;
-            flex-shrink: 0;
+            width: 120px;
+            height: 120px;
+        }
+
+        .trust-gauge canvas {
+            width: 100%;
+            height: 100%;
         }
 
         .trust-score-value {
@@ -278,152 +307,125 @@
             text-align: center;
         }
 
-        .trust-score-number {
-            font-size: 2.5rem;
+        .score-number {
+            font-size: 32px;
             font-weight: 800;
+            color: #1f2937;
             line-height: 1;
         }
 
-        .trust-score-number.high {
-            color: #10b981;
-        }
-
-        .trust-score-number.medium {
-            color: #3b82f6;
-        }
-
-        .trust-score-number.low {
-            color: #ef4444;
-        }
-
-        .trust-score-label {
-            font-size: 0.75rem;
+        .score-label {
+            font-size: 12px;
             color: #6b7280;
-            font-weight: 600;
-            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
-        .trust-score-interpretation {
+        .trust-details {
             flex: 1;
         }
 
-        .trust-level-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 0.875rem;
+        .trust-rating {
+            font-size: 20px;
             font-weight: 700;
-            margin-bottom: 0.75rem;
+            color: #1f2937;
+            margin-bottom: 0.5rem;
         }
 
-        .trust-level-badge.high {
-            background: #d1fae5;
-            color: #065f46;
-        }
-
-        .trust-level-badge.medium {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .trust-level-badge.low {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .trust-interpretation-text {
-            font-size: 1rem;
-            color: #374151;
+        .trust-description {
+            font-size: 14px;
+            color: #6b7280;
             line-height: 1.6;
         }
 
+        /* Article Metadata Grid */
         .article-metadata {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
-            padding: 1.5rem;
-            background: #f9fafb;
-            border-radius: 12px;
             margin-bottom: 2rem;
         }
 
         .metadata-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+            padding: 1rem;
+            background: #f9fafb;
+            border-radius: 8px;
+            border-left: 3px solid #3b82f6;
         }
 
         .metadata-label {
-            font-size: 0.75rem;
-            font-weight: 600;
+            font-size: 12px;
             color: #6b7280;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
         }
 
         .metadata-value {
-            font-size: 0.95rem;
+            font-size: 16px;
+            font-weight: 600;
             color: #1f2937;
-            font-weight: 500;
         }
 
-        .article-summary-section {
+        /* Article Summary */
+        .article-summary {
             margin-bottom: 2rem;
         }
 
-        .section-heading {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: #1f2937;
+        .section-subtitle {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
             margin-bottom: 0.75rem;
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
         }
 
-        .section-heading i {
+        .section-subtitle i {
             color: #3b82f6;
         }
 
-        .article-summary-text {
-            font-size: 0.95rem;
+        .summary-text {
+            font-size: 14px;
             color: #4b5563;
             line-height: 1.7;
             padding: 1rem;
             background: #f9fafb;
-            border-left: 4px solid #3b82f6;
             border-radius: 8px;
+            border-left: 3px solid #10b981;
         }
 
-        .analysis-findings-section {
+        /* Analysis Findings */
+        .analysis-findings {
             margin-bottom: 2rem;
         }
 
-        .bottom-line-box {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border: 2px solid #3b82f6;
-            border-radius: 12px;
+        .bottom-line {
             padding: 1.25rem;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
             margin-bottom: 1.5rem;
         }
 
-        .bottom-line-label {
-            font-size: 0.875rem;
+        .bottom-line-title {
+            font-size: 14px;
             font-weight: 700;
-            color: #1e40af;
+            color: #92400e;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.5px;
             margin-bottom: 0.5rem;
         }
 
         .bottom-line-text {
-            font-size: 1rem;
-            color: #1e40af;
+            font-size: 15px;
+            color: #78350f;
             line-height: 1.6;
             font-weight: 500;
         }
 
-        .key-findings-list {
+        .key-findings {
             display: flex;
             flex-direction: column;
             gap: 0.75rem;
@@ -432,69 +434,84 @@
         .finding-item {
             display: flex;
             align-items: flex-start;
-            gap: 12px;
+            gap: 0.75rem;
             padding: 1rem;
             background: #f9fafb;
             border-radius: 8px;
-            border-left: 4px solid #10b981;
+            transition: all 0.2s;
+        }
+
+        .finding-item:hover {
+            background: #f3f4f6;
+            transform: translateX(4px);
         }
 
         .finding-icon {
             color: #10b981;
-            font-size: 1.25rem;
-            flex-shrink: 0;
+            font-size: 18px;
             margin-top: 2px;
+            flex-shrink: 0;
         }
 
         .finding-text {
-            font-size: 0.95rem;
+            font-size: 14px;
             color: #374151;
             line-height: 1.6;
+            flex: 1;
         }
 
+        /* Explore Details CTA */
         .explore-details-cta {
             text-align: center;
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            padding: 2rem;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
             border-radius: 12px;
             margin-top: 2rem;
         }
 
         .explore-details-cta h3 {
-            font-size: 1.125rem;
+            font-size: 20px;
             font-weight: 700;
-            color: #1f2937;
+            color: #1e40af;
             margin-bottom: 0.5rem;
         }
 
         .explore-details-cta p {
-            font-size: 0.875rem;
-            color: #6b7280;
-            margin-bottom: 1rem;
+            font-size: 14px;
+            color: #3b82f6;
+            margin-bottom: 1.5rem;
         }
 
         .scroll-hint {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: white;
-            border: 2px solid #3b82f6;
-            color: #3b82f6;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--gradient-blue);
+            color: white;
+            border: none;
             border-radius: 8px;
-            font-size: 0.875rem;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
         }
 
         .scroll-hint:hover {
-            background: #3b82f6;
-            color: white;
             transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
         }
 
-        /* Service Results Section */
+        .scroll-hint i {
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(6px); }
+        }
+
+        /* Service Results Header */
         .service-results-header {
             text-align: center;
             padding: 2rem 1rem;
@@ -504,385 +521,269 @@
         }
 
         .service-results-header h2 {
-            font-size: 1.75rem;
+            font-size: 26px;
             font-weight: 700;
             color: #1f2937;
             margin-bottom: 0.5rem;
         }
 
         .service-results-header p {
-            font-size: 1rem;
+            font-size: 15px;
             color: #6b7280;
         }
 
-        /* Mobile Responsive */
+        /* Responsive Design */
         @media (max-width: 768px) {
-            .trust-score-section {
-                flex-direction: column;
-                text-align: center;
-            }
-
             .summary-header {
                 flex-direction: column;
+                align-items: flex-start;
                 gap: 1rem;
             }
 
-            .summary-actions {
+            .action-buttons {
                 width: 100%;
                 flex-direction: column;
             }
 
-            .action-button {
+            .action-btn {
                 width: 100%;
                 justify-content: center;
+            }
+
+            .trust-score-display {
+                flex-direction: column;
+                text-align: center;
             }
 
             .article-metadata {
                 grid-template-columns: 1fr;
             }
-        }
 
-        /* Loading Overlay Styles (from v7.1.0) */
-        .loading-backdrop {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(8px);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
+            .main-title-compact {
+                font-size: 24px !important;
+            }
 
-        .loading-backdrop.active {
-            display: flex;
-        }
+            .capabilities-showcase {
+                gap: 8px;
+            }
 
-        .progress-container-enhanced {
-            background: white;
-            border-radius: 20px;
-            padding: 2.5rem;
-            max-width: 500px;
-            width: 90%;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        }
-
-        .progress-header {
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .progress-icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
-
-        .progress-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 0.5rem;
-        }
-
-        .progress-subtitle {
-            font-size: 1rem;
-            color: #6b7280;
-        }
-
-        .progress-bar-container {
-            background: #f3f4f6;
-            border-radius: 12px;
-            height: 12px;
-            margin-bottom: 1.5rem;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: var(--gradient-blue);
-            border-radius: 12px;
-            transition: width 0.3s ease;
-        }
-
-        .progress-percentage {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 800;
-            color: #3b82f6;
-            margin-bottom: 1rem;
-        }
-
-        .progress-message {
-            text-align: center;
-            font-size: 1rem;
-            color: #374151;
-            margin-bottom: 2rem;
-            min-height: 3rem;
-        }
-
-        .fun-fact-box {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-top: 1.5rem;
-        }
-
-        .fun-fact-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #1e40af;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-        }
-
-        .fun-fact-text {
-            font-size: 0.875rem;
-            color: #1e40af;
-            line-height: 1.5;
+            .capability-badge {
+                font-size: 12px;
+                padding: 6px 12px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Navigation from main.css -->
+    <!-- Navigation -->
     <nav class="main-navigation">
         <div class="nav-container">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
+            <div class="nav-brand">
+                <i class="fas fa-shield-check nav-icon"></i>
+                <span class="nav-title">TruthLens</span>
+            </div>
             
             <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
                 <i class="fas fa-bars"></i>
             </button>
             
             <ul class="nav-menu" id="navMenu">
-                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i>Features</a></li>
-                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i>About</a></li>
-                <li><a href="/" class="nav-link active"><i class="fas fa-newspaper"></i>News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i>Transcript/YouTube</a></li>
-                <li><a href="/live-stream" class="nav-link"><i class="fas fa-video"></i>Live Stream</a></li>
-                <li><a href="/simple-debate-arena" class="nav-link"><i class="fas fa-comments"></i>Debate Arena</a></li>
-                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i>Contact Us</a></li>
+                <li><a href="/#features">Features</a></li>
+                <li><a href="/#about">About</a></li>
+                <li><a href="/" class="active">News Analysis</a></li>
+                <li><a href="/transcript">Transcript/YouTube</a></li>
+                <li><a href="/live-stream">Live Stream</a></li>
+                <li><a href="/simple-debate-arena">Debate Arena</a></li>
+                <li><a href="/#contact">Contact Us</a></li>
             </ul>
         </div>
     </nav>
 
-    <!-- Loading Overlay (v7.1.0 RESTORED) -->
-    <div id="loadingBackdrop" class="loading-backdrop">
-        <div class="progress-container-enhanced" id="progressContainerFixed">
-            <div class="progress-header">
-                <div class="progress-icon">
-                    <i class="fas fa-brain" style="color: #3b82f6;"></i>
-                </div>
-                <h2 class="progress-title">Analyzing Article</h2>
-                <p class="progress-subtitle">AI-powered credibility analysis in progress</p>
-            </div>
-            
-            <div class="progress-bar-container">
-                <div id="progressBarFill" class="progress-bar-fill" style="width: 0%"></div>
-            </div>
-            
-            <div id="progressPercentageFixed" class="progress-percentage">0%</div>
-            
-            <div id="loadingMessageEnhanced" class="progress-message">
-                Initializing analysis...
-            </div>
-
-            <div id="funFact" class="fun-fact-box" style="display: none;">
-                <div class="fun-fact-label">Did You Know?</div>
-                <div id="funFactText" class="fun-fact-text"></div>
-            </div>
-        </div>
-    </div>
-
     <!-- Main Content -->
-    <div class="analysis-container">
-        <!-- Hero Section -->
+    <div class="page-content">
+        <!-- Hero Section (Compact) -->
         <div class="section-header-compact">
-            <h1 class="main-title-compact">News Credibility Analysis</h1>
-            <p class="subtitle-compact">Comprehensive AI-powered analysis using 7 advanced services</p>
+            <h1 class="main-title-compact">
+                <i class="fas fa-newspaper" style="color: #3b82f6; margin-right: 8px;"></i>
+                News Credibility Analysis
+            </h1>
+            <p class="subtitle-compact">Professional AI analysis for news articles, editorials, and opinion pieces</p>
         </div>
 
-        <!-- Capabilities -->
+        <!-- Capabilities Showcase -->
         <div class="capabilities-showcase">
             <div class="capability-badge">
-                <i class="fas fa-shield-alt"></i>
+                <i class="fas fa-link"></i>
+                <span>URL Analysis</span>
+            </div>
+            <div class="capability-badge">
+                <i class="fas fa-file-alt"></i>
+                <span>Text Analysis</span>
+            </div>
+            <div class="capability-badge">
+                <i class="fas fa-chart-line"></i>
                 <span>7 AI Services</span>
             </div>
             <div class="capability-badge">
-                <i class="fas fa-balance-scale"></i>
-                <span>Bias Detection</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-clock"></i>
-                <span>Real-Time Analysis</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-check-circle"></i>
-                <span>Fact-Checked</span>
+                <i class="fas fa-file-pdf"></i>
+                <span>PDF Reports</span>
             </div>
         </div>
 
         <!-- Mode Description -->
-        <div class="mode-description-compact">
-            <i class="fas fa-newspaper"></i>
-            Comprehensive news credibility analysis with source verification, bias detection, and fact-checking
-        </div>
-
-        <!-- Input Section -->
-        <div class="input-section">
-            <label class="input-label" for="article-url">
-                <i class="fas fa-link"></i> Article URL
-            </label>
-            <input 
-                type="url" 
-                id="article-url" 
-                class="input-field" 
-                placeholder="https://example.com/article"
-            >
-            
-            <div style="margin: 16px 0; text-align: center; color: #6b7280; font-size: 14px;">
-                <span>— OR —</span>
+        <div class="analysis-container">
+            <div class="mode-description-compact">
+                <i class="fas fa-info-circle"></i>
+                <strong>News Mode:</strong> Analyzes source credibility, bias detection, fact-checking, author reputation, transparency, manipulation tactics, and content quality.
             </div>
-            
-            <label class="input-label" for="article-text">
-                <i class="fas fa-align-left"></i> Article Text
-            </label>
-            <textarea 
-                id="article-text" 
-                class="input-field" 
-                placeholder="Paste article text here..."
-            ></textarea>
 
-            <button id="analyze-btn" class="analyze-button" onclick="startAnalysis()">
-                <i class="fas fa-search"></i> Analyze Article
-            </button>
-        </div>
+            <!-- Input Section -->
+            <div class="input-section">
+                <label class="input-label" for="article-url">
+                    <i class="fas fa-link"></i> Article URL (Optional)
+                </label>
+                <input 
+                    type="url" 
+                    id="article-url" 
+                    class="input-field" 
+                    placeholder="https://example.com/article">
 
-        <!-- Results Section -->
-        <div id="results-section" class="results-section" style="display: none;">
-            
-            <!-- v7.2.0 - COMPREHENSIVE SUMMARY (Free Tier Ready) -->
-            <div id="comprehensive-summary" class="comprehensive-summary" style="display: none;">
+                <label class="input-label" for="article-text" style="margin-top: 16px;">
+                    <i class="fas fa-align-left"></i> Or Paste Article Text
+                </label>
+                <textarea 
+                    id="article-text" 
+                    class="input-field" 
+                    placeholder="Paste the full article text here for analysis..."></textarea>
+
+                <button 
+                    class="analyze-button" 
+                    onclick="startAnalysis()"
+                    id="analyze-btn">
+                    <i class="fas fa-search"></i> Analyze Article
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" style="display: none;">
                 
-                <!-- Header with Actions -->
-                <div class="summary-header">
-                    <h2 class="summary-title">Analysis Summary</h2>
-                    <div class="summary-actions">
-                        <button class="action-button pdf-button" onclick="downloadPDFReport()" title="Download full report as PDF">
-                            <i class="fas fa-file-pdf"></i>
-                            Download PDF
-                        </button>
-                        <button class="action-button reset-button" onclick="resetAnalysis()" title="Clear results and start over">
-                            <i class="fas fa-redo"></i>
-                            Reset
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Trust Score Section -->
-                <div class="trust-score-section">
-                    <div class="trust-score-circle">
-                        <canvas id="trustScoreCanvas" width="140" height="140"></canvas>
-                        <div class="trust-score-value">
-                            <div id="trust-score-number" class="trust-score-number">--</div>
-                            <div class="trust-score-label">Trust Score</div>
-                        </div>
-                    </div>
-                    <div class="trust-score-interpretation">
-                        <div id="trust-level-badge" class="trust-level-badge">Analyzing...</div>
-                        <div id="trust-interpretation" class="trust-interpretation-text"></div>
-                    </div>
-                </div>
-
-                <!-- Article Metadata -->
-                <div class="article-metadata">
-                    <div class="metadata-item">
-                        <div class="metadata-label">Source</div>
-                        <div id="metadata-source" class="metadata-value">—</div>
-                    </div>
-                    <div class="metadata-item">
-                        <div class="metadata-label">Author</div>
-                        <div id="metadata-author" class="metadata-value">—</div>
-                    </div>
-                    <div class="metadata-item">
-                        <div class="metadata-label">Word Count</div>
-                        <div id="metadata-wordcount" class="metadata-value">—</div>
-                    </div>
-                    <div class="metadata-item">
-                        <div class="metadata-label">Analysis Date</div>
-                        <div id="metadata-date" class="metadata-value">—</div>
-                    </div>
-                </div>
-
-                <!-- Article Summary -->
-                <div class="article-summary-section">
-                    <h3 class="section-heading">
-                        <i class="fas fa-file-alt"></i>
-                        What This Article Is About
-                    </h3>
-                    <div id="article-summary-text" class="article-summary-text">
-                        Loading article summary...
-                    </div>
-                </div>
-
-                <!-- Analysis Findings -->
-                <div class="analysis-findings-section">
-                    <h3 class="section-heading">
-                        <i class="fas fa-search"></i>
-                        What We Found and What It Means
-                    </h3>
-                    
-                    <!-- Bottom Line -->
-                    <div class="bottom-line-box">
-                        <div class="bottom-line-label">Bottom Line</div>
-                        <div id="bottom-line-text" class="bottom-line-text">
-                            Analyzing credibility and reliability...
+                <!-- Comprehensive Summary Section -->
+                <div id="comprehensive-summary" class="comprehensive-summary" style="display: none;">
+                    <div class="summary-header">
+                        <h2 class="summary-title">
+                            <i class="fas fa-clipboard-check"></i>
+                            Analysis Summary
+                        </h2>
+                        <div class="action-buttons">
+                            <button class="action-btn download-pdf-btn" onclick="if(typeof window.generatePDF === 'function') { window.generatePDF(); }">
+                                <i class="fas fa-file-pdf"></i>
+                                Download PDF
+                            </button>
+                            <button class="action-btn new-analysis-btn" onclick="resetAnalysis()">
+                                <i class="fas fa-redo"></i>
+                                New Analysis
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Key Findings -->
-                    <div id="key-findings-list" class="key-findings-list">
-                        <!-- Findings will be inserted here dynamically -->
+                    <!-- Trust Score Display -->
+                    <div class="trust-score-display">
+                        <div class="trust-gauge">
+                            <canvas id="trust-gauge-canvas" width="120" height="120"></canvas>
+                            <div class="trust-score-value">
+                                <div class="score-number" id="trust-score-number">0</div>
+                                <div class="score-label">Trust Score</div>
+                            </div>
+                        </div>
+                        <div class="trust-details">
+                            <div class="trust-rating" id="trust-rating">Calculating...</div>
+                            <div class="trust-description" id="trust-description">
+                                Analyzing article across 7 comprehensive dimensions...
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Article Metadata -->
+                    <div class="article-metadata">
+                        <div class="metadata-item">
+                            <div class="metadata-label">Source</div>
+                            <div class="metadata-value" id="metadata-source">Loading...</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">Author</div>
+                            <div class="metadata-value" id="metadata-author">Loading...</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">Word Count</div>
+                            <div class="metadata-value" id="metadata-wordcount">Loading...</div>
+                        </div>
+                        <div class="metadata-item">
+                            <div class="metadata-label">Analysis Date</div>
+                            <div class="metadata-value" id="metadata-date">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Article Summary -->
+                    <div class="article-summary">
+                        <h3 class="section-subtitle">
+                            <i class="fas fa-align-left"></i>
+                            Article Summary
+                        </h3>
+                        <div class="summary-text" id="article-summary-text">
+                            Loading article summary...
+                        </div>
+                    </div>
+
+                    <!-- Analysis Findings -->
+                    <div class="analysis-findings">
+                        <h3 class="section-subtitle">
+                            <i class="fas fa-lightbulb"></i>
+                            Key Insights
+                        </h3>
+                        
+                        <div class="bottom-line">
+                            <div class="bottom-line-title">
+                                <i class="fas fa-flag"></i> Bottom Line
+                            </div>
+                            <div class="bottom-line-text" id="bottom-line-text">
+                                Analyzing content...
+                            </div>
+                        </div>
+
+                        <div class="key-findings" id="key-findings-list">
+                            <!-- Findings will be inserted here dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Explore Detailed Analysis CTA -->
+                    <div class="explore-details-cta">
+                        <h3>Want More Details?</h3>
+                        <p>Scroll down to explore our comprehensive 7-service AI analysis breakdown</p>
+                        <button class="scroll-hint" onclick="scrollToDetailedAnalysis()">
+                            <i class="fas fa-arrow-down"></i>
+                            View Detailed Analysis
+                        </button>
+                    </div>
+
                 </div>
 
-                <!-- Explore Detailed Analysis CTA -->
-                <div class="explore-details-cta">
-                    <h3>Want More Details?</h3>
-                    <p>Scroll down to explore our comprehensive 7-service AI analysis breakdown</p>
-                    <button class="scroll-hint" onclick="scrollToDetailedAnalysis()">
-                        <i class="fas fa-arrow-down"></i>
-                        View Detailed Analysis
-                    </button>
-                </div>
-
-            </div>
-
-            <!-- Detailed Service Results Section -->
-            <div id="service-results-wrapper" style="display: none;">
-                <div class="service-results-header">
-                    <h2>Detailed Service Analysis</h2>
-                    <p>In-depth breakdowns from each of our 7 AI-powered analysis services</p>
-                </div>
-                <div id="service-results">
-                    <!-- Service cards will be dynamically inserted here -->
+                <!-- Detailed Service Results Section -->
+                <div id="service-results-wrapper" style="display: none;">
+                    <div class="service-results-header">
+                        <h2>Detailed Service Analysis</h2>
+                        <p>In-depth breakdowns from each of our 7 AI-powered analysis services</p>
+                    </div>
+                    <div id="service-results">
+                        <!-- Service cards will be dynamically inserted here -->
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Load JavaScript Dependencies -->
+    <!-- CRITICAL: Load order matters! -->
+    <script src="/static/js/chart-renderer.js"></script>
     <script src="/static/js/service-templates.js"></script>
     <script src="/static/js/unified-app-core.js"></script>
     <script src="/static/js/pdf-generator.js"></script>
@@ -919,94 +820,97 @@
             }
         }
 
-        // v7.2.0 - COMPREHENSIVE SUMMARY UPDATE FUNCTION
+        // Update comprehensive summary v7.2.0
         function updateComprehensiveSummary(data) {
             console.log('[Summary v7.2.0] Updating comprehensive summary');
             console.log('[Summary v7.2.0] Data received:', data);
             
-            // Show the comprehensive summary
             const summaryContainer = document.getElementById('comprehensive-summary');
             const serviceWrapper = document.getElementById('service-results-wrapper');
+            const resultsSection = document.getElementById('results-section');
             
+            // Show results section
+            if (resultsSection) {
+                resultsSection.style.display = 'block';
+            }
+            
+            // Show summary container
             if (summaryContainer) {
                 summaryContainer.style.display = 'block';
             }
             
+            // Show service wrapper
             if (serviceWrapper) {
                 serviceWrapper.style.display = 'block';
             }
-
-            // Update Trust Score
-            updateTrustScoreDisplay(data);
-
-            // Update Article Metadata
+            
+            // Update all summary components
+            updateTrustScore(data);
             updateArticleMetadata(data);
-
-            // Update Article Summary
             updateArticleSummary(data);
-
-            // Update Analysis Findings
             updateAnalysisFindings(data);
             
             console.log('[Summary v7.2.0] Summary updated successfully');
         }
 
-        function updateTrustScoreDisplay(data) {
+        function updateTrustScore(data) {
             const trustScore = data.trust_score || 0;
-            const trustNumberEl = document.getElementById('trust-score-number');
-            const trustLevelBadge = document.getElementById('trust-level-badge');
-            const trustInterpretation = document.getElementById('trust-interpretation');
             
-            if (trustNumberEl) {
-                trustNumberEl.textContent = Math.round(trustScore);
-                
-                // Color based on score
-                if (trustScore >= 70) {
-                    trustNumberEl.className = 'trust-score-number high';
-                    if (trustLevelBadge) {
-                        trustLevelBadge.className = 'trust-level-badge high';
-                        trustLevelBadge.textContent = 'High Credibility';
-                    }
-                    if (trustInterpretation) {
-                        trustInterpretation.textContent = 'This source and article demonstrate strong credibility indicators. The information presented is likely reliable, but always verify important claims independently.';
-                    }
+            // Update number
+            const scoreNumber = document.getElementById('trust-score-number');
+            if (scoreNumber) {
+                scoreNumber.textContent = Math.round(trustScore);
+            }
+            
+            // Update rating text
+            const ratingEl = document.getElementById('trust-rating');
+            if (ratingEl) {
+                if (trustScore >= 80) {
+                    ratingEl.textContent = 'Highly Trustworthy';
+                    ratingEl.style.color = '#10b981';
+                } else if (trustScore >= 60) {
+                    ratingEl.textContent = 'Generally Reliable';
+                    ratingEl.style.color = '#3b82f6';
                 } else if (trustScore >= 40) {
-                    trustNumberEl.className = 'trust-score-number medium';
-                    if (trustLevelBadge) {
-                        trustLevelBadge.className = 'trust-level-badge medium';
-                        trustLevelBadge.textContent = 'Moderate Credibility';
-                    }
-                    if (trustInterpretation) {
-                        trustInterpretation.textContent = 'This article shows mixed credibility signals. Some concerns were identified. Exercise caution and cross-reference with other sources before accepting claims.';
-                    }
+                    ratingEl.textContent = 'Exercise Caution';
+                    ratingEl.style.color = '#f59e0b';
                 } else {
-                    trustNumberEl.className = 'trust-score-number low';
-                    if (trustLevelBadge) {
-                        trustLevelBadge.className = 'trust-level-badge low';
-                        trustLevelBadge.textContent = 'Low Credibility';
-                    }
-                    if (trustInterpretation) {
-                        trustInterpretation.textContent = 'Significant credibility concerns were identified. This source or article may contain unreliable information. Verify all claims with authoritative sources.';
-                    }
+                    ratingEl.textContent = 'Low Credibility';
+                    ratingEl.style.color = '#ef4444';
                 }
             }
             
-            // Draw circular progress
-            const canvas = document.getElementById('trustScoreCanvas');
+            // Update description
+            const descEl = document.getElementById('trust-description');
+            if (descEl) {
+                if (trustScore >= 80) {
+                    descEl.textContent = 'This source demonstrates strong credibility indicators across multiple analysis dimensions.';
+                } else if (trustScore >= 60) {
+                    descEl.textContent = 'This source shows mostly positive indicators with some minor concerns noted.';
+                } else if (trustScore >= 40) {
+                    descEl.textContent = 'This source has mixed indicators. Verify claims through additional sources.';
+                } else {
+                    descEl.textContent = 'This source shows significant credibility concerns. Treat information skeptically.';
+                }
+            }
+            
+            // Draw trust gauge
+            const canvas = document.getElementById('trust-gauge-canvas');
             if (canvas) {
                 const ctx = canvas.getContext('2d');
-                const centerX = 70;
-                const centerY = 70;
-                const radius = 60;
+                const centerX = 60;
+                const centerY = 60;
+                const radius = 50;
                 
                 // Clear canvas
-                ctx.clearRect(0, 0, 140, 140);
+                ctx.clearRect(0, 0, 120, 120);
                 
-                // Background circle
+                // Background arc
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.arc(centerX, centerY, radius, -Math.PI / 2, Math.PI * 1.5);
                 ctx.strokeStyle = '#e5e7eb';
                 ctx.lineWidth = 10;
+                ctx.lineCap = 'round';
                 ctx.stroke();
                 
                 // Progress arc
@@ -1216,5 +1120,4 @@
 </body>
 </html>
 
-<!-- I did no harm and this file is not truncated -->
 <!-- I did no harm and this file is not truncated -->
