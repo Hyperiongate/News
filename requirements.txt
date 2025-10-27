@@ -2,10 +2,17 @@
 # WITH DEBATE ARENA AND LIVE STREAMING FEATURES
 # Complete requirements with database support and live streaming
 # 
-# Date: October 24, 2025
-# Version: 11.0.0 - Fixed Deployment Hash Mismatch Issues
+# Date: October 27, 2025
+# Version: 10.2.5 - Transcript Creation with PDF Download
 #
-# LATEST CHANGES (October 24, 2025):
+# LATEST CHANGES (October 27, 2025):
+# =====================================
+# - VERIFIED: reportlab==4.0.7 for new transcript PDF download feature
+# - FEATURE: /api/youtube/create-transcript endpoint (no additional dependencies)
+# - FEATURE: /api/youtube/download-transcript-pdf endpoint (uses reportlab)
+# - All existing packages maintained - DO NO HARM ✓
+#
+# PREVIOUS CHANGES (October 24, 2025):
 # - Removed duplicate entries (requests, flask-limiter)
 # - Updated package versions to resolve hash conflicts
 # - Cleaned up structure and removed redundant comments
@@ -155,7 +162,11 @@ idna==3.6
 
 # ============================================================================
 # PDF GENERATION
+# *** CRITICAL FOR NEW TRANSCRIPT DOWNLOAD FEATURE (v10.2.5) ***
 # ============================================================================
+# Required for /api/youtube/download-transcript-pdf endpoint
+# Generates formatted PDFs with video metadata and transcript content
+# Used by "Create Transcript" button on YouTube URL tab
 reportlab==4.0.7
 
 # ============================================================================
@@ -177,10 +188,17 @@ Werkzeug==2.3.7
 # ============================================================================
 # NOTES FOR DEPLOYMENT
 # ============================================================================
-# All packages verified compatible as of October 24, 2025
+# All packages verified compatible as of October 27, 2025
 # No hash checking enabled - using clean version pinning
 # Tested on Python 3.9+ 
 # Compatible with Render.com deployment platform
+#
+# NEW IN v10.2.5 (October 27, 2025):
+# ----------------------------------
+# - reportlab==4.0.7 is REQUIRED for the new transcript PDF download feature
+# - This enables the "Create Transcript" button functionality
+# - Generates professionally formatted PDFs with video metadata
+# - No other new dependencies added
 #
 # To update in the future:
 # 1. Test locally first: pip install -r requirements.txt
@@ -193,7 +211,8 @@ Werkzeug==2.3.7
 # - Live Streaming: assemblyai, yt-dlp
 # - Debate Arena: Flask-SQLAlchemy, psycopg2-binary
 # - AI Services: openai, httpx
-# - PDF Reports: reportlab
+# - PDF Reports: reportlab (ANALYSIS RESULTS)
+# - PDF Transcripts: reportlab (NEW - TRANSCRIPT DOWNLOAD FEATURE)
 # ============================================================================
 
 # I did no harm and this file is not truncated
