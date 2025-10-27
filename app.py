@@ -1,7 +1,33 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.5
+Last Updated: October 27, 2025 - v10.2.6
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.6 (October 27, 2025):
+========================
+NEW FEATURE: Simple Debate Arena - Anonymous, No-Auth Debate System
+- ADDED: simple_debate_models.py integration - Simplified database models (no User model!)
+- ADDED: simple_debate_routes.py integration - Anonymous debate API routes
+- ADDED: /simple-debate-arena route - New simplified debate interface
+- FEATURE: Three simple modes - Pick a Fight, Join a Fight, Judgement City (Vote)
+- FEATURE: Anonymous voting via browser fingerprint
+- FEATURE: 250-word argument limit with live counter
+- FEATURE: Real-time voting bar chart visualization
+- PRESERVED: All v10.2.5 functionality including old /debate-arena (DO NO HARM ✓)
+
+HOW IT WORKS:
+1. Pick a Fight - User creates debate topic and first argument
+2. Join a Fight - Another user adds opposing argument
+3. Judgement City - Users vote on arguments with bar chart visualization
+4. No authentication required - completely anonymous
+5. Browser fingerprint prevents duplicate voting
+
+DEPLOYMENT REQUIREMENTS:
+- Add simple_debate_models.py to project root
+- Add simple_debate_routes.py to project root
+- Add templates/simple-debate-arena.html
+- Deploy updated app.py
+- All existing features preserved (news analysis, transcripts, old debate arena)
 
 CHANGES IN v10.2.5 (October 27, 2025):
 ========================
@@ -21,45 +47,12 @@ HOW IT WORKS:
 5. User can download as formatted PDF
 6. No job creation, no analysis, instant results
 
-DEPLOYMENT REQUIREMENTS:
-- Add to requirements.txt: reportlab
-- Deploy updated app.py
-- Deploy updated templates/transcript.html
-- All existing functionality preserved
-
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.5 - TRANSCRIPT CREATION WITH PDF DOWNLOAD
+Version: 10.2.6 - SIMPLE DEBATE ARENA INTEGRATION
 Date: October 27, 2025
 
-CRITICAL FIX FROM 10.2.3:
-========================
-ROOT CAUSE: Missing static page routes for navigation menu items
-  - Navigation header showed: Features, About, Live Stream, Debate Arena, Contact
-  - But app.py only had routes for: News Analysis (/) and Transcript
-  - Users got 404 errors clicking on Features, About, Contact, Live Stream, Debate Arena
-
-THE FIX:
-========
-1. ADDED: 5 missing static page routes:
-   - /features → features.html
-   - /about → about.html
-   - /contact → contact.html
-   - /live-stream → live-stream.html
-   - /debate-arena → debate-arena.html
-
-2. PRESERVED: All v10.2.3 functionality (DO NO HARM ✓)
-   - YouTube job integration still works
-   - News analysis still works
-   - Transcript analysis still works
-   - API routes unchanged
-
-DEPLOYMENT:
-===========
-Replace existing app.py completely with this file.
-All navigation menu items will now work properly.
-
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 26, 2025 - v10.2.4 NAVIGATION FIX
+Last modified: October 27, 2025 - v10.2.6 SIMPLE DEBATE ARENA
 """
 
 import os
@@ -114,7 +107,7 @@ logger.info(f"  template_folder: {app.template_folder}")
 logger.info("=" * 80)
 
 # ============================================================================
-# NEW: DATABASE CONFIGURATION FOR DEBATE ARENA (v9.0.0)
+# DATABASE CONFIGURATION FOR DEBATE ARENAS (v9.0.0 + v10.2.6)
 # ============================================================================
 
 database_url = os.getenv('DATABASE_URL')
@@ -136,7 +129,7 @@ if database_url:
     
     logger.info("=" * 80)
     logger.info("DATABASE CONFIGURATION:")
-    logger.info("  ✓ PostgreSQL configured for Debate Arena")
+    logger.info("  ✓ PostgreSQL configured for Debate Arenas")
     logger.info("  ✓ Connection pooling enabled")
     logger.info("  ✓ Auto-reconnect on failure")
     logger.info("=" * 80)
@@ -145,28 +138,55 @@ if database_url:
     from flask_sqlalchemy import SQLAlchemy
     db = SQLAlchemy(app)
     
-    # Import debate models (optional - gracefully handle if missing)
+    # Import OLD debate models (optional - gracefully handle if missing)
+    old_debate_available = False
     try:
         from debate_models import User, Debate, Argument, Vote
-        logger.info("  ✓ Debate models imported successfully")
+        logger.info("  ✓ Old debate models imported successfully")
+        old_debate_available = True
     except ImportError as e:
-        logger.warning(f"  ⚠ Debate models not found: {e}")
-        logger.warning("  ⚠ Debate Arena will be disabled")
-        db = None  # Disable debate features if models missing
+        logger.warning(f"  ⚠ Old debate models not found: {e}")
+        logger.warning("  ⚠ Old Debate Arena (/debate-arena) will be disabled")
     
-    # Initialize database (only if models imported successfully)
-    if db is not None:
+    # Import NEW simple debate models (v10.2.6)
+    simple_debate_available = False
+    try:
+        from simple_debate_models import SimpleDebate, SimpleArgument, SimpleVote
+        from simple_debate_routes import simple_debate_bp
+        
+        # Register the simple debate blueprint
+        app.register_blueprint(simple_debate_bp)
+        
+        logger.info("  ✓ Simple debate models imported successfully")
+        logger.info("  ✓ Simple debate routes registered at /api/simple-debate")
+        simple_debate_available = True
+    except ImportError as e:
+        logger.warning(f"  ⚠ Simple debate models not found: {e}")
+        logger.warning("  ⚠ Simple Debate Arena (/simple-debate-arena) will be disabled")
+    
+    # Initialize database (create all tables)
+    if old_debate_available or simple_debate_available:
         with app.app_context():
             try:
                 db.create_all()
                 logger.info("  ✓ Database tables created/verified")
+                if old_debate_available:
+                    logger.info("    - Old debate tables: users, debates, arguments, votes")
+                if simple_debate_available:
+                    logger.info("    - Simple debate tables: simple_debates, simple_arguments, simple_votes")
             except Exception as e:
                 logger.error(f"  ✗ Database initialization error: {e}")
-                db = None  # Disable if initialization fails
+                old_debate_available = False
+                simple_debate_available = False
+    else:
+        logger.warning("  ⚠ No debate models available - debate features disabled")
+        db = None
 else:
     db = None
+    old_debate_available = False
+    simple_debate_available = False
     logger.info("=" * 80)
-    logger.info("DATABASE: Not configured (Debate Arena disabled)")
+    logger.info("DATABASE: Not configured (All Debate Arenas disabled)")
     logger.info("=" * 80)
 
 # ============================================================================
@@ -202,571 +222,460 @@ def extract_article_text(url: str) -> Tuple[Optional[str], Optional[Dict]]:
         for element in soup(['script', 'style', 'nav', 'header', 'footer', 'aside']):
             element.decompose()
         
-        # Extract metadata
+        # Try to find the article title
+        title = None
+        for selector in ['h1', 'title', '[property="og:title"]', '.article-title']:
+            title_elem = soup.select_one(selector)
+            if title_elem:
+                title = title_elem.get_text(strip=True)
+                if title:
+                    break
+        
+        # Try to find the publication date
+        pub_date = None
+        for selector in ['time', '[property="article:published_time"]', '.publish-date', '.date']:
+            date_elem = soup.select_one(selector)
+            if date_elem:
+                pub_date = date_elem.get('datetime') or date_elem.get_text(strip=True)
+                if pub_date:
+                    break
+        
+        # Extract main article text
+        article_text = []
+        
+        # Try common article selectors
+        article_selectors = [
+            'article',
+            '[role="main"]',
+            '.article-content',
+            '.post-content',
+            '.entry-content',
+            'main'
+        ]
+        
+        article_container = None
+        for selector in article_selectors:
+            article_container = soup.select_one(selector)
+            if article_container:
+                break
+        
+        if article_container:
+            # Extract paragraphs from article
+            paragraphs = article_container.find_all(['p', 'h2', 'h3'])
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                if len(text) > 50:  # Filter out very short text
+                    article_text.append(text)
+        else:
+            # Fallback: get all paragraphs
+            paragraphs = soup.find_all('p')
+            for p in paragraphs:
+                text = p.get_text(strip=True)
+                if len(text) > 50:
+                    article_text.append(text)
+        
+        if not article_text:
+            logger.warning(f"No substantial article text found for {url}")
+            return None, None
+        
+        full_text = '\n\n'.join(article_text)
+        
         metadata = {
-            'title': soup.find('title').get_text() if soup.find('title') else None,
             'url': url,
-            'domain': urlparse(url).netloc
+            'title': title,
+            'publication_date': pub_date,
+            'word_count': len(full_text.split())
         }
         
-        # Try to find article text
-        article_text = None
-        
-        # Try article tags first
-        article = soup.find('article')
-        if article:
-            paragraphs = article.find_all('p')
-            if paragraphs:
-                article_text = '\n\n'.join([p.get_text().strip() for p in paragraphs])
-        
-        # Fall back to all paragraphs
-        if not article_text:
-            paragraphs = soup.find_all('p')
-            if paragraphs:
-                article_text = '\n\n'.join([p.get_text().strip() for p in paragraphs])
-        
-        return article_text, metadata
+        return full_text, metadata
         
     except Exception as e:
-        logger.error(f"Error extracting article: {e}")
+        logger.error(f"Error extracting article from {url}: {e}")
         return None, None
 
-# ============================================================================
-# TRANSCRIPT & LIVE STREAM ROUTES (v10.0.0) - FIXED IN v10.2.2
-# ============================================================================
-
-# NEW IN v10.2.3: Import job management from transcript_routes
-# This allows /api/youtube/process to create jobs properly
-transcript_job_api = None
-
-try:
-    from transcript_routes import transcript_bp
-    # Also import the job management functions we need
-    from transcript_routes import create_job_via_api
-    transcript_job_api = create_job_via_api
-    
-    app.register_blueprint(transcript_bp, url_prefix='/api/transcript')
-    logger.info("=" * 80)
-    logger.info("TRANSCRIPT ROUTES:")
-    
-    # List all transcript routes
-    transcript_routes = [rule.rule for rule in app.url_map.iter_rules() if '/api/transcript/' in rule.rule]
-    logger.info(f"✓ Registered transcript routes: {len(transcript_routes)} routes")
-    for route in transcript_routes:
-        logger.info(f"  - {route}")
-    
-    logger.info("  ✓ Job management API imported for YouTube integration")
-    logger.info("=" * 80)
-    
-except ImportError as e:
-    logger.warning(f"⚠ Failed to import transcript_routes.py: {e}")
-    logger.warning("⚠ Transcript analysis endpoints will not be available")
-    logger.warning("⚠ YouTube processing will also be disabled")
-    logger.info("=" * 80)
+def validate_url(url: str) -> bool:
+    """Validate if a string is a valid URL."""
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
 
 # ============================================================================
-# STATIC PAGE ROUTES (v10.2.4) - NAVIGATION FIX
+# STATIC PAGE ROUTES
 # ============================================================================
 
 @app.route('/')
 def index():
-    """News Analysis page (main page)"""
+    """Main page - News Analysis"""
     return render_template('index.html')
 
 @app.route('/transcript')
-def transcript_page():
-    """Standalone transcript analysis page"""
+def transcript():
+    """Transcript analysis page"""
     return render_template('transcript.html')
 
-# NEW IN v10.2.4: Added missing static page routes for navigation menu
 @app.route('/features')
-def features_page():
+def features():
     """Features page"""
     return render_template('features.html')
 
 @app.route('/about')
-def about_page():
+def about():
     """About page"""
     return render_template('about.html')
 
 @app.route('/contact')
-def contact_page():
+def contact():
     """Contact page"""
     return render_template('contact.html')
 
 @app.route('/live-stream')
-def live_stream_page():
-    """Live Stream Analysis page"""
+def live_stream():
+    """Live stream analysis page"""
     return render_template('live-stream.html')
 
 @app.route('/debate-arena')
-def debate_arena_page():
-    """Debate Arena page"""
+def debate_arena():
+    """Old Debate Arena page (v9.0.0 - with authentication)"""
+    if not old_debate_available:
+        return render_template('error.html', 
+                             message="Old Debate Arena is not available. Please set DATABASE_URL and ensure debate_models.py exists."), 503
     return render_template('debate-arena.html')
 
-# ============================================================================
-# DEBATE ARENA ROUTES (v9.0.0) - Optional
-# ============================================================================
-
-# Only register debate routes if database is available
-if database_url and db:
-    try:
-        from debate_routes import debate_bp
-        app.register_blueprint(debate_bp, url_prefix='/api/debate')
-        logger.info("=" * 80)
-        logger.info("DEBATE ARENA ROUTES:")
-        logger.info("  ✓ Debate routes registered at /api/debate/*")
-        logger.info("=" * 80)
-    except ImportError as e:
-        logger.warning(f"⚠ Failed to import debate_routes: {e}")
-        logger.warning("⚠ Debate Arena will not be available")
-        logger.info("=" * 80)
-
-# ============================================================================
-# NEWS ANALYSIS API ROUTES (v8.5.1)
-# ============================================================================
-
-@app.route('/api/analyze', methods=['POST'])
-def analyze_article():
+@app.route('/simple-debate-arena')
+def simple_debate_arena():
     """
-    Main news analysis endpoint (v8.5.1)
-    Analyzes news articles using 7 AI services
+    NEW Simple Debate Arena page (v10.2.6 - anonymous, no authentication)
+    
+    Features:
+    - Pick a Fight: Create debate topic and first argument
+    - Join a Fight: Add opposing argument to open debate
+    - Judgement City: Vote on completed debates
+    - Anonymous voting via browser fingerprint
+    - 250-word argument limit
+    - Real-time voting bar chart
     """
+    if not simple_debate_available:
+        return render_template('error.html', 
+                             message="Simple Debate Arena is not available. Please set DATABASE_URL and ensure simple_debate_models.py and simple_debate_routes.py exist."), 503
+    return render_template('simple-debate-arena.html')
+
+# ============================================================================
+# API ROUTES - NEWS ANALYSIS
+# ============================================================================
+
+@app.route('/api/analyze-news', methods=['POST'])
+def analyze_news():
+    """Main endpoint for news article analysis."""
     try:
         data = request.get_json()
         
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-        
-        url = data.get('url', '').strip()
-        
-        if not url:
-            return jsonify({'success': False, 'error': 'No URL provided'}), 400
-        
-        logger.info("=" * 80)
-        logger.info(f"NEWS ANALYSIS REQUEST:")
-        logger.info(f"  URL: {url}")
-        logger.info(f"  Timestamp: {datetime.now().isoformat()}")
-        logger.info("=" * 80)
-        
-        # Extract article content
-        logger.info("Step 1: Extracting article content...")
-        article_text, metadata = extract_article_text(url)
-        
-        if not article_text:
-            return jsonify({
-                'success': False,
-                'error': 'Could not extract article content from URL'
-            }), 400
-        
-        logger.info(f"  ✓ Extracted {len(article_text)} characters")
-        
-        # Analyze with NewsAnalyzer
-        logger.info("Step 2: Running comprehensive analysis...")
-        raw_results = news_analyzer_service.analyze(url, article_text, metadata)
-        
-        if not raw_results.get('success'):
-            return jsonify({
-                'success': False,
-                'error': raw_results.get('error', 'Analysis failed')
-            }), 500
-        
-        logger.info("  ✓ Analysis complete")
-        
-        # Transform for frontend
-        transformed_results = data_transformer.transform_response(raw_results)
-        
-        logger.info(f"Sending to frontend:")
-        logger.info(f"  - Success: {transformed_results.get('success')}")
-        logger.info(f"  - Trust Score: {transformed_results.get('trust_score')}")
-        logger.info(f"  - Source: {transformed_results.get('source')}")
-        logger.info(f"  - Author: {transformed_results.get('author')}")
-        logger.info("=" * 80)
-        
-        return jsonify(transformed_results)
-        
-    except Exception as e:
-        logger.error(f"Analysis error: {e}", exc_info=True)
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-# ============================================================================
-# YOUTUBE TRANSCRIPT API (FIXED IN v10.2.3)
-# ============================================================================
-
-@app.route('/api/youtube/process', methods=['POST'])
-def process_youtube():
-    """
-    Process YouTube URL and extract transcript with JOB CREATION
-    
-    FIXED IN v10.2.3: Now properly integrates with job system!
-    
-    Flow:
-      1. Extract YouTube transcript using ScrapingBee
-      2. Create a job in the job management system
-      3. Start background processing (claim extraction + fact-checking)
-      4. Return job_id to frontend
-      5. Frontend polls /api/transcript/status/{job_id}
-    
-    Frontend sends: 
-        {'url': 'https://www.youtube.com/watch?v=...'} 
-        OR
-        {'youtube_url': 'https://www.youtube.com/watch?v=...'}
-    
-    Returns:
-        Success:
-            {
-                'success': True,
-                'job_id': 'abc123...',
-                'message': 'Analysis started',
-                'video_title': 'Video Title',
-                'status_url': '/api/transcript/status/abc123...'
-            }
-        
-        Error:
-            {
-                'success': False,
-                'error': 'Error message',
-                'suggestion': 'Helpful suggestion'
-            }
-    """
-    try:
-        data = request.json
-        
-        # Accept both 'url' and 'youtube_url' parameters
-        url = data.get('url') or data.get('youtube_url')
-        
-        logger.info("=" * 80)
-        logger.info("API /api/youtube/process endpoint called - Version 10.2.3")
-        logger.info(f"YouTube URL: {url}")
-        
-        if not url:
-            logger.error("No YouTube URL provided")
-            return jsonify({
-                'success': False,
-                'error': 'No YouTube URL provided',
-                'suggestion': 'Please provide a valid YouTube URL'
-            }), 400
-        
-        # Validate URL format
-        if 'youtube.com' not in url and 'youtu.be' not in url:
-            logger.error("Invalid YouTube URL format")
-            return jsonify({
-                'success': False,
-                'error': 'Invalid YouTube URL',
-                'suggestion': 'URL must be from youtube.com or youtu.be'
-            }), 400
-        
-        # Check if transcript_routes is available
-        if transcript_job_api is None:
-            logger.error("Transcript routes not available - cannot create job")
-            return jsonify({
-                'success': False,
-                'error': 'Transcript processing system not available',
-                'suggestion': 'Please ensure transcript_routes.py is installed'
-            }), 503
-        
-        # Step 1: Extract YouTube transcript
-        logger.info("Step 1: Extracting YouTube transcript...")
-        result = extract_youtube_transcript(url)
-        
-        if not result.get('success'):
-            error_msg = result.get('error', 'Unknown error')
-            logger.error(f"Step 1: Failed - {error_msg}")
-            logger.info("=" * 80)
-            return jsonify({
-                'success': False,
-                'error': error_msg,
-                'suggestion': result.get('suggestion', 'Please try again')
-            }), 400
-        
-        # Step 2: Extract transcript text
-        transcript = result.get('transcript', '')
-        if not transcript:
-            logger.error("Step 2: No transcript extracted from video")
-            logger.info("=" * 80)
-            return jsonify({
-                'success': False,
-                'error': 'No transcript available for this video',
-                'suggestion': 'This video may not have captions enabled'
-            }), 400
-        
-        transcript_length = len(transcript)
-        video_title = result.get('metadata', {}).get('title', 'Unknown')
-        video_channel = result.get('metadata', {}).get('channel', 'Unknown')
-        
-        logger.info(f"Step 2: Success! Extracted {transcript_length} characters")
-        logger.info(f"  - Video Title: {video_title}")
-        logger.info(f"  - Channel: {video_channel}")
-        
-        # Step 3: Create job via transcript_routes API
-        logger.info("Step 3: Creating analysis job...")
-        job_response = transcript_job_api(transcript, 'youtube', result.get('metadata', {}))
-        
-        if not job_response.get('success'):
-            logger.error(f"Step 3: Failed to create job - {job_response.get('error')}")
-            logger.info("=" * 80)
-            return jsonify({
-                'success': False,
-                'error': 'Failed to start analysis',
-                'suggestion': 'Please try again'
-            }), 500
-        
-        job_id = job_response.get('job_id')
-        logger.info(f"Step 3: ✓ Created job {job_id}")
-        
-        logger.info("Step 4: Background processing started")
-        logger.info("=" * 80)
-        
-        # Step 4: Return job_id to frontend
-        return jsonify({
-            'success': True,
-            'job_id': job_id,
-            'message': 'YouTube video processed successfully - analysis in progress',
-            'video_title': video_title,
-            'video_channel': video_channel,
-            'transcript_length': transcript_length,
-            'status_url': f'/api/transcript/status/{job_id}'
-        })
-        
-    except Exception as e:
-        logger.error(f"YouTube processing error: {e}", exc_info=True)
-        traceback.print_exc()
-        return jsonify({
-            'success': False,
-            'error': f'Unexpected error: {str(e)}',
-            'suggestion': 'Please try again later or contact support'
-        }), 500
-
-# ============================================================================
-
-@app.route('/api/youtube/create-transcript', methods=['POST'])
-def create_transcript():
-    """
-    NEW ENDPOINT v3.1.0 (October 27, 2025): Extract YouTube transcript WITHOUT analysis.
-    This endpoint only extracts and returns the transcript with metadata.
-    No job creation, no background processing, no fact-checking.
-    
-    Returns:
-        - transcript: Full transcript text
-        - metadata: Video information (title, channel, duration, etc.)
-    """
-    try:
-        logger.info("=" * 80)
-        logger.info("TRANSCRIPT CREATION REQUEST (NO ANALYSIS)")
-        logger.info("=" * 80)
-        
-        # Get and validate URL
-        data = request.get_json()
-        if not data:
-            logger.error("No data provided in request")
-            return jsonify({
-                'success': False,
-                'error': 'No data provided',
-                'suggestion': 'Please include YouTube URL in request body'
-            }), 400
-        
-        url = data.get('url', '').strip()
-        logger.info(f"URL received: {url}")
-        
-        if not url:
-            logger.error("No URL provided")
-            return jsonify({
-                'success': False,
-                'error': 'No YouTube URL provided',
-                'suggestion': 'Please provide a valid YouTube video URL'
-            }), 400
-        
-        # Extract transcript
-        logger.info("Calling extract_youtube_transcript()...")
-        result = extract_youtube_transcript(url)
-        
-        if not result.get('success'):
-            error_msg = result.get('error', 'Failed to extract transcript')
-            logger.error(f"Transcript extraction failed - {error_msg}")
-            logger.info("=" * 80)
-            
-            # Provide specific guidance for ScrapingBee issues
-            if 'API error: 500' in error_msg or '500' in error_msg:
-                return jsonify({
-                    'success': False,
-                    'error': 'ScrapingBee service is temporarily unavailable',
-                    'suggestion': 'This is a temporary issue with the transcript service. Please try:\n1. Wait a few minutes and try again\n2. Use "Analyze Video" instead (uses same service but may work)\n3. Try a different video',
-                    'technical_details': error_msg
-                }), 503  # Service Unavailable
-            elif 'API error: 429' in error_msg or '429' in error_msg:
-                return jsonify({
-                    'success': False,
-                    'error': 'API rate limit reached',
-                    'suggestion': 'The transcript service has reached its usage limit. Please try again later or contact support.',
-                    'technical_details': error_msg
-                }), 429  # Too Many Requests
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': error_msg,
-                    'suggestion': result.get('suggestion', 'Please try again with a different video')
-                }), 400
-        
-        # Extract transcript text
-        transcript = result.get('transcript', '')
-        if not transcript:
-            logger.error("No transcript extracted from video")
-            logger.info("=" * 80)
-            return jsonify({
-                'success': False,
-                'error': 'No transcript available for this video',
-                'suggestion': 'This video may not have captions enabled'
-            }), 400
-        
-        transcript_length = len(transcript)
-        word_count = len(transcript.split())
-        video_title = result.get('metadata', {}).get('title', 'Unknown')
-        video_channel = result.get('metadata', {}).get('channel', 'Unknown')
-        
-        logger.info(f"✓ Success! Extracted {transcript_length} characters ({word_count} words)")
-        logger.info(f"  - Video Title: {video_title}")
-        logger.info(f"  - Channel: {video_channel}")
-        logger.info("=" * 80)
-        
-        # Return transcript data immediately (no job creation)
-        return jsonify({
-            'success': True,
-            'transcript': transcript,
-            'metadata': result.get('metadata', {}),
-            'stats': {
-                'character_count': transcript_length,
-                'word_count': word_count
-            }
-        })
-        
-    except Exception as e:
-        logger.error(f"Transcript creation error: {e}", exc_info=True)
-        logger.error(f"Error type: {type(e).__name__}")
-        logger.error(f"Error details: {str(e)}")
-        logger.info("=" * 80)
-        return jsonify({
-            'success': False,
-            'error': f'Unexpected error: {str(e)}',
-            'suggestion': 'Please try again later or contact support',
-            'error_type': type(e).__name__
-        }), 500
-
-@app.route('/api/youtube/download-transcript-pdf', methods=['POST'])
-def download_transcript_pdf():
-    """
-    NEW ENDPOINT v3.1.0 (October 27, 2025): Generate and download transcript as PDF.
-    Receives transcript data and metadata, generates formatted PDF.
-    
-    Requires: pip install reportlab
-    """
-    try:
-        logger.info("=" * 80)
-        logger.info("PDF GENERATION REQUEST")
-        logger.info("=" * 80)
-        
-        # Import reportlab for PDF generation
-        try:
-            from reportlab.lib.pagesizes import letter
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-            from reportlab.lib.units import inch
-            from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
-            from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
-            from io import BytesIO
-        except ImportError:
-            logger.error("reportlab not installed")
-            return jsonify({
-                'success': False,
-                'error': 'PDF generation library not available',
-                'suggestion': 'Server needs reportlab installed: pip install reportlab'
-            }), 500
-        
-        # Get transcript data
-        data = request.get_json()
         if not data:
             return jsonify({
                 'success': False,
                 'error': 'No data provided'
             }), 400
         
-        transcript = data.get('transcript', '')
-        metadata = data.get('metadata', {})
+        url = data.get('url')
+        article_text = data.get('article_text')
         
-        if not transcript:
+        logger.info("=" * 80)
+        logger.info("NEW ANALYSIS REQUEST:")
+        logger.info(f"  URL provided: {bool(url)}")
+        logger.info(f"  Text provided: {bool(article_text)}")
+        logger.info("=" * 80)
+        
+        # Validate input
+        if not url and not article_text:
             return jsonify({
                 'success': False,
-                'error': 'No transcript provided'
+                'error': 'Either URL or article text must be provided'
             }), 400
         
-        # Extract metadata
-        video_title = metadata.get('title', 'YouTube Video Transcript')
-        channel_name = metadata.get('channel', 'Unknown Channel')
-        duration = metadata.get('duration_formatted', 'Unknown')
-        upload_date = metadata.get('upload_date', 'Unknown')
+        # Extract article if URL provided
+        metadata = None
+        if url:
+            if not validate_url(url):
+                return jsonify({
+                    'success': False,
+                    'error': 'Invalid URL format'
+                }), 400
+            
+            logger.info(f"Extracting article from URL: {url}")
+            extracted_text, metadata = extract_article_text(url)
+            
+            if not extracted_text:
+                return jsonify({
+                    'success': False,
+                    'error': 'Failed to extract article text from URL. Please try pasting the article text directly.'
+                }), 400
+            
+            article_text = extracted_text
+            logger.info(f"Successfully extracted {len(article_text)} characters")
         
-        logger.info(f"Generating PDF for: {video_title}")
+        # Analyze the article
+        logger.info("Starting comprehensive analysis...")
+        raw_results = news_analyzer_service.analyze_news(
+            article_text=article_text,
+            url=url
+        )
+        
+        logger.info("Analysis complete - transforming data...")
+        
+        # Transform the results
+        final_results = data_transformer.transform_analysis_results(
+            raw_results=raw_results,
+            url=url,
+            metadata=metadata
+        )
+        
+        logger.info("Data transformation complete")
+        logger.info("=" * 80)
+        
+        return jsonify({
+            'success': True,
+            'results': final_results
+        })
+        
+    except Exception as e:
+        logger.error("=" * 80)
+        logger.error("ANALYSIS ERROR:")
+        logger.error(f"Error: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        logger.error("=" * 80)
+        
+        return jsonify({
+            'success': False,
+            'error': f'Analysis failed: {str(e)}'
+        }), 500
+
+# ============================================================================
+# API ROUTES - TRANSCRIPT ANALYSIS (v10.2.3)
+# ============================================================================
+
+# Store active jobs in memory (in production, use Redis or database)
+transcript_jobs = {}
+transcript_job_api = None
+
+try:
+    from services.transcript_analyzer import TranscriptAnalyzer
+    transcript_job_api = TranscriptAnalyzer()
+    logger.info("TranscriptAnalyzer initialized successfully")
+except ImportError as e:
+    logger.warning(f"TranscriptAnalyzer not available: {e}")
+    transcript_job_api = None
+
+@app.route('/api/youtube/process', methods=['POST'])
+def process_youtube_transcript():
+    """
+    Process YouTube URL for transcript extraction and analysis
+    NOW PROPERLY CREATES JOB_ID (v10.2.3 FIX)
+    """
+    try:
+        if not transcript_job_api:
+            return jsonify({
+                'success': False,
+                'error': 'Transcript analysis service not available'
+            }), 503
+        
+        data = request.get_json()
+        youtube_url = data.get('url')
+        
+        if not youtube_url:
+            return jsonify({
+                'success': False,
+                'error': 'YouTube URL is required'
+            }), 400
+        
+        logger.info(f"Processing YouTube URL: {youtube_url}")
+        
+        # Create a job and start processing
+        job_id = transcript_job_api.create_job(youtube_url)
+        
+        logger.info(f"✅ Created job_id: {job_id} for YouTube analysis")
+        
+        # Return immediately with job_id
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'Processing started',
+            'status': 'processing'
+        })
+        
+    except Exception as e:
+        logger.error(f"YouTube processing error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/youtube/status/<job_id>', methods=['GET'])
+def get_youtube_job_status(job_id):
+    """Check the status of a YouTube transcript analysis job"""
+    try:
+        if not transcript_job_api:
+            return jsonify({
+                'success': False,
+                'error': 'Transcript analysis service not available'
+            }), 503
+        
+        status = transcript_job_api.get_job_status(job_id)
+        
+        if not status:
+            return jsonify({
+                'success': False,
+                'error': 'Job not found'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'status': status['status'],
+            'data': status.get('data'),
+            'error': status.get('error')
+        })
+        
+    except Exception as e:
+        logger.error(f"Status check error for job {job_id}: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# ============================================================================
+# API ROUTES - TRANSCRIPT CREATION WITHOUT ANALYSIS (v10.2.5)
+# ============================================================================
+
+@app.route('/api/youtube/create-transcript', methods=['POST'])
+def create_transcript_only():
+    """
+    NEW in v10.2.5: Create transcript from YouTube URL without analysis
+    Returns transcript data immediately without creating a job
+    """
+    try:
+        data = request.get_json()
+        youtube_url = data.get('url')
+        
+        if not youtube_url:
+            return jsonify({
+                'success': False,
+                'error': 'YouTube URL is required'
+            }), 400
+        
+        logger.info(f"Creating transcript for YouTube URL: {youtube_url}")
+        
+        # Extract transcript directly
+        transcript_data = extract_youtube_transcript(youtube_url)
+        
+        if not transcript_data or not transcript_data.get('transcript'):
+            return jsonify({
+                'success': False,
+                'error': 'Failed to extract transcript. Please check the URL and try again.'
+            }), 400
+        
+        logger.info(f"✅ Successfully extracted transcript ({len(transcript_data['transcript'])} characters)")
+        
+        return jsonify({
+            'success': True,
+            'transcript_data': transcript_data
+        })
+        
+    except Exception as e:
+        logger.error(f"Transcript creation error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': f'Failed to create transcript: {str(e)}'
+        }), 500
+
+
+@app.route('/api/youtube/download-transcript-pdf', methods=['POST'])
+def download_transcript_pdf():
+    """
+    NEW in v10.2.5: Generate and download transcript as PDF
+    """
+    try:
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
+        from reportlab.lib.enums import TA_LEFT, TA_CENTER
+        from io import BytesIO
+        
+        data = request.get_json()
+        transcript_data = data.get('transcript_data')
+        
+        if not transcript_data:
+            return jsonify({
+                'success': False,
+                'error': 'Transcript data is required'
+            }), 400
         
         # Create PDF in memory
         buffer = BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=letter,
-                              topMargin=0.75*inch, bottomMargin=0.75*inch,
-                              leftMargin=0.75*inch, rightMargin=0.75*inch)
+        doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.75*inch, bottomMargin=0.75*inch)
         
-        # Build PDF content
+        # Styles
         styles = getSampleStyleSheet()
-        story = []
-        
-        # Custom styles
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
             fontSize=18,
-            textColor='#3b82f6',
+            textColor='#1a1a1a',
             spaceAfter=12,
             alignment=TA_CENTER
         )
         
-        metadata_style = ParagraphStyle(
-            'Metadata',
-            parent=styles['Normal'],
-            fontSize=10,
-            textColor='#4b5563',
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=12,
+            textColor='#4a4a4a',
             spaceAfter=6,
-            alignment=TA_CENTER
+            spaceBefore=12
         )
         
-        content_style = ParagraphStyle(
-            'Content',
-            parent=styles['Normal'],
-            fontSize=11,
-            leading=16,
-            alignment=TA_JUSTIFY,
-            spaceAfter=12
+        body_style = ParagraphStyle(
+            'CustomBody',
+            parent=styles['BodyText'],
+            fontSize=10,
+            textColor='#2a2a2a',
+            spaceAfter=6,
+            alignment=TA_LEFT
         )
         
-        # Add title
-        story.append(Paragraph(video_title, title_style))
+        # Build PDF content
+        story = []
+        
+        # Title
+        story.append(Paragraph("YouTube Video Transcript", title_style))
         story.append(Spacer(1, 0.2*inch))
         
-        # Add metadata
-        story.append(Paragraph(f"<b>Channel:</b> {channel_name}", metadata_style))
-        story.append(Paragraph(f"<b>Duration:</b> {duration}", metadata_style))
-        story.append(Paragraph(f"<b>Published:</b> {upload_date}", metadata_style))
-        story.append(Paragraph(f"<b>Transcript Length:</b> {len(transcript):,} characters", metadata_style))
+        # Metadata
+        if transcript_data.get('title'):
+            story.append(Paragraph(f"<b>Title:</b> {transcript_data['title']}", body_style))
+        if transcript_data.get('channel'):
+            story.append(Paragraph(f"<b>Channel:</b> {transcript_data['channel']}", body_style))
+        if transcript_data.get('duration'):
+            story.append(Paragraph(f"<b>Duration:</b> {transcript_data['duration']}", body_style))
+        if transcript_data.get('upload_date'):
+            story.append(Paragraph(f"<b>Upload Date:</b> {transcript_data['upload_date']}", body_style))
+        
         story.append(Spacer(1, 0.3*inch))
         
-        # Add separator line
-        story.append(Paragraph("<hr/>", styles['Normal']))
-        story.append(Spacer(1, 0.2*inch))
+        # Transcript content
+        story.append(Paragraph("Transcript", heading_style))
+        story.append(Spacer(1, 0.1*inch))
         
-        # Add transcript content
-        # Split into paragraphs for better formatting
-        paragraphs = transcript.split('\n\n')
+        # Split transcript into paragraphs and add to PDF
+        transcript_text = transcript_data.get('transcript', '')
+        paragraphs = transcript_text.split('\n\n')
+        
         for para in paragraphs:
             if para.strip():
-                # Clean up the text for PDF
-                clean_para = para.strip().replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                story.append(Paragraph(clean_para, content_style))
+                # Escape HTML special characters
+                para_clean = para.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                story.append(Paragraph(para_clean, body_style))
+                story.append(Spacer(1, 0.1*inch))
         
         # Build PDF
         doc.build(story)
@@ -775,17 +684,16 @@ def download_transcript_pdf():
         pdf_data = buffer.getvalue()
         buffer.close()
         
-        # Create safe filename
-        safe_title = ''.join(c for c in video_title if c.isalnum() or c in (' ', '-', '_')).strip()
-        safe_title = safe_title[:50]  # Limit length
-        filename = f"{safe_title}_transcript.pdf"
-        
-        logger.info(f"✓ PDF generated: {filename} ({len(pdf_data)} bytes)")
-        logger.info("=" * 80)
-        
-        # Return PDF as download
-        from flask import Response
+        # Create response
         response = Response(pdf_data, mimetype='application/pdf')
+        
+        # Generate filename from title or use default
+        title = transcript_data.get('title', 'transcript')
+        # Clean filename
+        filename = re.sub(r'[^\w\s-]', '', title).strip()
+        filename = re.sub(r'[-\s]+', '-', filename)
+        filename = f"{filename[:50]}.pdf"  # Limit length
+        
         response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
         response.headers['Content-Length'] = len(pdf_data)
         
@@ -851,15 +759,16 @@ def test_transcript_setup():
 def health():
     return jsonify({
         'status': 'healthy',
-        'version': '10.2.5',
+        'version': '10.2.6',
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
-            'debate_arena': 'v9.0.0 - Challenge & Pick-a-Fight modes' if database_url and db else 'disabled',
+            'old_debate_arena': 'v9.0.0 - Challenge & Pick-a-Fight with auth' if old_debate_available else 'disabled',
+            'simple_debate_arena': 'v10.2.6 - Anonymous debates with 3 modes' if simple_debate_available else 'disabled',
             'live_streaming': 'v10.0.0 - YouTube Live analysis with AssemblyAI',
             'youtube_transcripts': 'v10.2.3 - YouTube URL transcript extraction (FIXED with job integration)',
             'transcript_analysis': 'v10.2.3 - Full transcript fact-checking with proper job management',
-            'transcript_creation': 'v3.1.0 - Create transcript without analysis + PDF download',
+            'transcript_creation': 'v10.2.5 - Create transcript without analysis + PDF download',
             'navigation': 'v10.2.4 - All menu items work (Features, About, Contact, Live Stream, Debate Arena)'
         }
     })
@@ -908,7 +817,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.5")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.6")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -940,26 +849,51 @@ if __name__ == '__main__':
     else:
         logger.info("  ✗ YouTube Transcripts - Disabled (set SCRAPINGBEE_API_KEY to enable)")
     
-    if database_url and db:
-        logger.info("  ✓ Debate Arena - Challenge Mode & Pick-a-Fight")
+    if old_debate_available:
+        logger.info("  ✓ Old Debate Arena - Challenge Mode & Pick-a-Fight (v9.0.0)")
         logger.info("    - Text-based arguments")
         logger.info("    - Real-time voting")
-        logger.info("    - User authentication")
+        logger.info("    - User authentication with email")
+        logger.info("    - Available at /debate-arena")
     else:
-        logger.info("  ✗ Debate Arena - Disabled (set DATABASE_URL to enable)")
+        logger.info("  ✗ Old Debate Arena - Disabled (DATABASE_URL not set or debate_models.py missing)")
+    
+    if simple_debate_available:
+        logger.info("  ✓ Simple Debate Arena - Anonymous Debates (v10.2.6) ⭐ NEW")
+        logger.info("    - Pick a Fight: Create debate and first argument")
+        logger.info("    - Join a Fight: Add opposing argument")
+        logger.info("    - Judgement City: Vote with bar chart")
+        logger.info("    - No authentication required")
+        logger.info("    - 250-word argument limit")
+        logger.info("    - Browser fingerprint voting")
+        logger.info("    - Available at /simple-debate-arena")
+    else:
+        logger.info("  ✗ Simple Debate Arena - Disabled (DATABASE_URL not set or simple_debate files missing)")
     
     logger.info("")
     logger.info("STATIC PAGE ROUTES:")
     logger.info("  ✓ / (News Analysis)")
     logger.info("  ✓ /transcript (Transcript Analysis)")
-    logger.info("  ✓ /features (Features Page) - NEW IN v10.2.4")
-    logger.info("  ✓ /about (About Page) - NEW IN v10.2.4")
-    logger.info("  ✓ /contact (Contact Page) - NEW IN v10.2.4")
-    logger.info("  ✓ /live-stream (Live Stream Page) - NEW IN v10.2.4")
-    logger.info("  ✓ /debate-arena (Debate Arena Page) - NEW IN v10.2.4")
+    logger.info("  ✓ /features (Features Page)")
+    logger.info("  ✓ /about (About Page)")
+    logger.info("  ✓ /contact (Contact Page)")
+    logger.info("  ✓ /live-stream (Live Stream Page)")
+    logger.info("  ✓ /debate-arena (Old Debate Arena - with auth)")
+    logger.info("  ✓ /simple-debate-arena (Simple Debate Arena - anonymous) ⭐ NEW")
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.6 (SIMPLE DEBATE ARENA):")
+    logger.info("  ✅ ADDED: Simple Debate Arena - completely anonymous")
+    logger.info("  ✅ ADDED: /simple-debate-arena route and template")
+    logger.info("  ✅ ADDED: simple_debate_models.py integration")
+    logger.info("  ✅ ADDED: simple_debate_routes.py blueprint registration")
+    logger.info("  ✅ FEATURE: Pick a Fight, Join a Fight, Judgement City modes")
+    logger.info("  ✅ FEATURE: Browser fingerprint for anonymous voting")
+    logger.info("  ✅ FEATURE: 250-word limit with live counter")
+    logger.info("  ✅ FEATURE: Real-time voting bar chart")
+    logger.info("  ✅ PRESERVED: All v10.2.5 functionality (DO NO HARM)")
+    logger.info("")
     logger.info("NEW IN v10.2.5 (TRANSCRIPT CREATION):")
     logger.info("  ✅ ADDED: /api/youtube/create-transcript endpoint")
     logger.info("  ✅ ADDED: /api/youtube/download-transcript-pdf endpoint")
@@ -983,7 +917,5 @@ if __name__ == '__main__':
     
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
-
-# I did no harm and this file is not truncated
 
 # I did no harm and this file is not truncated
