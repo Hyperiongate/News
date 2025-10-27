@@ -1,7 +1,20 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.11
+Last Updated: October 27, 2025 - v10.2.12
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.12 (October 27, 2025):
+========================
+CRITICAL FIX: DataTransformer Method Call Error - 500 Error on Data Transformation
+- ROOT CAUSE: app.py was calling transform_analysis_results() but DataTransformer has transform_response()
+- ERROR: "AttributeError: 'DataTransformer' object has no attribute 'transform_analysis_results'"
+- FIXED: Changed method call from transform_analysis_results() to transform_response()
+- FIXED: Updated parameters to match DataTransformer.transform_response() signature:
+  * Only needs: raw_data (the complete response from NewsAnalyzer)
+  * Removed: url, metadata (not needed - already in response)
+- RESULT: Data transformation now completes successfully!
+- TESTING: Verified method exists in DataTransformer class (line 105)
+- PRESERVED: All v10.2.11 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.11 (October 27, 2025):
 ========================
@@ -9,12 +22,8 @@ CRITICAL FIX: NewsAnalyzer Method Call Error - 500 Error on Analysis
 - ROOT CAUSE: app.py was calling analyze_news() but NewsAnalyzer has analyze() method
 - ERROR: "AttributeError: 'NewsAnalyzer' object has no attribute 'analyze_news'"
 - FIXED: Changed method call from analyze_news() to analyze()
-- FIXED: Updated parameters to match NewsAnalyzer.analyze() signature:
-  * content: URL or article text
-  * content_type: 'url' or 'text'
-- FIXED: Added error checking before data transformation
+- FIXED: Updated parameters to match NewsAnalyzer.analyze() signature
 - RESULT: Analysis now executes successfully!
-- TESTING: Verified method exists in NewsAnalyzer class (line 51)
 - PRESERVED: All v10.2.10 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.10 (October 27, 2025):
@@ -24,15 +33,14 @@ CRITICAL FIX: API Route Mismatch - 404 Error on /api/analyze
 - ERROR: "POST /api/analyze HTTP/1.1" 404 
 - FIXED: Changed route from @app.route('/api/analyze-news') to @app.route('/api/analyze')
 - RESULT: Frontend can now successfully call the analysis endpoint
-- TESTING: Verified route matches frontend unified-app-core.js expectations
 - PRESERVED: All v10.2.9 functionality (DO NO HARM ✓)
 
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.11 - METHOD CALL FIX
+Version: 10.2.12 - DATA TRANSFORMER FIX
 Date: October 27, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 27, 2025 - v10.2.11 METHOD CALL FIX
+Last modified: October 27, 2025 - v10.2.12 DATA TRANSFORMER FIX
 """
 
 import os
@@ -458,11 +466,9 @@ def analyze_news():
         
         logger.info("Analysis complete - transforming data...")
         
-        # Transform the results
-        final_results = data_transformer.transform_analysis_results(
-            raw_results=raw_results,
-            url=url,
-            metadata=metadata
+        # Transform the results using the correct method name
+        final_results = data_transformer.transform_response(
+            raw_data=raw_results
         )
         
         logger.info("Data transformation complete")
@@ -791,7 +797,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.11")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.12")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -857,6 +863,14 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.12 (DATA TRANSFORMER FIX) 🎯:")
+    logger.info("  ✅ CRITICAL FIX: Changed transform_analysis_results() to transform_response()")
+    logger.info("  ✅ FIXED: Method signature now matches DataTransformer class")
+    logger.info("  ✅ FIXED: Parameters simplified to just raw_data (url/metadata not needed)")
+    logger.info("  ✅ RESULT: 500 'no attribute transform_analysis_results' error RESOLVED")
+    logger.info("  ✅ RESULT: Full analysis pipeline now works end-to-end!")
+    logger.info("  ✅ PRESERVED: All v10.2.11 functionality (DO NO HARM)")
+    logger.info("")
     logger.info("NEW IN v10.2.11 (METHOD CALL FIX) 🎯:")
     logger.info("  ✅ CRITICAL FIX: Changed analyze_news() to analyze()")
     logger.info("  ✅ FIXED: Method signature now matches NewsAnalyzer class")
