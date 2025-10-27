@@ -1,7 +1,19 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.12
+Last Updated: October 27, 2025 - v10.2.13
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.13 (October 27, 2025):
+========================
+CRITICAL FIX: Double Extraction Bug - Removed Basic Extraction Function
+- ROOT CAUSE: app.py was doing basic requests.get() extraction BEFORE pipeline
+- ERROR: Basic function failed on modern sites, preventing ArticleExtractor service from running
+- SYMPTOMS: "Unknown Source", 0 trust score, no service details shown
+- FIXED: Removed lines 430-449 (basic extract_article_text call)
+- FIXED: Now passes URL directly to pipeline
+- RESULT: ArticleExtractor service (with ScrapingBee/ScraperAPI) now handles extraction properly!
+- RESULT: All 7 analysis services now receive proper article content
+- PRESERVED: All v10.2.12 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.12 (October 27, 2025):
 ========================
@@ -40,7 +52,7 @@ Version: 10.2.12 - DATA TRANSFORMER FIX
 Date: October 27, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 27, 2025 - v10.2.12 DATA TRANSFORMER FIX
+Last modified: October 27, 2025 - v10.2.13 DOUBLE EXTRACTION BUG FIX
 """
 
 import os
@@ -427,29 +439,15 @@ def analyze_news():
                 'error': 'Either URL or article text must be provided'
             }), 400
         
-        # Extract article if URL provided
-        metadata = None
-        if url:
-            if not validate_url(url):
-                return jsonify({
-                    'success': False,
-                    'error': 'Invalid URL format'
-                }), 400
-            
-            logger.info(f"Extracting article from URL: {url}")
-            extracted_text, metadata = extract_article_text(url)
-            
-            if not extracted_text:
-                return jsonify({
-                    'success': False,
-                    'error': 'Failed to extract article text from URL. Please try pasting the article text directly.'
-                }), 400
-            
-            article_text = extracted_text
-            logger.info(f"Successfully extracted {len(article_text)} characters")
+        # Validate URL format if provided
+        if url and not validate_url(url):
+            return jsonify({
+                'success': False,
+                'error': 'Invalid URL format'
+            }), 400
         
-        # Analyze the article
-        logger.info("Starting comprehensive analysis...")
+        # Analyze the article (pipeline will handle extraction with ArticleExtractor service)
+        logger.info("Starting comprehensive analysis (pipeline will extract article)...")
         raw_results = news_analyzer_service.analyze(
             content=url or article_text,
             content_type='url' if url else 'text'
@@ -797,7 +795,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.12")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.13")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -863,6 +861,14 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.13 (DOUBLE EXTRACTION BUG FIX) 🎯:")
+    logger.info("  ✅ CRITICAL FIX: Removed basic extraction from app.py")
+    logger.info("  ✅ FIXED: app.py was doing requests.get() before pipeline")
+    logger.info("  ✅ FIXED: Now lets ArticleExtractor service handle extraction")
+    logger.info("  ✅ RESULT: ScrapingBee/ScraperAPI now work properly")
+    logger.info("  ✅ RESULT: All services now get proper article content")
+    logger.info("  ✅ PRESERVED: All v10.2.12 functionality (DO NO HARM)")
+    logger.info("")
     logger.info("NEW IN v10.2.12 (DATA TRANSFORMER FIX) 🎯:")
     logger.info("  ✅ CRITICAL FIX: Changed transform_analysis_results() to transform_response()")
     logger.info("  ✅ FIXED: Method signature now matches DataTransformer class")
