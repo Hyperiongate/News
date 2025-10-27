@@ -1,8 +1,16 @@
 /**
  * TruthLens Service Templates - WITH INTEGRATED CHART RENDERING
- * Date: October 25, 2025
- * Version: 5.0.0 - CHART INTEGRATION & VISUAL ENHANCEMENTS
- * Last Updated: October 25, 2025
+ * Date: October 27, 2025
+ * Version: 5.0.2 - BACKWARDS COMPATIBLE RESPONSE STRUCTURE FIX
+ * Last Updated: October 27, 2025
+ * 
+ * CRITICAL FIX IN v5.0.2 (October 27, 2025):
+ * ✅ FIXED: Now handles BOTH old and new response structures
+ * ✅ OLD STRUCTURE: {success: true, results: {detailed_analysis: {...}}}
+ * ✅ NEW STRUCTURE: {success: true, detailed_analysis: {...}}
+ * ✅ Line 527: Updated service extraction logic
+ * ✅ RESULT: Services now display correctly regardless of backend version
+ * ✅ PRESERVED: All v5.0.0 functionality (DO NO HARM ✓)
  * 
  * MAJOR CHANGES FROM v4.31.0:
  * ✅ ADDED: Chart rendering integration for ALL services
@@ -520,13 +528,17 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.0] displayAllAnalyses called - NOW WITH CHART RENDERING');
+        console.log('[ServiceTemplates v5.0.2] displayAllAnalyses called - BACKWARDS COMPATIBLE FIX');
+        console.log('[ServiceTemplates v5.0.2] Checking data structure...');
         
-        var detailed = data.detailed_analysis || {};
+        // CRITICAL FIX: Handle both old and new response structures
+        // OLD: {success: true, results: {detailed_analysis: {...}}}
+        // NEW: {success: true, detailed_analysis: {...}}
+        var detailed = data.detailed_analysis || (data.results && data.results.detailed_analysis) || {};
         var analysisMode = data.analysis_mode || 'news';
         
-        console.log('[ServiceTemplates v5.0] Analysis mode:', analysisMode);
-        console.log('[ServiceTemplates v5.0] Services available:', Object.keys(detailed));
+        console.log('[ServiceTemplates v5.0.2] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.0.2] Services available:', Object.keys(detailed));
         
         // Get container (supports both IDs)
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
@@ -962,9 +974,11 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('[ServiceTemplates v5.0.0] CHART INTEGRATION - Module loaded successfully');
-console.log('[ServiceTemplates v5.0.0] ✨ Charts will now render inside service cards!');
+console.log('[ServiceTemplates v5.0.2] BACKWARDS COMPATIBLE FIX - Module loaded successfully');
+console.log('[ServiceTemplates v5.0.2] BACKWARDS COMPATIBLE FIX - Handles both response structures');
+console.log('[ServiceTemplates v5.0.2] ✨ Charts will now render inside service cards!');
 
 /**
  * I did no harm and this file is not truncated.
+ * v5.0.2 - October 27, 2025 - Backwards compatible response structure fix
  */
