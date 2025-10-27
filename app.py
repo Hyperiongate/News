@@ -1,7 +1,19 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.5
+Last Updated: October 27, 2025 - v10.2.6
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.6 (October 27, 2025):
+========================
+NEW FEATURE: Simple Debate Arena - Anonymous, No-Auth Debate System
+- ADDED: simple_debate_models.py - Simplified models (no User!)
+- ADDED: simple_debate_routes.py - Three endpoints (pick/join/vote)
+- ADDED: simple-debate-arena.html - Clean UI, no authentication
+- FEATURE: Pick a Fight - Create debate + argument (<250 words)
+- FEATURE: Join a Fight - Add opposing argument to open debates
+- FEATURE: Judgement City - Vote and see real-time results
+- TRACKING: Anonymous voting via browser fingerprint
+- PRESERVED: All existing functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.5 (October 27, 2025):
 ========================
@@ -115,6 +127,7 @@ logger.info("=" * 80)
 
 # ============================================================================
 # NEW: DATABASE CONFIGURATION FOR DEBATE ARENA (v9.0.0)
+# UPDATED: v10.2.6 - Added Simple Debate Arena (no-auth version)
 # ============================================================================
 
 database_url = os.getenv('DATABASE_URL')
@@ -136,7 +149,7 @@ if database_url:
     
     logger.info("=" * 80)
     logger.info("DATABASE CONFIGURATION:")
-    logger.info("  ✓ PostgreSQL configured for Debate Arena")
+    logger.info("  ✓ PostgreSQL configured for Debate Arenas")
     logger.info("  ✓ Connection pooling enabled")
     logger.info("  ✓ Auto-reconnect on failure")
     logger.info("=" * 80)
@@ -145,28 +158,40 @@ if database_url:
     from flask_sqlalchemy import SQLAlchemy
     db = SQLAlchemy(app)
     
-    # Import debate models (optional - gracefully handle if missing)
+    # Import OLD debate models (optional - complex auth system)
+    old_debate_enabled = False
     try:
         from debate_models import User, Debate, Argument, Vote
-        logger.info("  ✓ Debate models imported successfully")
+        old_debate_enabled = True
+        logger.info("  ✓ Old debate models imported (complex auth system)")
     except ImportError as e:
-        logger.warning(f"  ⚠ Debate models not found: {e}")
-        logger.warning("  ⚠ Debate Arena will be disabled")
-        db = None  # Disable debate features if models missing
+        logger.warning(f"  ⚠ Old debate models not found: {e}")
     
-    # Initialize database (only if models imported successfully)
-    if db is not None:
-        with app.app_context():
-            try:
-                db.create_all()
-                logger.info("  ✓ Database tables created/verified")
-            except Exception as e:
-                logger.error(f"  ✗ Database initialization error: {e}")
-                db = None  # Disable if initialization fails
+    # Import NEW SIMPLE debate models (v10.2.6) - NO AUTH VERSION
+    simple_debate_enabled = False
+    try:
+        from simple_debate_models import SimpleDebate, SimpleArgument, SimpleVote
+        simple_debate_enabled = True
+        logger.info("  ✓ Simple debate models imported (no-auth system)")
+    except ImportError as e:
+        logger.warning(f"  ⚠ Simple debate models not found: {e}")
+    
+    # Initialize database (create all tables)
+    with app.app_context():
+        try:
+            db.create_all()
+            logger.info("  ✓ Database tables created/verified for all systems")
+        except Exception as e:
+            logger.error(f"  ✗ Database initialization error: {e}")
+            db = None
+            simple_debate_enabled = False
+            old_debate_enabled = False
 else:
     db = None
+    simple_debate_enabled = False
+    old_debate_enabled = False
     logger.info("=" * 80)
-    logger.info("DATABASE: Not configured (Debate Arena disabled)")
+    logger.info("DATABASE: Not configured (Debate Arenas disabled)")
     logger.info("=" * 80)
 
 # ============================================================================
@@ -301,25 +326,46 @@ def live_stream_page():
 
 @app.route('/debate-arena')
 def debate_arena_page():
-    """Debate Arena page"""
+    """Debate Arena page (complex auth system)"""
     return render_template('debate-arena.html')
+
+@app.route('/simple-debate-arena')
+def simple_debate_arena_page():
+    """Simple Debate Arena page (no-auth version)"""
+    return render_template('simple-debate-arena.html')
 
 # ============================================================================
 # DEBATE ARENA ROUTES (v9.0.0) - Optional
 # ============================================================================
 
-# Only register debate routes if database is available
-if database_url and db:
+# Only register OLD debate routes if database is available
+if database_url and old_debate_enabled:
     try:
         from debate_routes import debate_bp
         app.register_blueprint(debate_bp, url_prefix='/api/debate')
         logger.info("=" * 80)
-        logger.info("DEBATE ARENA ROUTES:")
+        logger.info("DEBATE ARENA ROUTES (OLD - Complex Auth System):")
         logger.info("  ✓ Debate routes registered at /api/debate/*")
         logger.info("=" * 80)
     except ImportError as e:
         logger.warning(f"⚠ Failed to import debate_routes: {e}")
-        logger.warning("⚠ Debate Arena will not be available")
+        logger.warning("⚠ Old Debate Arena will not be available")
+        logger.info("=" * 80)
+
+# Register NEW SIMPLE debate routes (v10.2.6)
+if database_url and simple_debate_enabled:
+    try:
+        from simple_debate_routes import simple_debate_bp
+        app.register_blueprint(simple_debate_bp)
+        logger.info("=" * 80)
+        logger.info("SIMPLE DEBATE ARENA ROUTES (v10.2.6 - NO AUTH):")
+        logger.info("  ✓ Simple debate routes at /api/simple-debate/*")
+        logger.info("  ✓ Pick Fight / Join Fight / Vote endpoints")
+        logger.info("  ✓ Anonymous participation with browser tracking")
+        logger.info("=" * 80)
+    except ImportError as e:
+        logger.warning(f"⚠ Failed to import simple_debate_routes: {e}")
+        logger.warning("⚠ Simple Debate Arena will not be available")
         logger.info("=" * 80)
 
 # ============================================================================
@@ -789,7 +835,8 @@ def health():
         'timestamp': datetime.utcnow().isoformat(),
         'features': {
             'news_analysis': 'v8.5.1 - 7 AI services with bias awareness',
-            'debate_arena': 'v9.0.0 - Challenge & Pick-a-Fight modes' if database_url and db else 'disabled',
+            'debate_arena_complex': 'v9.0.0 - Challenge & Pick-a-Fight (auth required)' if database_url and old_debate_enabled else 'disabled',
+            'simple_debate_arena': 'v10.2.6 - Pick/Join/Vote (no auth)' if database_url and simple_debate_enabled else 'disabled',
             'live_streaming': 'v10.0.0 - YouTube Live analysis with AssemblyAI',
             'youtube_transcripts': 'v10.2.3 - YouTube URL transcript extraction (FIXED with job integration)',
             'transcript_analysis': 'v10.2.3 - Full transcript fact-checking with proper job management',
@@ -842,7 +889,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.5")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.6")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -874,13 +921,21 @@ if __name__ == '__main__':
     else:
         logger.info("  ✗ YouTube Transcripts - Disabled (set SCRAPINGBEE_API_KEY to enable)")
     
-    if database_url and db:
-        logger.info("  ✓ Debate Arena - Challenge Mode & Pick-a-Fight")
-        logger.info("    - Text-based arguments")
+    if database_url and old_debate_enabled:
+        logger.info("  ✓ Debate Arena (Complex) - Challenge & Pick-a-Fight")
+        logger.info("    - Text-based arguments with authentication")
         logger.info("    - Real-time voting")
-        logger.info("    - User authentication")
+        logger.info("    - Partner mode and handshakes")
     else:
-        logger.info("  ✗ Debate Arena - Disabled (set DATABASE_URL to enable)")
+        logger.info("  ✗ Debate Arena (Complex) - Disabled")
+    
+    if database_url and simple_debate_enabled:
+        logger.info("  ✓ Simple Debate Arena (NO-AUTH) - Pick/Join/Vote")
+        logger.info("    - Anonymous participation")
+        logger.info("    - Three simple flows")
+        logger.info("    - Browser-based vote tracking")
+    else:
+        logger.info("  ✗ Simple Debate Arena - Disabled (set DATABASE_URL to enable)")
     
     logger.info("")
     logger.info("STATIC PAGE ROUTES:")
@@ -891,9 +946,17 @@ if __name__ == '__main__':
     logger.info("  ✓ /contact (Contact Page) - NEW IN v10.2.4")
     logger.info("  ✓ /live-stream (Live Stream Page) - NEW IN v10.2.4")
     logger.info("  ✓ /debate-arena (Debate Arena Page) - NEW IN v10.2.4")
+    logger.info("  ✓ /simple-debate-arena (Simple Debate Arena) - NEW IN v10.2.6")
     logger.info("")
     
     logger.info("VERSION HISTORY:")
+    logger.info("NEW IN v10.2.6 (SIMPLE DEBATE ARENA):")
+    logger.info("  ✅ ADDED: Simple Debate Arena with no authentication")
+    logger.info("  ✅ FEATURE: Pick a Fight - Create debate + argument")
+    logger.info("  ✅ FEATURE: Join a Fight - Add opposing argument")
+    logger.info("  ✅ FEATURE: Judgement City - Vote and see results")
+    logger.info("  ✅ TRACKING: Anonymous voting via browser fingerprint")
+    logger.info("")
     logger.info("NEW IN v10.2.5 (TRANSCRIPT CREATION):")
     logger.info("  ✅ ADDED: /api/youtube/create-transcript endpoint")
     logger.info("  ✅ ADDED: /api/youtube/download-transcript-pdf endpoint")
@@ -921,3 +984,35 @@ if __name__ == '__main__':
 # I did no harm and this file is not truncated
 
 # I did no harm and this file is not truncated
+# ============================================================================
+# SIMPLE DEBATE ARENA NOTES (v10.2.6)
+# ============================================================================
+#
+# The Simple Debate Arena is a completely anonymous debate system with:
+# - NO user authentication or email verification
+# - Three simple flows: Pick a Fight, Join a Fight, Judgement City
+# - Browser fingerprint tracking for vote prevention (IP + User-Agent)
+# - Maximum 250 words per argument
+# - Real-time voting results with bar chart visualization
+#
+# Database Tables:
+# - simple_debates: Topics and voting status
+# - simple_arguments: FOR/AGAINST arguments
+# - simple_votes: Anonymous votes tracked by browser fingerprint
+#
+# API Endpoints:
+# - POST /api/simple-debate/pick-fight - Create debate with first argument
+# - POST /api/simple-debate/join-fight/<id> - Add opposing argument
+# - POST /api/simple-debate/vote/<id> - Cast or change vote
+# - GET /api/simple-debate/open - List debates waiting for second argument
+# - GET /api/simple-debate/voting - List debates in voting phase
+# - GET /api/simple-debate/<id> - Get specific debate details
+# - GET /api/simple-debate/stats - Platform statistics
+#
+# Frontend: /simple-debate-arena
+# - Clean, simple interface
+# - No login required
+# - Real-time vote updates
+# - Word counter for arguments
+#
+# ============================================================================
