@@ -2939,3 +2939,283 @@ body {
 -e 
 
 /* I did no harm and this file is not truncated */
+/**
+ * CSS Additions for Service Templates v5.1.0
+ * Date: October 27, 2025
+ * 
+ * APPEND these styles to the END of your existing static/css/main.css file
+ * These styles support the simplified service templates
+ */
+
+/* ============================================================================
+   SIMPLIFIED SERVICE TEMPLATE STYLES v5.1.0
+   ============================================================================ */
+
+/* Score Display - Large Centered */
+.score-display-large {
+    text-align: center;
+    padding: 2rem 1rem;
+    margin-bottom: 2rem;
+}
+
+.score-circle {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+.score-number {
+    font-size: 4rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+}
+
+.score-max {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #64748b;
+    line-height: 1;
+}
+
+.score-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: capitalize;
+}
+
+/* Info Box */
+.info-box {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #3b82f6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.info-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Analysis Text Box */
+.analysis-text-box {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #10b981;
+}
+
+.analysis-text-box h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-text-box h4 i {
+    color: #10b981;
+}
+
+.analysis-text-box p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #475569;
+    margin: 0;
+}
+
+/* Findings Box */
+.findings-box {
+    background: #fffbeb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #f59e0b;
+}
+
+.findings-box h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.findings-box h4 i {
+    color: #f59e0b;
+}
+
+.findings-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.findings-box ul li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #fef3c7;
+    font-size: 0.95rem;
+    color: #475569;
+    line-height: 1.6;
+}
+
+.findings-box ul li:last-child {
+    border-bottom: none;
+}
+
+.findings-box ul li:before {
+    content: '✓';
+    color: #f59e0b;
+    font-weight: bold;
+    margin-right: 0.75rem;
+}
+
+/* Claims List */
+.claims-list {
+    margin: 2rem 0;
+}
+
+.claims-list h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.claims-list h4 i {
+    color: #3b82f6;
+}
+
+#claims-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.claim-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #94a3b8;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.claim-item:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.claim-item.claim-true {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.claim-item.claim-false {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+}
+
+.claim-item.claim-neutral {
+    border-left-color: #94a3b8;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.claim-number {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.claim-content {
+    flex: 1;
+}
+
+.claim-text {
+    font-size: 0.95rem;
+    color: #1e293b;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.claim-verdict {
+    font-size: 0.875rem;
+    color: #475569;
+    margin-bottom: 0.5rem;
+}
+
+.claim-verdict strong {
+    color: #1e293b;
+}
+
+.claim-explanation {
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.6;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .score-number {
+        font-size: 3rem;
+    }
+    
+    .score-max {
+        font-size: 1.5rem;
+    }
+    
+    .score-label {
+        font-size: 1rem;
+    }
+    
+    .claim-item {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .claim-number {
+        align-self: flex-start;
+    }
+}
+
+/**
+ * END OF CSS ADDITIONS v5.1.0
+ * Copy everything above and paste at the END of your main.css file
+ */
