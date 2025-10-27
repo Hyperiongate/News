@@ -1,5 +1,5 @@
 """
-TruthLens Simple Debate Arena - Flask Routes
+TruthLens Debate Arena - Flask Routes
 File: simple_debate_routes.py
 Date: October 27, 2025
 Version: 1.0.0 - SIMPLIFIED NO-AUTH VERSION
@@ -80,41 +80,43 @@ def pick_fight():
         "topic": "Should pineapple be on pizza?",
         "category": "Food",
         "position": "for",  // or "against"
-        "argument": "Your argument text here..."
+        "argument": "Pineapple adds a sweet contrast..."
     }
     """
     try:
         data = request.get_json()
         
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-        
         # Validate required fields
         topic = data.get('topic', '').strip()
         position = data.get('position', '').strip().lower()
-        argument_text = data.get('argument', '').strip()
+        argument = data.get('argument', '').strip()
         category = data.get('category', 'General').strip()
         
-        # Validation
         if not topic or len(topic) < 10:
-            return jsonify({'success': False, 'error': 'Topic must be at least 10 characters'}), 400
-        
-        if len(topic) > 500:
-            return jsonify({'success': False, 'error': 'Topic must be less than 500 characters'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Topic must be at least 10 characters'
+            }), 400
         
         if position not in ['for', 'against']:
-            return jsonify({'success': False, 'error': 'Position must be "for" or "against"'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Position must be "for" or "against"'
+            }), 400
         
-        if not argument_text:
-            return jsonify({'success': False, 'error': 'Argument text is required'}), 400
-        
-        # Word count validation (max 250 words)
-        word_count = len(argument_text.split())
-        if word_count > 250:
-            return jsonify({'success': False, 'error': f'Argument must be 250 words or less (you have {word_count} words)'}), 400
-        
+        # Validate argument word count
+        word_count = len(argument.split())
         if word_count < 10:
-            return jsonify({'success': False, 'error': 'Argument must be at least 10 words'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Argument must be at least 10 words'
+            }), 400
+        
+        if word_count > 250:
+            return jsonify({
+                'success': False,
+                'error': 'Argument cannot exceed 250 words'
+            }), 400
         
         # Create debate
         debate = SimpleDebate(
@@ -126,21 +128,21 @@ def pick_fight():
         db.session.flush()  # Get debate ID
         
         # Create first argument
-        argument = SimpleArgument(
+        first_argument = SimpleArgument(
             debate_id=debate.id,
             position=position,
-            text_content=argument_text
+            text_content=argument
         )
-        argument.calculate_word_count()
-        db.session.add(argument)
+        first_argument.calculate_word_count()
+        db.session.add(first_argument)
         
         db.session.commit()
         
-        logger.info(f"New debate created: ID={debate.id}, Topic={topic}, Position={position}")
+        logger.info(f"New debate created: {debate.id} - {topic[:50]}")
         
         return jsonify({
             'success': True,
-            'message': 'Fight created! Waiting for an opponent...',
+            'message': 'Fight started! Waiting for opponent...',
             'debate': debate.to_dict(include_arguments=True)
         }), 201
         
@@ -151,78 +153,72 @@ def pick_fight():
 
 
 # ============================================================================
-# 2. JOIN A FIGHT - Add Opposing Argument
+# 2. JOIN A FIGHT - Add Second Argument
 # ============================================================================
 
 @simple_debate_bp.route('/join-fight/<int:debate_id>', methods=['POST'])
 def join_fight(debate_id):
     """
-    Join an existing debate with opposing argument
+    Add opposing argument to open debate
     
     Request JSON:
     {
-        "argument": "Your counter-argument text here..."
+        "argument": "Actually, pineapple does NOT belong..."
     }
     """
     try:
-        debate = SimpleDebate.query.get(debate_id)
+        data = request.get_json()
+        argument = data.get('argument', '').strip()
         
+        # Get debate
+        debate = SimpleDebate.query.get(debate_id)
         if not debate:
             return jsonify({'success': False, 'error': 'Debate not found'}), 404
         
         if debate.status != 'open':
-            return jsonify({'success': False, 'error': 'This debate is no longer accepting arguments'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'This debate is no longer accepting opponents'
+            }), 400
         
-        # Check if debate already has both arguments
-        if debate.is_complete():
-            return jsonify({'success': False, 'error': 'This debate already has both arguments'}), 400
-        
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-        
-        argument_text = data.get('argument', '').strip()
-        
-        # Validation
-        if not argument_text:
-            return jsonify({'success': False, 'error': 'Argument text is required'}), 400
-        
-        # Word count validation (max 250 words)
-        word_count = len(argument_text.split())
-        if word_count > 250:
-            return jsonify({'success': False, 'error': f'Argument must be 250 words or less (you have {word_count} words)'}), 400
-        
+        # Validate argument word count
+        word_count = len(argument.split())
         if word_count < 10:
-            return jsonify({'success': False, 'error': 'Argument must be at least 10 words'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'Argument must be at least 10 words'
+            }), 400
+        
+        if word_count > 250:
+            return jsonify({
+                'success': False,
+                'error': 'Argument cannot exceed 250 words'
+            }), 400
         
         # Determine opposing position
-        existing_argument = debate.arguments.first()
-        if not existing_argument:
-            return jsonify({'success': False, 'error': 'Debate has no first argument'}), 400
+        first_arg = debate.arguments.first()
+        opposing_position = 'against' if first_arg.position == 'for' else 'for'
         
-        opposing_position = 'against' if existing_argument.position == 'for' else 'for'
-        
-        # Create opposing argument
-        argument = SimpleArgument(
+        # Create second argument
+        second_argument = SimpleArgument(
             debate_id=debate.id,
             position=opposing_position,
-            text_content=argument_text
+            text_content=argument
         )
-        argument.calculate_word_count()
-        db.session.add(argument)
+        second_argument.calculate_word_count()
+        db.session.add(second_argument)
         
-        # Update debate status to voting
+        # Update debate to voting status
         debate.status = 'voting'
         debate.voting_opened_at = datetime.utcnow()
         
         db.session.commit()
         
-        logger.info(f"Debate {debate_id} completed with opposing argument. Now in voting phase.")
+        logger.info(f"Debate {debate_id} now complete and in voting")
         
         return jsonify({
             'success': True,
-            'message': 'Argument submitted! Debate is now in Judgement City for voting.',
+            'message': 'Fight joined! Debate is now live in Judgement City.',
             'debate': debate.to_dict(include_arguments=True, include_votes=True)
         }), 201
         
@@ -233,71 +229,71 @@ def join_fight(debate_id):
 
 
 # ============================================================================
-# 3. VOTE - Cast Vote in Judgement City
+# 3. VOTE (Judgement City)
 # ============================================================================
 
 @simple_debate_bp.route('/vote/<int:debate_id>', methods=['POST'])
 def vote(debate_id):
     """
-    Vote for an argument in a debate
+    Vote for an argument (or change existing vote)
     
     Request JSON:
     {
-        "argument_id": 123  // ID of the argument you're voting for
+        "argument_id": 123
     }
     """
     try:
-        debate = SimpleDebate.query.get(debate_id)
+        data = request.get_json()
+        argument_id = data.get('argument_id')
         
+        if not argument_id:
+            return jsonify({'success': False, 'error': 'argument_id required'}), 400
+        
+        # Get debate and argument
+        debate = SimpleDebate.query.get(debate_id)
         if not debate:
             return jsonify({'success': False, 'error': 'Debate not found'}), 404
         
         if debate.status != 'voting':
-            return jsonify({'success': False, 'error': 'This debate is not open for voting'}), 400
+            return jsonify({
+                'success': False,
+                'error': 'This debate is not open for voting'
+            }), 400
         
-        data = request.get_json()
-        
-        if not data:
-            return jsonify({'success': False, 'error': 'No data provided'}), 400
-        
-        argument_id = data.get('argument_id')
-        
-        if not argument_id:
-            return jsonify({'success': False, 'error': 'Argument ID is required'}), 400
-        
-        # Verify argument belongs to this debate
         argument = SimpleArgument.query.get(argument_id)
-        
         if not argument or argument.debate_id != debate_id:
-            return jsonify({'success': False, 'error': 'Invalid argument for this debate'}), 400
+            return jsonify({'success': False, 'error': 'Invalid argument'}), 400
         
         # Get browser fingerprint
         browser_fingerprint = get_browser_fingerprint()
         
         # Check if user already voted
-        if check_user_voted(debate_id, browser_fingerprint):
-            # User already voted - allow changing vote
-            existing_vote = SimpleVote.query.filter_by(
-                debate_id=debate_id,
-                browser_fingerprint=browser_fingerprint
-            ).first()
-            
+        existing_vote = SimpleVote.query.filter_by(
+            debate_id=debate_id,
+            browser_fingerprint=browser_fingerprint
+        ).first()
+        
+        if existing_vote:
+            # Change vote
             if existing_vote.argument_id == argument_id:
+                # Same vote, just return current state
                 return jsonify({
-                    'success': False,
-                    'error': 'You already voted for this argument'
-                }), 400
+                    'success': True,
+                    'message': 'You already voted for this argument',
+                    'debate': debate.to_dict(include_arguments=True, include_votes=True)
+                }), 200
             
-            # Change vote - decrement old argument, increment new argument
+            # Different vote - update
             old_argument = SimpleArgument.query.get(existing_vote.argument_id)
             if old_argument:
-                old_argument.vote_count = max(0, old_argument.vote_count - 1)
+                old_argument.vote_count -= 1
             
             argument.vote_count += 1
             existing_vote.argument_id = argument_id
-            existing_vote.created_at = datetime.utcnow()
             
             db.session.commit()
+            
+            logger.info(f"Vote changed in debate {debate_id} to argument {argument_id}")
             
             return jsonify({
                 'success': True,
@@ -383,18 +379,18 @@ def list_voting_debates():
         debates = get_voting_debates(limit=per_page, offset=offset)
         total = SimpleDebate.query.filter_by(status='voting').count()
         
-        # Check if user has voted in each debate
+        # Check if user voted for each debate
         browser_fingerprint = get_browser_fingerprint()
         
-        debates_data = []
+        debates_with_vote_status = []
         for debate in debates:
             debate_dict = debate.to_dict(include_arguments=True, include_votes=True)
             debate_dict['user_has_voted'] = check_user_voted(debate.id, browser_fingerprint)
-            debates_data.append(debate_dict)
+            debates_with_vote_status.append(debate_dict)
         
         return jsonify({
             'success': True,
-            'debates': debates_data,
+            'debates': debates_with_vote_status,
             'pagination': {
                 'page': page,
                 'per_page': per_page,
@@ -457,39 +453,7 @@ def get_stats():
         
     except Exception as e:
         logger.error(f"Error getting stats: {e}", exc_info=True)
-        return jsonify({'success': False, 'error': 'Failed to load stats'}), 500
-
-
-# ============================================================================
-# ADMIN ROUTES (Optional)
-# ============================================================================
-
-@simple_debate_bp.route('/close/<int:debate_id>', methods=['POST'])
-def close_debate(debate_id):
-    """Close a debate (admin function)"""
-    try:
-        debate = SimpleDebate.query.get(debate_id)
-        
-        if not debate:
-            return jsonify({'success': False, 'error': 'Debate not found'}), 404
-        
-        debate.status = 'closed'
-        debate.closed_at = datetime.utcnow()
-        
-        db.session.commit()
-        
-        logger.info(f"Debate {debate_id} closed")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Debate closed',
-            'debate': debate.to_dict()
-        }), 200
-        
-    except Exception as e:
-        logger.error(f"Error closing debate {debate_id}: {e}", exc_info=True)
-        db.session.rollback()
-        return jsonify({'success': False, 'error': 'Failed to close debate'}), 500
+        return jsonify({'success': False, 'error': 'Failed to load statistics'}), 500
 
 
 # I did no harm and this file is not truncated
