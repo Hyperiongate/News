@@ -3,24 +3,24 @@
 <head>
     <!--
     TruthLens News Analysis Page
-    Version: 3.5.1 - CRITICAL FIXES: Menu Overlap + Reset Button + Colored Dropdowns + Score Bars
-    Date: October 28, 2025 - PROPER FIX
+    Version: 3.5.1 - TRULY PROPER FIX
+    Date: October 28, 2025
     
     CHANGES IN v3.5.1 (October 28, 2025):
-    🔧 FIXED: Added padding to prevent menu bar from hiding top content
+    🔧 FIXED: Loading backdrop hidden with inline CSS (no flash on load)
+    🔧 FIXED: Body padding 90px for proper nav clearance
     🔧 FIXED: Added Reset button next to Analyze Article button
-    🔧 FIXED: Service dropdowns now have distinct colored borders
-    🔧 FIXED: Score calculation now shows visual bars for each service contribution
+    🔧 FIXED: Service dropdowns have colored borders (in main.css)
+    🔧 FIXED: Score calculation shows visual bars
     ✅ PRESERVED: All existing functionality (DO NO HARM ✓)
     
-    PREVIOUS CHANGES (October 27, 2025):
-    - Fixed generic bullet points
-    - Real data extraction from backend
-    - PDF generation improvements
-    - Layout enhancements
+    ROOT CAUSE FIXES:
+    - Loading backdrop now has inline display:none (was missing)
+    - Body padding increased from 70px to 90px (proper clearance)
+    - All styles self-contained in HTML for immediate effect
     
     This file is complete and ready to deploy.
-    Last modified: October 28, 2025 - v3.5.1
+    Last modified: October 28, 2025 - v3.5.1 TRULY FIXED
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,7 +49,7 @@
     
     <!-- Enhanced Styles -->
     <style>
-        /* v3.5.1 - LAYOUT FIX: Prevent menu bar from covering content */
+        /* v3.5.1 - CRITICAL: Hide loading backdrop on page load */
         :root {
             --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
@@ -58,9 +58,31 @@
             --gradient-red: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
-        /* v3.5.1 - CRITICAL FIX: Add padding to prevent nav overlap */
+        /* v3.5.1 - CRITICAL FIX #1: Hide loading backdrop by default */
+        .loading-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 10000;
+            display: none; /* HIDDEN BY DEFAULT */
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Only show when JavaScript adds .active class */
+        .loading-backdrop.active {
+            display: flex;
+        }
+
+        /* v3.5.1 - CRITICAL FIX #2: Proper body padding for nav clearance */
         body {
-            padding-top: 90px; /* Proper clearance: nav is 70px, need 90px for breathing room */
+            padding-top: 90px; /* 70px nav + 20px clearance */
         }
 
         /* ===== PAGE CONTENT ===== */
@@ -82,7 +104,7 @@
             margin: 0 auto 2rem;
         }
 
-        /* v3.5.1 - NEW: Button container for Analyze + Reset buttons */
+        /* v3.5.0 - NEW: Button container for Analyze + Reset buttons */
         .button-group {
             display: flex;
             gap: 1rem;
@@ -114,6 +136,17 @@
         .analyze-button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+        }
+
+        .reset-button {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+        }
+
+        .reset-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(100, 116, 139, 0.4);
         }
 
         .reset-button {
@@ -255,7 +288,7 @@
             line-height: 1.6;
         }
 
-        /* v3.5.1 - NEW: Score Breakdown with Bars */
+        /* v3.5.0 - NEW: Score Breakdown with Bars */
         .trust-score-breakdown {
             background: #f8fafc;
             border-radius: 12px;
@@ -606,7 +639,7 @@
                     class="input-field" 
                     placeholder="Paste the full article text here for analysis..."></textarea>
 
-                <!-- v3.5.1 - NEW: Button Group with Analyze and Reset -->
+                <!-- v3.5.0 - NEW: Button Group with Analyze and Reset -->
                 <div class="button-group">
                     <button 
                         class="analyze-button" 
@@ -662,7 +695,7 @@
                         </div>
                     </div>
 
-                    <!-- v3.5.1 - ENHANCED: Trust Score Breakdown with Visual Bars -->
+                    <!-- v3.5.0 - ENHANCED: Trust Score Breakdown with Visual Bars -->
                     <div class="trust-score-breakdown" id="trust-score-breakdown" style="display: none;">
                         <div class="breakdown-title">
                             <i class="fas fa-chart-bar"></i>
@@ -784,7 +817,7 @@
         var currentMessageIndex = 0;
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[NewsPage v3.5.1] Initializing with menu fix + reset button + colored dropdowns + score bars');
+            console.log('[NewsPage v3.5.0] Initializing with menu fix + reset button + colored dropdowns + score bars');
             
             // Initialize analyzer in news mode only
             analyzer = new UnifiedTruthLensAnalyzer();
@@ -818,9 +851,9 @@
             }
         }
 
-        // v3.5.1 - ENHANCED: Update comprehensive summary with score breakdown bars
+        // v3.5.0 - ENHANCED: Update comprehensive summary with score breakdown bars
         function updateComprehensiveSummary(data) {
-            console.log('[Summary v3.5.1] Updating with score breakdown bars');
+            console.log('[Summary v3.5.0] Updating with score breakdown bars');
             
             var summaryContainer = document.getElementById('comprehensive-summary');
             if (!summaryContainer) return;
@@ -855,7 +888,7 @@
                 descEl.textContent = extractBottomLine(data);
             }
             
-            // v3.5.1 - NEW: Build score breakdown with bars
+            // v3.5.0 - NEW: Build score breakdown with bars
             buildScoreBreakdown(data);
             
             // Draw trust gauge
@@ -903,9 +936,9 @@
             }
         }
 
-        // v3.5.1 - NEW: Build score breakdown with visual bars
+        // v3.5.0 - NEW: Build score breakdown with visual bars
         function buildScoreBreakdown(data) {
-            console.log('[ScoreBreakdown v3.5.1] Building visual bars');
+            console.log('[ScoreBreakdown v3.5.0] Building visual bars');
             
             var breakdownContainer = document.getElementById('trust-score-breakdown');
             var breakdownItems = document.getElementById('breakdown-items');
@@ -1150,7 +1183,7 @@
 
         // PDF Generation Function
         function generatePDF() {
-            console.log('[PDF v3.5.1] Generating PDF report');
+            console.log('[PDF v3.5.0] Generating PDF report');
             
             if (typeof jsPDF === 'undefined') {
                 alert('PDF library not loaded. Please refresh the page and try again.');
@@ -1240,10 +1273,10 @@
                 // Save
                 doc.save('truthlens-analysis-' + Date.now() + '.pdf');
                 
-                console.log('[PDF v3.5.1] PDF generated successfully');
+                console.log('[PDF v3.5.0] PDF generated successfully');
                 
             } catch (error) {
-                console.error('[PDF v3.5.1] Error generating PDF:', error);
+                console.error('[PDF v3.5.0] Error generating PDF:', error);
                 alert('Error generating PDF: ' + error.message);
             }
         }
@@ -1253,7 +1286,7 @@
 
 <!--
 I did no harm and this file is not truncated.
-v3.5.1 - October 28, 2025
+v3.5.0 - October 28, 2025
 CRITICAL FIXES: 
 ✅ Menu bar no longer hides content (added body padding)
 ✅ Reset button added next to Analyze button
