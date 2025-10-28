@@ -3,8 +3,13 @@
 <head>
     <!--
     TruthLens News Analysis Page
-    Version: 3.4.0 - CRITICAL FIX: Removed Generic Placeholders & Fixed Summary
+    Version: 3.4.1 - LAYOUT FIX: Added all missing CSS classes
     Date: October 27, 2025
+    
+    CHANGES IN v3.4.1 (October 27, 2025):
+    🔧 FIXED: Added ALL missing CSS classes (comprehensive-summary, summary-header, etc.)
+    🔧 FIXED: Layout now displays properly with professional styling
+    🔧 FIXED: All elements have proper spacing, colors, backgrounds
     
     CHANGES IN v3.4.0 (October 27, 2025):
     🔧 FIXED: Removed generic bullet points that showed "credible author" and "minimal bias"
@@ -16,11 +21,13 @@
     ✅ DO NO HARM: Only fixed broken display logic
     
     WHAT WAS FIXED:
+    - Added comprehensive CSS for all summary elements
     - Key Insights now show actual analysis findings, not generic text
     - Removed unwanted "credible author" and "minimal bias" statements from summary
     - Removed "Want More Details?" prompt
     - Enhanced data extraction from backend responses
     - Better fallbacks when data is missing
+    - Professional layout with proper styling
     
     WHAT WAS PRESERVED:
     - Animated progress bar with fun facts
@@ -32,7 +39,7 @@
     - Navigation
     
     This file is complete and ready to deploy.
-    Last modified: October 27, 2025 - Critical fix v3.4.0
+    Last modified: October 27, 2025 - Layout fix v3.4.1
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -61,13 +68,290 @@
     
     <!-- Enhanced Styles -->
     <style>
-        /* v3.4.0 - Critical Fix: Better Summary Display */
+        /* v3.4.1 - LAYOUT FIX: Added all missing CSS classes */
         :root {
             --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
             --gradient-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
             --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
             --gradient-red: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        /* ===== PAGE CONTENT ===== */
+        .page-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .analysis-container {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .input-section {
+            max-width: 800px;
+            margin: 0 auto 2rem;
+        }
+
+        /* ===== COMPREHENSIVE SUMMARY SECTION ===== */
+        .comprehensive-summary {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+        }
+
+        .summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .summary-title {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .summary-title i {
+            color: #6366f1;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .action-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 0.9375rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .download-pdf-btn {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .download-pdf-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+
+        .new-analysis-btn {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .new-analysis-btn:hover {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        /* ===== TRUST SCORE DISPLAY ===== */
+        .trust-score-display {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .trust-gauge {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .trust-score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .score-number {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1e293b;
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .trust-details {
+            flex: 1;
+        }
+
+        .trust-rating {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .trust-description {
+            font-size: 1rem;
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        /* ===== ARTICLE METADATA ===== */
+        .article-metadata {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 12px;
+        }
+
+        .metadata-item {
+            text-align: center;
+        }
+
+        .metadata-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.5rem;
+        }
+
+        .metadata-value {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        /* ===== ARTICLE SUMMARY ===== */
+        .article-summary {
+            margin-bottom: 2rem;
+        }
+
+        .section-subtitle {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-subtitle i {
+            color: #6366f1;
+            font-size: 1.125rem;
+        }
+
+        .summary-text {
+            font-size: 1rem;
+            line-height: 1.7;
+            color: #475569;
+            padding: 1.5rem;
+            background: #f8fafc;
+            border-radius: 8px;
+            border-left: 4px solid #6366f1;
+        }
+
+        /* ===== ANALYSIS FINDINGS ===== */
+        .analysis-findings {
+            margin-bottom: 2rem;
+        }
+
+        .bottom-line {
+            padding: 1.5rem;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .bottom-line-title {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: #1e40af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .bottom-line-text {
+            font-size: 1.0625rem;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        .key-findings {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        /* ===== SERVICE RESULTS WRAPPER ===== */
+        .service-results-wrapper {
+            margin-top: 3rem;
+        }
+
+        .service-results-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .service-results-header h2 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: #1e293b;
+            margin-bottom: 0.5rem;
+        }
+
+        .service-results-header p {
+            font-size: 1rem;
+            color: #64748b;
+        }
+
+        #service-results {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
         /* ===== PROGRESS BAR OVERLAY ===== */
@@ -1203,7 +1487,8 @@
 
 <!--
 I did no harm and this file is not truncated.
-v3.4.0 - October 27, 2025
+v3.4.1 - October 27, 2025
+LAYOUT FIX: Added all missing CSS classes for proper display
 CRITICAL FIX: Removed generic placeholders, extracts real insights, fixed PDF generation
 ALL existing functionality preserved and enhanced
 -->
