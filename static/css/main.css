@@ -3758,3 +3758,290 @@ body {
  */
 
 /* I did no harm and this file is not truncated. */
+/**
+ * TruthLens Main CSS - PROPER FIXES v3.5.1
+ * Date: October 28, 2025
+ * 
+ * ROOT CAUSE FIXES (NO DUCT TAPE):
+ * 1. Added missing .loading-backdrop styles (HTML uses this class but CSS was missing it)
+ * 2. Increased body padding to 90px for proper navigation clearance
+ * 3. Added service dropdown colored borders
+ * 
+ * ADD THESE STYLES TO THE END OF YOUR main.css FILE
+ * (After all existing styles, before the final closing comment)
+ */
+
+/* =============================================================================
+   FIX #1: LOADING BACKDROP STYLES (Missing from CSS, but used in HTML)
+   Root Cause: HTML has class="loading-backdrop" but CSS only defined .loading-overlay
+   ============================================================================= */
+
+.loading-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(30, 41, 59, 0.95);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: none;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-backdrop.active {
+    display: flex;
+}
+
+/* Progress container styling */
+.progress-container-enhanced {
+    max-width: 500px;
+    background: white;
+    border-radius: 20px;
+    padding: 3rem 2.5rem;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+.progress-header-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.progress-header-text i {
+    color: #6366f1;
+    font-size: 1.5rem;
+}
+
+.progress-message-text {
+    font-size: 1rem;
+    color: #64748b;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+    min-height: 24px;
+}
+
+.progress-percentage {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #6366f1;
+    margin-bottom: 1rem;
+}
+
+.progress-bar-wrapper {
+    width: 100%;
+    height: 12px;
+    background: #e5e7eb;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    background-size: 200% 100%;
+    border-radius: 6px;
+    transition: width 0.3s ease;
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.fun-fact-box {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border: 2px solid #3b82f6;
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: left;
+}
+
+.fun-fact-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: #1e40af;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.fun-fact-label i {
+    color: #3b82f6;
+}
+
+.fun-fact-text {
+    font-size: 0.875rem;
+    color: #475569;
+    line-height: 1.6;
+}
+
+/* =============================================================================
+   FIX #2: BODY PADDING FOR NAVIGATION CLEARANCE
+   Root Cause: 70px padding = nav exactly at edge, need more clearance
+   ============================================================================= */
+
+body {
+    padding-top: 90px;
+}
+
+/* Responsive padding */
+@media (max-width: 768px) {
+    body {
+        padding-top: 80px;
+    }
+}
+
+/* =============================================================================
+   FIX #3: SERVICE DROPDOWN COLORED BORDERS
+   ============================================================================= */
+
+/* Base service card styling */
+.service-card {
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border-left: 6px solid transparent;
+}
+
+.service-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+/* Source Credibility - Blue */
+.service-card[data-service="source_credibility"],
+.service-card.source-credibility {
+    border-left-color: #3b82f6;
+}
+
+.service-card[data-service="source_credibility"] .service-header,
+.service-card.source-credibility .service-header {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(37, 99, 235, 0.05) 100%);
+    border-bottom: 2px solid #3b82f6;
+}
+
+/* Author Analyzer - Purple */
+.service-card[data-service="author_analyzer"],
+.service-card.author-analyzer {
+    border-left-color: #8b5cf6;
+}
+
+.service-card[data-service="author_analyzer"] .service-header,
+.service-card.author-analyzer .service-header {
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1) 0%, rgba(124, 58, 237, 0.05) 100%);
+    border-bottom: 2px solid #8b5cf6;
+}
+
+/* Bias Detector - Orange */
+.service-card[data-service="bias_detector"],
+.service-card.bias-detector {
+    border-left-color: #f59e0b;
+}
+
+.service-card[data-service="bias_detector"] .service-header,
+.service-card.bias-detector .service-header {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(217, 119, 6, 0.05) 100%);
+    border-bottom: 2px solid #f59e0b;
+}
+
+/* Fact Checker - Green */
+.service-card[data-service="fact_checker"],
+.service-card.fact-checker {
+    border-left-color: #10b981;
+}
+
+.service-card[data-service="fact_checker"] .service-header,
+.service-card.fact-checker .service-header {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%);
+    border-bottom: 2px solid #10b981;
+}
+
+/* Transparency Analyzer - Cyan */
+.service-card[data-service="transparency_analyzer"],
+.service-card.transparency-analyzer {
+    border-left-color: #06b6d4;
+}
+
+.service-card[data-service="transparency_analyzer"] .service-header,
+.service-card.transparency-analyzer .service-header {
+    background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(8, 145, 178, 0.05) 100%);
+    border-bottom: 2px solid #06b6d4;
+}
+
+/* Manipulation Detector - Red */
+.service-card[data-service="manipulation_detector"],
+.service-card.manipulation-detector {
+    border-left-color: #ef4444;
+}
+
+.service-card[data-service="manipulation_detector"] .service-header,
+.service-card.manipulation-detector .service-header {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 38, 0.05) 100%);
+    border-bottom: 2px solid #ef4444;
+}
+
+/* Content Analyzer - Pink */
+.service-card[data-service="content_analyzer"],
+.service-card.content-analyzer {
+    border-left-color: #ec4899;
+}
+
+.service-card[data-service="content_analyzer"] .service-header,
+.service-card.content-analyzer .service-header {
+    background: linear-gradient(135deg, rgba(236, 72, 153, 0.1) 0%, rgba(219, 39, 119, 0.05) 100%);
+    border-bottom: 2px solid #ec4899;
+}
+
+/* Service header enhancements */
+.service-header {
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.service-header:hover {
+    filter: brightness(0.98);
+}
+
+/* =============================================================================
+   END OF PROPER FIXES v3.5.1
+   ============================================================================= */
+
+/**
+ * DEPLOYMENT INSTRUCTIONS:
+ * 
+ * 1. Open your /static/css/main.css file
+ * 2. Scroll to the very bottom
+ * 3. Paste ALL of the above styles at the end
+ * 4. Save the file
+ * 5. Deploy to GitHub
+ * 6. Hard refresh browser (Ctrl+Shift+R)
+ * 
+ * WHAT WAS FIXED:
+ * ✅ Loading backdrop now hidden on page load (proper CSS added)
+ * ✅ Body padding increased to 90px (proper clearance from nav)
+ * ✅ Service dropdowns have colored left borders (7 unique colors)
+ * 
+ * ROOT CAUSES ADDRESSED:
+ * - HTML used class="loading-backdrop" but CSS only had ".loading-overlay"
+ * - 70px padding wasn't enough clearance for 70px navigation
+ * - Service cards had no distinct visual identity
+ */
+
+/* I did no harm and this file is not truncated. */
