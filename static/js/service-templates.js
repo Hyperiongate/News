@@ -1,30 +1,25 @@
 /**
- * TruthLens Service Templates - COMPLETE v5.4.0
+ * TruthLens Service Templates - COMPLETE v5.4.1
  * Date: October 28, 2025
- * Version: 5.4.0 - DROPDOWN + COLORED BORDER FIXES
+ * Version: 5.4.1 - DROPDOWN FIX + FINDINGS FILTER
  * 
- * WHAT'S NEW IN v5.4.0 (October 28, 2025):
- * ✅ FIXED: Dropdown toggle now works properly with active state
- * ✅ FIXED: Each service has unique colored left border
- * ✅ FIXED: Service cards have proper hover effects
- * ✅ ENHANCED: Visual feedback when expanding/collapsing
+ * WHAT'S NEW IN v5.4.1 (October 28, 2025):
+ * ✅ FIXED: Dropdowns now properly expand/collapse with inline CSS
+ * ✅ FIXED: Filtered out "What to verify" from findings
+ * ✅ FIXED: Added explicit max-height transitions for smooth animations
+ * ✅ PRESERVED: All v5.4.0 colored borders and hover effects
  * ✅ PRESERVED: All v5.3.0 functionality (trust meter, comparison charts)
- * ✅ PRESERVED: All object extraction fixes from v5.2.0
- * ✅ PRESERVED: displayAllAnalyses() method (CRITICAL)
  * 
- * DROPDOWN FIXES:
- * - Toggle function properly attached to headers
- * - Active class manages expansion state
- * - Smooth transitions for content reveal
+ * DROPDOWN FIX:
+ * - Content div now has inline max-height management
+ * - Default state: max-height: 0, overflow: hidden
+ * - Active state: max-height: 5000px (enough for all content)
+ * - Smooth transition: 0.4s ease
  * 
- * COLORED BORDER SCHEME:
- * - Source Credibility: #3b82f6 (Blue)
- * - Bias Detection: #8b5cf6 (Purple)
- * - Fact Checking: #10b981 (Green)
- * - Author Analysis: #f59e0b (Orange)
- * - Transparency: #6366f1 (Indigo)
- * - Manipulation Detection: #ef4444 (Red)
- * - Content Quality: #14b8a6 (Teal)
+ * FINDINGS FILTER:
+ * - Filters out generic/unhelpful findings
+ * - Removes "What to verify" and similar meta-text
+ * - Only shows meaningful insights to users
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
  * Last Updated: October 28, 2025
@@ -53,7 +48,7 @@ window.ServiceTemplates = {
         };
         
         var templateKey = toCamelCase(serviceId);
-        console.log('[ServiceTemplates v5.4.0] Template lookup:', serviceId, '→', templateKey);
+        console.log('[ServiceTemplates v5.4.1] Template lookup:', serviceId, '→', templateKey);
         
         const templates = {
             sourceCredibility: `
@@ -332,10 +327,10 @@ window.ServiceTemplates = {
         var template = templates[templateKey];
         
         if (template) {
-            console.log('[ServiceTemplates v5.4.0] ✓ Template found for:', templateKey);
+            console.log('[ServiceTemplates v5.4.1] ✓ Template found for:', templateKey);
             return template;
         } else {
-            console.warn('[ServiceTemplates v5.4.0] ✗ Template not found for:', templateKey);
+            console.warn('[ServiceTemplates v5.4.1] ✗ Template not found for:', templateKey);
             return '<div class="service-analysis-section"><p>Template not available</p></div>';
         }
     },
@@ -378,6 +373,7 @@ window.ServiceTemplates = {
         return fallback;
     },
     
+    // v5.4.1 FIX: Better findings filtering
     extractFindings: function(data) {
         var findings = data.findings || data.key_findings || [];
         
@@ -385,11 +381,32 @@ window.ServiceTemplates = {
             return [];
         }
         
+        // v5.4.1 FIX: Filter out unwanted meta-text
+        var unwantedPhrases = [
+            'what to verify',
+            'things to check',
+            'verify this',
+            'check this',
+            'look for',
+            'consider checking'
+        ];
+        
         var self = this;
         return findings.map(function(finding) {
             return self.extractText(finding, '');
         }).filter(function(text) {
-            return text && text.length > 0;
+            if (!text || text.length === 0) return false;
+            
+            // Check if text contains unwanted phrases
+            var lowerText = text.toLowerCase();
+            for (var i = 0; i < unwantedPhrases.length; i++) {
+                if (lowerText.includes(unwantedPhrases[i])) {
+                    console.log('[ServiceTemplates v5.4.1] Filtered out meta-text:', text);
+                    return false;
+                }
+            }
+            
+            return true;
         });
     },
     
@@ -405,7 +422,7 @@ window.ServiceTemplates = {
     
     // Render chart for a service
     renderServiceChart: function(serviceId, serviceData) {
-        console.log('[ServiceTemplates v5.4.0] Checking for chart data in:', serviceId);
+        console.log('[ServiceTemplates v5.4.1] Checking for chart data in:', serviceId);
         
         if (typeof ChartRenderer === 'undefined') {
             console.warn('[ServiceTemplates] ChartRenderer not loaded');
@@ -436,27 +453,27 @@ window.ServiceTemplates = {
     },
     
     // ============================================================================
-    // MAIN DISPLAY METHOD - v5.4.0 WITH DROPDOWN AND BORDER FIXES
+    // MAIN DISPLAY METHOD - v5.4.1 WITH DROPDOWN FIX
     // ============================================================================
     
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.4.0] displayAllAnalyses called - DROPDOWN + BORDER FIXES');
-        console.log('[ServiceTemplates v5.4.0] Checking data structure...');
+        console.log('[ServiceTemplates v5.4.1] displayAllAnalyses called - DROPDOWN FIX');
+        console.log('[ServiceTemplates v5.4.1] Checking data structure...');
         
         var detailed = data.detailed_analysis || (data.results && data.results.detailed_analysis) || {};
         var analysisMode = data.analysis_mode || 'news';
         
-        console.log('[ServiceTemplates v5.4.0] Analysis mode:', analysisMode);
-        console.log('[ServiceTemplates v5.4.0] Services available:', Object.keys(detailed));
+        console.log('[ServiceTemplates v5.4.1] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.4.1] Services available:', Object.keys(detailed));
         
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
         
         if (!container) {
-            console.error('[ServiceTemplates v5.4.0] CRITICAL: Container not found!');
+            console.error('[ServiceTemplates v5.4.1] CRITICAL: Container not found!');
             return;
         }
         
-        console.log('[ServiceTemplates v5.4.0] Container found:', container.id);
+        console.log('[ServiceTemplates v5.4.1] Container found:', container.id);
         
         var serviceOrder = [
             { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', displayFunc: 'displaySourceCredibility' },
@@ -473,19 +490,19 @@ window.ServiceTemplates = {
         var self = this;
         serviceOrder.forEach(function(service) {
             if (detailed[service.id]) {
-                console.log('[ServiceTemplates v5.4.0] Processing service:', service.name);
+                console.log('[ServiceTemplates v5.4.1] Processing service:', service.name);
                 
-                // v5.4.0 FIX: Create service card with colored border
+                // Create service card with colored border
                 var serviceCard = document.createElement('div');
                 serviceCard.className = 'service-dropdown ' + service.id.replace(/_/g, '') + 'Dropdown';
                 serviceCard.id = service.id.replace(/_/g, '') + 'Dropdown';
                 
-                // v5.4.0 FIX: Add unique colored left border
+                // Add unique colored left border
                 var borderColor = self.serviceColors[service.id] || '#6366f1';
                 serviceCard.style.borderLeft = '4px solid ' + borderColor;
                 serviceCard.style.transition = 'all 0.3s ease';
                 
-                // v5.4.0 FIX: Header with proper click handler
+                // Header with proper click handler
                 var header = document.createElement('div');
                 header.className = 'service-header';
                 header.style.cursor = 'pointer';
@@ -499,13 +516,22 @@ window.ServiceTemplates = {
                     </div>
                 `;
                 
-                // v5.4.0 FIX: Proper toggle with visual feedback
+                // Content div - v5.4.1 FIX: Inline styles for proper collapse/expand
+                var content = document.createElement('div');
+                content.className = 'service-content';
+                content.style.maxHeight = '0';
+                content.style.overflow = 'hidden';
+                content.style.transition = 'max-height 0.4s ease';
+                content.innerHTML = self.getTemplate(service.id);
+                
+                // v5.4.1 FIX: Toggle with inline max-height management
                 header.onclick = function() {
                     var isActive = serviceCard.classList.contains('active');
                     
                     if (isActive) {
                         // Collapse
                         serviceCard.classList.remove('active');
+                        content.style.maxHeight = '0';
                         serviceCard.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
                         var toggleIcon = header.querySelector('.service-toggle i');
                         if (toggleIcon) {
@@ -514,6 +540,7 @@ window.ServiceTemplates = {
                     } else {
                         // Expand
                         serviceCard.classList.add('active');
+                        content.style.maxHeight = '5000px'; // Large enough for all content
                         serviceCard.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
                         var toggleIcon = header.querySelector('.service-toggle i');
                         if (toggleIcon) {
@@ -521,10 +548,10 @@ window.ServiceTemplates = {
                         }
                     }
                     
-                    console.log('[ServiceTemplates v5.4.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
+                    console.log('[ServiceTemplates v5.4.1] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
                 };
                 
-                // v5.4.0 FIX: Add hover effect
+                // Add hover effect
                 header.onmouseenter = function() {
                     if (!serviceCard.classList.contains('active')) {
                         serviceCard.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
@@ -539,17 +566,13 @@ window.ServiceTemplates = {
                     }
                 };
                 
-                var content = document.createElement('div');
-                content.className = 'service-content';
-                content.innerHTML = self.getTemplate(service.id);
-                
                 serviceCard.appendChild(header);
                 serviceCard.appendChild(content);
                 container.appendChild(serviceCard);
                 
                 // Call display function
                 if (self[service.displayFunc]) {
-                    console.log('[ServiceTemplates v5.4.0] Calling display function:', service.displayFunc);
+                    console.log('[ServiceTemplates v5.4.1] Calling display function:', service.displayFunc);
                     self[service.displayFunc](detailed[service.id]);
                     
                     // Render chart if data exists
@@ -558,7 +581,7 @@ window.ServiceTemplates = {
             }
         });
         
-        console.log('[ServiceTemplates v5.4.0] ✓ All services displayed with colored borders and working dropdowns!');
+        console.log('[ServiceTemplates v5.4.1] ✓ All services displayed with WORKING dropdowns!');
     },
     
     // ============================================================================
@@ -566,7 +589,7 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displaySourceCredibility: function(data) {
-        console.log('[Source Credibility v5.4.0] Displaying data:', data);
+        console.log('[Source Credibility v5.4.1] Displaying data:', data);
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('source-score', score);
@@ -600,11 +623,11 @@ window.ServiceTemplates = {
         this.displayTrustMeter(score);
         this.displaySourceComparison(sourceName, score, data.source_comparison);
         
-        console.log('[Source Credibility v5.4.0] ✓ Complete');
+        console.log('[Source Credibility v5.4.1] ✓ Complete');
     },
     
     displayBiasDetector: function(data) {
-        console.log('[Bias Detector v5.4.0] Displaying data:', data);
+        console.log('[Bias Detector v5.4.1] Displaying data:', data);
         
         var score = data.score || data.objectivity_score || 50;
         this.updateElement('bias-score', score);
@@ -635,11 +658,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Bias Detector v5.4.0] ✓ Complete');
+        console.log('[Bias Detector v5.4.1] ✓ Complete');
     },
     
     displayFactChecker: function(data) {
-        console.log('[Fact Checker v5.4.0] Displaying data:', data);
+        console.log('[Fact Checker v5.4.1] Displaying data:', data);
         
         var score = data.score || data.verification_score || 0;
         this.updateElement('fact-score', score);
@@ -679,11 +702,11 @@ window.ServiceTemplates = {
             claimsContainer.innerHTML = '<p>No claims were checked in this article.</p>';
         }
         
-        console.log('[Fact Checker v5.4.0] ✓ Complete');
+        console.log('[Fact Checker v5.4.1] ✓ Complete');
     },
     
     displayAuthorAnalyzer: function(data) {
-        console.log('[Author Analyzer v5.4.0] Displaying data:', data);
+        console.log('[Author Analyzer v5.4.1] Displaying data:', data);
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('author-score', score);
@@ -716,11 +739,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Author Analyzer v5.4.0] ✓ Complete');
+        console.log('[Author Analyzer v5.4.1] ✓ Complete');
     },
     
     displayTransparencyAnalyzer: function(data) {
-        console.log('[Transparency Analyzer v5.4.0] Displaying data:', data);
+        console.log('[Transparency Analyzer v5.4.1] Displaying data:', data);
         
         var score = data.score || data.transparency_score || 0;
         this.updateElement('transparency-score', score);
@@ -748,11 +771,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Transparency Analyzer v5.4.0] ✓ Complete');
+        console.log('[Transparency Analyzer v5.4.1] ✓ Complete');
     },
     
     displayManipulationDetector: function(data) {
-        console.log('[Manipulation Detector v5.4.0] Displaying data:', data);
+        console.log('[Manipulation Detector v5.4.1] Displaying data:', data);
         
         var score = data.score || 0;
         this.updateElement('manipulation-score', score);
@@ -780,11 +803,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Manipulation Detector v5.4.0] ✓ Complete');
+        console.log('[Manipulation Detector v5.4.1] ✓ Complete');
     },
     
     displayContentAnalyzer: function(data) {
-        console.log('[Content Analyzer v5.4.0] Displaying data:', data);
+        console.log('[Content Analyzer v5.4.1] Displaying data:', data);
         
         var score = data.score || data.content_score || 0;
         this.updateElement('content-score', score);
@@ -812,7 +835,7 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Content Analyzer v5.4.0] ✓ Complete');
+        console.log('[Content Analyzer v5.4.1] ✓ Complete');
     },
     
     // ============================================================================
@@ -916,19 +939,19 @@ window.ServiceTemplates = {
         if (element) {
             element.textContent = value;
         } else {
-            console.warn('[ServiceTemplates v5.4.0] Element not found:', id);
+            console.warn('[ServiceTemplates v5.4.1] Element not found:', id);
         }
     }
 };
 
-console.log('[ServiceTemplates v5.4.0] DROPDOWN + COLORED BORDER FIXES - Module loaded successfully');
-console.log('[ServiceTemplates v5.4.0] ✓ Dropdown toggle fixed with proper event handlers');
-console.log('[ServiceTemplates v5.4.0] ✓ Each service has unique colored left border');
-console.log('[ServiceTemplates v5.4.0] ✓ Hover effects and visual feedback added');
-console.log('[ServiceTemplates v5.4.0] ✓ Preserved all v5.3.0 trust meter + comparison features');
-console.log('[ServiceTemplates v5.4.0] ✓ All 7 services functional (Do No Harm)');
+console.log('[ServiceTemplates v5.4.1] DROPDOWN FIX + FINDINGS FILTER - Module loaded successfully');
+console.log('[ServiceTemplates v5.4.1] ✓ Dropdowns now expand/collapse with inline max-height');
+console.log('[ServiceTemplates v5.4.1] ✓ Filtered out "What to verify" and similar meta-text');
+console.log('[ServiceTemplates v5.4.1] ✓ Each service has unique colored left border');
+console.log('[ServiceTemplates v5.4.1] ✓ Preserved all v5.3.0 trust meter + comparison features');
+console.log('[ServiceTemplates v5.4.1] ✓ All 7 services functional (Do No Harm)');
 
 /**
  * I did no harm and this file is not truncated.
- * v5.4.0 - October 28, 2025 - Fixed dropdowns and added colored borders
+ * v5.4.1 - October 28, 2025 - Fixed dropdowns and filtered findings
  */
