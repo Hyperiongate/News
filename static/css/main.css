@@ -1,1494 +1,3221 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!--
-    TruthLens News Analysis Page
-    Version: 3.4.1 - LAYOUT FIX: Added all missing CSS classes
-    Date: October 27, 2025
+/**
+ * TruthLens Main CSS - Enhanced Professional Layout
+ * Date: October 24, 2025
+ * Version: 4.1.0 - UNIFIED NAVIGATION SYSTEM ADDED
+ * 
+ * LATEST CHANGE (October 24, 2025):
+ * - ADDED: Unified navigation header system for all pages
+ * - ADDED: Fixed navigation bar with gradient background
+ * - ADDED: Active page highlighting in navigation
+ * - ADDED: Mobile-responsive hamburger menu
+ * - ADDED: "Coming Soon" badge for Debate Arena
+ * - ADDED: Smooth transitions and hover effects
+ * - PRESERVED: All existing styles (DO NO HARM ✓)
+ * 
+ * PREVIOUS CHANGES (October 12, 2025):
+ * - ADDED: Complete CSS for source credibility comparison bar chart
+ * - ADDED: .source-comparison-section, .source-ranking-chart, .source-bar styles
+ * - ADDED: Animated bar fills with color coding (excellent/good/moderate/low)
+ * - ADDED: Score explanation box styling
+ * 
+ * All other styles remain unchanged from v4.0.0
+ */
+
+/* ===== BASE RESET ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f8fafc;
+    color: #1e293b;
+    line-height: 1.6;
+}
+
+/* ===== HEADER STYLES ===== */
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.5rem 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: white;
+    transition: transform 0.3s ease;
+}
+
+.logo:hover {
+    transform: scale(1.05);
+}
+
+.logo-icon {
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.logo-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+}
+
+.nav-link {
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.nav-link:hover {
+    color: white;
+}
+
+.cta-button {
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.cta-button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+}
+
+/* ===== MAIN CONTAINER ===== */
+.main-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* ===== ANALYSIS SECTION - REDUCED PADDING ===== */
+.analysis-section {
+    background: white;
+    border-radius: 16px;
+    padding: 2rem;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+}
+
+/* ===== NEW: COMPACT HERO SECTION ===== */
+.section-header-compact {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.main-title-compact {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+.gradient-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 3s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+    0%, 100% { filter: hue-rotate(0deg); }
+    50% { filter: hue-rotate(10deg); }
+}
+
+.subtitle-compact {
+    font-size: 1rem;
+    color: #64748b;
+    max-width: 600px;
+    margin: 0 auto 1rem;
+}
+
+/* ===== NEW: CAPABILITIES SHOWCASE ===== */
+.capabilities-showcase {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border-radius: 12px;
+}
+
+.capability-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    background: white;
+    border-radius: 20px;
+    border: 2px solid #e5e7eb;
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.875rem;
+    transition: all 0.3s ease;
+    cursor: default;
+}
+
+.capability-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+    border-color: #6366f1;
+}
+
+.capability-badge i {
+    color: #6366f1;
+    font-size: 1rem;
+}
+
+/* ===== MODE SELECTOR ===== */
+.mode-selector {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 12px;
+    padding: 0.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.mode-tab {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: #64748b;
+}
+
+.mode-tab.active {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    transform: scale(1.02);
+}
+
+.mode-tab:hover:not(.active) {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
+}
+
+.mode-tab i {
+    font-size: 1.1rem;
+}
+
+.mode-content {
+    display: none;
+}
+
+.mode-content.active {
+    display: block;
+}
+
+/* ===== NEW: COMPACT MODE DESCRIPTION ===== */
+.mode-description-compact {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border-radius: 8px;
+    border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.mode-description-compact p {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.mode-description-compact i {
+    color: #6366f1;
+    font-size: 1rem;
+}
+
+/* ===== INPUT FORM ===== */
+.input-form {
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.input-group {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.input-label i {
+    margin-right: 0.5rem;
+    color: #6366f1;
+}
+
+.input-field {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    background: #fafafa;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #6366f1;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.textarea-field {
+    min-height: 100px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.transcript-textarea {
+    min-height: 150px;
+    font-family: 'Inter', monospace;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* Content type indicators */
+.content-type-indicator {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: #6366f1;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.content-type-indicator.show {
+    opacity: 1;
+}
+
+/* ===== BUTTONS ===== */
+.button-container {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.analyze-button {
+    flex: 1;
+    padding: 1rem 2rem;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.analyze-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+}
+
+.analyze-button:active {
+    transform: translateY(0);
+}
+
+.analyze-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.reset-button {
+    padding: 1rem 1.5rem;
+    background: #f1f5f9;
+    color: #475569;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.reset-button:hover {
+    background: #e2e8f0;
+    transform: translateY(-2px);
+}
+
+/* ===== EXTRACTION BLOCKED MESSAGE ===== */
+.extraction-blocked-message {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #f59e0b;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    display: none;
+}
+
+.extraction-blocked-message.show {
+    display: block;
+    animation: slideDown 0.3s ease-out;
+}
+
+.blocked-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.blocked-icon {
+    width: 40px;
+    height: 40px;
+    background: #f59e0b;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.blocked-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #92400e;
+    margin: 0;
+}
+
+.blocked-message {
+    color: #78350f;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+}
+
+.blocked-action {
+    background: white;
+    border: 2px dashed #f59e0b;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.blocked-action-title {
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.blocked-action-text {
+    color: #78350f;
+    font-size: 0.9rem;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.textarea-field.highlight {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+    }
+    50% {
+        box-shadow: 0 0 0 6px rgba(245, 158, 11, 0.2);
+    }
+}
+
+.youtube-helper {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.05) 0%, rgba(255, 0, 0, 0.02) 100%);
+    border: 1px solid rgba(255, 0, 0, 0.2);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: #dc2626;
+}
+
+/* ===== PROGRESS CONTAINER - COMPACT & ALWAYS VISIBLE ===== */
+.progress-container {
+    display: none;
+    margin: 1.5rem auto;
+    max-width: 700px;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.progress-container.show {
+    display: block !important;
+}
+
+.progress-header {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.progress-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.25rem;
+}
+
+.progress-subtitle {
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.progress-percentage {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #6366f1;
+    margin: 0.75rem 0;
+    text-align: center;
+}
+
+.progress-bar-container {
+    background: #f1f5f9;
+    height: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 1rem 0;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    border-radius: 8px;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-steps {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.3;
+    transition: opacity 0.3s ease;
+}
+
+.progress-step.active {
+    opacity: 1;
+}
+
+.step-icon {
+    width: 32px;
+    height: 32px;
+    background: #e5e7eb;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: #6b7280;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active .step-icon {
+    background: #6366f1;
+    color: white;
+    transform: scale(1.1);
+}
+
+.progress-step.completed .step-icon {
+    background: #10b981;
+    color: white;
+}
+
+.step-text {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.progress-step.active .step-text {
+    color: #1e293b;
+}
+
+/* ===== NEW: WHAT WE ANALYZE SECTION ===== */
+.what-we-analyze {
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border-radius: 16px;
+    border: 2px solid #e5e7eb;
+}
+
+.analyze-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1e293b;
+    text-align: center;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.analyze-title i {
+    color: #6366f1;
+    font-size: 1.5rem;
+}
+
+.analyze-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.analyze-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.analyze-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    border-color: #6366f1;
+}
+
+.analyze-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.analyze-icon.source {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.analyze-icon.bias {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+}
+
+.analyze-icon.facts {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.analyze-icon.author {
+    background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
+}
+
+.analyze-icon.transparency {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+}
+
+.analyze-icon.manipulation {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.analyze-card h4 {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.5rem;
+}
+
+.analyze-card p {
+    color: #64748b;
+    font-size: 0.9rem;
+    line-height: 1.6;
+}
+
+/* ===== NEW: DATA SOURCES SECTION ===== */
+.data-sources {
+    text-align: center;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    border: 2px dashed #e5e7eb;
+}
+
+.sources-label {
+    display: block;
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.source-badges {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.source-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+    transition: all 0.3s ease;
+}
+
+.source-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+/* ===== RESULTS SECTION ===== */
+.results-section {
+    display: none;
+    margin-top: 2rem;
+}
+
+.results-section.show {
+    display: block;
+}
+
+.results-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    position: relative;
+}
+
+.results-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.analysis-mode-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.analysis-mode-badge.news {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+}
+
+.analysis-mode-badge.transcript {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+/* ===== SERVICE DROPDOWN STYLES ===== */
+#serviceAnalysisContainer {
+    margin-top: 2rem;
+}
+
+.service-dropdown {
+    margin-bottom: 1rem;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    background: white;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+.service-dropdown.active {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.service-header {
+    padding: 1.25rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+    background: #fafafa;
+}
+
+.service-header:hover {
+    background: #f3f4f6;
+}
+
+.service-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.service-title i {
+    font-size: 1.25rem;
+    width: 28px;
+    text-align: center;
+}
+
+.service-toggle {
+    color: #6b7280;
+    transition: transform 0.3s;
+}
+
+.service-dropdown.active .service-toggle i {
+    transform: rotate(180deg);
+}
+
+/* Service specific colors */
+.sourceCredibilityDropdown .service-title i { color: #6366f1; }
+.biasDetectorDropdown .service-title i { color: #f59e0b; }
+.factCheckerDropdown .service-title i { color: #3b82f6; }
+.transparencyAnalyzerDropdown .service-title i { color: #8b5cf6; }
+.manipulationDetectorDropdown .service-title i { color: #ef4444; }
+.contentAnalyzerDropdown .service-title i { color: #ec4899; }
+.authorDropdown .service-title i { color: #06b6d4; }
+
+/* ===== SERVICE CONTENT ===== */
+.service-content {
+    background: white;
+    border-top: 1px solid #e5e7eb;
+    display: none;
+}
+
+.service-dropdown.active .service-content {
+    display: block;
+}
+
+.service-analysis-card {
+    padding: 1.5rem;
+    background: #fafafa;
+}
+
+/* ===== ENHANCED SOURCE CREDIBILITY STYLES ===== */
+.source-credibility-enhanced {
+    padding: 1rem;
+}
+
+.source-metrics-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.source-metric-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.source-metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.source-metric-card.primary {
+    border-top: 4px solid #6366f1;
+}
+
+.source-metric-card.success {
+    border-top: 4px solid #10b981;
+}
+
+.source-metric-card.info {
+    border-top: 4px solid #3b82f6;
+}
+
+.metric-icon-large {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.8;
+}
+
+.metric-value-large {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+}
+
+/* ============================================================================
+   NEW SECTION v4.0.1: SOURCE CREDIBILITY BAR CHART STYLES
+   ============================================================================ */
+
+/* Container for the source comparison section */
+.source-comparison-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* Title for the comparison chart */
+.comparison-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.comparison-title i {
+    color: #6366f1;
+    font-size: 1.125rem;
+}
+
+/* Score explanation box */
+.score-explanation {
+    background: #f0f9ff;
+    border-left: 3px solid #3b82f6;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 6px;
+}
+
+.score-explanation p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #1e40af;
+    line-height: 1.5;
+}
+
+.score-explanation i {
+    margin-right: 0.5rem;
+}
+
+/* Container for the bar chart */
+.source-ranking-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Individual source bar row */
+.source-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.source-bar:hover {
+    background: #f1f5f9;
+    transform: translateX(4px);
+}
+
+/* Highlight current source */
+.source-bar.current {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+    border: 2px solid #6366f1;
+    box-shadow: 0 2px 8px rgba(99, 102, 241, 0.15);
+}
+
+/* Source name label */
+.source-name {
+    flex: 0 0 180px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.source-bar.current .source-name {
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+/* Bar track (background) */
+.source-bar-track {
+    flex: 1;
+    height: 32px;
+    background: #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Bar fill (colored bar) */
+.source-bar-fill {
+    height: 100%;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 0.75rem;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated shimmer effect on bars */
+.source-bar-fill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Score label inside the bar */
+.score-label {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+}
+
+/* Color tiers for different score ranges */
+.source-bar-fill.excellent {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+.source-bar-fill.good {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.source-bar-fill.moderate {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+.source-bar-fill.low {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* Current source bar gets extra emphasis */
+.source-bar.current .source-bar-fill {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* Trust Level Meter Section */
+.trust-meter-section {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.trust-meter-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.trust-meter {
+    position: relative;
+    height: 40px;
+    background: linear-gradient(90deg, 
+        #ef4444 0%, 
+        #f59e0b 25%, 
+        #eab308 50%, 
+        #84cc16 75%, 
+        #10b981 100%
+    );
+    border-radius: 20px;
+    margin-bottom: 0.5rem;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.trust-indicator {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 56px;
+    background: white;
+    border: 4px solid #1e293b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1.125rem;
+    color: #1e293b;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trust-scale {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.scale-marker {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+/* Source Details Grid */
+.source-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.source-detail-item {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: flex;
+    gap: 0.75rem;
+    align-items: flex-start;
+}
+
+.detail-icon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.125rem;
+    flex-shrink: 0;
+}
+
+.detail-content {
+    flex: 1;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.detail-value {
+    font-size: 0.95rem;
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* End of Source Credibility Bar Chart Styles */
+
+/* ===== METRICS GRID (GENERAL) ===== */
+.service-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.metric-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border-left: 3px solid #6366f1;
+}
+
+.metric-card.primary { border-left-color: #6366f1; }
+.metric-card.success { border-left-color: #10b981; }
+.metric-card.warning { border-left-color: #f59e0b; }
+.metric-card.danger { border-left-color: #ef4444; }
+.metric-card.info { border-left-color: #3b82f6; }
+.metric-card.secondary { border-left-color: #06b6d4; }
+
+.metric-icon {
+    font-size: 1.5rem;
+    color: #6366f1;
+    opacity: 0.7;
+}
+
+.metric-content {
+    flex: 1;
+}
+
+.metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.metric-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* ===== ENHANCED TRUST SCORE DISPLAY ===== */
+.trust-score-visual {
+    display: flex;
+    gap: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.score-circle-container {
+    flex-shrink: 0;
+}
+
+.score-circle-bg {
+    width: 180px;
+    height: 180px;
+    background: conic-gradient(
+        from 0deg,
+        #10b981 0deg 72deg,
+        #3b82f6 72deg 144deg,
+        #f59e0b 144deg 216deg,
+        #ef4444 216deg 288deg,
+        #6b7280 288deg 360deg
+    );
+    border-radius: 50%;
+    padding: 8px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.score-circle-inner {
+    width: 164px;
+    height: 164px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: scoreReveal 0.5s ease-out;
+    text-align: center;
+    padding: 10px;
+}
+
+.trust-score-big {
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+    display: block;
+}
+
+.trust-score-big.high { color: #10b981; }
+.trust-score-big.medium { color: #3b82f6; }
+.trust-score-big.low { color: #ef4444; }
+
+.trust-score-max {
+    font-size: 1.125rem;
+    color: #6b7280;
+    font-weight: 600;
+    margin: 0.125rem 0 0.5rem 0;
+    display: block;
+}
+
+.trust-label-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    max-width: 140px;
+    text-align: center;
+}
+
+.trust-label-badge.high {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+}
+
+.trust-label-badge.medium {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+.trust-label-badge.low {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.score-details-section {
+    flex: 1;
+}
+
+.score-breakdown-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.score-breakdown-title i {
+    color: #6366f1;
+}
+
+.calculation-method {
+    background: rgba(99, 102, 241, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.calculation-method-title {
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.calculation-method-text {
+    color: #64748b;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.service-contributions {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.contributions-title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 1rem;
+    font-size: 0.95rem;
+}
+
+.contribution-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.contribution-label {
+    flex: 0 0 140px;
+    font-size: 0.85rem;
+    color: #475569;
+    font-weight: 500;
+}
+
+.contribution-bar-container {
+    flex: 1;
+    height: 24px;
+    background: #f1f5f9;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.contribution-bar {
+    height: 100%;
+    border-radius: 12px;
+    transition: width 0.6s ease;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+}
+
+.contribution-score {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: white;
+    white-space: nowrap;
+}
+
+.contribution-weight {
+    flex: 0 0 40px;
+    text-align: right;
+    font-size: 0.85rem;
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.contribution-source { background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%); }
+.contribution-bias { background: linear-gradient(90deg, #f59e0b 0%, #f97316 100%); }
+.contribution-author { background: linear-gradient(90deg, #06b6d4 0%, #0891b2 100%); }
+.contribution-facts { background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%); }
+.contribution-transparency { background: linear-gradient(90deg, #8b5cf6 0%, #a855f7 100%); }
+.contribution-manipulation { background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%); }
+.contribution-content { background: linear-gradient(90deg, #ec4899 0%, #db2777 100%); }
+
+.article-info-section {
+    margin-top: 2rem;
+    padding: 2rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.info-label {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.info-value {
+    font-size: 1rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+.findings-summary {
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.02) 100%);
+    border-left: 4px solid #6366f1;
+    border-radius: 8px;
+}
+
+.findings-title {
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+}
+
+.findings-text {
+    color: #475569;
+    line-height: 1.7;
+    font-size: 0.95rem;
+}
+
+/* ===== ANALYSIS DETAILS ===== */
+.analysis-details {
+    margin-top: 1.5rem;
+}
+
+.analysis-block {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border-left: 3px solid #6366f1;
+}
+
+.analysis-block h4 {
+    color: #1f2937;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-block h4 i {
+    color: #6366f1;
+    font-size: 0.875rem;
+}
+
+.analysis-block p {
+    color: #4b5563;
+    line-height: 1.6;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* ===== ERROR MESSAGE ===== */
+.error-message {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    max-width: 400px;
+    display: none;
+}
+
+.error-message.active {
+    display: block;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.error-content {
+    padding: 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.error-icon {
+    width: 40px;
+    height: 40px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.error-text {
+    flex: 1;
+    color: #1e293b;
+    line-height: 1.6;
+}
+
+.error-close {
+    background: none;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: color 0.2s;
+}
+
+.error-close:hover {
+    color: #1e293b;
+}
+
+/* ===== LOADING OVERLAY ===== */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.loading-overlay.active {
+    display: flex;
+}
+
+.loading-content {
+    text-align: center;
+    color: white;
+}
+
+.loading-spinner {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 2rem;
+}
+
+.spinner-ring {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border: 3px solid transparent;
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.spinner-ring:nth-child(2) {
+    animation-delay: 0.15s;
+    opacity: 0.7;
+}
+
+.spinner-ring:nth-child(3) {
+    animation-delay: 0.3s;
+    opacity: 0.5;
+}
+
+.spinner-ring:nth-child(4) {
+    animation-delay: 0.45s;
+    opacity: 0.3;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.loading-subtitle {
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+/* ===== ANIMATIONS ===== */
+@keyframes scoreReveal {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ===== UTILITY CLASSES ===== */
+.no-data {
+    padding: 2rem;
+    text-align: center;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.source-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: #f1f5f9;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #475569;
+    margin-left: 0.5rem;
+}
+
+.source-type-badge.youtube {
+    background: rgba(255, 0, 0, 0.1);
+    color: #dc2626;
+}
+
+.source-type-badge.news {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+    .main-container {
+        padding: 1rem;
+    }
     
-    CHANGES IN v3.4.1 (October 27, 2025):
-    🔧 FIXED: Added ALL missing CSS classes (comprehensive-summary, summary-header, etc.)
-    🔧 FIXED: Layout now displays properly with professional styling
-    🔧 FIXED: All elements have proper spacing, colors, backgrounds
+    .analysis-section {
+        padding: 1.5rem;
+    }
     
-    CHANGES IN v3.4.0 (October 27, 2025):
-    🔧 FIXED: Removed generic bullet points that showed "credible author" and "minimal bias"
-    🔧 FIXED: Key Insights now extract REAL data from backend instead of generic placeholders
-    🔧 FIXED: Removed unnecessary "Want More Details?" section
-    🔧 FIXED: Trust score breakdown now displays properly with better data extraction
-    🔧 FIXED: PDF generation now works correctly
-    ✅ PRESERVED: All existing functionality (progress bar, service dropdowns, etc.)
-    ✅ DO NO HARM: Only fixed broken display logic
+    .main-title-compact {
+        font-size: 1.5rem;
+    }
     
-    WHAT WAS FIXED:
-    - Added comprehensive CSS for all summary elements
-    - Key Insights now show actual analysis findings, not generic text
-    - Removed unwanted "credible author" and "minimal bias" statements from summary
-    - Removed "Want More Details?" prompt
-    - Enhanced data extraction from backend responses
-    - Better fallbacks when data is missing
-    - Professional layout with proper styling
+    .subtitle-compact {
+        font-size: 0.9rem;
+    }
     
-    WHAT WAS PRESERVED:
-    - Animated progress bar with fun facts
-    - Trust score visualization
-    - Trust score breakdown bars
-    - All service dropdown cards
-    - PDF generation
-    - Chart rendering
-    - Navigation
+    .nav-links {
+        display: none;
+    }
     
-    This file is complete and ready to deploy.
-    Last modified: October 27, 2025 - Layout fix v3.4.1
-    -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens - AI-Powered News Credibility Analysis</title>
-    <meta name="description" content="Professional AI analysis for news credibility using 7 advanced services.">
+    .capabilities-showcase {
+        gap: 0.5rem;
+    }
     
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/static/images/favicon.png">
+    .capability-badge {
+        font-size: 0.8rem;
+        padding: 0.5rem 0.75rem;
+    }
     
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+    .analyze-grid {
+        grid-template-columns: 1fr;
+    }
     
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    .service-metrics-grid,
+    .source-metrics-row {
+        grid-template-columns: 1fr;
+    }
     
-    <!-- Chart.js for Visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    .progress-steps {
+        grid-template-columns: repeat(3, 1fr);
+    }
     
-    <!-- jsPDF Library for PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    .trust-score-visual {
+        flex-direction: column;
+        gap: 2rem;
+    }
     
-    <!-- External Styles -->
-    <link rel="stylesheet" href="/static/css/main.css">
+    .score-circle-container {
+        margin: 0 auto;
+    }
     
-    <!-- Enhanced Styles -->
-    <style>
-        /* v3.4.1 - LAYOUT FIX: Added all missing CSS classes */
-        :root {
-            --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            --gradient-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            --gradient-red: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        }
-
-        /* ===== PAGE CONTENT ===== */
-        .page-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .analysis-container {
-            background: white;
-            border-radius: 16px;
-            padding: 2.5rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-        }
-
-        .input-section {
-            max-width: 800px;
-            margin: 0 auto 2rem;
-        }
-
-        /* ===== COMPREHENSIVE SUMMARY SECTION ===== */
-        .comprehensive-summary {
-            background: white;
-            border-radius: 16px;
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-        }
-
-        .summary-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2.5rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 2px solid #f1f5f9;
-        }
-
-        .summary-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .summary-title i {
-            color: #6366f1;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .action-btn {
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            border: none;
-            font-weight: 600;
-            font-size: 0.9375rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: all 0.3s ease;
-        }
-
-        .download-pdf-btn {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
-        }
-
-        .download-pdf-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
-        }
-
-        .new-analysis-btn {
-            background: #f1f5f9;
-            color: #475569;
-        }
-
-        .new-analysis-btn:hover {
-            background: #e2e8f0;
-            color: #334155;
-        }
-
-        /* ===== TRUST SCORE DISPLAY ===== */
-        .trust-score-display {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-            padding: 2rem;
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            border-radius: 12px;
-            margin-bottom: 2rem;
-            border: 1px solid #e5e7eb;
-        }
-
-        .trust-gauge {
-            position: relative;
-            flex-shrink: 0;
-        }
-
-        .trust-score-value {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            text-align: center;
-        }
-
-        .score-number {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #1e293b;
-            line-height: 1;
-        }
-
-        .score-label {
-            font-size: 0.75rem;
-            color: #64748b;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .trust-details {
-            flex: 1;
-        }
-
-        .trust-rating {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .trust-description {
-            font-size: 1rem;
-            color: #64748b;
-            line-height: 1.6;
-        }
-
-        /* ===== ARTICLE METADATA ===== */
-        .article-metadata {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-            padding: 1.5rem;
-            background: #f8fafc;
-            border-radius: 12px;
-        }
-
-        .metadata-item {
-            text-align: center;
-        }
-
-        .metadata-label {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: #64748b;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-        }
-
-        .metadata-value {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: #1e293b;
-        }
-
-        /* ===== ARTICLE SUMMARY ===== */
-        .article-summary {
-            margin-bottom: 2rem;
-        }
-
-        .section-subtitle {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .section-subtitle i {
-            color: #6366f1;
-            font-size: 1.125rem;
-        }
-
-        .summary-text {
-            font-size: 1rem;
-            line-height: 1.7;
-            color: #475569;
-            padding: 1.5rem;
-            background: #f8fafc;
-            border-radius: 8px;
-            border-left: 4px solid #6366f1;
-        }
-
-        /* ===== ANALYSIS FINDINGS ===== */
-        .analysis-findings {
-            margin-bottom: 2rem;
-        }
-
-        .bottom-line {
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            border-left: 4px solid #3b82f6;
-        }
-
-        .bottom-line-title {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: #1e40af;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .bottom-line-text {
-            font-size: 1.0625rem;
-            font-weight: 600;
-            color: #1e293b;
-            line-height: 1.6;
-        }
-
-        .key-findings {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        /* ===== SERVICE RESULTS WRAPPER ===== */
-        .service-results-wrapper {
-            margin-top: 3rem;
-        }
-
-        .service-results-header {
-            text-align: center;
-            margin-bottom: 2.5rem;
-            padding: 2rem;
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .service-results-header h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
-
-        .service-results-header p {
-            font-size: 1rem;
-            color: #64748b;
-        }
-
-        #service-results {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        /* ===== PROGRESS BAR OVERLAY ===== */
-        .loading-backdrop {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-            z-index: 9998;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .loading-backdrop.active {
-            display: flex;
-        }
-
-        .progress-container-enhanced {
-            background: white;
-            border-radius: 20px;
-            padding: 2.5rem;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            min-width: 500px;
-            max-width: 600px;
-            text-align: center;
-        }
-
-        .progress-header-text {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 1rem;
-        }
-
-        .progress-message-text {
-            font-size: 1rem;
-            color: #64748b;
-            margin-bottom: 2rem;
-            min-height: 3rem;
-        }
-
-        .progress-bar-wrapper {
-            background: #f1f5f9;
-            height: 8px;
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 1rem;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            background-size: 200% 100%;
-            border-radius: 10px;
-            width: 0%;
-            transition: width 0.5s ease;
-            animation: shimmerEffect 2s infinite;
-        }
-
-        @keyframes shimmerEffect {
-            0% { background-position: 0% 0%; }
-            100% { background-position: 200% 0%; }
-        }
-
-        .progress-percentage {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 800;
-            color: #3b82f6;
-            margin-bottom: 1rem;
-        }
-
-        .fun-fact-box {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-top: 1.5rem;
-        }
-
-        .fun-fact-label {
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: #1e40af;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.5rem;
-        }
-
-        .fun-fact-text {
-            font-size: 0.875rem;
-            color: #1e40af;
-            line-height: 1.5;
-        }
-
-        /* ===== TRUST SCORE BREAKDOWN BARS ===== */
-        .trust-score-breakdown {
-            margin-top: 2rem;
-            padding: 1.5rem;
-            background: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 100%);
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-        }
-
-        .breakdown-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .breakdown-item {
-            margin-bottom: 1.25rem;
-        }
-
-        .breakdown-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .breakdown-label {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
-        }
-
-        .breakdown-name {
-            font-size: 0.875rem;
-            font-weight: 600;
-            color: #475569;
-        }
-
-        .breakdown-score {
-            font-size: 0.875rem;
-            font-weight: 700;
-            color: #1e293b;
-        }
-
-        .breakdown-bar-container {
-            height: 10px;
-            background: #e5e7eb;
-            border-radius: 5px;
-            overflow: hidden;
-        }
-
-        .breakdown-bar-fill {
-            height: 100%;
-            transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 0%;
-            border-radius: 5px;
-        }
-
-        /* v3.4.0 - ENHANCED: Better finding item styling */
-        .finding-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 8px;
-            margin-bottom: 0.75rem;
-            border-left: 3px solid #3b82f6;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .finding-icon {
-            color: #3b82f6;
-            font-size: 1.25rem;
-            margin-top: 0.125rem;
-            flex-shrink: 0;
-        }
-
-        .finding-text {
-            color: #475569;
-            font-size: 0.9375rem;
-            line-height: 1.6;
-            flex: 1;
-        }
-
-        /* v3.4.0 - NEW: Empty state for when no findings */
-        .no-findings-message {
-            padding: 2rem;
-            text-align: center;
-            color: #64748b;
-            font-size: 0.9375rem;
-            background: #f8fafc;
-            border-radius: 8px;
-            border: 1px dashed #cbd5e1;
-        }
-
-        .no-findings-message i {
-            font-size: 2rem;
-            color: #94a3b8;
-            margin-bottom: 0.5rem;
-            display: block;
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation -->
-    <nav class="main-navigation">
-        <div class="nav-container">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
-            
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
-            
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i>Features</a></li>
-                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i>About</a></li>
-                <li><a href="/" class="nav-link active"><i class="fas fa-newspaper"></i>News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i>Transcript/YouTube</a></li>
-                <li><a href="/live-stream" class="nav-link"><i class="fas fa-video"></i>Live Stream</a></li>
-                <li><a href="/simple-debate-arena" class="nav-link"><i class="fas fa-comments"></i>Debate Arena</a></li>
-                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i>Contact Us</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <!-- Loading Backdrop with Progress Bar -->
-    <div id="loadingBackdrop" class="loading-backdrop">
-        <div class="progress-container-enhanced">
-            <h3 class="progress-header-text">
-                <i class="fas fa-search"></i> Analyzing Article
-            </h3>
-            
-            <div class="progress-message-text" id="progress-message">
-                Starting analysis...
-            </div>
-            
-            <div class="progress-percentage" id="progress-percentage">0%</div>
-            
-            <div class="progress-bar-wrapper">
-                <div class="progress-bar-fill" id="progress-bar"></div>
-            </div>
-            
-            <div class="fun-fact-box">
-                <div class="fun-fact-label">
-                    <i class="fas fa-lightbulb"></i> Did You Know?
-                </div>
-                <div class="fun-fact-text" id="fun-fact">
-                    The average person encounters 300-400 pieces of misinformation daily on social media.
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content -->
-    <div class="page-content">
-        <!-- Hero Section (Compact) -->
-        <div class="section-header-compact">
-            <h1 class="main-title-compact">
-                <i class="fas fa-newspaper" style="color: #3b82f6; margin-right: 8px;"></i>
-                News Credibility Analysis
-            </h1>
-            <p class="subtitle-compact">Professional AI analysis for news articles, editorials, and opinion pieces</p>
-        </div>
-
-        <!-- Capabilities Showcase -->
-        <div class="capabilities-showcase">
-            <div class="capability-badge">
-                <i class="fas fa-link"></i>
-                <span>URL Analysis</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-file-alt"></i>
-                <span>Text Analysis</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-chart-line"></i>
-                <span>7 AI Services</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-file-pdf"></i>
-                <span>PDF Reports</span>
-            </div>
-        </div>
-
-        <!-- Mode Description -->
-        <div class="analysis-container">
-            <div class="mode-description-compact">
-                <i class="fas fa-info-circle"></i>
-                <strong>News Mode:</strong> Analyzes source credibility, bias detection, fact-checking, author reputation, transparency, manipulation tactics, and content quality.
-            </div>
-
-            <!-- Input Section -->
-            <div class="input-section">
-                <label class="input-label" for="article-url">
-                    <i class="fas fa-link"></i> Article URL (Optional)
-                </label>
-                <input 
-                    type="url" 
-                    id="article-url" 
-                    class="input-field" 
-                    placeholder="https://example.com/article">
-
-                <label class="input-label" for="article-text" style="margin-top: 16px;">
-                    <i class="fas fa-align-left"></i> Or Paste Article Text
-                </label>
-                <textarea 
-                    id="article-text" 
-                    class="input-field" 
-                    placeholder="Paste the full article text here for analysis..."></textarea>
-
-                <button 
-                    class="analyze-button" 
-                    onclick="startAnalysis()"
-                    id="analyze-btn">
-                    <i class="fas fa-search"></i> Analyze Article
-                </button>
-            </div>
-
-            <!-- Results Section -->
-            <div id="results-section" style="display: none;">
-                
-                <!-- Comprehensive Summary Section -->
-                <div id="comprehensive-summary" class="comprehensive-summary" style="display: none;">
-                    <div class="summary-header">
-                        <h2 class="summary-title">
-                            <i class="fas fa-clipboard-check"></i>
-                            Analysis Summary
-                        </h2>
-                        <div class="action-buttons">
-                            <button class="action-btn download-pdf-btn" onclick="generatePDF()">
-                                <i class="fas fa-file-pdf"></i>
-                                Download PDF
-                            </button>
-                            <button class="action-btn new-analysis-btn" onclick="resetAnalysis()">
-                                <i class="fas fa-redo"></i>
-                                New Analysis
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Trust Score Display -->
-                    <div class="trust-score-display">
-                        <div class="trust-gauge">
-                            <canvas id="trust-gauge-canvas" width="120" height="120"></canvas>
-                            <div class="trust-score-value">
-                                <div class="score-number" id="trust-score-number">0</div>
-                                <div class="score-label">Trust Score</div>
-                            </div>
-                        </div>
-                        <div class="trust-details">
-                            <div class="trust-rating" id="trust-rating">Calculating...</div>
-                            <div class="trust-description" id="trust-description">
-                                Analyzing article across 7 comprehensive dimensions...
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Trust Score Breakdown -->
-                    <div class="trust-score-breakdown" id="trust-score-breakdown" style="display: none;">
-                        <div class="breakdown-title">
-                            <i class="fas fa-chart-bar"></i>
-                            Score Breakdown
-                        </div>
-                        <div id="breakdown-items">
-                            <!-- Breakdown items will be inserted here -->
-                        </div>
-                    </div>
-
-                    <!-- Article Metadata -->
-                    <div class="article-metadata">
-                        <div class="metadata-item">
-                            <div class="metadata-label">Source</div>
-                            <div class="metadata-value" id="metadata-source">Loading...</div>
-                        </div>
-                        <div class="metadata-item">
-                            <div class="metadata-label">Author</div>
-                            <div class="metadata-value" id="metadata-author">Loading...</div>
-                        </div>
-                        <div class="metadata-item">
-                            <div class="metadata-label">Word Count</div>
-                            <div class="metadata-value" id="metadata-wordcount">Loading...</div>
-                        </div>
-                        <div class="metadata-item">
-                            <div class="metadata-label">Analysis Date</div>
-                            <div class="metadata-value" id="metadata-date">Loading...</div>
-                        </div>
-                    </div>
-
-                    <!-- Article Summary -->
-                    <div class="article-summary">
-                        <h3 class="section-subtitle">
-                            <i class="fas fa-align-left"></i>
-                            Article Summary
-                        </h3>
-                        <div class="summary-text" id="article-summary-text">
-                            Loading article summary...
-                        </div>
-                    </div>
-
-                    <!-- Analysis Findings -->
-                    <div class="analysis-findings">
-                        <h3 class="section-subtitle">
-                            <i class="fas fa-lightbulb"></i>
-                            Key Insights
-                        </h3>
-                        
-                        <div class="bottom-line">
-                            <div class="bottom-line-title">
-                                <i class="fas fa-flag"></i> Bottom Line
-                            </div>
-                            <div class="bottom-line-text" id="bottom-line-text">
-                                Analyzing content...
-                            </div>
-                        </div>
-
-                        <div class="key-findings" id="key-findings-list">
-                            <!-- Findings will be inserted here dynamically -->
-                        </div>
-                    </div>
-
-                    <!-- v3.4.0 REMOVED: "Want More Details?" section - unnecessary -->
-
-                </div>
-
-                <!-- Detailed Service Results Section -->
-                <div id="service-results-wrapper" style="display: none;">
-                    <div class="service-results-header">
-                        <h2>Detailed Service Analysis</h2>
-                        <p>In-depth breakdowns from each of our 7 AI-powered analysis services</p>
-                    </div>
-                    <div id="service-results">
-                        <!-- Service cards will be dynamically inserted here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Load JavaScript Dependencies -->
-    <!-- CRITICAL: Load order matters! -->
-    <script src="/static/js/chart-renderer.js"></script>
-    <script src="/static/js/service-templates.js"></script>
-    <script src="/static/js/unified-app-core.js"></script>
-    <script src="/static/js/pdf-generator.js"></script>
+    .contribution-item {
+        flex-wrap: wrap;
+    }
     
-    <script>
-        // Initialize the analyzer in NEWS-ONLY mode
-        var analyzer;
-        
-        // Fun facts for rotation
-        var funFacts = [
-            'The average person encounters 300-400 pieces of misinformation daily on social media.',
-            'Fact-checking organizations verify thousands of claims every day using AI and human experts.',
-            '62% of Americans get their news from social media platforms.',
-            'Studies show that false information spreads 6 times faster than true information online.',
-            'Professional fact-checkers use over 20 different verification techniques.',
-            'Reading just the headline leads to 70% misunderstanding of article content.',
-            'AI can analyze writing patterns to detect potential bias with 85% accuracy.',
-            'Expert human fact-checkers spend an average of 2-3 hours verifying complex claims.'
-        ];
-        
-        var currentFunFactIndex = 0;
-        var funFactInterval = null;
-        var progressInterval = null;
-        var messageInterval = null;
-        
-        // Progress messages
-        var progressMessages = [
-            '<i class="fas fa-download"></i> Extracting article content...',
-            '<i class="fas fa-shield-check"></i> Analyzing source credibility...',
-            '<i class="fas fa-balance-scale"></i> Detecting potential bias...',
-            '<i class="fas fa-check-double"></i> Fact-checking claims...',
-            '<i class="fas fa-user-check"></i> Evaluating author reputation...',
-            '<i class="fas fa-eye"></i> Assessing transparency...',
-            '<i class="fas fa-exclamation-triangle"></i> Detecting manipulation tactics...',
-            '<i class="fas fa-star"></i> Analyzing content quality...'
-        ];
-        
-        var currentMessageIndex = 0;
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('[NewsPage v3.4.0] Initializing with fixed summary display');
-            
-            // Initialize analyzer in news mode only
-            analyzer = new UnifiedTruthLensAnalyzer();
-            analyzer.currentMode = 'news'; // Force news mode
-            
-            console.log('[NewsPage] Analyzer initialized in news-only mode');
-        });
+    .contribution-label {
+        flex: 0 0 100%;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .progress-container {
+        padding: 1.25rem;
+    }
+    
+    .error-message {
+        left: 1rem;
+        right: 1rem;
+        max-width: none;
+    }
+    
+    .data-sources {
+        padding: 1rem;
+    }
+    
+    .source-badges {
+        gap: 0.5rem;
+    }
+    
+    .source-badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    /* Responsive bar chart */
+    .source-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .source-name {
+        flex: 0 0 auto;
+        margin-bottom: 0.5rem;
+    }
+    
+    .source-details-grid {
+        grid-template-columns: 1fr;
+    }
+}
 
-        // Start analysis function
-        function startAnalysis() {
-            const url = document.getElementById('article-url').value.trim();
-            const text = document.getElementById('article-text').value.trim();
-            
-            if (!url && !text) {
-                alert('Please provide either an article URL or article text');
-                return;
-            }
-            
-            // Show loading state
-            showEnhancedLoadingState();
-            
-            if (analyzer) {
-                analyzer.startAnalysis(url, text);
-            } else {
-                console.error('[NewsPage] Analyzer not initialized');
-                alert('Analyzer not ready. Please refresh the page.');
-            }
-        }
+@media (max-width: 480px) {
+    .capabilities-showcase {
+        flex-direction: column;
+    }
+    
+    .capability-badge {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .mode-selector {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .step-text {
+        font-size: 0.65rem;
+    }
+}
+/* ============================================================================
+   TRANSPARENCY ANALYZER v3.0.0 STYLES - ADD TO END OF main.css
+   Date: October 12, 2025
+   
+   ADD THESE STYLES TO THE BOTTOM OF YOUR main.css FILE
+   ============================================================================ */
 
-        // Enhanced loading state with progress bar and fun facts
-        function showEnhancedLoadingState() {
-            console.log('[LoadingState v3.4.0] Showing progress overlay');
-            
-            const loadingBackdrop = document.getElementById('loadingBackdrop');
-            const progressBar = document.getElementById('progress-bar');
-            const progressPercentage = document.getElementById('progress-percentage');
-            const progressMessage = document.getElementById('progress-message');
-            const funFactText = document.getElementById('fun-fact');
-            
-            if (loadingBackdrop) {
-                loadingBackdrop.classList.add('active');
-            }
-            
-            // Reset progress
-            if (progressBar) progressBar.style.width = '0%';
-            if (progressPercentage) progressPercentage.textContent = '0%';
-            
-            // Animate progress bar
-            let progress = 0;
-            progressInterval = setInterval(() => {
-                progress += Math.random() * 3;
-                if (progress > 90) progress = 90; // Cap at 90% until actual completion
-                
-                if (progressBar) progressBar.style.width = progress + '%';
-                if (progressPercentage) progressPercentage.textContent = Math.round(progress) + '%';
-            }, 200);
-            
-            // Rotate progress messages
-            currentMessageIndex = 0;
-            if (progressMessage) {
-                progressMessage.innerHTML = progressMessages[0];
-            }
-            
-            messageInterval = setInterval(() => {
-                currentMessageIndex = (currentMessageIndex + 1) % progressMessages.length;
-                if (progressMessage) {
-                    progressMessage.innerHTML = progressMessages[currentMessageIndex];
-                }
-            }, 3000);
-            
-            // Rotate fun facts
-            currentFunFactIndex = 0;
-            if (funFactText) {
-                funFactText.textContent = funFacts[0];
-            }
-            
-            funFactInterval = setInterval(() => {
-                currentFunFactIndex = (currentFunFactIndex + 1) % funFacts.length;
-                if (funFactText) {
-                    funFactText.textContent = funFacts[currentFunFactIndex];
-                }
-            }, 8000);
-        }
+/* Transparency Enhanced v3 Container */
+.transparency-enhanced-v3 {
+    padding: 1rem;
+}
 
-        // Hide loading state
-        function hideEnhancedLoadingState() {
-            console.log('[LoadingState v3.4.0] Hiding progress overlay');
-            
-            const loadingBackdrop = document.getElementById('loadingBackdrop');
-            const progressBar = document.getElementById('progress-bar');
-            const progressPercentage = document.getElementById('progress-percentage');
-            
-            // Complete progress animation
-            if (progressBar) progressBar.style.width = '100%';
-            if (progressPercentage) progressPercentage.textContent = '100%';
-            
-            // Hide after a short delay
-            setTimeout(() => {
-                if (loadingBackdrop) {
-                    loadingBackdrop.classList.remove('active');
-                }
-                
-                // Clear intervals
-                if (progressInterval) clearInterval(progressInterval);
-                if (messageInterval) clearInterval(messageInterval);
-                if (funFactInterval) clearInterval(funFactInterval);
-            }, 500);
-        }
+/* Hero Section with Score */
+.trans-hero-v3 {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border-radius: 16px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    color: white;
+    box-shadow: 0 4px 20px rgba(139, 92, 246, 0.3);
+}
 
-        // Override the analyzer's hideLoadingState method
-        if (typeof UnifiedTruthLensAnalyzer !== 'undefined') {
-            UnifiedTruthLensAnalyzer.prototype.hideLoadingState = function() {
-                hideEnhancedLoadingState();
-            };
-            
-            UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
-                showEnhancedLoadingState();
-            };
-        }
+.trans-score-display-v3 {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
 
-        // v3.4.0 - CRITICAL FIX: Completely rewritten to extract REAL insights
-        function updateComprehensiveSummary(data) {
-            console.log('[Summary v3.4.0] Updating comprehensive summary - NO GENERIC PLACEHOLDERS');
-            console.log('[Summary v3.4.0] Data received:', data);
-            
-            const summaryContainer = document.getElementById('comprehensive-summary');
-            const serviceWrapper = document.getElementById('service-results-wrapper');
-            const resultsSection = document.getElementById('results-section');
-            
-            // Show results section
-            if (resultsSection) {
-                resultsSection.style.display = 'block';
-            }
-            
-            // Show summary container
-            if (summaryContainer) {
-                summaryContainer.style.display = 'block';
-            }
-            
-            // Show service wrapper
-            if (serviceWrapper) {
-                serviceWrapper.style.display = 'block';
-            }
-            
-            // Update all summary components
-            updateTrustScore(data);
-            updateTrustScoreBreakdown(data);
-            updateArticleMetadata(data);
-            updateArticleSummary(data);
-            updateAnalysisFindings(data); // FIXED in v3.4.0
-            
-            console.log('[Summary v3.4.0] Summary updated successfully');
-        }
+.trans-score-circle-v3 {
+    width: 140px;
+    height: 140px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0;
+}
 
-        function updateTrustScore(data) {
-            const trustScore = data.trust_score || 0;
-            
-            // Update number
-            const scoreNumber = document.getElementById('trust-score-number');
-            if (scoreNumber) {
-                scoreNumber.textContent = Math.round(trustScore);
-            }
-            
-            // Update rating text
-            const ratingEl = document.getElementById('trust-rating');
-            if (ratingEl) {
-                if (trustScore >= 80) {
-                    ratingEl.textContent = 'Highly Trustworthy';
-                    ratingEl.style.color = '#10b981';
-                } else if (trustScore >= 60) {
-                    ratingEl.textContent = 'Generally Reliable';
-                    ratingEl.style.color = '#3b82f6';
-                } else if (trustScore >= 40) {
-                    ratingEl.textContent = 'Exercise Caution';
-                    ratingEl.style.color = '#f59e0b';
-                } else {
-                    ratingEl.textContent = 'Low Credibility';
-                    ratingEl.style.color = '#ef4444';
-                }
-            }
-            
-            // Update description
-            const descEl = document.getElementById('trust-description');
-            if (descEl) {
-                if (trustScore >= 80) {
-                    descEl.textContent = 'This source demonstrates strong credibility indicators across multiple analysis dimensions.';
-                } else if (trustScore >= 60) {
-                    descEl.textContent = 'This source shows mostly positive indicators with some minor concerns noted.';
-                } else if (trustScore >= 40) {
-                    descEl.textContent = 'This source has mixed indicators. Verify claims through additional sources.';
-                } else {
-                    descEl.textContent = 'This source shows significant credibility concerns. Treat information skeptically.';
-                }
-            }
-            
-            // Draw trust gauge
-            const canvas = document.getElementById('trust-gauge-canvas');
-            if (canvas) {
-                const ctx = canvas.getContext('2d');
-                const centerX = 60;
-                const centerY = 60;
-                const radius = 50;
-                
-                // Clear canvas
-                ctx.clearRect(0, 0, 120, 120);
-                
-                // Background arc
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, -Math.PI / 2, Math.PI * 1.5);
-                ctx.strokeStyle = '#e5e7eb';
-                ctx.lineWidth = 10;
-                ctx.lineCap = 'round';
-                ctx.stroke();
-                
-                // Progress arc
-                const endAngle = (trustScore / 100) * 2 * Math.PI - (Math.PI / 2);
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, -Math.PI / 2, endAngle);
-                
-                // Color based on score
-                if (trustScore >= 70) {
-                    ctx.strokeStyle = '#10b981';
-                } else if (trustScore >= 40) {
-                    ctx.strokeStyle = '#3b82f6';
-                } else {
-                    ctx.strokeStyle = '#ef4444';
-                }
-                ctx.lineWidth = 10;
-                ctx.lineCap = 'round';
-                ctx.stroke();
-            }
-        }
+.trans-score-number-v3 {
+    font-size: 3.5rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+}
 
-        // Trust Score Breakdown visualization
-        function updateTrustScoreBreakdown(data) {
-            console.log('[TrustBreakdown v3.4.0] Creating score breakdown visualization');
-            
-            const breakdownContainer = document.getElementById('trust-score-breakdown');
-            const breakdownItems = document.getElementById('breakdown-items');
-            
-            if (!breakdownContainer || !breakdownItems) return;
-            
-            // Extract service scores from data
-            const services = [
-                { name: 'Source Credibility', score: 0, key: 'source_credibility' },
-                { name: 'Bias Detection', score: 0, key: 'bias_detector' },
-                { name: 'Fact Checking', score: 0, key: 'fact_checker' },
-                { name: 'Author Analysis', score: 0, key: 'author_analyzer' },
-                { name: 'Transparency', score: 0, key: 'transparency_analyzer' },
-                { name: 'Manipulation Detection', score: 0, key: 'manipulation_detector' },
-                { name: 'Content Quality', score: 0, key: 'content_analyzer' }
-            ];
-            
-            // Try to extract scores from results
-            if (data.results) {
-                services.forEach(service => {
-                    if (data.results[service.key]) {
-                        service.score = data.results[service.key].score || 0;
-                    }
-                });
-            }
-            
-            // Check if we have any scores
-            const hasScores = services.some(s => s.score > 0);
-            
-            if (!hasScores) {
-                console.log('[TrustBreakdown] No service scores found in data');
-                breakdownContainer.style.display = 'none';
-                return;
-            }
-            
-            // Show breakdown
-            breakdownContainer.style.display = 'block';
-            breakdownItems.innerHTML = '';
-            
-            // Create breakdown items
-            services.forEach(service => {
-                const item = document.createElement('div');
-                item.className = 'breakdown-item';
-                
-                const label = document.createElement('div');
-                label.className = 'breakdown-label';
-                
-                const name = document.createElement('div');
-                name.className = 'breakdown-name';
-                name.textContent = service.name;
-                
-                const score = document.createElement('div');
-                score.className = 'breakdown-score';
-                score.textContent = Math.round(service.score) + '/100';
-                
-                label.appendChild(name);
-                label.appendChild(score);
-                
-                const barContainer = document.createElement('div');
-                barContainer.className = 'breakdown-bar-container';
-                
-                const barFill = document.createElement('div');
-                barFill.className = 'breakdown-bar-fill';
-                
-                // Color based on score
-                if (service.score >= 70) {
-                    barFill.style.backgroundColor = '#10b981';
-                } else if (service.score >= 40) {
-                    barFill.style.backgroundColor = '#3b82f6';
-                } else {
-                    barFill.style.backgroundColor = '#ef4444';
-                }
-                
-                // Animate width
-                setTimeout(() => {
-                    barFill.style.width = service.score + '%';
-                }, 100);
-                
-                barContainer.appendChild(barFill);
-                
-                item.appendChild(label);
-                item.appendChild(barContainer);
-                
-                breakdownItems.appendChild(item);
-            });
-            
-            console.log('[TrustBreakdown] Breakdown visualization created');
-        }
+.trans-score-label-v3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    opacity: 0.9;
+}
 
-        function updateArticleMetadata(data) {
-            // Source
-            const sourceEl = document.getElementById('metadata-source');
-            if (sourceEl) {
-                sourceEl.textContent = data.source || 'Unknown Source';
-            }
+.trans-score-text-v3 {
+    flex: 1;
+    min-width: 250px;
+}
 
-            // Author
-            const authorEl = document.getElementById('metadata-author');
-            if (authorEl) {
-                authorEl.textContent = data.author || 'Unknown Author';
-            }
+.trans-score-text-v3 h3 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: white;
+}
 
-            // Word Count
-            const wordCountEl = document.getElementById('metadata-wordcount');
-            if (wordCountEl) {
-                const wordCount = data.word_count || 0;
-                wordCountEl.textContent = wordCount > 0 ? wordCount.toLocaleString() : 'N/A';
-            }
+.trans-score-text-v3 p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin: 0;
+    opacity: 0.95;
+}
 
-            // Analysis Date
-            const dateEl = document.getElementById('metadata-date');
-            if (dateEl) {
-                const now = new Date();
-                dateEl.textContent = now.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                });
-            }
-        }
+/* Section Styling */
+.trans-section-v3 {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
+}
 
-        function updateArticleSummary(data) {
-            const summaryEl = document.getElementById('article-summary-text');
-            if (summaryEl) {
-                let summary = 'Article summary not available.';
-                
-                // Try to get summary from multiple possible locations
-                if (data.article_summary && typeof data.article_summary === 'string') {
-                    summary = data.article_summary;
-                } else if (data.article && data.article.excerpt) {
-                    summary = data.article.excerpt;
-                } else if (data.analysis && data.analysis.summary) {
-                    summary = data.analysis.summary;
-                } else if (data.content && data.content.summary) {
-                    summary = data.content.summary;
-                }
-                
-                // Trim if too long
-                if (summary.length > 500) {
-                    summary = summary.substring(0, 497) + '...';
-                }
-                
-                summaryEl.textContent = summary;
-            }
-        }
+.trans-section-v3.meaning {
+    background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+    border-left: 4px solid #f59e0b;
+}
 
-        // v3.4.0 - CRITICAL FIX: Completely rewritten to extract REAL insights
-        function updateAnalysisFindings(data) {
-            console.log('[Findings v3.4.0] Extracting REAL insights from backend data');
-            
-            // Bottom Line
-            const bottomLineEl = document.getElementById('bottom-line-text');
-            if (bottomLineEl) {
-                let bottomLine = extractBottomLine(data);
-                bottomLineEl.textContent = bottomLine;
-            }
+.trans-section-header-v3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
 
-            // Key Findings - ONLY REAL DATA, NO GENERIC PLACEHOLDERS
-            const findingsListEl = document.getElementById('key-findings-list');
-            if (findingsListEl) {
-                findingsListEl.innerHTML = ''; // Clear existing
-                
-                let findings = extractRealFindings(data);
-                
-                if (findings.length === 0) {
-                    // Show empty state - NO GENERIC PLACEHOLDERS
-                    const emptyState = document.createElement('div');
-                    emptyState.className = 'no-findings-message';
-                    emptyState.innerHTML = `
-                        <i class="fas fa-info-circle"></i>
-                        <p>Detailed insights will appear here after analysis completes.</p>
-                        <p style="margin-top: 0.5rem; font-size: 0.875rem;">Check the service dropdowns below for comprehensive analysis details.</p>
-                    `;
-                    findingsListEl.appendChild(emptyState);
-                } else {
-                    // Display REAL findings only
-                    findings.forEach(finding => {
-                        const findingItem = document.createElement('div');
-                        findingItem.className = 'finding-item';
-                        
-                        const icon = document.createElement('i');
-                        icon.className = 'fas fa-check-circle finding-icon';
-                        
-                        const text = document.createElement('div');
-                        text.className = 'finding-text';
-                        text.textContent = finding;
-                        
-                        findingItem.appendChild(icon);
-                        findingItem.appendChild(text);
-                        
-                        findingsListEl.appendChild(findingItem);
-                    });
-                }
-            }
-        }
+.trans-section-header-v3 i {
+    font-size: 1.25rem;
+    color: #8b5cf6;
+}
 
-        // v3.4.0 - NEW: Extract bottom line from actual data
-        function extractBottomLine(data) {
-            // Try multiple locations for bottom line
-            if (data.insights && data.insights.bottom_line) {
-                return data.insights.bottom_line;
-            }
-            
-            if (data.findings_summary) {
-                return data.findings_summary;
-            }
-            
-            if (data.summary && typeof data.summary === 'string') {
-                return data.summary;
-            }
-            
-            // Last resort: construct from trust score
-            const trustScore = data.trust_score || 0;
-            if (trustScore >= 70) {
-                return 'Analysis indicates this source demonstrates strong credibility across multiple dimensions.';
-            } else if (trustScore >= 40) {
-                return 'Analysis shows mixed credibility indicators. Recommend verification through additional sources.';
-            } else {
-                return 'Analysis identifies significant credibility concerns. Treat information with appropriate skepticism.';
-            }
-        }
+.trans-section-header-v3 h4 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+}
 
-        // v3.4.0 - NEW: Extract REAL findings from backend data
-        function extractRealFindings(data) {
-            let findings = [];
-            
-            // Try to get findings from multiple possible locations
-            if (data.insights && data.insights.key_findings && Array.isArray(data.insights.key_findings)) {
-                findings = data.insights.key_findings;
-            } else if (data.analysis && data.analysis.key_findings && Array.isArray(data.analysis.key_findings)) {
-                findings = data.analysis.key_findings;
-            } else if (data.key_findings && Array.isArray(data.key_findings)) {
-                findings = data.key_findings;
-            } else if (data.results) {
-                // Try to extract from individual service results
-                findings = extractFindingsFromServices(data.results);
-            }
-            
-            // Filter out unwanted generic phrases
-            const unwantedPhrases = [
-                'credible author',
-                'minimal bias',
-                'low bias score',
-                'factual concerns',
-                'demonstrates strong credibility',
-                'shows minimal bias',
-                'content shows minimal bias'
-            ];
-            
-            findings = findings.filter(finding => {
-                const lowerFinding = finding.toLowerCase();
-                return !unwantedPhrases.some(phrase => lowerFinding.includes(phrase));
-            });
-            
-            console.log('[Findings v3.4.0] Extracted ' + findings.length + ' real findings');
-            return findings;
-        }
+.trans-section-content-v3 {
+    color: #475569;
+    line-height: 1.7;
+}
 
-        // v3.4.0 - NEW: Extract findings from service results
-        function extractFindingsFromServices(results) {
-            const findings = [];
-            
-            // Extract meaningful insights from each service
-            Object.keys(results).forEach(serviceKey => {
-                const service = results[serviceKey];
-                
-                // Look for findings arrays in each service
-                if (service.findings && Array.isArray(service.findings)) {
-                    findings.push(...service.findings);
-                } else if (service.key_points && Array.isArray(service.key_points)) {
-                    findings.push(...service.key_points);
-                } else if (service.summary && typeof service.summary === 'string' && service.summary.length > 20) {
-                    findings.push(service.summary);
-                }
-            });
-            
-            return findings;
-        }
+/* Quick Stats Grid */
+.trans-stats-grid-v3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
 
-        function scrollToDetailedAnalysis() {
-            const serviceResults = document.getElementById('service-results-wrapper');
-            if (serviceResults) {
-                serviceResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        }
+.trans-stat-card-v3 {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    text-align: center;
+    transition: all 0.3s ease;
+    border-top: 4px solid #cbd5e1;
+}
 
-        function resetAnalysis() {
-            // Clear inputs
-            document.getElementById('article-url').value = '';
-            document.getElementById('article-text').value = '';
-            
-            // Hide results
-            const resultsSection = document.getElementById('results-section');
-            if (resultsSection) {
-                resultsSection.style.display = 'none';
-            }
-            
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+.trans-stat-card-v3:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
 
-        function toggleMobileMenu() {
-            const navMenu = document.getElementById('navMenu');
-            if (navMenu) {
-                navMenu.classList.toggle('active');
-            }
-        }
+.trans-stat-card-v3.sources {
+    border-top-color: #3b82f6;
+}
 
-        // v3.4.0 - NEW: PDF Generation Function
-        function generatePDF() {
-            console.log('[PDF v3.4.0] Generating PDF report');
-            
-            if (typeof jsPDF === 'undefined') {
-                alert('PDF library not loaded. Please refresh the page and try again.');
-                return;
-            }
-            
-            if (!window.lastAnalysisData) {
-                alert('No analysis data available. Please run an analysis first.');
-                return;
-            }
-            
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                // Set up fonts
-                doc.setFont('helvetica');
-                
-                // Title
-                doc.setFontSize(20);
-                doc.setTextColor(59, 130, 246);
-                doc.text('TruthLens Analysis Report', 20, 20);
-                
-                // Trust Score
-                doc.setFontSize(14);
-                doc.setTextColor(30, 41, 59);
-                const trustScore = window.lastAnalysisData.trust_score || 0;
-                doc.text('Trust Score: ' + Math.round(trustScore) + '/100', 20, 35);
-                
-                // Date
-                doc.setFontSize(10);
-                doc.setTextColor(100, 116, 139);
-                const now = new Date();
-                doc.text('Generated: ' + now.toLocaleString(), 20, 42);
-                
-                // Metadata
-                doc.setFontSize(12);
-                doc.setTextColor(30, 41, 59);
-                doc.text('Article Details', 20, 55);
-                
-                doc.setFontSize(10);
-                doc.setTextColor(71, 85, 105);
-                doc.text('Source: ' + (window.lastAnalysisData.source || 'Unknown'), 20, 65);
-                doc.text('Author: ' + (window.lastAnalysisData.author || 'Unknown'), 20, 72);
-                
-                // Summary
-                doc.setFontSize(12);
-                doc.setTextColor(30, 41, 59);
-                doc.text('Summary', 20, 85);
-                
-                doc.setFontSize(10);
-                doc.setTextColor(71, 85, 105);
-                const summaryText = document.getElementById('article-summary-text')?.textContent || 'No summary available';
-                const splitSummary = doc.splitTextToSize(summaryText, 170);
-                doc.text(splitSummary, 20, 95);
-                
-                // Key Insights
-                let yPos = 95 + (splitSummary.length * 5) + 15;
-                doc.setFontSize(12);
-                doc.setTextColor(30, 41, 59);
-                doc.text('Key Insights', 20, yPos);
-                
-                yPos += 10;
-                doc.setFontSize(10);
-                doc.setTextColor(71, 85, 105);
-                
-                const findings = extractRealFindings(window.lastAnalysisData);
-                if (findings.length > 0) {
-                    findings.forEach((finding, index) => {
-                        if (yPos > 270) {
-                            doc.addPage();
-                            yPos = 20;
-                        }
-                        const splitFinding = doc.splitTextToSize('• ' + finding, 170);
-                        doc.text(splitFinding, 20, yPos);
-                        yPos += splitFinding.length * 5 + 5;
-                    });
-                } else {
-                    doc.text('See service breakdowns for detailed insights.', 20, yPos);
-                }
-                
-                // Footer
-                doc.setFontSize(8);
-                doc.setTextColor(148, 163, 184);
-                doc.text('Generated by TruthLens - AI-Powered News Analysis', 20, 285);
-                
-                // Save
-                doc.save('truthlens-analysis-' + Date.now() + '.pdf');
-                
-                console.log('[PDF v3.4.0] PDF generated successfully');
-                
-            } catch (error) {
-                console.error('[PDF v3.4.0] Error generating PDF:', error);
-                alert('Error generating PDF: ' + error.message);
-            }
-        }
-    </script>
-</body>
-</html>
+.trans-stat-card-v3.quotes {
+    border-top-color: #10b981;
+}
 
-<!--
-I did no harm and this file is not truncated.
-v3.4.1 - October 27, 2025
-LAYOUT FIX: Added all missing CSS classes for proper display
-CRITICAL FIX: Removed generic placeholders, extracts real insights, fixed PDF generation
-ALL existing functionality preserved and enhanced
--->
+.trans-stat-card-v3.verifiable {
+    border-top-color: #8b5cf6;
+}
+
+.trans-stat-card-v3.links {
+    border-top-color: #f59e0b;
+}
+
+.trans-stat-icon-v3 {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 0.75rem;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.trans-stat-card-v3.sources .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.trans-stat-card-v3.quotes .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.trans-stat-card-v3.verifiable .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+}
+
+.trans-stat-card-v3.links .trans-stat-icon-v3 {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+.trans-stat-value-v3 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.trans-stat-label-v3 {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.trans-stat-detail-v3 {
+    font-size: 0.75rem;
+    color: #8b5cf6;
+    font-weight: 600;
+    margin-top: 0.25rem;
+}
+
+/* Findings Container */
+#trans-findings-container-v3 {
+    margin-top: 1rem;
+}
+
+/* Education Section */
+.trans-education-v3 {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    border: 2px solid #3b82f6;
+}
+
+.trans-edu-header-v3 {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.trans-edu-header-v3 i {
+    font-size: 1.5rem;
+    color: #3b82f6;
+}
+
+.trans-edu-header-v3 h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e40af;
+}
+
+.trans-edu-grid-v3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.5rem;
+}
+
+.trans-edu-item-v3 {
+    display: flex;
+    align-items: start;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+    transition: all 0.3s ease;
+}
+
+.trans-edu-item-v3:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.trans-edu-item-v3 > i {
+    font-size: 1.75rem;
+    color: #3b82f6;
+    flex-shrink: 0;
+    margin-top: 0.25rem;
+}
+
+.trans-edu-item-v3 strong {
+    display: block;
+    color: #1e40af;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.trans-edu-item-v3 p {
+    margin: 0;
+    color: #475569;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Responsive Design for Transparency v3 */
+@media (max-width: 768px) {
+    .trans-hero-v3 {
+        padding: 1.5rem;
+    }
+    
+    .trans-score-display-v3 {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .trans-score-circle-v3 {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .trans-score-number-v3 {
+        font-size: 2.75rem;
+    }
+    
+    .trans-score-text-v3 {
+        min-width: 0;
+    }
+    
+    .trans-score-text-v3 h3 {
+        font-size: 1.5rem;
+    }
+    
+    .trans-stats-grid-v3 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .trans-edu-grid-v3 {
+        grid-template-columns: 1fr;
+    }
+    
+    .trans-section-v3 {
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .trans-stats-grid-v3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* End of Transparency v3.0.0 Styles */
+/**
+ * TruthLens v4.5.0 - PDF Button CSS Additions
+ * Date: October 14, 2025
+ * 
+ * INSTRUCTIONS:
+ * Add these styles to the END of your static/css/main.css file
+ * OR include them in a <style> tag in index.html (already done in v4.5.0 index.html)
+ * 
+ * These styles are for the PDF download button that appears in the results header
+ */
+
+/* ===== PDF DOWNLOAD BUTTON STYLES ===== */
+
+/* Main PDF button styling - matches v4.3.0 purple gradient theme */
+.pdf-download-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    margin-left: 16px;
+}
+
+/* Hover effect - lifts button and enhances shadow */
+.pdf-download-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+/* Active/click effect - returns to normal position */
+.pdf-download-button:active {
+    transform: translateY(0);
+}
+
+/* Disabled state - reduced opacity and no interaction */
+.pdf-download-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Icon styling within button */
+.pdf-download-button i {
+    font-size: 16px;
+}
+
+/* Results header layout adjustment to accommodate button */
+.results-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+/* Ensure title and badge work with button */
+.results-title {
+    flex: 0 0 auto;
+}
+
+.analysis-mode-badge {
+    flex: 0 0 auto;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Tablet and below - stack button below title */
+@media (max-width: 768px) {
+    .pdf-download-button {
+        margin-left: 0;
+        margin-top: 12px;
+        width: 100%;
+        justify-content: center;
+    }
+
+    .results-header {
+        flex-direction: column;
+        align-items: center;
+    }
+}
+
+/* Mobile - ensure button is easily tappable */
+@media (max-width: 480px) {
+    .pdf-download-button {
+        padding: 14px 24px;
+        font-size: 16px;
+    }
+}
+
+/* ===== LOADING STATE (optional enhancement) ===== */
+
+/* Add this class via JavaScript when generating PDF */
+.pdf-download-button.generating {
+    opacity: 0.7;
+    cursor: wait;
+    pointer-events: none;
+}
+
+.pdf-download-button.generating i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ===== SUCCESS FLASH (optional enhancement) ===== */
+
+/* Add this class briefly after successful PDF generation */
+.pdf-download-button.success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.pdf-download-button.success i::before {
+    content: "\f058"; /* FontAwesome check-circle */
+}
+
+/* ===== PRINT STYLES ===== */
+
+/* Hide PDF button when printing the page itself */
+@media print {
+    .pdf-download-button {
+        display: none;
+    }
+}
+/* Enhanced Trust Score Display - FIXED SPACING */
+.trust-score-visual {
+    display: flex;
+    gap: 3rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 16px;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.score-circle-inner {
+    width: 164px;
+    height: 164px;
+    background: white;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    animation: scoreReveal 0.5s ease-out;
+    text-align: center;
+    padding: 10px;
+}
+
+/* FIXED: Score display with proper spacing */
+.trust-score-big {
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1;
+    margin: 0;
+    display: inline-block;
+    position: relative;
+}
+
+.trust-score-max {
+    font-size: 1.125rem;
+    color: #6b7280;
+    font-weight: 600;
+    margin: 0.125rem 0 0.5rem 0;
+    display: inline-block;
+    position: relative;
+    left: 5px; /* Slight offset to prevent overlap */
+}
+
+/* Alternative inline display */
+.score-display-inline {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 2px; /* Small gap between score and /100 */
+}
+
+.score-number {
+    font-size: 2.75rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--primary-color);
+}
+
+.score-divider {
+    font-size: 1.125rem;
+    color: #6b7280;
+    font-weight: 600;
+    margin-left: 4px; /* Add space after score number */
+}
+/**
+ * ADD THIS CSS TO static/css/main.css
+ * INSERT AT THE END OF THE FILE (after line 2402)
+ * 
+ * These styles create the fixed progress bar that stays at the top of the viewport
+ * Version: 4.1.0 - ENHANCED FIXED PROGRESS BAR
+ * Date: October 22, 2025
+ */
+
+/* ===== LOADING OVERLAY BACKDROP ===== */
+.loading-overlay-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9998;
+    backdrop-filter: blur(4px);
+}
+
+.loading-overlay-backdrop.show {
+    display: block;
+}
+
+/* ===== ENHANCED PROGRESS BAR - FIXED AT TOP ===== */
+.progress-container-fixed {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    background: white;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 1.5rem 2rem;
+    border-bottom: 3px solid #6366f1;
+}
+
+.progress-container-fixed.show {
+    display: block;
+    animation: slideDownFromTop 0.4s ease-out;
+}
+
+@keyframes slideDownFromTop {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.progress-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.progress-header-enhanced {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.progress-title-enhanced {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.progress-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spinAround 1s linear infinite;
+}
+
+@keyframes spinAround {
+    to { transform: rotate(360deg); }
+}
+
+.progress-percentage-enhanced {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #6366f1;
+}
+
+/* Rotating Dynamic Message */
+.progress-message {
+    text-align: center;
+    font-size: 0.95rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+    min-height: 24px;
+    font-weight: 500;
+}
+
+.progress-message i {
+    margin-right: 0.5rem;
+    color: #6366f1;
+}
+
+/* Progress Bar */
+.progress-bar-container-enhanced {
+    background: #f1f5f9;
+    height: 8px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+    background-size: 200% 100%;
+    border-radius: 10px;
+    width: 0%;
+    transition: width 0.5s ease;
+    animation: shimmerEffect 2s infinite;
+}
+
+@keyframes shimmerEffect {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+}
+
+/* Enhanced Steps with Icons */
+.progress-steps-enhanced {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.progress-step-enhanced {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.3;
+    transition: all 0.3s ease;
+}
+
+.progress-step-enhanced.active {
+    opacity: 1;
+}
+
+.step-icon-enhanced {
+    width: 40px;
+    height: 40px;
+    background: #e5e7eb;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: #6b7280;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.progress-step-enhanced.active .step-icon-enhanced {
+    background: #6366f1;
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.progress-step-enhanced.active .step-icon-enhanced::after {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    border: 2px solid #6366f1;
+    animation: pulseRing 1.5s infinite;
+}
+
+@keyframes pulseRing {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0; }
+}
+
+.progress-step-enhanced.completed .step-icon-enhanced {
+    background: #10b981;
+    color: white;
+}
+
+.step-text-enhanced {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-align: center;
+}
+
+.progress-step-enhanced.active .step-text-enhanced {
+    color: #1e293b;
+}
+
+/* Fun Facts Section */
+.fun-facts-section {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+    border-radius: 8px;
+    border: 1px solid rgba(99, 102, 241, 0.1);
+}
+
+.fun-fact {
+    display: none;
+    font-size: 0.85rem;
+    color: #475569;
+    line-height: 1.6;
+    font-style: italic;
+}
+
+.fun-fact.show {
+    display: block;
+    animation: fadeInUp 0.5s ease;
+}
+
+.fun-fact i {
+    color: #6366f1;
+    margin-right: 0.5rem;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .progress-container-fixed {
+        padding: 1rem;
+    }
+
+    .progress-title-enhanced {
+        font-size: 1rem;
+    }
+
+    .progress-percentage-enhanced {
+        font-size: 1.25rem;
+    }
+
+    .progress-steps-enhanced {
+        gap: 0.25rem;
+    }
+
+    .step-icon-enhanced {
+        width: 32px;
+        height: 32px;
+        font-size: 0.9rem;
+    }
+
+    .step-text-enhanced {
+        font-size: 0.65rem;
+    }
+
+    .fun-fact {
+        font-size: 0.75rem;
+    }
+}
+
+/**
+ * END OF ENHANCED PROGRESS BAR CSS
+ * Paste this entire section at the END of static/css/main.css
+ *//**
+ * TruthLens Unified Navigation System
+ * Version: 1.0.0
+ * Date: October 24, 2025
+ * 
+ * CHANGES:
+ * - ADDED: Professional navigation header for all pages
+ * - ADDED: Active page highlighting
+ * - ADDED: Mobile responsive hamburger menu
+ * - ADDED: Smooth transitions and hover effects
+ * - ADDED: "Coming Soon" badge styling
+ * 
+ * This CSS provides unified navigation across:
+ * - News Analysis (index.html)
+ * - Transcript Analysis (transcript.html)
+ * - Debate Arena (future)
+ */
+
+/* ===== NAVIGATION HEADER ===== */
+.main-navigation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    padding: 0;
+}
+
+.nav-container-unified {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+}
+
+/* Logo */
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: white;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    transition: transform 0.3s ease;
+}
+
+.nav-logo:hover {
+    transform: scale(1.05);
+}
+
+.nav-logo i {
+    font-size: 1.75rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Navigation Menu */
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-item {
+    position: relative;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.nav-link.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.nav-link i {
+    font-size: 1rem;
+}
+
+/* CTA Button - "Upgrade to Pro" */
+.nav-item.nav-cta {
+    margin-left: 0.5rem;
+}
+
+.nav-link-cta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-link-cta:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.nav-link-cta i {
+    color: #fbbf24;
+    font-size: 1rem;
+}
+
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+    display: none;
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ===== MOBILE RESPONSIVE ===== */
+@media (max-width: 1024px) {
+    .nav-link {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    
+    .nav-link i {
+        font-size: 0.9rem;
+    }
+    
+    .nav-link-cta {
+        padding: 0.625rem 1rem;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-container-unified {
+        padding: 0 1rem;
+        height: 60px;
+    }
+
+    .mobile-menu-toggle {
+        display: block;
+    }
+
+    .nav-menu {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        flex-direction: column;
+        gap: 0;
+        padding: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        max-height: calc(100vh - 60px);
+        overflow-y: auto;
+    }
+
+    .nav-menu.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .nav-item {
+        width: 100%;
+    }
+    
+    .nav-item.nav-cta {
+        margin-left: 0;
+        margin-top: 0.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+        padding-top: 0.5rem;
+    }
+
+    .nav-link {
+        width: 100%;
+        padding: 1rem;
+        justify-content: flex-start;
+        border-radius: 8px;
+        font-size: 1rem;
+    }
+    
+    .nav-link-cta {
+        width: 100%;
+        padding: 1rem;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .nav-logo {
+        font-size: 1.25rem;
+    }
+
+    .nav-logo i {
+        font-size: 1.5rem;
+    }
+}
+
+/* Adjust body padding for fixed nav */
+body {
+    padding-top: 90px;
+}
+
+@media (max-width: 768px) {
+    body {
+        padding-top: 80px;
+    }
+}
+-e 
+
+/* I did no harm and this file is not truncated */
+/**
+ * CSS Additions for Service Templates v5.1.0
+ * Date: October 27, 2025
+ * 
+ * APPEND these styles to the END of your existing static/css/main.css file
+ * These styles support the simplified service templates
+ */
+
+/* ============================================================================
+   SIMPLIFIED SERVICE TEMPLATE STYLES v5.1.0
+   ============================================================================ */
+
+/* Score Display - Large Centered */
+.score-display-large {
+    text-align: center;
+    padding: 2rem 1rem;
+    margin-bottom: 2rem;
+}
+
+.score-circle {
+    display: inline-flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-bottom: 1rem;
+}
+
+.score-number {
+    font-size: 4rem;
+    font-weight: 800;
+    color: #1e293b;
+    line-height: 1;
+}
+
+.score-max {
+    font-size: 2rem;
+    font-weight: 600;
+    color: #64748b;
+    line-height: 1;
+}
+
+.score-label {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: capitalize;
+}
+
+/* Info Box */
+.info-box {
+    background: white;
+    border-radius: 8px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #3b82f6;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.info-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.info-value {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+/* Analysis Text Box */
+.analysis-text-box {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #10b981;
+}
+
+.analysis-text-box h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-text-box h4 i {
+    color: #10b981;
+}
+
+.analysis-text-box p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: #475569;
+    margin: 0;
+}
+
+/* Findings Box */
+.findings-box {
+    background: #fffbeb;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #f59e0b;
+}
+
+.findings-box h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.findings-box h4 i {
+    color: #f59e0b;
+}
+
+.findings-box ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.findings-box ul li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #fef3c7;
+    font-size: 0.95rem;
+    color: #475569;
+    line-height: 1.6;
+}
+
+.findings-box ul li:last-child {
+    border-bottom: none;
+}
+
+.findings-box ul li:before {
+    content: '✓';
+    color: #f59e0b;
+    font-weight: bold;
+    margin-right: 0.75rem;
+}
+
+/* Claims List */
+.claims-list {
+    margin: 2rem 0;
+}
+
+.claims-list h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.claims-list h4 i {
+    color: #3b82f6;
+}
+
+#claims-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.claim-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid #94a3b8;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
+}
+
+.claim-item:hover {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+.claim-item.claim-true {
+    border-left-color: #10b981;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+}
+
+.claim-item.claim-false {
+    border-left-color: #ef4444;
+    background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+}
+
+.claim-item.claim-neutral {
+    border-left-color: #94a3b8;
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.claim-number {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.claim-content {
+    flex: 1;
+}
+
+.claim-text {
+    font-size: 0.95rem;
+    color: #1e293b;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.claim-verdict {
+    font-size: 0.875rem;
+    color: #475569;
+    margin-bottom: 0.5rem;
+}
+
+.claim-verdict strong {
+    color: #1e293b;
+}
+
+.claim-explanation {
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.6;
+    padding-top: 0.5rem;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 0.5rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .score-number {
+        font-size: 3rem;
+    }
+    
+    .score-max {
+        font-size: 1.5rem;
+    }
+    
+    .score-label {
+        font-size: 1rem;
+    }
+    
+    .claim-item {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .claim-number {
+        align-self: flex-start;
+    }
+}
+
+/**
+ * END OF CSS ADDITIONS v5.1.0
+ * Copy everything above and paste at the END of your main.css file
+ */
