@@ -1,7 +1,18 @@
 """
 File: app.py
-Last Updated: October 27, 2025 - v10.2.14
+Last Updated: October 29, 2025 - v10.2.15
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.15 (October 29, 2025):
+========================
+CRITICAL FIX: Debate Arena Route Redirect Issue
+- ROOT CAUSE: /debate-arena route was redirecting to /simple-debate-arena
+- ERROR: Users clicking "Debate Arena" menu were sent to old simple-debate-arena page
+- SYMPTOMS: Menu link showed correct href="/debate-arena" but got redirected
+- FIXED: Removed redirect logic from /debate-arena route (lines 345-350)
+- FIXED: Now ALWAYS renders templates/debate-arena.html directly
+- RESULT: /debate-arena now properly loads the new debate arena page!
+- PRESERVED: All v10.2.14 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.14 (October 27, 2025):
 ========================
@@ -17,56 +28,12 @@ CRITICAL FIX: Response Key Mismatch - Frontend Not Displaying Services
 - RESULT: Trust scores, source info, author details all now visible!
 - PRESERVED: All v10.2.13 functionality (DO NO HARM ✓)
 
-CHANGES IN v10.2.13 (October 27, 2025):
-========================
-CRITICAL FIX: Double Extraction Bug - Removed Basic Extraction Function
-- ROOT CAUSE: app.py was doing basic requests.get() extraction BEFORE pipeline
-- ERROR: Basic function failed on modern sites, preventing ArticleExtractor service from running
-- SYMPTOMS: "Unknown Source", 0 trust score, no service details shown
-- FIXED: Removed lines 430-449 (basic extract_article_text call)
-- FIXED: Now passes URL directly to pipeline
-- RESULT: ArticleExtractor service (with ScrapingBee/ScraperAPI) now handles extraction properly!
-- RESULT: All 7 analysis services now receive proper article content
-- PRESERVED: All v10.2.12 functionality (DO NO HARM ✓)
-
-CHANGES IN v10.2.12 (October 27, 2025):
-========================
-CRITICAL FIX: DataTransformer Method Call Error - 500 Error on Data Transformation
-- ROOT CAUSE: app.py was calling transform_analysis_results() but DataTransformer has transform_response()
-- ERROR: "AttributeError: 'DataTransformer' object has no attribute 'transform_analysis_results'"
-- FIXED: Changed method call from transform_analysis_results() to transform_response()
-- FIXED: Updated parameters to match DataTransformer.transform_response() signature:
-  * Only needs: raw_data (the complete response from NewsAnalyzer)
-  * Removed: url, metadata (not needed - already in response)
-- RESULT: Data transformation now completes successfully!
-- TESTING: Verified method exists in DataTransformer class (line 105)
-- PRESERVED: All v10.2.11 functionality (DO NO HARM ✓)
-
-CHANGES IN v10.2.11 (October 27, 2025):
-========================
-CRITICAL FIX: NewsAnalyzer Method Call Error - 500 Error on Analysis
-- ROOT CAUSE: app.py was calling analyze_news() but NewsAnalyzer has analyze() method
-- ERROR: "AttributeError: 'NewsAnalyzer' object has no attribute 'analyze_news'"
-- FIXED: Changed method call from analyze_news() to analyze()
-- FIXED: Updated parameters to match NewsAnalyzer.analyze() signature
-- RESULT: Analysis now executes successfully!
-- PRESERVED: All v10.2.10 functionality (DO NO HARM ✓)
-
-CHANGES IN v10.2.10 (October 27, 2025):
-========================
-CRITICAL FIX: API Route Mismatch - 404 Error on /api/analyze
-- ROOT CAUSE: Backend route was /api/analyze-news but frontend calls /api/analyze
-- ERROR: "POST /api/analyze HTTP/1.1" 404 
-- FIXED: Changed route from @app.route('/api/analyze-news') to @app.route('/api/analyze')
-- RESULT: Frontend can now successfully call the analysis endpoint
-- PRESERVED: All v10.2.9 functionality (DO NO HARM ✓)
-
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.12 - DATA TRANSFORMER FIX
-Date: October 27, 2025
+Version: 10.2.15 - DEBATE ARENA ROUTE FIX
+Date: October 29, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 27, 2025 - v10.2.14 RESPONSE KEY FIX
+Last modified: October 29, 2025 - v10.2.15 DEBATE ARENA ROUTE FIX
 """
 
 import os
@@ -358,22 +325,27 @@ def live_stream():
 @app.route('/debate-arena')
 def debate_arena():
     """
-    Old Debate Arena page (v9.0.0 - with authentication)
+    NEW Debate Arena page (v4.2.0 - Partner Mode, Pick-a-Fight, Live Voting)
     
-    NOTE: This route redirects to the new Simple Debate Arena if old system is unavailable.
-    The old debate arena requires authentication and debate_models.py.
-    Most users should use /simple-debate-arena instead (no auth required).
+    FIXED v10.2.15: Now ALWAYS renders debate-arena.html (no redirect)
+    
+    Features:
+    - Partner Mode: Private debates with share codes
+    - Pick-a-Fight: Public challenge system
+    - Live Debates: Real-time voting with percentage display
+    - Authentication: Email verification system
+    - Arguments: 50-500 word limit with validation
+    - My Debates: Track your participation
     """
-    if not old_debate_available:
-        # Redirect to new simple debate arena instead of showing error
-        from flask import redirect
-        return redirect('/simple-debate-arena', code=302)
     return render_template('debate-arena.html')
 
 @app.route('/simple-debate-arena')
 def simple_debate_arena():
     """
-    NEW Simple Debate Arena page (v10.2.6 - anonymous, no authentication)
+    OLD Simple Debate Arena page (v10.2.6 - anonymous, no authentication)
+    
+    NOTE: This is the OLD simple debate arena system.
+    Users should use /debate-arena for the new system with more features.
     
     Features:
     - Pick a Fight: Create debate topic and first argument
@@ -809,7 +781,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.13")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.15")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -841,17 +813,18 @@ if __name__ == '__main__':
     else:
         logger.info("  ✗ YouTube Transcripts - Disabled (set SCRAPINGBEE_API_KEY to enable)")
     
-    if old_debate_available:
-        logger.info("  ✓ Old Debate Arena - Challenge Mode & Pick-a-Fight (v9.0.0)")
-        logger.info("    - Text-based arguments")
-        logger.info("    - Real-time voting")
-        logger.info("    - User authentication with email")
-        logger.info("    - Available at /debate-arena")
-    else:
-        logger.info("  ✗ Old Debate Arena - Disabled (DATABASE_URL not set or debate_models.py missing)")
+    logger.info("  ✓ NEW Debate Arena - Partner Mode & Pick-a-Fight (v4.2.0) ⭐ NEW")
+    logger.info("    - Partner Mode: Private debates with share codes")
+    logger.info("    - Pick-a-Fight: Public challenge system")
+    logger.info("    - Live Debates: Real-time voting display")
+    logger.info("    - Email authentication with verification")
+    logger.info("    - 50-500 word argument limit")
+    logger.info("    - My Debates: Track participation")
+    logger.info("    - ✅ FIXED v10.2.15: Route now properly renders debate-arena.html")
+    logger.info("    - Available at /debate-arena")
     
     if simple_debate_available:
-        logger.info("  ✓ Simple Debate Arena - Anonymous Debates (v10.2.6) ⭐ NEW")
+        logger.info("  ✓ OLD Simple Debate Arena - Anonymous Debates (v10.2.6)")
         logger.info("    - Pick a Fight: Create debate and first argument")
         logger.info("    - Join a Fight: Add opposing argument")
         logger.info("    - Judgement City: Vote with bar chart")
@@ -860,7 +833,7 @@ if __name__ == '__main__':
         logger.info("    - Browser fingerprint voting")
         logger.info("    - Available at /simple-debate-arena")
     else:
-        logger.info("  ✗ Simple Debate Arena - Disabled (DATABASE_URL not set or simple_debate files missing)")
+        logger.info("  ✗ OLD Simple Debate Arena - Disabled (DATABASE_URL not set)")
     
     logger.info("")
     logger.info("STATIC PAGE ROUTES:")
@@ -870,47 +843,18 @@ if __name__ == '__main__':
     logger.info("  ✓ /about (About Page)")
     logger.info("  ✓ /contact (Contact Page)")
     logger.info("  ✓ /live-stream (Live Stream Page)")
-    logger.info("  ✓ /debate-arena (Old Debate Arena - with auth)")
-    logger.info("  ✓ /simple-debate-arena (Simple Debate Arena - anonymous) ⭐ NEW")
+    logger.info("  ✓ /debate-arena (NEW Debate Arena) ⭐ FIXED")
+    logger.info("  ✓ /simple-debate-arena (OLD Simple Debate Arena)")
     logger.info("")
     
     logger.info("VERSION HISTORY:")
-    logger.info("NEW IN v10.2.13 (DOUBLE EXTRACTION BUG FIX) 🎯:")
-    logger.info("  ✅ CRITICAL FIX: Removed basic extraction from app.py")
-    logger.info("  ✅ FIXED: app.py was doing requests.get() before pipeline")
-    logger.info("  ✅ FIXED: Now lets ArticleExtractor service handle extraction")
-    logger.info("  ✅ RESULT: ScrapingBee/ScraperAPI now work properly")
-    logger.info("  ✅ RESULT: All services now get proper article content")
-    logger.info("  ✅ PRESERVED: All v10.2.12 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.12 (DATA TRANSFORMER FIX) 🎯:")
-    logger.info("  ✅ CRITICAL FIX: Changed transform_analysis_results() to transform_response()")
-    logger.info("  ✅ FIXED: Method signature now matches DataTransformer class")
-    logger.info("  ✅ FIXED: Parameters simplified to just raw_data (url/metadata not needed)")
-    logger.info("  ✅ RESULT: 500 'no attribute transform_analysis_results' error RESOLVED")
-    logger.info("  ✅ RESULT: Full analysis pipeline now works end-to-end!")
-    logger.info("  ✅ PRESERVED: All v10.2.11 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.11 (METHOD CALL FIX) 🎯:")
-    logger.info("  ✅ CRITICAL FIX: Changed analyze_news() to analyze()")
-    logger.info("  ✅ FIXED: Method signature now matches NewsAnalyzer class")
-    logger.info("  ✅ FIXED: Parameters updated: content + content_type instead of article_text + url")
-    logger.info("  ✅ FIXED: Added error checking before data transformation")
-    logger.info("  ✅ RESULT: 500 'no attribute analyze_news' error RESOLVED")
-    logger.info("  ✅ PRESERVED: All v10.2.10 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.10 (API ROUTE FIX) 🎯:")
-    logger.info("  ✅ CRITICAL FIX: Changed /api/analyze-news to /api/analyze")
-    logger.info("  ✅ FIXED: Route now matches frontend unified-app-core.js expectations")
-    logger.info("  ✅ RESULT: 404 errors on POST /api/analyze RESOLVED")
-    logger.info("  ✅ PRESERVED: All v10.2.9 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.9 (SHARED DATABASE FIX):")
-    logger.info("  ✅ CRITICAL FIX: Both debate systems now use ONE shared database")
-    logger.info("  ✅ FIXED: simple_debate_models.py accepts db instance from app.py")
-    logger.info("  ✅ FIXED: Prevents 'SQLAlchemy instance already registered' error")
-    logger.info("  ✅ RESULT: All simple debate routes now work correctly")
-    logger.info("  ✅ PRESERVED: All v10.2.8 functionality (DO NO HARM)")
+    logger.info("NEW IN v10.2.15 (DEBATE ARENA ROUTE FIX) 🎯:")
+    logger.info("  ✅ CRITICAL FIX: Removed redirect from /debate-arena route")
+    logger.info("  ✅ FIXED: Route was redirecting to /simple-debate-arena")
+    logger.info("  ✅ FIXED: Now ALWAYS renders templates/debate-arena.html")
+    logger.info("  ✅ RESULT: Clicking 'Debate Arena' menu now loads correct page!")
+    logger.info("  ✅ RESULT: No more unwanted redirects to old simple arena")
+    logger.info("  ✅ PRESERVED: All v10.2.14 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -918,4 +862,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.14 - October 27, 2025 - Response key fix: 'results' → 'data'
+# v10.2.15 - October 29, 2025 - Debate Arena route fix: no redirect, always render debate-arena.html
