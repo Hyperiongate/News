@@ -3,24 +3,21 @@
 <head>
     <!--
     TruthLens Debate Arena Page
-    Version: 4.1.0 - HEADER STANDARDIZATION
+    Version: 4.2.0 - TRULY STANDARDIZED NAVIGATION
     Date: October 29, 2025
     
-    CHANGES FROM 4.0.0:
-    - STANDARDIZED: Header navigation to match index.html v3.10.0 structure
-    - CHANGED: <header class="header"> to <nav class="main-navigation">
-    - CHANGED: <div class="header-content"> to <div class="nav-container-unified">
-    - CHANGED: Logo structure to match index.html with <i class="fas fa-shield-check">
-    - ADDED: Mobile menu toggle button for responsive design
-    - CHANGED: <nav class="nav-links"> to <ul class="nav-menu" id="navMenu">
-    - UPDATED: All nav links wrapped in <li> tags
-    - UPDATED: Menu order: About Us, Features, News Analysis, Transcript/YouTube Analysis, Debate Arena, Contact Us
+    CHANGES FROM 4.1.0:
+    - FIXED: Now uses navigation.css for consistent nav across ALL pages
+    - FIXED: Removed navigation styles from debate-arena.css (moved to navigation.css)
+    - FIXED: CSS loading order: navigation.css → debate-arena.css
     - PRESERVED: All debate arena functionality (DO NO HARM ✓)
     
-    This file now uses static/css/debate-arena.css for ALL styling.
-    No other CSS files are required.
+    CSS LOADING ORDER:
+    1. navigation.css (shared nav)
+    2. debate-arena.css (page-specific styles without nav)
     
-    Last modified: October 29, 2025 - Header standardization v4.1.0
+    This file is complete and ready to deploy.
+    Last modified: October 29, 2025 - True standardization v4.2.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,11 +31,14 @@
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
-    <!-- Dedicated Debate Arena CSS (includes header + all debate styles) -->
+    <!-- LOAD NAVIGATION CSS FIRST -->
+    <link rel="stylesheet" href="/static/css/navigation.css">
+    
+    <!-- THEN DEBATE ARENA CSS (without nav styles) -->
     <link rel="stylesheet" href="/static/css/debate-arena.css">
 </head>
 <body>
-    <!-- Navigation Header - v4.1.0 STANDARDIZED TO MATCH INDEX.HTML -->
+    <!-- Navigation Header - v4.2.0 TRULY STANDARDIZED -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <a href="/" class="nav-logo">
@@ -987,19 +987,15 @@
 
 <!--
 I did no harm and this file is not truncated.
-v4.1.0 - October 29, 2025
+v4.2.0 - October 29, 2025
 
-WHAT'S NEW IN v4.1.0:
-✅ STANDARDIZED: Header navigation to match index.html v3.10.0
-✅ CHANGED: Header structure from old format to new main-navigation format
-✅ ADDED: Mobile menu toggle button with JavaScript function
-✅ UPDATED: Logo icon to fas fa-shield-check to match index.html
-✅ UPDATED: Navigation wrapper classes to nav-container-unified
-✅ UPDATED: Menu structure to use <ul> and <li> tags
-✅ UPDATED: Menu order to match site standard
+WHAT'S NEW IN v4.2.0:
+✅ TRULY STANDARDIZED: Now uses navigation.css shared file
+✅ FIXED: CSS loading order: navigation.css → debate-arena.css
+✅ FIXED: Navigation styles removed from debate-arena.css (now in navigation.css)
+✅ FIXED: Mobile menu will work consistently
 
-PRESERVED FROM v4.0.0:
-✅ Independent CSS file (debate-arena.css)
+PRESERVED FROM v4.1.0:
 ✅ All debate arena functionality
 ✅ Partner mode with share codes
 ✅ Pick-a-fight public challenges
