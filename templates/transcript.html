@@ -3,31 +3,25 @@
 <head>
     <!--
     TruthLens Transcript Analysis Page
-    Version: 3.2.0 - CSS EXTRACTION AND MODULARIZATION
+    Version: 3.3.0 - STANDARDIZED NAVIGATION MENU
     Date: October 29, 2025
     
-    CHANGES FROM PREVIOUS VERSION (v3.1.0):
-    - EXTRACTED: All inline CSS moved to dedicated transcript-youtube.css file
-    - ADDED: Link to new transcript-youtube.css file
-    - PRESERVED: Link to main.css for unified navigation header
-    - PRESERVED: All existing functionality (DO NO HARM ✓)
-    - IMPROVED: Maintainability - CSS is now in separate file
+    WHAT'S NEW IN v3.3.0:
+    ✅ FIXED: Navigation now standardized across all pages
+    ✅ FIXED: Debate arena link confirmed at /debate-arena (was already correct)
+    ✅ FIXED: Menu order matches: About Us, Features, News Analysis, Transcript/YouTube, Debate Arena, Contact Us
+    ✅ REMOVED: "Live Stream" link (not consistently implemented)
+    ✅ PRESERVED: All v3.2.0 functionality intact (DO NO HARM ✓)
     
-    PREVIOUS CHANGES (v3.1.0):
-    - ADDED: "Create Transcript" button next to "Analyze Video" button on YouTube tab
-    - ADDED: Transcript display section with formatted output
-    - ADDED: PDF download functionality for transcripts
-    - ADDED: New API integration for /api/youtube/create-transcript endpoint
-    - PRESERVED: Full analysis functionality still works
-    
-    NEW FEATURES:
-    - Users can now choose between "Analyze Video" or "Create Transcript"
-    - Transcript-only mode extracts and displays video transcript
-    - One-click PDF download of transcript
-    - Clean formatting with video metadata included
+    PRESERVED FROM v3.2.0:
+    ✅ CSS extracted to transcript-youtube.css
+    ✅ "Create Transcript" functionality
+    ✅ "Analyze Video" functionality  
+    ✅ PDF download for transcripts
+    ✅ All existing analysis features
     
     This file is complete and ready to deploy.
-    Last modified: October 29, 2025 - Extracted CSS to separate file v3.2.0
+    Last modified: October 29, 2025 - v3.3.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -45,7 +39,7 @@
 </head>
 <body>
 
-    <!-- Navigation (from main.css) -->
+    <!-- Navigation (from main.css) - v3.3.0 STANDARDIZED MENU -->
     <nav class="nav">
         <div class="nav-container">
             <a href="/" class="nav-brand">
@@ -53,11 +47,10 @@
                 TruthLens AI
             </a>
             <div class="nav-menu">
+                <a href="/about" class="nav-link">About Us</a>
                 <a href="/features" class="nav-link">Features</a>
-                <a href="/about" class="nav-link">About</a>
                 <a href="/" class="nav-link">News Analysis</a>
-                <a href="/transcript" class="nav-link active">Transcript/YouTube</a>
-                <a href="/live-stream" class="nav-link">Live Stream</a>
+                <a href="/transcript" class="nav-link active">Transcript/YouTube Analysis</a>
                 <a href="/debate-arena" class="nav-link">Debate Arena</a>
                 <a href="/contact" class="nav-link">Contact Us</a>
             </div>
@@ -220,7 +213,7 @@
     </div>
 
     <script>
-        console.log('[TranscriptApp] Module loading - v13.1.0 with transcript creation...');
+        console.log('[TranscriptApp] Module loading - v13.2.0 with standardized navigation...');
         
         let currentJobId = null;
         let pollInterval = null;
@@ -985,11 +978,30 @@
             window.scrollTo({ behavior: 'smooth', top: 0 });
         }
 
-        console.log('[TranscriptApp] ✓ Initialized - v13.1.0 with transcript creation');
+        console.log('[TranscriptApp] ✓ Initialized - v13.2.0 with standardized navigation');
     </script>
-
-    <!-- I did no harm and this file is not truncated -->
 </body>
 </html>
 
-<!-- I did no harm and this file is not truncated -->
+<!--
+I did no harm and this file is not truncated.
+v3.3.0 - October 29, 2025
+
+WHAT'S NEW IN v3.3.0:
+✅ FIXED: Navigation menu standardized across all pages
+✅ FIXED: Menu order: About Us, Features, News Analysis, Transcript/YouTube, Debate Arena, Contact Us
+✅ REMOVED: "Live Stream" link (not consistently implemented)
+✅ PRESERVED: All v3.2.0 functionality intact
+
+PRESERVED FROM v3.2.0:
+✅ CSS extracted to transcript-youtube.css
+✅ "Create Transcript" button and functionality
+✅ "Analyze Video" button and functionality
+✅ PDF download for transcripts
+✅ All existing analysis features
+✅ Progress animations
+✅ Fun facts rotation
+
+DEPLOYMENT READY FOR GITHUB/RENDER
+Complete file ready for production deployment.
+-->
