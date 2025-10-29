@@ -1,25 +1,25 @@
 /**
  * TruthLens Unified App Core
- * Version: 6.10.0 - COMPREHENSIVE SUMMARY INTEGRATION
- * Date: October 24, 2025
+ * Version: 6.11.0 - POSITIVE PROGRESS MESSAGES FIX
+ * Date: October 28, 2025
  * 
- * CHANGES FROM 6.9.0:
- * ✅ ADDED: Call to updateComprehensiveSummary() in displayResults
- * ✅ ENHANCED: Now displays comprehensive summary before detailed services
- * ✅ PRESERVED: All v6.9.0 functionality including startAnalysis method (DO NO HARM ✓)
+ * CHANGES FROM 6.10.0:
+ * ✅ FIXED: Changed scary/negative progress messages to positive, exciting ones
+ * ✅ REMOVED: "Detecting potential bias..." and similar negative phrases
+ * ✅ ADDED: Exciting, upbeat messages that make users feel good
+ * ✅ PRESERVED: All v6.10.0 functionality (DO NO HARM ✓)
  * 
- * WHAT'S NEW IN v6.10.0:
- * - displayResults now calls updateComprehensiveSummary if it exists
- * - This displays the new free-tier-ready summary section
- * - Backwards compatible - works with or without the new function
+ * WHAT'S NEW IN v6.11.0:
+ * - Progress messages are now positive and engaging
+ * - Messages highlight what we're discovering, not what we're "detecting"
+ * - Makes the loading experience feel exciting instead of scary
  * 
  * Save as: static/js/unified-app-core.js (REPLACE existing file)
- * Last Updated: October 24, 2025
+ * Last Updated: October 28, 2025
  */
 
-
 function UnifiedTruthLensAnalyzer() {
-    console.log('[UnifiedTruthLens] Initializing v6.10.0...');
+    console.log('[UnifiedTruthLens] Initializing v6.11.0 with positive messages...');
     
     // Core properties
     this.currentMode = 'news';
@@ -36,7 +36,7 @@ function UnifiedTruthLensAnalyzer() {
         console.error('[UnifiedTruthLens] ServiceTemplates not found!');
     }
     
-    console.log('[UnifiedTruthLens] Initialized successfully v6.10.0');
+    console.log('[UnifiedTruthLens] Initialized successfully v6.11.0');
 }
 
 // v6.9.0 - CRITICAL FIX: Added startAnalysis method for index.html compatibility
@@ -136,7 +136,7 @@ UnifiedTruthLensAnalyzer.prototype.analyzeContent = function(url, text, mode) {
 };
 
 UnifiedTruthLensAnalyzer.prototype.showLoadingState = function() {
-    console.log('[LoadingState] Showing enhanced loading overlay');
+    console.log('[LoadingState] Showing enhanced loading overlay with positive messages');
     
     var loadingBackdrop = document.getElementById('loadingBackdrop');
     var progressContainer = document.getElementById('progressContainerFixed');
@@ -179,26 +179,30 @@ UnifiedTruthLensAnalyzer.prototype.animateProgress = function() {
     }, 100);
 };
 
+/**
+ * v6.11.0 FIX: POSITIVE, EXCITING PROGRESS MESSAGES
+ * Changed from scary "detecting" language to positive "discovering" language
+ */
 UnifiedTruthLensAnalyzer.prototype.updateLoadingMessages = function() {
     var loadingMessage = document.getElementById('loadingMessageEnhanced');
     if (!loadingMessage) return;
     
     var messages = this.isYouTubeURL ? [
-        'Extracting transcript from YouTube video...',
-        'Processing audio content...',
-        'Identifying claims and statements...',
-        'Cross-referencing with fact-checking databases...',
-        'Analyzing speaker credibility...',
-        'Evaluating content accuracy...',
-        'Generating comprehensive report...'
+        '🎬 Extracting video transcript...',
+        '🔍 Reading through the content...',
+        '✨ Discovering key claims and facts...',
+        '📚 Checking facts across reliable sources...',
+        '👤 Learning about the speaker...',
+        '⚡ Evaluating content quality...',
+        '🎯 Building your comprehensive report...'
     ] : [
-        'Extracting article content...',
-        'Analyzing source credibility...',
-        'Detecting potential bias...',
-        'Fact-checking claims...',
-        'Evaluating author reputation...',
-        'Assessing transparency...',
-        'Generating comprehensive report...'
+        '📰 Gathering article content...',
+        '🛡️ Verifying source reputation...',
+        '🎯 Understanding the perspective...',
+        '✓ Checking the facts...',
+        '👤 Researching the author...',
+        '💎 Assessing content quality...',
+        '📊 Creating your detailed analysis...'
     ];
     
     var currentIndex = 0;
@@ -218,14 +222,14 @@ UnifiedTruthLensAnalyzer.prototype.showFunFacts = function() {
     if (!funFactBox || !funFactText) return;
     
     var facts = [
-        'The average person encounters 300-400 pieces of misinformation daily on social media.',
-        'Fact-checking organizations verify thousands of claims every day using AI and human experts.',
-        'Studies show that people are more likely to believe information that confirms their existing beliefs.',
-        'The term "fake news" has been around since the 1890s but became prominent in 2016.',
-        'AI can detect biased language patterns that humans might miss, improving objectivity analysis.',
-        'Professional news outlets employ editorial standards that include multiple source verification.',
-        'Misleading headlines can influence perception even when the article content is accurate.',
-        'The first fact-checking organization was created in 1913 by a newspaper editor in the US.'
+        '💡 The average person encounters 300-400 pieces of information daily on social media.',
+        '🔬 AI can analyze patterns in text that help identify reliable information sources.',
+        '📊 Professional news outlets employ editorial standards that include multiple source verification.',
+        '🎓 Media literacy education helps people better evaluate information quality.',
+        '🌟 Quality journalism involves fact-checking, multiple sources, and editorial oversight.',
+        '📖 The first fact-checking organization was created in 1913 by a newspaper editor.',
+        '🔍 Cross-referencing claims with multiple sources is a key skill for informed readers.',
+        '✨ AI tools can process information faster, but human judgment remains essential.'
     ];
     
     var currentFactIndex = 0;
@@ -379,7 +383,7 @@ UnifiedTruthLensAnalyzer.prototype.cleanAuthorName = function(author) {
     return author.replace(/^by\s+/i, '').trim() || 'Unknown Author';
 };
 
-console.log('[UnifiedTruthLens] Loading v6.10.0 - Comprehensive summary integration complete');
+console.log('[UnifiedTruthLens] Loading v6.11.0 - Positive progress messages ready');
 var unifiedAnalyzer = new UnifiedTruthLensAnalyzer();
 
 window.UnifiedTruthLensAnalyzer = UnifiedTruthLensAnalyzer;
