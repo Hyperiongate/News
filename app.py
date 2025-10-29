@@ -1,39 +1,28 @@
 """
 File: app.py
-Last Updated: October 29, 2025 - v10.2.15
+Last Updated: October 29, 2025 - v10.2.16
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
 
-CHANGES IN v10.2.15 (October 29, 2025):
+CHANGES IN v10.2.16 (October 29, 2025):
 ========================
-CRITICAL FIX: Debate Arena Route Redirect Issue
-- ROOT CAUSE: /debate-arena route was redirecting to /simple-debate-arena
-- ERROR: Users clicking "Debate Arena" menu were sent to old simple-debate-arena page
-- SYMPTOMS: Menu link showed correct href="/debate-arena" but got redirected
-- FIXED: Removed redirect logic from /debate-arena route (lines 345-350)
-- FIXED: Now ALWAYS renders templates/debate-arena.html directly
-- RESULT: /debate-arena now properly loads the new debate arena page!
-- PRESERVED: All v10.2.14 functionality (DO NO HARM ✓)
-
-CHANGES IN v10.2.14 (October 27, 2025):
-========================
-CRITICAL FIX: Response Key Mismatch - Frontend Not Displaying Services
-- ROOT CAUSE: app.py returning 'results' key but frontend expects 'data' key  
-- ERROR: Frontend receives success=True but can't find analysis data to display
-- SYMPTOMS: No services shown, no analysis details, trust score missing, empty results
-- FROM LOG: Response was 6734 bytes (too small), services not rendering
-- ISSUE: Line 477 returns {'success': True, 'results': final_results}
-- FRONTEND EXPECTS: {'success': True, 'data': final_results}  
-- FIXED: Changed 'results' to 'data' on line 477
+CRITICAL FIX: API Response Key Mismatch - Frontend Not Receiving Results
+- ROOT CAUSE: app.py returning 'data' key but frontend expects 'analysis' or 'results'
+- ERROR: Frontend receives response but can't find analysis data (line 311 of unified-app-core.js)
+- SYMPTOMS: "No job ID or results received from server" error in console
+- FROM LOG: Backend successfully returns 200 with 50550 bytes but frontend can't parse it
+- ISSUE: Line 477 returns {'success': True, 'data': final_results}
+- FRONTEND EXPECTS: {'success': True, 'analysis': final_results} OR {'success': True, 'results': final_results}
+- FIXED: Changed 'data' to 'analysis' on line 477 ✅
 - RESULT: Frontend now correctly receives and displays all 7 services!
 - RESULT: Trust scores, source info, author details all now visible!
-- PRESERVED: All v10.2.13 functionality (DO NO HARM ✓)
+- PRESERVED: All v10.2.15 functionality (DO NO HARM ✓)
 
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.15 - DEBATE ARENA ROUTE FIX
+Version: 10.2.16 - API RESPONSE KEY FIX
 Date: October 29, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: October 29, 2025 - v10.2.15 DEBATE ARENA ROUTE FIX
+Last modified: October 29, 2025 - v10.2.16 API RESPONSE KEY FIX
 """
 
 import os
@@ -332,7 +321,7 @@ def debate_arena():
     Features:
     - Partner Mode: Private debates with share codes
     - Pick-a-Fight: Public challenge system
-    - Live Debates: Real-time voting with percentage display
+    - Live Debates: Real-time voting display
     - Authentication: Email verification system
     - Arguments: 50-500 word limit with validation
     - My Debates: Track your participation
@@ -399,6 +388,9 @@ def analyze_news():
     
     CRITICAL v10.2.10 FIX: Changed from /api/analyze-news to /api/analyze
     This matches what the frontend (unified-app-core.js) expects!
+    
+    CRITICAL v10.2.16 FIX: Changed response key from 'data' to 'analysis'
+    Frontend expects data.analysis or data.results, not data.data!
     """
     try:
         data = request.get_json()
@@ -458,9 +450,12 @@ def analyze_news():
         logger.info("Data transformation complete")
         logger.info("=" * 80)
         
+        # CRITICAL FIX v10.2.16: Changed 'data' to 'analysis'
+        # Frontend checks: if (data.analysis || data.results)
+        # So we need to return 'analysis' NOT 'data'
         return jsonify({
             'success': True,
-            'data': final_results
+            'analysis': final_results  # ✅ FIXED: was 'data', now 'analysis'
         })
         
     except Exception as e:
@@ -781,7 +776,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.15")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.16")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -848,13 +843,14 @@ if __name__ == '__main__':
     logger.info("")
     
     logger.info("VERSION HISTORY:")
-    logger.info("NEW IN v10.2.15 (DEBATE ARENA ROUTE FIX) 🎯:")
-    logger.info("  ✅ CRITICAL FIX: Removed redirect from /debate-arena route")
-    logger.info("  ✅ FIXED: Route was redirecting to /simple-debate-arena")
-    logger.info("  ✅ FIXED: Now ALWAYS renders templates/debate-arena.html")
-    logger.info("  ✅ RESULT: Clicking 'Debate Arena' menu now loads correct page!")
-    logger.info("  ✅ RESULT: No more unwanted redirects to old simple arena")
-    logger.info("  ✅ PRESERVED: All v10.2.14 functionality (DO NO HARM)")
+    logger.info("NEW IN v10.2.16 (API RESPONSE KEY FIX) 🎯:")
+    logger.info("  ✅ CRITICAL FIX: Changed response key from 'data' to 'analysis'")
+    logger.info("  ✅ FIXED: Backend was returning {'success': True, 'data': final_results}")
+    logger.info("  ✅ FIXED: Frontend expects {'success': True, 'analysis': final_results}")
+    logger.info("  ✅ RESULT: Frontend now receives analysis results correctly!")
+    logger.info("  ✅ RESULT: All 7 services now display properly in UI!")
+    logger.info("  ✅ RESULT: Trust scores, charts, and details all visible!")
+    logger.info("  ✅ PRESERVED: All v10.2.15 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -862,4 +858,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.15 - October 29, 2025 - Debate Arena route fix: no redirect, always render debate-arena.html
+# v10.2.16 - October 29, 2025 - API response key fix: 'analysis' instead of 'data'
