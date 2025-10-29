@@ -1,17 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-        <!--
+    <!--
     TruthLens Transcript Analysis Page
-    Version: 3.1.0 - TRANSCRIPT CREATION WITH PDF DOWNLOAD
-    Date: October 27, 2025
+    Version: 3.2.0 - CSS EXTRACTION AND MODULARIZATION
+    Date: October 29, 2025
     
-    CHANGES FROM PREVIOUS VERSION (v3.0.0):
+    CHANGES FROM PREVIOUS VERSION (v3.1.0):
+    - EXTRACTED: All inline CSS moved to dedicated transcript-youtube.css file
+    - ADDED: Link to new transcript-youtube.css file
+    - PRESERVED: Link to main.css for unified navigation header
+    - PRESERVED: All existing functionality (DO NO HARM ✓)
+    - IMPROVED: Maintainability - CSS is now in separate file
+    
+    PREVIOUS CHANGES (v3.1.0):
     - ADDED: "Create Transcript" button next to "Analyze Video" button on YouTube tab
     - ADDED: Transcript display section with formatted output
     - ADDED: PDF download functionality for transcripts
     - ADDED: New API integration for /api/youtube/create-transcript endpoint
-    - PRESERVED: All existing functionality (DO NO HARM ✓)
     - PRESERVED: Full analysis functionality still works
     
     NEW FEATURES:
@@ -21,7 +27,7 @@
     - Clean formatting with video metadata included
     
     This file is complete and ready to deploy.
-    Last modified: October 27, 2025 - Added transcript creation v3.1.0
+    Last modified: October 29, 2025 - Extracted CSS to separate file v3.2.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -31,682 +37,11 @@
     <!-- External Styles - Unified Navigation -->
     <link rel="stylesheet" href="/static/css/main.css">
     
+    <!-- Transcript/YouTube Analysis Specific Styles -->
+    <link rel="stylesheet" href="/static/css/transcript-youtube.css">
+    
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <style>
-        :root {
-            --primary-blue: #3b82f6;
-            --primary-dark: #1e40af;
-            --success-green: #10b981;
-            --error-red: #ef4444;
-            --warning-orange: #f59e0b;
-            --purple-glow: #a855f7;
-            --pink-glow: #ec4899;
-            --cyan-glow: #06b6d4;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-            padding-top: 90px;
-        }
-
-        /* ========================================================================
-           BUTTON GROUP STYLING FOR SIDE-BY-SIDE BUTTONS
-           ======================================================================== */
-        
-        .button-group {
-            display: flex;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .button-group button {
-            flex: 1;
-            padding: 14px 24px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .button-group button.primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .button-group button.secondary {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-        }
-
-        .button-group button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
-        .button-group button.secondary:hover {
-            box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
-        }
-
-        /* ========================================================================
-           TRANSCRIPT DISPLAY SECTION
-           ======================================================================== */
-        
-        .transcript-section {
-            display: none;
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            margin-bottom: 30px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            animation: slideInUp 0.5s ease-out;
-        }
-
-        .transcript-section.active {
-            display: block;
-        }
-
-        .transcript-header {
-            border-bottom: 2px solid var(--gray-200);
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-
-        .transcript-header h2 {
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--gray-900);
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .transcript-metadata {
-            background: var(--gray-50);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 30px;
-        }
-
-        .transcript-metadata-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-            color: var(--gray-700);
-            font-size: 14px;
-        }
-
-        .transcript-metadata-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .transcript-metadata-item i {
-            color: var(--primary-blue);
-            width: 20px;
-        }
-
-        .transcript-content {
-            background: var(--gray-50);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 30px;
-            max-height: 500px;
-            overflow-y: auto;
-        }
-
-        .transcript-text {
-            font-size: 16px;
-            line-height: 1.8;
-            color: var(--gray-800);
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-
-        .transcript-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
-        .transcript-actions button {
-            padding: 12px 32px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .transcript-actions .btn-download {
-            background: var(--error-red);
-            color: white;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.4);
-        }
-
-        .transcript-actions .btn-download:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
-        }
-
-        .transcript-actions .btn-new {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .transcript-actions .btn-new:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
-        /* ========================================================================
-           ULTRA-ENTERTAINING PROGRESS SECTION
-           ======================================================================== */
-        
-        /* Time Estimate Banner */
-        .time-estimate-banner {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 16px 24px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            font-size: 18px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            animation: gentlePulse 2s ease-in-out infinite;
-        }
-
-        .time-estimate-banner i {
-            font-size: 24px;
-            animation: spin 3s linear infinite;
-        }
-
-        @keyframes gentlePulse {
-            0%, 100% {
-                transform: scale(1);
-                box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-            }
-            50% {
-                transform: scale(1.02);
-                box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-            }
-        }
-
-        @keyframes spin {
-            from {
-                transform: rotate(0deg);
-            }
-            to {
-                transform: rotate(360deg);
-            }
-        }
-        
-        .progress-section {
-            display: none;
-            background: rgba(255, 255, 255, 0.98);
-            backdrop-filter: blur(20px);
-            border-radius: 24px;
-            padding: 50px 40px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 
-                0 20px 60px rgba(0, 0, 0, 0.15),
-                0 0 40px rgba(102, 126, 234, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .progress-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle, rgba(102, 126, 234, 0.05) 0%, transparent 70%);
-            animation: rotateBackground 20s linear infinite;
-        }
-
-        @keyframes rotateBackground {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .progress-section.active {
-            display: block;
-            animation: slideInUp 0.5s ease-out;
-        }
-
-        @keyframes slideInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        /* Multi-layer Animated Spinner */
-        .spinner-container {
-            position: relative;
-            width: 100px;
-            height: 100px;
-            margin: 0 auto 30px;
-        }
-
-        .spinner-ring {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border: 4px solid transparent;
-            border-radius: 50%;
-            animation: spin 2s linear infinite;
-        }
-
-        .spinner-ring:nth-child(1) {
-            border-top-color: var(--primary-blue);
-            animation-duration: 1.5s;
-        }
-
-        .spinner-ring:nth-child(2) {
-            border-right-color: var(--purple-glow);
-            animation-duration: 2s;
-            animation-direction: reverse;
-        }
-
-        .spinner-ring:nth-child(3) {
-            border-bottom-color: var(--cyan-glow);
-            animation-duration: 2.5s;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Progress Emoji */
-        .progress-emoji {
-            font-size: 48px;
-            margin-bottom: 20px;
-            animation: bounce 1s ease-in-out infinite;
-        }
-
-        @keyframes bounce {
-            0%, 100% {
-                transform: translateY(0);
-            }
-            50% {
-                transform: translateY(-10px);
-            }
-        }
-
-        /* Progress Percentage */
-        .progress-percent {
-            font-size: 36px;
-            font-weight: 800;
-            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--purple-glow) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 20px;
-        }
-
-        /* Progress Bar Container */
-        .progress-bar-container {
-            width: 100%;
-            height: 8px;
-            background: var(--gray-200);
-            border-radius: 10px;
-            overflow: hidden;
-            margin-bottom: 20px;
-        }
-
-        /* Progress Bar Fill */
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary-blue), var(--purple-glow), var(--cyan-glow));
-            background-size: 200% 100%;
-            border-radius: 10px;
-            transition: width 0.5s ease;
-            animation: shimmer 2s ease-in-out infinite;
-        }
-
-        @keyframes shimmer {
-            0% {
-                background-position: -200% 0;
-            }
-            100% {
-                background-position: 200% 0;
-            }
-        }
-
-        /* Claims Counter */
-        .claims-counter {
-            background: linear-gradient(135deg, var(--success-green) 0%, #059669 100%);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 20px;
-            font-size: 16px;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                transform: scale(1);
-            }
-            50% {
-                transform: scale(1.05);
-            }
-        }
-
-        /* Fun Fact */
-        .fun-fact {
-            background: var(--gray-50);
-            border-left: 4px solid var(--primary-blue);
-            padding: 16px 20px;
-            border-radius: 8px;
-            font-size: 15px;
-            color: var(--gray-700);
-            max-width: 600px;
-            margin: 0 auto;
-            text-align: left;
-        }
-
-        /* Sparkles (Decorative particles) */
-        .sparkles-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            overflow: hidden;
-        }
-
-        .sparkle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: var(--primary-blue);
-            border-radius: 50%;
-            animation: sparkleFloat 3s ease-in-out infinite;
-            opacity: 0;
-        }
-
-        @keyframes sparkleFloat {
-            0%, 100% {
-                opacity: 0;
-                transform: translateY(0) scale(0);
-            }
-            50% {
-                opacity: 1;
-                transform: translateY(-100px) scale(1);
-            }
-        }
-
-        /* Container and basic layout */
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-            margin-bottom: 30px;
-        }
-
-        .tabs {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 30px;
-            border-bottom: 2px solid var(--gray-200);
-        }
-
-        .tab {
-            flex: 1;
-            padding: 14px 20px;
-            background: transparent;
-            border: none;
-            border-bottom: 3px solid transparent;
-            color: var(--gray-600);
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .tab:hover {
-            color: var(--primary-blue);
-            background: var(--gray-50);
-        }
-
-        .tab.active {
-            color: var(--primary-blue);
-            border-bottom-color: var(--primary-blue);
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--gray-800);
-            margin-bottom: 12px;
-        }
-
-        .input-group textarea,
-        .input-group input[type="text"] {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid var(--gray-200);
-            border-radius: 12px;
-            font-size: 15px;
-            font-family: inherit;
-            transition: all 0.3s ease;
-        }
-
-        .input-group textarea {
-            min-height: 200px;
-            resize: vertical;
-        }
-
-        .input-group textarea:focus,
-        .input-group input[type="text"]:focus {
-            outline: none;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-
-        .char-counter {
-            text-align: right;
-            font-size: 13px;
-            color: var(--gray-600);
-            margin-top: 8px;
-        }
-
-        .help-text {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 14px;
-            color: var(--gray-600);
-            margin-top: 8px;
-        }
-
-        .help-text i {
-            color: var(--primary-blue);
-        }
-
-        /* Single button styling (for backward compatibility) */
-        button {
-            width: 100%;
-            padding: 14px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
-        }
-
-        button i {
-            font-size: 18px;
-        }
-
-        /* Results Section */
-        .results-section {
-            display: none;
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 24px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-        }
-
-        .results-section.active {
-            display: block;
-            animation: slideInUp 0.5s ease-out;
-        }
-
-        .credibility-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px;
-            padding: 40px;
-            text-align: center;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        }
-
-        .meter-score {
-            font-size: 72px;
-            font-weight: 800;
-            margin: 20px 0;
-            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        }
-
-        .credibility-label {
-            font-size: 24px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        .claim-card {
-            background: var(--gray-50);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            border-left: 4px solid var(--primary-blue);
-            transition: all 0.3s ease;
-        }
-
-        .claim-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transform: translateX(4px);
-        }
-
-        .verdict-badge {
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 30px 20px;
-            color: white;
-            font-size: 14px;
-            margin-top: 50px;
-        }
-
-        .footer a {
-            color: white;
-            text-decoration: underline;
-            margin: 0 10px;
-        }
-    </style>
 </head>
 <body>
 
@@ -788,7 +123,7 @@
                     Extract transcript or analyze the video's content
                 </div>
             </div>
-            <!-- NEW: Button Group for Analyze Video OR Create Transcript -->
+            <!-- Button Group for Analyze Video OR Create Transcript -->
             <div class="button-group">
                 <button class="primary" onclick="startAnalysis('youtube')">
                     <i class="fas fa-search"></i>
@@ -848,7 +183,7 @@
         </div>
     </div>
 
-    <!-- NEW: Transcript Display Section -->
+    <!-- Transcript Display Section -->
     <div id="transcript-section" class="transcript-section">
         <div class="transcript-header">
             <h2>
@@ -891,7 +226,7 @@
         let pollInterval = null;
         let currentResults = null;
         let funFactsInterval = null;
-        let currentTranscriptData = null; // NEW: Store transcript data
+        let currentTranscriptData = null; // Store transcript data
 
         const funFacts = [
             "🤖 AI models can process thousands of claims per minute!",
@@ -940,7 +275,7 @@
         }
 
         // ============================================================================
-        // NEW: CREATE TRANSCRIPT FUNCTION
+        // CREATE TRANSCRIPT FUNCTION
         // ============================================================================
         async function createTranscript() {
             const url = document.getElementById('youtube-url').value.trim();
@@ -1014,7 +349,7 @@
         }
 
         // ============================================================================
-        // NEW: DISPLAY TRANSCRIPT
+        // DISPLAY TRANSCRIPT
         // ============================================================================
         function displayTranscript(data) {
             const section = document.getElementById('transcript-section');
@@ -1085,7 +420,7 @@
         }
 
         // ============================================================================
-        // NEW: DOWNLOAD TRANSCRIPT PDF
+        // DOWNLOAD TRANSCRIPT PDF
         // ============================================================================
         async function downloadTranscriptPDF() {
             if (!currentTranscriptData) {
@@ -1629,7 +964,7 @@
         function startNewAnalysis() {
             currentJobId = null;
             currentResults = null;
-            currentTranscriptData = null; // NEW: Clear transcript data
+            currentTranscriptData = null;
             if (pollInterval) {
                 clearInterval(pollInterval);
                 pollInterval = null;
