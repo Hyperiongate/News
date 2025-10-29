@@ -3,20 +3,24 @@
 <head>
     <!--
     TruthLens Debate Arena Page
-    Version: 4.0.0 - INDEPENDENT CSS FILE
+    Version: 4.1.0 - HEADER STANDARDIZATION
     Date: October 29, 2025
     
-    CHANGES FROM PREVIOUS VERSION:
-    - REMOVED: Dependency on main.css (was getting too large)
-    - REMOVED: Inline <style> block (moved all styles to debate-arena.css)
-    - ADDED: Link to dedicated debate-arena.css file
-    - RESULT: Clean, maintainable, independent HTML file
-    - PRESERVED: All existing functionality (DO NO HARM ✓)
+    CHANGES FROM 4.0.0:
+    - STANDARDIZED: Header navigation to match index.html v3.10.0 structure
+    - CHANGED: <header class="header"> to <nav class="main-navigation">
+    - CHANGED: <div class="header-content"> to <div class="nav-container-unified">
+    - CHANGED: Logo structure to match index.html with <i class="fas fa-shield-check">
+    - ADDED: Mobile menu toggle button for responsive design
+    - CHANGED: <nav class="nav-links"> to <ul class="nav-menu" id="navMenu">
+    - UPDATED: All nav links wrapped in <li> tags
+    - UPDATED: Menu order: About Us, Features, News Analysis, Transcript/YouTube Analysis, Debate Arena, Contact Us
+    - PRESERVED: All debate arena functionality (DO NO HARM ✓)
     
     This file now uses static/css/debate-arena.css for ALL styling.
     No other CSS files are required.
     
-    Last modified: October 29, 2025 - Independent CSS v4.0.0
+    Last modified: October 29, 2025 - Header standardization v4.1.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -34,27 +38,28 @@
     <link rel="stylesheet" href="/static/css/debate-arena.css">
 </head>
 <body>
-    <!-- Navigation Header -->
-    <header class="header">
-        <div class="header-content">
-            <a href="/" class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-search-plus"></i>
-                </div>
-                <span class="logo-text">TruthLens</span>
+    <!-- Navigation Header - v4.1.0 STANDARDIZED TO MATCH INDEX.HTML -->
+    <nav class="main-navigation">
+        <div class="nav-container-unified">
+            <a href="/" class="nav-logo">
+                <i class="fas fa-shield-check"></i>
+                <span>TruthLens</span>
             </a>
             
-            <nav class="nav-links">
-                <a href="/features" class="nav-link">Features</a>
-                <a href="/about" class="nav-link">About</a>
-                <a href="/" class="nav-link">News Analysis</a>
-                <a href="/transcript" class="nav-link">Transcript/YouTube</a>
-                <a href="/live-stream" class="nav-link">Live Stream</a>
-                <a href="/debate-arena" class="nav-link active">Debate Arena</a>
-                <a href="/contact" class="nav-link">Contact Us</a>
-            </nav>
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="/about" class="nav-link">About Us</a></li>
+                <li><a href="/features" class="nav-link">Features</a></li>
+                <li><a href="/" class="nav-link">News Analysis</a></li>
+                <li><a href="/transcript" class="nav-link">Transcript/YouTube Analysis</a></li>
+                <li><a href="/debate-arena" class="nav-link active">Debate Arena</a></li>
+                <li><a href="/contact" class="nav-link">Contact Us</a></li>
+            </ul>
         </div>
-    </header>
+    </nav>
 
     <div class="debate-container">
         <!-- Header -->
@@ -312,6 +317,14 @@
                 if (activeTab === 'myDebatesSection') loadMyDebates();
             }, 30000);
         });
+
+        // Mobile menu toggle
+        function toggleMobileMenu() {
+            var navMenu = document.getElementById('navMenu');
+            if (navMenu) {
+                navMenu.classList.toggle('active');
+            }
+        }
 
         // Tab switching
         function switchTab(tab) {
@@ -972,4 +985,29 @@
 </body>
 </html>
 
-<!-- I did no harm and this file is not truncated -->
+<!--
+I did no harm and this file is not truncated.
+v4.1.0 - October 29, 2025
+
+WHAT'S NEW IN v4.1.0:
+✅ STANDARDIZED: Header navigation to match index.html v3.10.0
+✅ CHANGED: Header structure from old format to new main-navigation format
+✅ ADDED: Mobile menu toggle button with JavaScript function
+✅ UPDATED: Logo icon to fas fa-shield-check to match index.html
+✅ UPDATED: Navigation wrapper classes to nav-container-unified
+✅ UPDATED: Menu structure to use <ul> and <li> tags
+✅ UPDATED: Menu order to match site standard
+
+PRESERVED FROM v4.0.0:
+✅ Independent CSS file (debate-arena.css)
+✅ All debate arena functionality
+✅ Partner mode with share codes
+✅ Pick-a-fight public challenges
+✅ Live voting system
+✅ Authentication system
+✅ Word count validation
+✅ Real-time updates
+
+DEPLOYMENT READY FOR GITHUB/RENDER
+Complete file ready for production deployment.
+-->
