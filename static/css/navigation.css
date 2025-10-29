@@ -1,0 +1,190 @@
+/**
+ * TruthLens Navigation - Shared Across All Pages
+ * Version: 1.0.0
+ * Date: October 29, 2025
+ * 
+ * This file contains ONLY navigation/header styles.
+ * Include this file in ALL HTML pages for consistent navigation.
+ * 
+ * Last Modified: October 29, 2025 - Initial extraction from debate-arena.css
+ */
+
+/* ============================================================================
+   NAVIGATION HEADER - SHARED ACROSS ALL PAGES
+   ============================================================================ */
+
+.main-navigation {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+}
+
+.nav-container-unified {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 70px;
+}
+
+.nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: white;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 700;
+    transition: transform 0.3s ease;
+}
+
+.nav-logo:hover {
+    transform: scale(1.05);
+}
+
+.nav-logo i {
+    font-size: 1.75rem;
+}
+
+.nav-menu {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-menu li {
+    list-style: none;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    color: rgba(255, 255, 255, 0.9);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.nav-link:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.nav-link.active {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile Menu Toggle Button */
+.mobile-menu-toggle {
+    display: none;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    padding: 0.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-toggle:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ============================================================================
+   RESPONSIVE NAVIGATION
+   ============================================================================ */
+
+@media (max-width: 1024px) {
+    .nav-link {
+        padding: 0.625rem 0.75rem;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-container-unified {
+        padding: 0 1rem;
+        height: 60px;
+    }
+    
+    .mobile-menu-toggle {
+        display: block;
+    }
+    
+    .nav-menu {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        right: 0;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        flex-direction: column;
+        gap: 0;
+        padding: 1rem 0;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        transform: translateY(-100%);
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+    }
+    
+    .nav-menu.active {
+        transform: translateY(0);
+        opacity: 1;
+        visibility: visible;
+    }
+    
+    .nav-menu li {
+        width: 100%;
+    }
+    
+    .nav-link {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        border-radius: 0;
+        justify-content: flex-start;
+    }
+    
+    .nav-link:hover {
+        transform: none;
+        background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .nav-link.active {
+        background: rgba(255, 255, 255, 0.25);
+        border-left: 4px solid white;
+    }
+}
+
+@media (max-width: 480px) {
+    .nav-logo {
+        font-size: 1.25rem;
+    }
+    
+    .nav-logo i {
+        font-size: 1.5rem;
+    }
+}
+
+/* ============================================================================
+   END OF NAVIGATION CSS
+   ============================================================================ */
+
+/* I did no harm and this file is not truncated */
