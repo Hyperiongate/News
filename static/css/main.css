@@ -3970,3 +3970,204 @@ body {
    ============================================================================ */
 
 /* I did no harm and this file is not truncated. */
+/* ============================================================================
+   APPEND THIS TO THE END OF YOUR EXISTING main.css FILE
+   TRUST SCORE CIRCLE OVERLAP FIX v4.1.1
+   Date: October 28, 2025
+   
+   INSTRUCTIONS:
+   1. Open your existing static/css/main.css file
+   2. Scroll to the VERY BOTTOM
+   3. Copy everything below this line and paste it at the end
+   4. Save the file
+   ============================================================================ */
+
+/* CRITICAL FIX: TRUST SCORE DISPLAY - NO OVERLAP */
+
+.trust-score-visual {
+    display: flex !important;
+    gap: 2rem !important;
+    padding: 2rem !important;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%) !important;
+    border-radius: 16px !important;
+    margin-bottom: 2rem !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+    align-items: center !important;
+}
+
+.score-circle-container {
+    flex-shrink: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* FIXED: Smaller circle to prevent overlap */
+.score-circle-bg {
+    width: 130px !important;
+    height: 130px !important;
+    background: conic-gradient(
+        from 0deg,
+        #10b981 0deg 72deg,
+        #3b82f6 72deg 144deg,
+        #f59e0b 144deg 216deg,
+        #ef4444 216deg 288deg,
+        #6b7280 288deg 360deg
+    ) !important;
+    border-radius: 50% !important;
+    padding: 6px !important;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* FIXED: Smaller inner circle */
+.score-circle-inner {
+    width: 118px !important;
+    height: 118px !important;
+    background: white !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    animation: scoreReveal 0.5s ease-out !important;
+    text-align: center !important;
+    padding: 8px !important;
+    gap: 2px !important;
+}
+
+/* FIXED: Smaller score number - no overlap */
+.trust-score-big {
+    font-size: 2.5rem !important;
+    font-weight: 800 !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    display: block !important;
+}
+
+.trust-score-big.high { 
+    color: #10b981 !important; 
+}
+
+.trust-score-big.medium { 
+    color: #3b82f6 !important; 
+}
+
+.trust-score-big.low { 
+    color: #ef4444 !important; 
+}
+
+/* FIXED: Smaller max number */
+.trust-score-max {
+    font-size: 0.9rem !important;
+    color: #6b7280 !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    display: block !important;
+}
+
+/* FIXED: Smaller badge that fits */
+.trust-label-badge {
+    padding: 0.2rem 0.4rem !important;
+    border-radius: 12px !important;
+    font-size: 0.55rem !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.03em !important;
+    white-space: nowrap !important;
+    max-width: 100px !important;
+    text-align: center !important;
+    margin-top: 2px !important;
+}
+
+.trust-label-badge.high {
+    background: rgba(16, 185, 129, 0.15) !important;
+    color: #059669 !important;
+}
+
+.trust-label-badge.medium {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #2563eb !important;
+}
+
+.trust-label-badge.low {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #dc2626 !important;
+}
+
+/* Score details section */
+.score-details-section {
+    flex: 1 !important;
+    min-width: 0 !important;
+}
+
+.score-breakdown-title {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    margin-bottom: 0.75rem !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.5rem !important;
+}
+
+.score-breakdown-title i {
+    color: #6366f1 !important;
+}
+
+/* Responsive fixes */
+@media (max-width: 968px) {
+    .trust-score-visual {
+        flex-direction: column !important;
+        gap: 1.5rem !important;
+        text-align: center !important;
+    }
+    
+    .score-circle-bg {
+        width: 120px !important;
+        height: 120px !important;
+    }
+    
+    .score-circle-inner {
+        width: 108px !important;
+        height: 108px !important;
+    }
+    
+    .trust-score-big {
+        font-size: 2.25rem !important;
+    }
+    
+    .trust-score-max {
+        font-size: 0.85rem !important;
+    }
+    
+    .trust-label-badge {
+        font-size: 0.5rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .score-circle-bg {
+        width: 110px !important;
+        height: 110px !important;
+    }
+    
+    .score-circle-inner {
+        width: 98px !important;
+        height: 98px !important;
+    }
+    
+    .trust-score-big {
+        font-size: 2rem !important;
+    }
+}
+
+/* ============================================================================
+   END OF TRUST SCORE FIX v4.1.1 - October 28, 2025
+   This fix uses !important to override existing styles
+   No need to delete anything - just append this to the bottom
+   ============================================================================ */
+
+/* I did no harm and this file is not truncated */
