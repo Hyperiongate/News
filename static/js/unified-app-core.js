@@ -1,17 +1,22 @@
 /**
  * TruthLens Unified App Core
- * Version: 6.12.0 - ENTERTAINING PROGRESS & "WHAT TO VERIFY" FILTER FIX
- * Date: October 28, 2025
+ * Version: 6.13.0 - FIXED API CALLS & STARTANALYSIS EXPORT
+ * Date: October 29, 2025
  * 
- * CHANGES FROM 6.11.0:
- * ✅ FIXED: Progress messages now ENTERTAINING and COLORFUL
- * ✅ FIXED: Added robust filtering for "What to verify" text
- * ✅ FIXED: Trust score display positioning helpers
+ * CHANGES FROM 6.12.0:
+ * ✅ FIXED: Exported startAnalysis() function globally for onclick handlers
+ * ✅ FIXED: API calls now send correct parameters (url/text not input/input_type)
+ * ✅ FIXED: Proper integration with index.html button handlers
+ * ✅ PRESERVED: All entertaining progress and "What to verify" filtering
  * 
  * Developer Notes:
+ * - startAnalysis() is now window.startAnalysis for onclick="startAnalysis()"
+ * - API expects {url: "..."} or {text: "..."} parameters
  * - Progress uses fun emojis and positive messages
  * - "What to verify" filtered at multiple points
  * - Trust score has proper container handling
+ * 
+ * Last modified: October 29, 2025 - v6.13.0
  */
 
 // ============================================================================
@@ -57,13 +62,16 @@ const progressMessages = [
 
 let funFactInterval = null;
 let emojiInterval = null;
+let messageInterval = null;
+let currentFunFactIndex = 0;
+let currentMessageIndex = 0;
 
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('[Core] Initializing TruthLens Unified App v6.12.0');
+    console.log('[Core] Initializing TruthLens Unified App v6.13.0');
     
     initializeTabs();
     initializeAnalyzeButton();
@@ -74,9 +82,14 @@ document.addEventListener('DOMContentLoaded', function() {
     exampleButtons.forEach(btn => {
         btn.addEventListener('click', function() {
             const url = this.dataset.url;
-            document.getElementById('article-url').value = url;
-            // Switch to URL tab
-            switchTab('url');
+            const urlInput = document.getElementById('article-url');
+            if (urlInput) {
+                urlInput.value = url;
+            }
+            // Switch to URL tab if tab system exists
+            if (typeof switchTab === 'function') {
+                switchTab('url');
+            }
         });
     });
     
@@ -129,75 +142,78 @@ function initializeProgressAnimation() {
 }
 
 function startEntertainingProgress() {
-    const progressContainer = document.getElementById('progress-container');
-    if (!progressContainer) return;
+    console.log('[Core] Starting entertaining progress');
     
-    progressContainer.classList.add('active');
+    const loadingBackdrop = document.getElementById('loadingBackdrop');
+    if (loadingBackdrop) {
+        loadingBackdrop.classList.add('active');
+    }
     
     // Start fun fact rotation
-    let factIndex = 0;
-    const funFactElement = document.getElementById('fun-fact');
+    currentFunFactIndex = 0;
+    const funFactElement = document.getElementById('funFactText');
     if (funFactElement) {
         funFactInterval = setInterval(() => {
-            factIndex = (factIndex + 1) % funFacts.length;
+            currentFunFactIndex = (currentFunFactIndex + 1) % funFacts.length;
             funFactElement.style.opacity = '0';
             setTimeout(() => {
-                funFactElement.textContent = funFacts[factIndex];
+                funFactElement.textContent = funFacts[currentFunFactIndex];
                 funFactElement.style.opacity = '1';
             }, 300);
         }, 3000);
     }
     
-    // Start emoji rotation
-    let emojiIndex = 0;
-    const emojiElement = document.getElementById('progress-emoji');
-    if (emojiElement) {
-        emojiInterval = setInterval(() => {
-            emojiIndex = (emojiIndex + 1) % progressEmojis.length;
-            emojiElement.textContent = progressEmojis[emojiIndex];
-        }, 1500);
+    // Start message rotation
+    currentMessageIndex = 0;
+    const messageElement = document.getElementById('loadingMessageEnhanced');
+    if (messageElement) {
+        messageInterval = setInterval(() => {
+            currentMessageIndex = (currentMessageIndex + 1) % progressMessages.length;
+            messageElement.innerHTML = progressMessages[currentMessageIndex];
+        }, 2000);
     }
 }
 
 function updateEntertainingProgress(progress, message) {
+    console.log('[Core] Updating progress:', progress + '%');
+    
     // Update percentage
-    const percentElement = document.getElementById('progress-percentage');
+    const percentElement = document.getElementById('progressPercentageFixed');
     if (percentElement) {
         percentElement.textContent = `${progress}%`;
     }
     
     // Update progress bar
-    const progressBar = document.getElementById('progress-bar');
+    const progressBar = document.getElementById('progressBarFill');
     if (progressBar) {
         progressBar.style.width = `${progress}%`;
     }
     
-    // Update message
-    const messageElement = document.getElementById('progress-message');
-    if (messageElement && message) {
-        // Use entertaining messages based on progress
-        const messageIndex = Math.min(
-            Math.floor(progress / 10),
-            progressMessages.length - 1
-        );
-        messageElement.textContent = progressMessages[messageIndex];
+    // Update message if provided
+    if (message) {
+        const messageElement = document.getElementById('loadingMessageEnhanced');
+        if (messageElement) {
+            messageElement.innerHTML = message;
+        }
     }
 }
 
 function stopEntertainingProgress() {
+    console.log('[Core] Stopping entertaining progress');
+    
     if (funFactInterval) {
         clearInterval(funFactInterval);
         funFactInterval = null;
     }
     
-    if (emojiInterval) {
-        clearInterval(emojiInterval);
-        emojiInterval = null;
+    if (messageInterval) {
+        clearInterval(messageInterval);
+        messageInterval = null;
     }
     
-    const progressContainer = document.getElementById('progress-container');
-    if (progressContainer) {
-        progressContainer.classList.remove('active');
+    const loadingBackdrop = document.getElementById('loadingBackdrop');
+    if (loadingBackdrop) {
+        loadingBackdrop.classList.remove('active');
     }
 }
 
@@ -215,23 +231,29 @@ function initializeAnalyzeButton() {
     analyzeBtn.addEventListener('click', handleAnalyze);
 }
 
+// FIXED: Main analysis function - exported globally for onclick handlers
 async function handleAnalyze() {
-    console.log('[Core] Starting analysis');
+    console.log('[Core] Starting analysis via handleAnalyze');
     
-    // Get input based on current mode
-    let input = '';
-    if (currentMode === 'url') {
-        input = document.getElementById('article-url').value.trim();
-        if (!input) {
-            showError('Please enter a valid URL');
-            return;
-        }
-    } else {
-        input = document.getElementById('article-text').value.trim();
-        if (!input || input.length < 100) {
-            showError('Please enter at least 100 characters of text');
-            return;
-        }
+    // Get input from form fields
+    const urlInput = document.getElementById('article-url');
+    const textInput = document.getElementById('article-text');
+    
+    let url = '';
+    let text = '';
+    
+    if (urlInput) {
+        url = urlInput.value.trim();
+    }
+    
+    if (textInput) {
+        text = textInput.value.trim();
+    }
+    
+    // Validation
+    if (!url && !text) {
+        showError('Please provide either a URL or article text to analyze.');
+        return;
     }
     
     // Hide previous results
@@ -243,19 +265,29 @@ async function handleAnalyze() {
     
     // Disable analyze button
     const analyzeBtn = document.getElementById('analyze-btn');
-    analyzeBtn.disabled = true;
+    if (analyzeBtn) {
+        analyzeBtn.disabled = true;
+        analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+    }
     
     try {
+        // FIXED: Build request body with correct parameter names
+        const requestBody = {};
+        if (url) {
+            requestBody.url = url;
+        } else {
+            requestBody.text = text;
+        }
+        
+        console.log('[Core] Sending request:', requestBody);
+        
         // Submit for analysis
         const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                input: input,
-                input_type: currentMode
-            })
+            body: JSON.stringify(requestBody)
         });
         
         const data = await response.json();
@@ -264,23 +296,40 @@ async function handleAnalyze() {
             throw new Error(data.error || 'Analysis failed');
         }
         
+        console.log('[Core] API Response:', data);
+        
         if (data.job_id) {
             currentJobId = data.job_id;
             console.log('[Core] Job started:', currentJobId);
             
             // Start polling for results
             startPolling();
+        } else if (data.analysis || data.results) {
+            // Immediate results (no job ID)
+            console.log('[Core] Immediate results received');
+            stopEntertainingProgress();
+            processResults(data.analysis || data.results);
+            if (analyzeBtn) {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+            }
         } else {
-            throw new Error('No job ID received');
+            throw new Error('No job ID or results received from server');
         }
         
     } catch (error) {
         console.error('[Core] Analysis error:', error);
         showError(error.message || 'Failed to start analysis');
         stopEntertainingProgress();
-        analyzeBtn.disabled = false;
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+        }
     }
 }
+
+// FIXED: Export startAnalysis globally for onclick="startAnalysis()"
+window.startAnalysis = handleAnalyze;
 
 // ============================================================================
 // POLLING FOR RESULTS
@@ -313,7 +362,11 @@ function startPolling() {
                 processResults(data.results);
                 
                 // Re-enable analyze button
-                document.getElementById('analyze-btn').disabled = false;
+                const analyzeBtn = document.getElementById('analyze-btn');
+                if (analyzeBtn) {
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+                }
                 
             } else if (data.status === 'failed') {
                 throw new Error(data.error || 'Analysis failed');
@@ -324,7 +377,11 @@ function startPolling() {
             stopPolling();
             stopEntertainingProgress();
             showError(error.message || 'Failed to get analysis results');
-            document.getElementById('analyze-btn').disabled = false;
+            const analyzeBtn = document.getElementById('analyze-btn');
+            if (analyzeBtn) {
+                analyzeBtn.disabled = false;
+                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+            }
         }
     }, POLL_INTERVAL);
 }
@@ -341,26 +398,26 @@ function stopPolling() {
 // ============================================================================
 
 function processResults(results) {
-    console.log('[Core] Processing results');
+    console.log('[Core] Processing results:', results);
     
     if (!results) {
         showError('No results received');
         return;
     }
     
-    // Store results globally for export
+    // Store results globally for export and PDF generation
     window.analysisResults = results;
+    window.lastAnalysisData = results;
     
     // Show results section
-    const resultsSection = document.getElementById('results-section');
+    const resultsSection = document.getElementById('resultsSection');
     if (resultsSection) {
         resultsSection.style.display = 'block';
-        
-        // Add timestamp
-        const timestampEl = document.getElementById('timestamp');
-        if (timestampEl) {
-            timestampEl.textContent = `Analyzed on ${new Date().toLocaleString()}`;
-        }
+    }
+    
+    // Call page-specific update function if it exists
+    if (typeof updateComprehensiveSummary === 'function') {
+        updateComprehensiveSummary(results);
     }
     
     // Display trust score with proper positioning
@@ -379,9 +436,9 @@ function processResults(results) {
     // Display quick stats
     displayQuickStats(results);
     
-    // Display service results
-    if (results.service_results) {
-        displayServiceResults(results.service_results);
+    // Display service results using ServiceTemplates if available
+    if (results.service_results || results.detailed_analysis) {
+        displayServiceResults(results.service_results || results.detailed_analysis);
     }
     
     // Show export section
@@ -595,7 +652,17 @@ function displayQuickStats(results) {
 // ============================================================================
 
 function displayServiceResults(serviceResults) {
-    const container = document.getElementById('service-results');
+    console.log('[Core] Displaying service results');
+    
+    // Use ServiceTemplates if available
+    if (window.ServiceTemplates && typeof window.ServiceTemplates.displayAllAnalyses === 'function') {
+        console.log('[Core] Using ServiceTemplates to display results');
+        window.ServiceTemplates.displayAllAnalyses(serviceResults, null);
+        return;
+    }
+    
+    // Fallback: basic display
+    const container = document.getElementById('serviceAnalysisContainer');
     if (!container) return;
     
     // Clear existing content
@@ -603,7 +670,7 @@ function displayServiceResults(serviceResults) {
     
     // Process each service
     Object.entries(serviceResults).forEach(([serviceName, serviceData]) => {
-        if (serviceData && serviceData.success) {
+        if (serviceData && serviceData.success !== false) {
             const serviceCard = createServiceCard(serviceName, serviceData);
             if (serviceCard) {
                 container.appendChild(serviceCard);
@@ -649,11 +716,16 @@ function formatServiceName(name) {
     const nameMap = {
         'fact_checker': 'Fact Checking',
         'bias_detector': 'Bias Detection',
+        'source_credibility': 'Source Credibility',
         'source_checker': 'Source Credibility',
         'claim_extractor': 'Claim Extraction',
         'sentiment_analyzer': 'Sentiment Analysis',
         'readability_analyzer': 'Readability Analysis',
-        'news_categorizer': 'Category Analysis'
+        'news_categorizer': 'Category Analysis',
+        'author_analyzer': 'Author Analysis',
+        'transparency_analyzer': 'Transparency Analysis',
+        'manipulation_detector': 'Manipulation Detection',
+        'content_analyzer': 'Content Quality'
     };
     
     return nameMap[name] || name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -671,6 +743,22 @@ function showError(message) {
     // Create error element
     const errorDiv = document.createElement('div');
     errorDiv.className = 'error-message';
+    errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #ef4444;
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        z-index: 10001;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        max-width: 400px;
+        animation: slideIn 0.3s ease;
+    `;
     errorDiv.innerHTML = `
         <i class="fas fa-exclamation-triangle"></i>
         <span>${message}</span>
@@ -686,9 +774,19 @@ function showError(message) {
 }
 
 function hideResults() {
-    const resultsSection = document.getElementById('results-section');
+    const resultsSection = document.getElementById('resultsSection');
     if (resultsSection) {
         resultsSection.style.display = 'none';
+    }
+    
+    const comprehensiveSummary = document.getElementById('comprehensive-summary');
+    if (comprehensiveSummary) {
+        comprehensiveSummary.style.display = 'none';
+    }
+    
+    const serviceWrapper = document.getElementById('service-results-wrapper');
+    if (serviceWrapper) {
+        serviceWrapper.style.display = 'none';
     }
 }
 
@@ -768,6 +866,6 @@ False: ${window.analysisResults.false_claims || 0}`;
     });
 };
 
-console.log('[Core] TruthLens Unified App Core v6.12.0 loaded');
+console.log('[Core] TruthLens Unified App Core v6.13.0 loaded');
 
 /* I did no harm and this file is not truncated */
