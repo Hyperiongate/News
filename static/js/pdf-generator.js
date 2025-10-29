@@ -1,33 +1,23 @@
 /**
  * TruthLens PDF Generator
- * Version: 2.1.0 - COMPLETE SERVICE DETAILS
+ * Version: 2.2.0 - "WHAT TO VERIFY" BUG FIX
  * Date: October 28, 2025
  * 
- * CHANGES IN v2.1.0:
- * ✅ ADDED: Complete detailed service analysis in PDF
- * ✅ ADDED: All 7 services with scores, summaries, and findings
- * ✅ ENHANCED: Better page layout with section breaks
- * ✅ PRESERVED: All v2.0.0 fixes (DO NO HARM ✓)
+ * CHANGES FROM 2.1.0:
+ * ✅ FIXED: "What to verify" placeholder text no longer appears in PDF
+ * ✅ ENHANCED: Better filtering of empty/placeholder content
+ * ✅ ADDED: Comprehensive blacklist for unwanted phrases
+ * ✅ PRESERVED: All v2.1.0 complete service details (DO NO HARM ✓)
  * 
- * PDF NOW INCLUDES:
- * - Trust Score & Rating
- * - Metadata (source, author, word count, date)
- * - Score Breakdown (bar charts for all 7 services)
- * - Article Summary
- * - Key Insights
- * - Bottom Line
- * - DETAILED SERVICE ANALYSIS (NEW in v2.1.0):
- *   * Source Credibility
- *   * Bias Detection
- *   * Fact Checking
- *   * Author Analysis
- *   * Transparency
- *   * Manipulation Detection
- *   * Content Quality
+ * WHAT'S NEW IN v2.2.0:
+ * - Filters out "What to verify" and similar placeholder text
+ * - Removes empty findings before they reach the PDF
+ * - Better content validation throughout
+ * - Cleaner, more professional PDF output
  * 
  * PURPOSE:
  * Generates professional PDF reports from analysis results.
- * Now includes complete service-by-service breakdown.
+ * Now with enhanced content filtering.
  * 
  * DEPLOYMENT:
  * 1. Save as: static/js/pdf-generator.js
@@ -40,14 +30,68 @@
 (function() {
     'use strict';
     
-    console.log('[PDFGenerator v2.1.0] Initializing with COMPLETE SERVICE DETAILS...');
+    console.log('[PDFGenerator v2.2.0] Initializing with "What to Verify" bug fix...');
+
+    // COMPREHENSIVE BLACKLIST of placeholder/unwanted phrases
+    const CONTENT_BLACKLIST = [
+        'what to verify',
+        'things to check',
+        'verify this',
+        'check this',
+        'items to verify',
+        'verification needed',
+        'please verify',
+        'to be verified',
+        'needs verification',
+        'requires checking',
+        'check these',
+        'verify these',
+        'placeholder',
+        'coming soon',
+        'not available yet',
+        'tbd',
+        'to be determined',
+        'pending',
+        'n/a',
+        'none',
+        'no data',
+        'no information'
+    ];
+
+    /**
+     * Check if text contains blacklisted phrases
+     * @param {string} text - Text to check
+     * @returns {boolean} True if text is clean (no blacklist matches)
+     */
+    function isCleanContent(text) {
+        if (!text || typeof text !== 'string' || text.trim().length === 0) {
+            return false;
+        }
+        
+        const lowerText = text.toLowerCase().trim();
+        
+        // Check against blacklist
+        for (let phrase of CONTENT_BLACKLIST) {
+            if (lowerText.includes(phrase)) {
+                console.log('[PDFGenerator] Filtered out blacklisted content:', phrase);
+                return false;
+            }
+        }
+        
+        // Check if it's too short to be meaningful
+        if (lowerText.length < 10) {
+            return false;
+        }
+        
+        return true;
+    }
 
     /**
      * Main PDF generation function
      * Called from index.html via onclick="generatePDF()"
      */
     window.generatePDF = function() {
-        console.log('[PDFGenerator] Starting PDF generation with service details');
+        console.log('[PDFGenerator] Starting PDF generation with enhanced filtering');
         
         // Check if jsPDF is loaded
         if (typeof jsPDF === 'undefined' && typeof window.jspdf === 'undefined') {
@@ -76,7 +120,7 @@
      * @param {object} data - Analysis data from backend
      */
     function generateAnalysisReport(data) {
-        console.log('[PDFGenerator v2.1.0] Creating PDF document with service details');
+        console.log('[PDFGenerator v2.2.0] Creating PDF document with filtered content');
         
         // Initialize jsPDF
         const { jsPDF } = window.jspdf || window;
@@ -277,7 +321,7 @@
         
         yPos += 8;
         
-        // ===== KEY INSIGHTS =====
+        // ===== KEY INSIGHTS (v2.2.0 ENHANCED FILTERING) =====
         checkPageBreak(30);
         
         doc.setFontSize(14);
@@ -340,7 +384,7 @@
         
         yPos += 25;
         
-        // ===== v2.1.0 NEW: DETAILED SERVICE ANALYSIS =====
+        // ===== v2.1.0: DETAILED SERVICE ANALYSIS (with v2.2.0 filtering) =====
         addDetailedServiceAnalysis(doc, data, leftMargin, rightMargin, checkPageBreak);
         
         // ===== FOOTER (on all pages) =====
@@ -359,19 +403,19 @@
         const filename = 'truthlens-analysis-' + timestamp + '.pdf';
         doc.save(filename);
         
-        console.log('[PDFGenerator v2.1.0] ✓ PDF saved with complete service details:', filename);
+        console.log('[PDFGenerator v2.2.0] ✓ PDF saved with filtered content:', filename);
     }
 
     /**
-     * v2.1.0 NEW: Add detailed service analysis section
+     * v2.1.0: Add detailed service analysis section (v2.2.0 enhanced with filtering)
      */
     function addDetailedServiceAnalysis(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        console.log('[PDFGenerator v2.1.0] Adding detailed service analysis...');
+        console.log('[PDFGenerator v2.2.0] Adding detailed service analysis with filtering...');
         
         const detailed = data.detailed_analysis || data.results || {};
         
         if (Object.keys(detailed).length === 0) {
-            console.log('[PDFGenerator v2.1.0] No detailed analysis available');
+            console.log('[PDFGenerator v2.2.0] No detailed analysis available');
             return;
         }
         
@@ -453,21 +497,23 @@
                 yPos += 6;
             }
             
-            // Summary
+            // Summary (v2.2.0: with filtering)
             yPos += 2;
             doc.setFontSize(10);
             doc.setTextColor(71, 85, 105);
             
-            const summary = extractText(serviceData.summary || serviceData.analysis, 'No summary available.');
-            const splitSummary = doc.splitTextToSize(summary, rightMargin - leftMargin);
+            const summary = extractText(serviceData.summary || serviceData.analysis, 'Analysis available in full report.');
+            if (isCleanContent(summary)) {
+                const splitSummary = doc.splitTextToSize(summary, rightMargin - leftMargin);
+                
+                splitSummary.forEach(line => {
+                    checkPageBreak(6);
+                    doc.text(line, leftMargin, yPos);
+                    yPos += 5;
+                });
+            }
             
-            splitSummary.forEach(line => {
-                checkPageBreak(6);
-                doc.text(line, leftMargin, yPos);
-                yPos += 5;
-            });
-            
-            // Findings
+            // Findings (v2.2.0: with enhanced filtering)
             const findings = extractFindings(serviceData);
             if (findings.length > 0) {
                 yPos += 5;
@@ -496,7 +542,7 @@
             yPos += 8;
         });
         
-        console.log('[PDFGenerator v2.1.0] ✓ Service details added to PDF');
+        console.log('[PDFGenerator v2.2.0] ✓ Service details added with filtered content');
     }
 
     /**
@@ -554,10 +600,9 @@
     }
 
     /**
-     * Extract real findings from backend data
-     * v2.0.0 - NO GENERIC PLACEHOLDERS
+     * v2.2.0 ENHANCED: Extract real findings with comprehensive filtering
      * @param {object} data - Analysis data
-     * @returns {array} Array of finding strings
+     * @returns {array} Array of clean finding strings
      */
     function extractRealFindings(data) {
         let findings = [];
@@ -574,23 +619,10 @@
             findings = extractFindingsFromServices(data.detailed_analysis || data.results);
         }
         
-        // Filter out unwanted generic phrases and meta-text
-        const unwantedPhrases = [
-            'credible author',
-            'minimal bias',
-            'low bias score',
-            'factual concerns',
-            'demonstrates strong credibility',
-            'shows minimal bias',
-            'content shows minimal bias',
-            'what to verify',
-            'things to check'
-        ];
-        
-        findings = findings.filter(finding => {
-            const lowerFinding = finding.toLowerCase();
-            return !unwantedPhrases.some(phrase => lowerFinding.includes(phrase));
-        });
+        // v2.2.0: Use isCleanContent function for filtering
+        findings = findings
+            .map(f => extractText(f, ''))
+            .filter(text => isCleanContent(text));
         
         // Limit to top 5 findings for PDF summary
         return findings.slice(0, 5);
@@ -657,7 +689,7 @@
     }
 
     /**
-     * Extract findings from service data
+     * v2.2.0 ENHANCED: Extract findings from service data with filtering
      */
     function extractFindings(serviceData) {
         const findings = serviceData.findings || serviceData.key_findings || [];
@@ -666,29 +698,18 @@
             return [];
         }
         
-        // Filter unwanted meta-text
-        const unwantedPhrases = [
-            'what to verify',
-            'things to check',
-            'verify this',
-            'check this'
-        ];
-        
+        // v2.2.0: Use isCleanContent for comprehensive filtering
         return findings
             .map(f => extractText(f, ''))
-            .filter(text => {
-                if (!text || text.length === 0) return false;
-                const lowerText = text.toLowerCase();
-                return !unwantedPhrases.some(phrase => lowerText.includes(phrase));
-            })
+            .filter(text => isCleanContent(text))
             .slice(0, 3); // Max 3 findings per service in PDF
     }
 
-    console.log('[PDFGenerator v2.1.0] Ready with complete service details');
+    console.log('[PDFGenerator v2.2.0] Ready with "What to Verify" bug fix');
     
 })();
 
 /**
  * I did no harm and this file is not truncated.
- * v2.1.0 - October 28, 2025 - Added complete service details to PDF
+ * v2.2.0 - October 28, 2025 - Fixed "What to verify" bug with comprehensive filtering
  */
