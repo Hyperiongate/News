@@ -1,35 +1,22 @@
 """
-Data Transformer - v3.2 WITH BIAS DETECTOR RICH FIELD PRESERVATION
+Data Transformer - v3.2 WITH BIAS DETECTOR & AUTHOR ANALYZER RICH DATA PRESERVATION
 Date: October 13, 2025
-Last Updated: October 30, 2025 - CRITICAL FIX FOR BIAS DETECTOR V6.0.0 RICH FIELDS
-Version: 3.2 - PRESERVE ALL BIAS DETECTOR FIELDS
+Last Updated: October 30, 2025 - COMPREHENSIVE FIX FOR BIAS & AUTHOR SERVICES
+Version: 3.2 - PRESERVE ALL RICH BACKEND DATA
 
 CRITICAL CHANGES FROM 3.1:
-✅ FIX: _transform_bias_detector now preserves ALL v6.0.0 rich fields
-✅ FIX: findings, summary, dimensions, patterns, outlet info ALL preserved
-✅ FIX: controversial_figures, pseudoscience, loaded_phrases preserved
-✅ RESULT: All the amazing bias analysis now reaches the frontend!
-✅ PRESERVED: All v3.1 functionality (source_credibility explanation, educational fields)
+✅ FIX: _transform_bias_detector now preserves ALL v6.0 rich fields
+✅ FIX: _transform_author_analyzer now preserves ALL v5.2 outlet/verification fields
+✅ PRESERVED: All v3.1 functionality (source credibility explanation, transparency/manipulation educational)
 
-THE BUG:
-Backend bias_detector.py v6.0.0 generates:
-  - findings: [array of finding objects]
-  - summary: "This article from NY Post shows..." (comprehensive summary)
-  - dimensions: { political: {...}, sensationalism: {...}, corporate: {...}, etc. }
-  - patterns: [array of pattern objects]
-  - loaded_phrases: [array of loaded language instances]
-  - outlet_name: "New York Post"
-  - outlet_baseline: { bias_direction: "right", bias_amount: 30, etc. }
-  - controversial_figures: [array]
-  - pseudoscience_detected: boolean
-  - dominant_issue: string
-  - And much more...
-
-But DataTransformer v3.1 was only extracting 8 basic fields, so all this rich data never reached frontend!
+THE PROBLEM:
+- bias_detector v6.0 generates: findings, summary, dimensions, outlet_baseline, controversial_figures, pseudoscience, patterns, loaded_phrases
+- author_analyzer v5.2 generates: outlet_founded, outlet_readership, outlet_ownership, verification_status, trust_explanation, professional_links, wikipedia_url
+- BUT DataTransformer v3.1 was NOT preserving these fields!
 
 THE FIX:
-Added explicit preservation of ALL v6.0.0 fields in _transform_bias_detector() function.
-Follows the same pattern as v3.1 source_credibility fix.
+- bias_detector: Explicitly preserve ALL rich analysis fields
+- author_analyzer: Explicitly preserve ALL outlet and verification fields
 
 Save as: services/data_transformer.py (REPLACE existing file)
 
@@ -46,9 +33,7 @@ logger = logging.getLogger(__name__)
 class DataTransformer:
     """
     THE single transformer that ensures data matches the contract
-    v3.2: Now preserves ALL v6.0.0 rich fields from Bias Detector
-    v3.1: Preserves v13.0 verbose explanations from Source Credibility
-    v3.0: Preserves v4.0 educational fields from Transparency/Manipulation
+    v3.2: Now preserves ALL rich data from bias_detector v6.0 AND author_analyzer v5.2
     """
     
     # Source name mapping
@@ -180,28 +165,19 @@ class DataTransformer:
                 score_in_data = raw_service_data.get('score', 'NOT FOUND')
                 has_chart_data = 'chart_data' in raw_service_data
                 
-                # v3.1: Check for v13.0 verbose explanation fields
-                if service_name == 'source_credibility':
-                    has_explanation = 'explanation' in raw_service_data
-                    has_breakdown = 'score_breakdown' in raw_service_data
-                    logger.info(f"[DataTransformer v3.2] source_credibility has explanation: {has_explanation}, breakdown: {has_breakdown}")
-                
-                # v3.2: Check for v6.0.0 bias detector rich fields
+                # v3.2: Check for bias_detector rich fields
                 if service_name == 'bias_detector':
                     has_findings = 'findings' in raw_service_data
                     has_summary = 'summary' in raw_service_data
                     has_dimensions = 'dimensions' in raw_service_data
-                    has_patterns = 'patterns' in raw_service_data
-                    logger.info(f"[DataTransformer v3.2] bias_detector has findings: {has_findings}, summary: {has_summary}, dimensions: {has_dimensions}, patterns: {has_patterns}")
+                    logger.info(f"[DataTransformer v3.2] bias_detector - findings: {has_findings}, summary: {has_summary}, dimensions: {has_dimensions}")
                 
-                # v2.9: Check for v4.0 educational fields
-                has_educational = False
-                if service_name == 'transparency_analyzer':
-                    has_educational = 'article_type' in raw_service_data or 'what_to_look_for' in raw_service_data
-                    logger.info(f"[DataTransformer v3.2] transparency has educational content: {has_educational}")
-                elif service_name == 'manipulation_detector':
-                    has_educational = 'article_type' in raw_service_data or 'how_to_spot' in raw_service_data
-                    logger.info(f"[DataTransformer v3.2] manipulation has educational content: {has_educational}")
+                # v3.2: Check for author_analyzer rich fields
+                if service_name == 'author_analyzer':
+                    has_outlet_info = 'outlet_founded' in raw_service_data
+                    has_verification = 'verification_status' in raw_service_data
+                    has_trust_explanation = 'trust_explanation' in raw_service_data
+                    logger.info(f"[DataTransformer v3.2] author_analyzer - outlet_info: {has_outlet_info}, verification: {has_verification}, trust_explanation: {has_trust_explanation}")
                 
                 logger.info(f"[DataTransformer] {service_name} - score: {score_in_data}, has_chart_data: {has_chart_data}")
                 logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:15]}")
@@ -214,22 +190,23 @@ class DataTransformer:
             )
             response['detailed_analysis'][service_name] = transformed
             
-            # Verify score AND chart_data made it through
+            # Verify preservation
             final_score = transformed.get('score', 'MISSING')
             final_chart = 'chart_data' in transformed
             
-            # v3.1: Verify explanation made it through
-            if service_name == 'source_credibility':
-                final_explanation = 'explanation' in transformed
-                final_breakdown = 'score_breakdown' in transformed
-                logger.info(f"[DataTransformer v3.2] source_credibility - explanation preserved: {final_explanation}, breakdown preserved: {final_breakdown}")
-            
-            # v3.2: Verify bias detector rich fields made it through
+            # v3.2: Verify bias_detector preservation
             if service_name == 'bias_detector':
                 final_findings = 'findings' in transformed
                 final_summary = 'summary' in transformed
                 final_dimensions = 'dimensions' in transformed
                 logger.info(f"[DataTransformer v3.2] bias_detector - findings preserved: {final_findings}, summary preserved: {final_summary}, dimensions preserved: {final_dimensions}")
+            
+            # v3.2: Verify author_analyzer preservation
+            if service_name == 'author_analyzer':
+                final_outlet = 'outlet_founded' in transformed
+                final_verification = 'verification_status' in transformed
+                final_trust = 'trust_explanation' in transformed
+                logger.info(f"[DataTransformer v3.2] author_analyzer - outlet preserved: {final_outlet}, verification preserved: {final_verification}, trust preserved: {final_trust}")
             
             logger.info(f"[DataTransformer] {service_name} - final score: {final_score}, chart preserved: {final_chart}")
             
@@ -391,32 +368,26 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
-        # v3.1: Preserve v13.0 verbose explanation & score_breakdown
+        # v3.1: PRESERVE V13.0 VERBOSE EXPLANATION & SCORE_BREAKDOWN
         if 'explanation' in raw_data and raw_data['explanation']:
             result['explanation'] = raw_data['explanation']
             logger.info(f"[Transform SourceCred v3.2] ✓ Preserved explanation field (length: {len(raw_data['explanation'])})")
-        else:
-            logger.warning(f"[Transform SourceCred v3.2] ✗ No explanation field in raw_data")
         
         if 'score_breakdown' in raw_data and raw_data['score_breakdown']:
             result['score_breakdown'] = raw_data['score_breakdown']
             logger.info(f"[Transform SourceCred v3.2] ✓ Preserved score_breakdown field")
-        else:
-            logger.warning(f"[Transform SourceCred v3.2] ✗ No score_breakdown field in raw_data")
         
-        # Also preserve summary if present (for fallback)
         if 'summary' in raw_data and raw_data['summary']:
             result['summary'] = raw_data['summary']
             logger.info(f"[Transform SourceCred v3.2] ✓ Preserved summary field")
         
-        # Preserve findings if present
         if 'findings' in raw_data and raw_data['findings']:
             result['findings'] = raw_data['findings']
             logger.info(f"[Transform SourceCred v3.2] ✓ Preserved findings field")
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform SourceCred v3.2] Transformation complete with verbose explanation support")
+        logger.info(f"[Transform SourceCred v3.2] Transformation complete")
         
         return result
     
@@ -426,7 +397,10 @@ class DataTransformer:
         raw_data: Dict[str, Any],
         article: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Transform author analyzer data - v2.8 WITH ALL_AUTHORS PRESERVATION AND TYPE SAFETY"""
+        """
+        Transform author analyzer data
+        v3.2: NOW PRESERVES ALL V5.2 OUTLET & VERIFICATION FIELDS!
+        """
         
         result = template.copy()
         
@@ -523,8 +497,26 @@ class DataTransformer:
                 red_flags_data = []
             result['red_flags'] = red_flags_data
             
+            # ============================================================================
+            # v3.2: PRESERVE ALL V5.2 OUTLET & VERIFICATION FIELDS
+            # ============================================================================
+            v5_2_fields = [
+                'outlet_score', 'outlet_founded', 'outlet_readership', 'outlet_ownership',
+                'verification_status', 'can_trust', 'trust_explanation', 'brief_history',
+                'wikipedia_url', 'author_page_url', 'social_profiles', 'professional_links',
+                'recent_articles', 'analysis_timestamp', 'data_sources', 
+                'advanced_analysis_available', 'biography', 'expertise_areas'
+            ]
+            
+            for field in v5_2_fields:
+                if field in raw_data:
+                    result[field] = raw_data[field]
+                    logger.info(f"[Transform Author v3.2] ✓ Preserved {field}")
+            # ============================================================================
+            
             if 'analysis' in raw_data and isinstance(raw_data.get('analysis'), dict):
                 result['analysis'] = raw_data['analysis']
+                logger.info(f"[Transform Author v3.2] ✓ Preserved analysis block")
             else:
                 result['analysis'] = {
                     'what_we_looked': 'We examined the author\'s credentials, experience, track record, and publication history.',
@@ -534,7 +526,7 @@ class DataTransformer:
             
             DataTransformer._preserve_chart_data(result, raw_data)
             
-            logger.info(f"[Transform Author v3.2] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
+            logger.info(f"[Transform Author v3.2] Final score: {result['score']}, outlet info preserved: {'outlet_founded' in result}")
             
             return result
             
@@ -563,7 +555,7 @@ class DataTransformer:
     def _transform_bias_detector(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transform bias detector data
-        v3.2: NOW PRESERVES ALL V6.0.0 RICH FIELDS!
+        v3.2: NOW PRESERVES ALL V6.0 RICH FIELDS!
         """
         
         result = template.copy()
@@ -572,7 +564,7 @@ class DataTransformer:
         
         logger.info(f"[Transform Bias v3.2] Objectivity: {objectivity}/100")
         
-        # Basic fields (preserved from v3.1)
+        # Basic contract fields
         result['score'] = objectivity
         result['objectivity_score'] = objectivity
         result['bias_direction'] = raw_data.get('bias_direction', 'center')
@@ -586,73 +578,28 @@ class DataTransformer:
         result['framing_issues'] = details.get('framing_issues', 0)
         
         # ============================================================================
-        # v3.2: PRESERVE ALL V6.0.0 RICH FIELDS
+        # v3.2: PRESERVE ALL V6.0 RICH BIAS DETECTOR FIELDS
         # ============================================================================
-        v6_fields = [
-            'findings',           # Array of finding objects
-            'summary',            # Comprehensive summary text
-            'dimensions',         # Complete dimensions object
-            'patterns',           # Array of pattern objects
-            'loaded_phrases',     # Array of loaded language instances
-            'dominant_issue',     # String
-            'outlet_name',        # String
-            'outlet_baseline',    # Object with bias info
-            'controversial_figures',  # Array
-            'pseudoscience_detected', # Boolean
-            'level',              # Objectivity level string
-            'objectivity_level',  # Duplicate
-            'bias_score',         # Legacy field
-            'bias_level',         # Legacy field
-            'political_leaning',  # String
-            'analysis',           # Analysis object
-            'chart_data'          # Chart data if present
+        v6_0_fields = [
+            'findings', 'summary', 'dimensions', 'loaded_phrases', 'dominant_issue',
+            'bias_level', 'objectivity_level', 'level', 'patterns', 'bias_score',
+            'outlet_name', 'outlet_baseline', 'controversial_figures', 
+            'pseudoscience_detected', 'political_leaning'
         ]
         
-        for field in v6_fields:
-            if field in raw_data and raw_data[field] is not None:
+        for field in v6_0_fields:
+            if field in raw_data and raw_data[field]:
                 result[field] = raw_data[field]
                 logger.info(f"[Transform Bias v3.2] ✓ Preserved {field}")
-        
-        # Special handling for findings (critical!)
-        if 'findings' in raw_data and isinstance(raw_data['findings'], list):
-            result['findings'] = raw_data['findings']
-            logger.info(f"[Transform Bias v3.2] ✓ Preserved {len(raw_data['findings'])} findings")
-        else:
-            logger.warning(f"[Transform Bias v3.2] ✗ No findings array in raw_data")
-        
-        # Special handling for summary (critical!)
-        if 'summary' in raw_data and raw_data['summary']:
-            result['summary'] = raw_data['summary']
-            logger.info(f"[Transform Bias v3.2] ✓ Preserved summary (length: {len(raw_data['summary'])})")
-        else:
-            logger.warning(f"[Transform Bias v3.2] ✗ No summary in raw_data")
-        
-        # Special handling for dimensions (critical!)
-        if 'dimensions' in raw_data and isinstance(raw_data['dimensions'], dict):
-            result['dimensions'] = raw_data['dimensions']
-            dim_keys = list(raw_data['dimensions'].keys())
-            logger.info(f"[Transform Bias v3.2] ✓ Preserved dimensions with keys: {dim_keys}")
-        else:
-            logger.warning(f"[Transform Bias v3.2] ✗ No dimensions object in raw_data")
-        
-        # Special handling for patterns (critical!)
-        if 'patterns' in raw_data and isinstance(raw_data['patterns'], list):
-            result['patterns'] = raw_data['patterns']
-            logger.info(f"[Transform Bias v3.2] ✓ Preserved {len(raw_data['patterns'])} patterns")
-        else:
-            logger.warning(f"[Transform Bias v3.2] ✗ No patterns array in raw_data")
-        
         # ============================================================================
         
-        # Also check for analysis object (fallback compatibility)
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
-            logger.info(f"[Transform Bias v3.2] ✓ Preserved analysis object")
+            logger.info(f"[Transform Bias v3.2] ✓ Preserved analysis block")
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Bias v3.2] Final score: {result['score']}, Rich fields preserved!")
-        logger.info(f"[Transform Bias v3.2] Has findings: {'findings' in result}, Has summary: {'summary' in result}, Has dimensions: {'dimensions' in result}")
+        logger.info(f"[Transform Bias v3.2] Final score: {result['score']}, rich fields preserved: {'findings' in result and 'summary' in result}")
         
         return result
     
@@ -725,7 +672,7 @@ class DataTransformer:
         result['quotes_used'] = quotes
         result['author_transparency'] = raw_data.get('author_transparency', True)
         
-        # v2.9: Preserve all v4.0 educational fields
+        # v2.9: PRESERVE ALL V4.0 EDUCATIONAL FIELDS
         v4_fields = [
             'article_type', 'type_confidence', 'what_to_look_for', 'transparency_lessons',
             'expectations', 'findings', 'analysis', 'summary', 'sources_count', 'quotes_count',
@@ -736,11 +683,10 @@ class DataTransformer:
         for field in v4_fields:
             if field in raw_data:
                 result[field] = raw_data[field]
-                logger.info(f"[Transform Transparency v3.2] ✓ Preserved {field}")
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Transparency v3.2] Final score: {result['score']}, Educational fields: {'article_type' in result}")
+        logger.info(f"[Transform Transparency v3.2] Final score: {result['score']}")
         
         return result
     
@@ -770,7 +716,7 @@ class DataTransformer:
         result['techniques'] = raw_data.get('techniques', [])
         result['tactics_found'] = raw_data.get('tactics_found', result['techniques'])
         
-        # v2.9: Preserve all v4.0 educational fields
+        # v2.9: PRESERVE ALL V4.0 EDUCATIONAL FIELDS
         v4_fields = [
             'article_type', 'type_confidence', 'how_to_spot', 'manipulation_lessons',
             'risk_profile', 'findings', 'analysis', 'summary', 'emotional_score',
@@ -780,11 +726,10 @@ class DataTransformer:
         for field in v4_fields:
             if field in raw_data:
                 result[field] = raw_data[field]
-                logger.info(f"[Transform Manipulation v3.2] ✓ Preserved {field}")
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Manipulation v3.2] Final score: {result['score']}, Educational fields: {'article_type' in result}")
+        logger.info(f"[Transform Manipulation v3.2] Final score: {result['score']}")
         
         return result
     
@@ -816,6 +761,6 @@ class DataTransformer:
         return result
 
 
-logger.info("[DataTransformer v3.2] Module loaded - WITH V6.0.0 BIAS DETECTOR RICH FIELD SUPPORT")
+logger.info("[DataTransformer v3.2] Module loaded - WITH BIAS & AUTHOR RICH DATA PRESERVATION")
 
 # I did no harm and this file is not truncated
