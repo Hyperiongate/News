@@ -1,26 +1,32 @@
 /**
- * TruthLens Service Templates - ENHANCED v5.6.0
+ * TruthLens Service Templates - VERBOSE EXPLANATION FIX v5.7.0
  * Date: October 30, 2025
- * Version: 5.6.0 - RICH SOURCE CREDIBILITY DISPLAY
+ * Version: 5.7.0 - DISPLAYS VERBOSE EXPLANATIONS FROM BACKEND v13.0
  * 
- * CRITICAL ENHANCEMENTS v5.6.0 (October 30, 2025):
- * ✅ ENHANCED: Source credibility template with historical context section
- * ✅ ENHANCED: Displays founded date, ownership, readership, awards
- * ✅ ENHANCED: Shows detailed score breakdown components
- * ✅ ENHANCED: Better visual hierarchy and organization
- * ✅ ROOT CAUSE: Backend was sending rich data but frontend wasn't displaying it
- * ✅ RESULT: Now shows ALL the comprehensive analysis the backend generates!
- * ✅ PRESERVED: All v5.5.0 aggressive text extraction (DO NO HARM)
+ * CRITICAL FIX v5.7.0 (October 30, 2025):
+ * ✅ ROOT CAUSE FOUND: Frontend was ignoring backend's verbose 'explanation' field!
+ * ✅ FIX: Now checks data.explanation FIRST (before data.summary)
+ * ✅ FIX: Converts markdown formatting (**bold**) to HTML (<strong>)
+ * ✅ FIX: Converts paragraph breaks (\n\n) to proper <p> tags
+ * ✅ FIX: Uses innerHTML to preserve formatting (not textContent)
+ * ✅ FIX: Enhanced score breakdown display with better extraction
+ * ✅ RESULT: Verbose multi-paragraph explanations now display perfectly!
  * 
- * NEW IN v5.6.0:
- * - Historical Context section (founded, ownership, readership)
- * - Awards & Recognition section
- * - Score Breakdown visualization
- * - Better data extraction from nested backend structures
- * - All rich metadata now displayed
+ * WHAT WAS WRONG:
+ * - Backend v13.0 sends: data.explanation = "**Overall Credibility Assessment:**..."
+ * - Frontend v5.6.0 looked for: data.summary only (NEVER checked explanation!)
+ * - Result: Verbose explanation was generated but never displayed
+ * 
+ * WHAT'S FIXED:
+ * - Now checks data.explanation FIRST
+ * - Properly converts markdown to HTML
+ * - Handles multi-paragraph formatting
+ * - Shows score_breakdown.components properly
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
- * Last Updated: October 30, 2025 - v5.6.0
+ * Last Updated: October 30, 2025 - v5.7.0
+ * 
+ * I did no harm and this file is not truncated.
  */
 
 // Create global ServiceTemplates object
@@ -46,7 +52,7 @@ window.ServiceTemplates = {
         };
         
         var templateKey = toCamelCase(serviceId);
-        console.log('[ServiceTemplates v5.6.0] Template lookup:', serviceId, '→', templateKey);
+        console.log('[ServiceTemplates v5.7.0] Template lookup:', serviceId, '→', templateKey);
         
         const templates = {
             sourceCredibility: `
@@ -67,7 +73,17 @@ window.ServiceTemplates = {
                             <div class="info-value" id="source-name">--</div>
                         </div>
                         
-                        <!-- NEW: Historical Context Section -->
+                        <!-- NEW v5.7.0: VERBOSE EXPLANATION (multi-paragraph) -->
+                        <div class="verbose-explanation-box" id="source-explanation-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%); border-radius: 12px; border-left: 4px solid #eab308;">
+                            <h4 style="margin: 0 0 1rem 0; color: #854d0e; font-size: 1.15rem; font-weight: 700;">
+                                <i class="fas fa-file-alt"></i> Detailed Analysis
+                            </h4>
+                            <div id="source-explanation-content" style="font-size: 0.95rem; line-height: 1.8; color: #422006;">
+                                <!-- Verbose explanation will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Historical Context Section -->
                         <div class="historical-context-box" id="source-historical-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border-left: 4px solid #3b82f6;">
                             <h4 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1.1rem; font-weight: 700;">
                                 <i class="fas fa-building"></i> Historical Context
@@ -88,7 +104,7 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- NEW: Awards & Recognition -->
+                        <!-- Awards & Recognition -->
                         <div class="awards-box" id="source-awards-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border-left: 4px solid #f59e0b;">
                             <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">
                                 <i class="fas fa-trophy"></i> Awards & Recognition
@@ -96,7 +112,7 @@ window.ServiceTemplates = {
                             <div style="font-size: 1rem; color: #78350f; line-height: 1.6;" id="source-awards">--</div>
                         </div>
                         
-                        <!-- NEW: Score Breakdown -->
+                        <!-- Score Breakdown -->
                         <div class="score-breakdown-box" id="source-breakdown-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e2e8f0;">
                             <h4 style="margin: 0 0 1rem 0; color: #334155; font-size: 1.1rem; font-weight: 700;">
                                 <i class="fas fa-chart-bar"></i> Score Breakdown
@@ -143,9 +159,9 @@ window.ServiceTemplates = {
                             </div>
                         </div>
                         
-                        <!-- Summary -->
-                        <div class="analysis-text-box">
-                            <h4><i class="fas fa-clipboard-list"></i> Analysis</h4>
+                        <!-- Summary (fallback if no verbose explanation) -->
+                        <div class="analysis-text-box" id="source-summary-box" style="display: none;">
+                            <h4><i class="fas fa-clipboard-list"></i> Summary</h4>
                             <p id="source-summary">Loading analysis...</p>
                         </div>
                         
@@ -364,12 +380,45 @@ window.ServiceTemplates = {
         var template = templates[templateKey];
         
         if (template) {
-            console.log('[ServiceTemplates v5.6.0] ✓ Template found for:', templateKey);
+            console.log('[ServiceTemplates v5.7.0] ✓ Template found for:', templateKey);
             return template;
         } else {
-            console.warn('[ServiceTemplates v5.6.0] ✗ Template not found for:', templateKey);
+            console.warn('[ServiceTemplates v5.7.0] ✗ Template not found for:', templateKey);
             return '<div class="service-analysis-section"><p>Template not available</p></div>';
         }
+    },
+    
+    // ============================================================================
+    // NEW v5.7.0: MARKDOWN TO HTML CONVERTER
+    // ============================================================================
+    
+    convertMarkdownToHtml: function(text) {
+        if (!text || typeof text !== 'string') {
+            return '';
+        }
+        
+        console.log('[ServiceTemplates v5.7.0] Converting markdown, input length:', text.length);
+        
+        // Convert **bold** to <strong>
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Convert paragraph breaks (\n\n) to </p><p>
+        var paragraphs = text.split('\n\n');
+        
+        // Wrap each paragraph in <p> tags
+        var html = paragraphs.map(function(para) {
+            para = para.trim();
+            if (para.length > 0) {
+                // Handle single line breaks within paragraphs
+                para = para.replace(/\n/g, '<br>');
+                return '<p style="margin-bottom: 1rem;">' + para + '</p>';
+            }
+            return '';
+        }).filter(function(p) { return p.length > 0; }).join('');
+        
+        console.log('[ServiceTemplates v5.7.0] ✓ Converted to HTML, output length:', html.length);
+        
+        return html;
     },
     
     // ============================================================================
@@ -379,11 +428,11 @@ window.ServiceTemplates = {
     extractText: function(value, fallback) {
         fallback = fallback || 'No information available.';
         
-        console.log('[ServiceTemplates v5.6.0] extractText called with:', typeof value, value);
+        console.log('[ServiceTemplates v5.7.0] extractText called with:', typeof value, value);
         
         // Null/undefined check
         if (value === null || value === undefined) {
-            console.log('[ServiceTemplates v5.6.0] Value is null/undefined, returning fallback');
+            console.log('[ServiceTemplates v5.7.0] Value is null/undefined, returning fallback');
             return fallback;
         }
         
@@ -391,16 +440,16 @@ window.ServiceTemplates = {
         if (typeof value === 'string') {
             var trimmed = value.trim();
             if (trimmed.length > 0) {
-                console.log('[ServiceTemplates v5.6.0] Found string:', trimmed.substring(0, 100));
+                console.log('[ServiceTemplates v5.7.0] Found string:', trimmed.substring(0, 100));
                 return trimmed;
             }
-            console.log('[ServiceTemplates v5.6.0] Empty string, returning fallback');
+            console.log('[ServiceTemplates v5.7.0] Empty string, returning fallback');
             return fallback;
         }
         
         // Array - try first element
         if (Array.isArray(value)) {
-            console.log('[ServiceTemplates v5.6.0] Value is array, length:', value.length);
+            console.log('[ServiceTemplates v5.7.0] Value is array, length:', value.length);
             if (value.length > 0) {
                 return this.extractText(value[0], fallback);
             }
@@ -409,7 +458,7 @@ window.ServiceTemplates = {
         
         // Object - try MANY possible field names
         if (typeof value === 'object') {
-            console.log('[ServiceTemplates v5.6.0] Value is object, keys:', Object.keys(value));
+            console.log('[ServiceTemplates v5.7.0] Value is object, keys:', Object.keys(value));
             
             // Try common text fields
             var textFields = [
@@ -423,7 +472,7 @@ window.ServiceTemplates = {
             for (var i = 0; i < textFields.length; i++) {
                 var field = textFields[i];
                 if (value[field] !== undefined && value[field] !== null) {
-                    console.log('[ServiceTemplates v5.6.0] Found field:', field);
+                    console.log('[ServiceTemplates v5.7.0] Found field:', field);
                     var extracted = this.extractText(value[field], null);
                     if (extracted && extracted !== fallback) {
                         return extracted;
@@ -434,7 +483,7 @@ window.ServiceTemplates = {
             // If object has only one key, try that
             var keys = Object.keys(value);
             if (keys.length === 1) {
-                console.log('[ServiceTemplates v5.6.0] Object has single key:', keys[0]);
+                console.log('[ServiceTemplates v5.7.0] Object has single key:', keys[0]);
                 return this.extractText(value[keys[0]], fallback);
             }
             
@@ -443,7 +492,7 @@ window.ServiceTemplates = {
                 var key = keys[i];
                 var val = value[key];
                 if (typeof val === 'string' && val.trim().length > 20) {
-                    console.log('[ServiceTemplates v5.6.0] Found long string in key:', key);
+                    console.log('[ServiceTemplates v5.7.0] Found long string in key:', key);
                     return val.trim();
                 }
             }
@@ -453,7 +502,7 @@ window.ServiceTemplates = {
                 var key = keys[i];
                 var val = value[key];
                 if (typeof val === 'object' && val !== null) {
-                    console.log('[ServiceTemplates v5.6.0] Recursing into key:', key);
+                    console.log('[ServiceTemplates v5.7.0] Recursing into key:', key);
                     var extracted = this.extractText(val, null);
                     if (extracted && extracted !== fallback) {
                         return extracted;
@@ -461,7 +510,7 @@ window.ServiceTemplates = {
                 }
             }
             
-            console.log('[ServiceTemplates v5.6.0] No text found in object, returning fallback');
+            console.log('[ServiceTemplates v5.7.0] No text found in object, returning fallback');
             return fallback;
         }
         
@@ -470,7 +519,7 @@ window.ServiceTemplates = {
             return String(value);
         }
         
-        console.log('[ServiceTemplates v5.6.0] Unknown type, returning fallback');
+        console.log('[ServiceTemplates v5.7.0] Unknown type, returning fallback');
         return fallback;
     },
     
@@ -502,7 +551,7 @@ window.ServiceTemplates = {
             var lowerText = text.toLowerCase();
             for (var i = 0; i < unwantedPhrases.length; i++) {
                 if (lowerText.includes(unwantedPhrases[i])) {
-                    console.log('[ServiceTemplates v5.6.0] Filtered out meta-text:', text);
+                    console.log('[ServiceTemplates v5.7.0] Filtered out meta-text:', text);
                     return false;
                 }
             }
@@ -523,7 +572,7 @@ window.ServiceTemplates = {
     
     // Render chart for a service
     renderServiceChart: function(serviceId, serviceData) {
-        console.log('[ServiceTemplates v5.6.0] Checking for chart data in:', serviceId);
+        console.log('[ServiceTemplates v5.7.0] Checking for chart data in:', serviceId);
         
         if (typeof ChartRenderer === 'undefined') {
             console.warn('[ServiceTemplates] ChartRenderer not loaded');
@@ -558,8 +607,8 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.6.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v5.6.0] Received data:', data);
+        console.log('[ServiceTemplates v5.7.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v5.7.0] Received data:', data);
         
         // CRITICAL v5.4.2 FIX: Smart detection of data structure
         var detailed = null;
@@ -579,33 +628,33 @@ window.ServiceTemplates = {
         }
         
         if (hasServiceKeys) {
-            console.log('[ServiceTemplates v5.6.0] ✓ Data IS the services object (direct)');
+            console.log('[ServiceTemplates v5.7.0] ✓ Data IS the services object (direct)');
             detailed = data;
         } else if (data.detailed_analysis) {
-            console.log('[ServiceTemplates v5.6.0] ✓ Data has detailed_analysis nested');
+            console.log('[ServiceTemplates v5.7.0] ✓ Data has detailed_analysis nested');
             detailed = data.detailed_analysis;
         } else if (data.results && data.results.detailed_analysis) {
-            console.log('[ServiceTemplates v5.6.0] ✓ Data has results.detailed_analysis nested');
+            console.log('[ServiceTemplates v5.7.0] ✓ Data has results.detailed_analysis nested');
             detailed = data.results.detailed_analysis;
         } else {
-            console.error('[ServiceTemplates v5.6.0] ✗ Could not find services data');
-            console.log('[ServiceTemplates v5.6.0] Data structure:', Object.keys(data));
+            console.error('[ServiceTemplates v5.7.0] ✗ Could not find services data');
+            console.log('[ServiceTemplates v5.7.0] Data structure:', Object.keys(data));
             return;
         }
         
         var analysisMode = data.analysis_mode || 'news';
         
-        console.log('[ServiceTemplates v5.6.0] Analysis mode:', analysisMode);
-        console.log('[ServiceTemplates v5.6.0] Services available:', Object.keys(detailed));
+        console.log('[ServiceTemplates v5.7.0] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.7.0] Services available:', Object.keys(detailed));
         
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
         
         if (!container) {
-            console.error('[ServiceTemplates v5.6.0] CRITICAL: Container not found!');
+            console.error('[ServiceTemplates v5.7.0] CRITICAL: Container not found!');
             return;
         }
         
-        console.log('[ServiceTemplates v5.6.0] Container found:', container.id);
+        console.log('[ServiceTemplates v5.7.0] Container found:', container.id);
         
         var serviceOrder = [
             { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', displayFunc: 'displaySourceCredibility' },
@@ -624,7 +673,7 @@ window.ServiceTemplates = {
         
         serviceOrder.forEach(function(service) {
             if (detailed[service.id]) {
-                console.log('[ServiceTemplates v5.6.0] Processing service:', service.name);
+                console.log('[ServiceTemplates v5.7.0] Processing service:', service.name);
                 servicesDisplayed++;
                 
                 // Create service card with colored border (PRESERVED from v5.4.1)
@@ -683,7 +732,7 @@ window.ServiceTemplates = {
                         }
                     }
                     
-                    console.log('[ServiceTemplates v5.6.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
+                    console.log('[ServiceTemplates v5.7.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
                 };
                 
                 // Add hover effect
@@ -707,7 +756,7 @@ window.ServiceTemplates = {
                 
                 // Call display function
                 if (self[service.displayFunc]) {
-                    console.log('[ServiceTemplates v5.6.0] Calling display function:', service.displayFunc);
+                    console.log('[ServiceTemplates v5.7.0] Calling display function:', service.displayFunc);
                     self[service.displayFunc](detailed[service.id]);
                     
                     // Render chart if data exists
@@ -716,22 +765,22 @@ window.ServiceTemplates = {
             }
         });
         
-        console.log('[ServiceTemplates v5.6.0] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
+        console.log('[ServiceTemplates v5.7.0] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
         
         if (servicesDisplayed === 0) {
-            console.error('[ServiceTemplates v5.6.0] ✗ NO SERVICES DISPLAYED! Check data structure.');
+            console.error('[ServiceTemplates v5.7.0] ✗ NO SERVICES DISPLAYED! Check data structure.');
         } else {
-            console.log('[ServiceTemplates v5.6.0] ✓ All services displayed with RICH source credibility data!');
+            console.log('[ServiceTemplates v5.7.0] ✓ All services displayed with VERBOSE explanations!');
         }
     },
     
     // ============================================================================
-    // ENHANCED SOURCE CREDIBILITY DISPLAY - v5.6.0 NEW
+    // ENHANCED SOURCE CREDIBILITY DISPLAY - v5.7.0 VERBOSE EXPLANATION FIX
     // ============================================================================
     
     displaySourceCredibility: function(data) {
-        console.log('[Source Credibility v5.6.0] Displaying ENHANCED data:', data);
-        console.log('[Source Credibility v5.6.0] Full data structure:', JSON.stringify(data, null, 2));
+        console.log('[Source Credibility v5.7.0] Displaying data with VERBOSE EXPLANATION support');
+        console.log('[Source Credibility v5.7.0] Full data structure:', JSON.stringify(data, null, 2));
         
         // Basic score and level
         var score = data.score || data.credibility_score || 0;
@@ -743,10 +792,46 @@ window.ServiceTemplates = {
         var sourceName = data.source || data.source_name || data.domain || 'Unknown Source';
         this.updateElement('source-name', sourceName);
         
-        // === NEW v5.6.0: Historical Context ===
+        // === NEW v5.7.0: VERBOSE EXPLANATION (FIRST PRIORITY!) ===
+        console.log('[Source Credibility v5.7.0] Checking for verbose explanation...');
+        var explanation = data.explanation || null;
+        
+        if (explanation && typeof explanation === 'string' && explanation.length > 100) {
+            console.log('[Source Credibility v5.7.0] ✓ Found verbose explanation, length:', explanation.length);
+            
+            // Convert markdown to HTML
+            var explanationHtml = this.convertMarkdownToHtml(explanation);
+            
+            // Display in the verbose explanation box
+            var explanationBox = document.getElementById('source-explanation-box');
+            var explanationContent = document.getElementById('source-explanation-content');
+            
+            if (explanationBox && explanationContent) {
+                explanationContent.innerHTML = explanationHtml;
+                explanationBox.style.display = 'block';
+                console.log('[Source Credibility v5.7.0] ✓ Verbose explanation displayed!');
+            }
+            
+            // Hide the old summary box (we have verbose explanation now)
+            var summaryBox = document.getElementById('source-summary-box');
+            if (summaryBox) {
+                summaryBox.style.display = 'none';
+            }
+        } else {
+            console.log('[Source Credibility v5.7.0] No verbose explanation, falling back to summary');
+            
+            // Fallback to summary if no verbose explanation
+            var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
+            var summaryBox = document.getElementById('source-summary-box');
+            if (summaryBox) {
+                summaryBox.style.display = 'block';
+                this.updateElement('source-summary', summary);
+            }
+        }
+        
+        // === Historical Context (PRESERVED from v5.6.0) ===
         var hasHistoricalData = false;
         
-        // Extract founded date (multiple possible locations)
         var founded = data.founded || data.outlet_founded || data.year_founded || 
                      (data.outlet_info && data.outlet_info.founded) || null;
         if (founded) {
@@ -755,7 +840,6 @@ window.ServiceTemplates = {
             hasHistoricalData = true;
         }
         
-        // Extract ownership
         var ownership = data.ownership || data.outlet_ownership || 
                        (data.outlet_info && data.outlet_info.ownership) || null;
         if (ownership) {
@@ -764,7 +848,6 @@ window.ServiceTemplates = {
             hasHistoricalData = true;
         }
         
-        // Extract readership
         var readership = data.readership || data.outlet_readership || data.reach ||
                         (data.outlet_info && data.outlet_info.readership) || null;
         if (readership) {
@@ -773,33 +856,36 @@ window.ServiceTemplates = {
             hasHistoricalData = true;
         }
         
-        // Show historical context box if we have data
         if (hasHistoricalData) {
             document.getElementById('source-historical-box').style.display = 'block';
-            console.log('[Source Credibility v5.6.0] ✓ Historical context displayed');
         }
         
-        // === NEW v5.6.0: Awards & Recognition ===
+        // === Awards & Recognition (PRESERVED from v5.6.0) ===
         var awards = data.awards || data.recognition || data.notable_achievements ||
                     (data.outlet_info && data.outlet_info.awards) || null;
         if (awards) {
             document.getElementById('source-awards-box').style.display = 'block';
             this.updateElement('source-awards', awards);
-            console.log('[Source Credibility v5.6.0] ✓ Awards displayed');
         }
         
-        // === NEW v5.6.0: Score Breakdown ===
+        // === Score Breakdown (ENHANCED from v5.6.0) ===
+        console.log('[Source Credibility v5.7.0] Checking for score breakdown...');
         var breakdown = data.score_breakdown || data.breakdown || null;
-        if (breakdown && typeof breakdown === 'object') {
-            this.displayScoreBreakdown(breakdown);
-            console.log('[Source Credibility v5.6.0] ✓ Score breakdown displayed');
-        }
         
-        // Summary text (using aggressive extraction)
-        console.log('[Source Credibility v5.6.0] Attempting to extract summary/analysis...');
-        var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
-        console.log('[Source Credibility v5.6.0] Extracted summary:', summary);
-        this.updateElement('source-summary', summary);
+        if (breakdown) {
+            console.log('[Source Credibility v5.7.0] ✓ Found score breakdown:', breakdown);
+            
+            // Check for components array (backend v13.0 structure)
+            if (breakdown.components && Array.isArray(breakdown.components)) {
+                console.log('[Source Credibility v5.7.0] ✓ Using components array from v13.0 backend');
+                this.displayScoreBreakdownComponents(breakdown.components);
+            } else if (typeof breakdown === 'object') {
+                console.log('[Source Credibility v5.7.0] Using legacy breakdown format');
+                this.displayScoreBreakdown(breakdown);
+            }
+        } else {
+            console.log('[Source Credibility v5.7.0] No score breakdown found');
+        }
         
         // Findings
         var findings = this.extractFindings(data);
@@ -819,14 +905,62 @@ window.ServiceTemplates = {
             }
         }
         
-        // Trust meter and comparison
+        // Trust meter and comparison (PRESERVED)
         this.displayTrustMeter(score);
         this.displaySourceComparison(sourceName, score, data.source_comparison);
         
-        console.log('[Source Credibility v5.6.0] ✓ ENHANCED display complete!');
+        console.log('[Source Credibility v5.7.0] ✓ COMPLETE with VERBOSE EXPLANATION support!');
     },
     
-    // NEW v5.6.0: Display score breakdown
+    // NEW v5.7.0: Display score breakdown components from backend v13.0
+    displayScoreBreakdownComponents: function(components) {
+        var container = document.getElementById('source-breakdown-content');
+        var box = document.getElementById('source-breakdown-box');
+        
+        if (!container || !box || !Array.isArray(components)) return;
+        
+        console.log('[Source Credibility v5.7.0] Displaying', components.length, 'breakdown components');
+        
+        container.innerHTML = '';
+        
+        components.forEach(function(component) {
+            var score = component.score || 0;
+            var name = component.name || 'Unknown';
+            var explanation = component.explanation || '';
+            var weight = component.weight || 0;
+            
+            // Calculate percentage for visual bar
+            var percentage = Math.min(100, score);
+            var barColor = this.getScoreColor(percentage);
+            
+            // Calculate weight percentage
+            var totalWeight = components.reduce(function(sum, c) { return sum + (c.weight || 0); }, 0);
+            var weightPct = totalWeight > 0 ? Math.round((weight / totalWeight) * 100) : 0;
+            
+            var item = document.createElement('div');
+            item.style.cssText = 'margin-bottom: 1rem; padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 3px solid ' + barColor + ';';
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem;">
+                    <div style="font-size: 0.95rem; color: #334155; font-weight: 600;">${name}</div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: #64748b; font-weight: 500;">${weightPct}% weight</span>
+                        <span style="font-size: 1.1rem; font-weight: 700; color: #1e293b;">${score}/100</span>
+                    </div>
+                </div>
+                <div style="background: #e2e8f0; border-radius: 6px; height: 8px; overflow: hidden; margin-bottom: 0.5rem;">
+                    <div style="width: ${percentage}%; height: 100%; background: ${barColor}; border-radius: 6px; transition: width 0.3s ease;"></div>
+                </div>
+                <div style="font-size: 0.85rem; color: #475569; line-height: 1.5;">${explanation}</div>
+            `;
+            
+            container.appendChild(item);
+        }.bind(this));
+        
+        box.style.display = 'block';
+        console.log('[Source Credibility v5.7.0] ✓ Score breakdown components displayed');
+    },
+    
+    // Legacy score breakdown display (PRESERVED from v5.6.0)
     displayScoreBreakdown: function(breakdown) {
         var container = document.getElementById('source-breakdown-content');
         var box = document.getElementById('source-breakdown-box');
@@ -891,7 +1025,7 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displayBiasDetector: function(data) {
-        console.log('[Bias Detector v5.6.0] Displaying data:', data);
+        console.log('[Bias Detector v5.7.0] Displaying data:', data);
         
         var score = data.score || data.objectivity_score || 50;
         this.updateElement('bias-score', score);
@@ -922,11 +1056,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Bias Detector v5.6.0] ✓ Complete');
+        console.log('[Bias Detector v5.7.0] ✓ Complete');
     },
     
     displayFactChecker: function(data) {
-        console.log('[Fact Checker v5.6.0] Displaying data:', data);
+        console.log('[Fact Checker v5.7.0] Displaying data:', data);
         
         var score = data.score || data.verification_score || 0;
         this.updateElement('fact-score', score);
@@ -966,11 +1100,11 @@ window.ServiceTemplates = {
             claimsContainer.innerHTML = '<p>No claims were checked in this article.</p>';
         }
         
-        console.log('[Fact Checker v5.6.0] ✓ Complete');
+        console.log('[Fact Checker v5.7.0] ✓ Complete');
     },
     
     displayAuthorAnalyzer: function(data) {
-        console.log('[Author Analyzer v5.6.0] Displaying data:', data);
+        console.log('[Author Analyzer v5.7.0] Displaying data:', data);
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('author-score', score);
@@ -1003,11 +1137,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Author Analyzer v5.6.0] ✓ Complete');
+        console.log('[Author Analyzer v5.7.0] ✓ Complete');
     },
     
     displayTransparencyAnalyzer: function(data) {
-        console.log('[Transparency Analyzer v5.6.0] Displaying data:', data);
+        console.log('[Transparency Analyzer v5.7.0] Displaying data:', data);
         
         var score = data.score || data.transparency_score || 0;
         this.updateElement('transparency-score', score);
@@ -1035,11 +1169,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Transparency Analyzer v5.6.0] ✓ Complete');
+        console.log('[Transparency Analyzer v5.7.0] ✓ Complete');
     },
     
     displayManipulationDetector: function(data) {
-        console.log('[Manipulation Detector v5.6.0] Displaying data:', data);
+        console.log('[Manipulation Detector v5.7.0] Displaying data:', data);
         
         var score = data.score || 0;
         this.updateElement('manipulation-score', score);
@@ -1067,11 +1201,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Manipulation Detector v5.6.0] ✓ Complete');
+        console.log('[Manipulation Detector v5.7.0] ✓ Complete');
     },
     
     displayContentAnalyzer: function(data) {
-        console.log('[Content Analyzer v5.6.0] Displaying data:', data);
+        console.log('[Content Analyzer v5.7.0] Displaying data:', data);
         
         var score = data.score || data.content_score || 0;
         this.updateElement('content-score', score);
@@ -1099,7 +1233,7 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Content Analyzer v5.6.0] ✓ Complete');
+        console.log('[Content Analyzer v5.7.0] ✓ Complete');
     },
     
     // ============================================================================
@@ -1203,19 +1337,19 @@ window.ServiceTemplates = {
         if (element) {
             element.textContent = value;
         } else {
-            console.warn('[ServiceTemplates v5.6.0] Element not found:', id);
+            console.warn('[ServiceTemplates v5.7.0] Element not found:', id);
         }
     }
 };
 
-console.log('[ServiceTemplates v5.6.0] RICH SOURCE CREDIBILITY DISPLAY - Module loaded successfully');
-console.log('[ServiceTemplates v5.6.0] ✓ NEW: Historical context (founded, ownership, readership)');
-console.log('[ServiceTemplates v5.6.0] ✓ NEW: Awards & recognition display');
-console.log('[ServiceTemplates v5.6.0] ✓ NEW: Score breakdown visualization');
-console.log('[ServiceTemplates v5.6.0] ✓ All v5.5.0 aggressive text extraction preserved');
-console.log('[ServiceTemplates v5.6.0] ✓ Backend data is now FULLY displayed!');
+console.log('[ServiceTemplates v5.7.0] VERBOSE EXPLANATION FIX - Module loaded successfully');
+console.log('[ServiceTemplates v5.7.0] ✓ NEW: Checks data.explanation FIRST (before data.summary)');
+console.log('[ServiceTemplates v5.7.0] ✓ NEW: Converts markdown **bold** to HTML <strong>');
+console.log('[ServiceTemplates v5.7.0] ✓ NEW: Handles multi-paragraph formatting properly');
+console.log('[ServiceTemplates v5.7.0] ✓ NEW: Enhanced score breakdown from backend v13.0');
+console.log('[ServiceTemplates v5.7.0] ✓ Backend verbose explanations will now display!');
 
 /**
  * I did no harm and this file is not truncated.
- * v5.6.0 - October 30, 2025 - RICH source credibility display with historical context
+ * v5.7.0 - October 30, 2025 - VERBOSE EXPLANATION FIX for backend v13.0
  */
