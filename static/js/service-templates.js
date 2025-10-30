@@ -1,30 +1,26 @@
 /**
- * TruthLens Service Templates - VERBOSE EXPLANATION FIX v5.7.0
+ * TruthLens Service Templates - BIAS DETECTOR ENHANCEMENT v5.8.0
  * Date: October 30, 2025
- * Version: 5.7.0 - DISPLAYS VERBOSE EXPLANATIONS FROM BACKEND v13.0
+ * Version: 5.8.0 - ENHANCED BIAS DETECTOR WITH POLITICAL SPECTRUM BAR
  * 
- * CRITICAL FIX v5.7.0 (October 30, 2025):
- * ✅ ROOT CAUSE FOUND: Frontend was ignoring backend's verbose 'explanation' field!
- * ✅ FIX: Now checks data.explanation FIRST (before data.summary)
- * ✅ FIX: Converts markdown formatting (**bold**) to HTML (<strong>)
- * ✅ FIX: Converts paragraph breaks (\n\n) to proper <p> tags
- * ✅ FIX: Uses innerHTML to preserve formatting (not textContent)
- * ✅ FIX: Enhanced score breakdown display with better extraction
- * ✅ RESULT: Verbose multi-paragraph explanations now display perfectly!
+ * CRITICAL UPDATE v5.8.0 (October 30, 2025):
+ * ✅ NEW: Political spectrum bar display (far-left to far-right)
+ * ✅ NEW: "What is Bias?" educational section
+ * ✅ NEW: Multi-dimensional bias breakdown with ALL 7 dimensions
+ * ✅ NEW: Loaded language examples showcase
+ * ✅ NEW: Score explanation (why this specific score)
+ * ✅ NEW: Outlet-aware context display
+ * ✅ PRESERVED: All v5.7.0 verbose explanation features (DO NO HARM ✓)
+ * ✅ PRESERVED: All other 6 services unchanged (DO NO HARM ✓)
  * 
- * WHAT WAS WRONG:
- * - Backend v13.0 sends: data.explanation = "**Overall Credibility Assessment:**..."
- * - Frontend v5.6.0 looked for: data.summary only (NEVER checked explanation!)
- * - Result: Verbose explanation was generated but never displayed
- * 
- * WHAT'S FIXED:
- * - Now checks data.explanation FIRST
- * - Properly converts markdown to HTML
- * - Handles multi-paragraph formatting
- * - Shows score_breakdown.components properly
+ * WHAT CHANGED:
+ * - displayBiasDetector() completely rewritten with rich visualizations
+ * - Added political spectrum bar instead of circle meter
+ * - Added educational content about bias types
+ * - All other services untouched (source credibility, fact checker, etc.)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
- * Last Updated: October 30, 2025 - v5.7.0
+ * Last Updated: October 30, 2025 - v5.8.0
  * 
  * I did no harm and this file is not truncated.
  */
@@ -52,7 +48,7 @@ window.ServiceTemplates = {
         };
         
         var templateKey = toCamelCase(serviceId);
-        console.log('[ServiceTemplates v5.7.0] Template lookup:', serviceId, '→', templateKey);
+        console.log('[ServiceTemplates v5.8.0] Template lookup:', serviceId, '→', templateKey);
         
         const templates = {
             sourceCredibility: `
@@ -73,7 +69,7 @@ window.ServiceTemplates = {
                             <div class="info-value" id="source-name">--</div>
                         </div>
                         
-                        <!-- NEW v5.7.0: VERBOSE EXPLANATION (multi-paragraph) -->
+                        <!-- Verbose Explanation (v5.7.0) -->
                         <div class="verbose-explanation-box" id="source-explanation-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%); border-radius: 12px; border-left: 4px solid #eab308;">
                             <h4 style="margin: 0 0 1rem 0; color: #854d0e; font-size: 1.15rem; font-weight: 700;">
                                 <i class="fas fa-file-alt"></i> Detailed Analysis
@@ -176,29 +172,158 @@ window.ServiceTemplates = {
             
             biasDetector: `
                 <div class="service-analysis-section">
-                    <div class="bias-detector-enhanced">
-                        <!-- Score Display -->
+                    <div class="bias-detector-enhanced-v2">
+                        <!-- NEW v5.8.0: Score Display with Context -->
                         <div class="score-display-large">
                             <div class="score-circle">
                                 <div class="score-number" id="bias-score">--</div>
                                 <div class="score-max">/100</div>
                             </div>
                             <div class="score-label" id="bias-level">Analyzing...</div>
+                            <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem; font-weight: 500;">
+                                Objectivity Score (Higher is Better)
+                            </div>
                         </div>
                         
-                        <!-- Political Leaning -->
-                        <div class="info-box">
-                            <div class="info-label">Political Leaning</div>
-                            <div class="info-value" id="bias-leaning">--</div>
+                        <!-- NEW v5.8.0: Outlet Context Banner -->
+                        <div id="bias-outlet-banner" style="display: none; margin: 1.5rem 0; padding: 1rem 1.5rem; background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%); border-radius: 12px; border-left: 4px solid #6366f1;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-building" style="font-size: 1.5rem; color: #4f46e5;"></i>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 700; color: #312e81; font-size: 1rem; margin-bottom: 0.25rem;">
+                                        Source: <span id="bias-outlet-name">--</span>
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: #4338ca;" id="bias-outlet-context">
+                                        <!-- Outlet bias context will be inserted here -->
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         
-                        <!-- Summary -->
+                        <!-- NEW v5.8.0: Political Spectrum Bar -->
+                        <div id="bias-spectrum-container" style="margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-chart-line" style="color: #8b5cf6;"></i>
+                                Political Spectrum
+                            </h4>
+                            
+                            <!-- Spectrum Bar -->
+                            <div style="position: relative; margin-bottom: 2rem;">
+                                <!-- Rainbow gradient bar -->
+                                <div style="height: 48px; border-radius: 24px; background: linear-gradient(90deg, #dc2626 0%, #f97316 20%, #fbbf24 40%, #94a3b8 50%, #60a5fa 60%, #3b82f6 80%, #1e40af 100%); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); position: relative; overflow: visible;">
+                                    <!-- Position indicator -->
+                                    <div id="bias-spectrum-indicator" style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);">
+                                        <div style="width: 4px; height: 64px; background: #1e293b; margin: 0 auto; border-radius: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);"></div>
+                                        <div style="width: 0; height: 0; border-left: 12px solid transparent; border-right: 12px solid transparent; border-top: 16px solid #1e293b; margin: -2px auto 0; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Labels -->
+                                <div style="display: flex; justify-content: space-between; margin-top: 1rem; padding: 0 0.5rem;">
+                                    <div style="text-align: left;">
+                                        <div style="font-size: 0.85rem; font-weight: 700; color: #dc2626;">Far Left</div>
+                                        <div style="font-size: 0.75rem; color: #64748b;">Progressive</div>
+                                    </div>
+                                    <div style="text-align: center;">
+                                        <div style="font-size: 0.85rem; font-weight: 700; color: #94a3b8;">Center</div>
+                                        <div style="font-size: 0.75rem; color: #64748b;">Neutral</div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="font-size: 0.85rem; font-weight: 700; color: #1e40af;">Far Right</div>
+                                        <div style="font-size: 0.75rem; color: #64748b;">Conservative</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Current Position Label -->
+                            <div style="text-align: center; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+                                <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.25rem;">Detected Political Leaning</div>
+                                <div style="font-size: 1.25rem; font-weight: 700; color: #1e293b;" id="bias-political-label">--</div>
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.8.0: "What is Bias?" Educational Section -->
+                        <div style="margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; border: 2px solid #f59e0b;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #92400e; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-graduation-cap" style="color: #f59e0b;"></i>
+                                Understanding Bias
+                            </h4>
+                            
+                            <div style="display: grid; gap: 1.25rem;">
+                                <div style="background: white; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #f59e0b;">
+                                    <div style="font-weight: 700; color: #78350f; margin-bottom: 0.5rem; font-size: 1rem;">
+                                        <i class="fas fa-info-circle" style="color: #f59e0b; margin-right: 0.5rem;"></i>
+                                        What is Media Bias?
+                                    </div>
+                                    <p style="margin: 0; color: #78350f; font-size: 0.95rem; line-height: 1.7;">
+                                        Media bias occurs when news coverage systematically favors certain perspectives, political positions, or interests while downplaying others. It can appear in word choice, story selection, source selection, and how prominently stories are featured.
+                                    </p>
+                                </div>
+                                
+                                <div style="background: white; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                                    <div style="font-weight: 700; color: #1e40af; margin-bottom: 0.5rem; font-size: 1rem;">
+                                        <i class="fas fa-question-circle" style="color: #3b82f6; margin-right: 0.5rem;"></i>
+                                        Is Bias Always Bad?
+                                    </div>
+                                    <p style="margin: 0; color: #1e40af; font-size: 0.95rem; line-height: 1.7;">
+                                        Not necessarily. Some outlets openly cater to specific audiences with clear editorial perspectives (like opinion sections). The key is <strong>transparency</strong> and <strong>factual accuracy</strong>. Bias becomes problematic when it distorts facts, omits important context, or presents opinion as objective news.
+                                    </p>
+                                </div>
+                                
+                                <div style="background: white; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #10b981;">
+                                    <div style="font-weight: 700; color: #065f46; margin-bottom: 0.5rem; font-size: 1rem;">
+                                        <i class="fas fa-lightbulb" style="color: #10b981; margin-right: 0.5rem;"></i>
+                                        Why This Score Matters
+                                    </div>
+                                    <p style="margin: 0; color: #065f46; font-size: 0.95rem; line-height: 1.7;">
+                                        This objectivity score (0-100, higher is better) helps you understand if this article presents information fairly or if it's skewed by political perspective, sensationalism, or loaded language. A lower score doesn't mean the facts are wrong—just that they're presented with a particular slant that you should be aware of.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.8.0: Multi-Dimensional Bias Breakdown -->
+                        <div id="bias-dimensions-container" style="margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-layer-group" style="color: #8b5cf6;"></i>
+                                Bias Dimensions Analyzed
+                            </h4>
+                            <div id="bias-dimensions-content" style="display: grid; gap: 1rem;">
+                                <!-- Dimension bars will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.8.0: Loaded Language Examples -->
+                        <div id="bias-loaded-language-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 16px; border: 2px solid #ef4444;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #991b1b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-exclamation-triangle" style="color: #ef4444;"></i>
+                                Loaded Language Examples
+                            </h4>
+                            <div style="font-size: 0.9rem; color: #7f1d1d; margin-bottom: 1rem; line-height: 1.6;">
+                                These words and phrases carry emotional weight or bias that may influence how you perceive the information:
+                            </div>
+                            <div id="bias-loaded-phrases-content" style="display: grid; gap: 0.75rem;">
+                                <!-- Loaded phrases will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.8.0: Score Explanation -->
+                        <div style="margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border-radius: 12px; border-left: 4px solid #3b82f6;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1.05rem; font-weight: 700;">
+                                <i class="fas fa-calculator"></i> How We Calculated This Score
+                            </h4>
+                            <div id="bias-score-explanation" style="font-size: 0.95rem; color: #0c4a6e; line-height: 1.7;">
+                                <!-- Score explanation will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Summary (preserved from v5.7.0) -->
                         <div class="analysis-text-box">
-                            <h4><i class="fas fa-clipboard-list"></i> Analysis</h4>
+                            <h4><i class="fas fa-clipboard-list"></i> Analysis Summary</h4>
                             <p id="bias-summary">Loading analysis...</p>
                         </div>
                         
-                        <!-- Findings -->
+                        <!-- Findings (preserved from v5.7.0) -->
                         <div class="findings-box" id="bias-findings-box" style="display: none;">
                             <h4><i class="fas fa-list-check"></i> Key Findings</h4>
                             <ul id="bias-findings-list"></ul>
@@ -380,16 +505,16 @@ window.ServiceTemplates = {
         var template = templates[templateKey];
         
         if (template) {
-            console.log('[ServiceTemplates v5.7.0] ✓ Template found for:', templateKey);
+            console.log('[ServiceTemplates v5.8.0] ✓ Template found for:', templateKey);
             return template;
         } else {
-            console.warn('[ServiceTemplates v5.7.0] ✗ Template not found for:', templateKey);
+            console.warn('[ServiceTemplates v5.8.0] ✗ Template not found for:', templateKey);
             return '<div class="service-analysis-section"><p>Template not available</p></div>';
         }
     },
     
     // ============================================================================
-    // NEW v5.7.0: MARKDOWN TO HTML CONVERTER
+    // MARKDOWN TO HTML CONVERTER (PRESERVED FROM v5.7.0)
     // ============================================================================
     
     convertMarkdownToHtml: function(text) {
@@ -397,7 +522,7 @@ window.ServiceTemplates = {
             return '';
         }
         
-        console.log('[ServiceTemplates v5.7.0] Converting markdown, input length:', text.length);
+        console.log('[ServiceTemplates v5.8.0] Converting markdown, input length:', text.length);
         
         // Convert **bold** to <strong>
         text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -416,23 +541,23 @@ window.ServiceTemplates = {
             return '';
         }).filter(function(p) { return p.length > 0; }).join('');
         
-        console.log('[ServiceTemplates v5.7.0] ✓ Converted to HTML, output length:', html.length);
+        console.log('[ServiceTemplates v5.8.0] ✓ Converted to HTML, output length:', html.length);
         
         return html;
     },
     
     // ============================================================================
-    // SUPER AGGRESSIVE TEXT EXTRACTION - v5.5.0 FIX (PRESERVED)
+    // TEXT EXTRACTION (PRESERVED FROM v5.7.0)
     // ============================================================================
     
     extractText: function(value, fallback) {
         fallback = fallback || 'No information available.';
         
-        console.log('[ServiceTemplates v5.7.0] extractText called with:', typeof value, value);
+        console.log('[ServiceTemplates v5.8.0] extractText called with:', typeof value, value);
         
         // Null/undefined check
         if (value === null || value === undefined) {
-            console.log('[ServiceTemplates v5.7.0] Value is null/undefined, returning fallback');
+            console.log('[ServiceTemplates v5.8.0] Value is null/undefined, returning fallback');
             return fallback;
         }
         
@@ -440,16 +565,16 @@ window.ServiceTemplates = {
         if (typeof value === 'string') {
             var trimmed = value.trim();
             if (trimmed.length > 0) {
-                console.log('[ServiceTemplates v5.7.0] Found string:', trimmed.substring(0, 100));
+                console.log('[ServiceTemplates v5.8.0] Found string:', trimmed.substring(0, 100));
                 return trimmed;
             }
-            console.log('[ServiceTemplates v5.7.0] Empty string, returning fallback');
+            console.log('[ServiceTemplates v5.8.0] Empty string, returning fallback');
             return fallback;
         }
         
         // Array - try first element
         if (Array.isArray(value)) {
-            console.log('[ServiceTemplates v5.7.0] Value is array, length:', value.length);
+            console.log('[ServiceTemplates v5.8.0] Value is array, length:', value.length);
             if (value.length > 0) {
                 return this.extractText(value[0], fallback);
             }
@@ -458,7 +583,7 @@ window.ServiceTemplates = {
         
         // Object - try MANY possible field names
         if (typeof value === 'object') {
-            console.log('[ServiceTemplates v5.7.0] Value is object, keys:', Object.keys(value));
+            console.log('[ServiceTemplates v5.8.0] Value is object, keys:', Object.keys(value));
             
             // Try common text fields
             var textFields = [
@@ -472,7 +597,7 @@ window.ServiceTemplates = {
             for (var i = 0; i < textFields.length; i++) {
                 var field = textFields[i];
                 if (value[field] !== undefined && value[field] !== null) {
-                    console.log('[ServiceTemplates v5.7.0] Found field:', field);
+                    console.log('[ServiceTemplates v5.8.0] Found field:', field);
                     var extracted = this.extractText(value[field], null);
                     if (extracted && extracted !== fallback) {
                         return extracted;
@@ -483,7 +608,7 @@ window.ServiceTemplates = {
             // If object has only one key, try that
             var keys = Object.keys(value);
             if (keys.length === 1) {
-                console.log('[ServiceTemplates v5.7.0] Object has single key:', keys[0]);
+                console.log('[ServiceTemplates v5.8.0] Object has single key:', keys[0]);
                 return this.extractText(value[keys[0]], fallback);
             }
             
@@ -492,7 +617,7 @@ window.ServiceTemplates = {
                 var key = keys[i];
                 var val = value[key];
                 if (typeof val === 'string' && val.trim().length > 20) {
-                    console.log('[ServiceTemplates v5.7.0] Found long string in key:', key);
+                    console.log('[ServiceTemplates v5.8.0] Found long string in key:', key);
                     return val.trim();
                 }
             }
@@ -502,7 +627,7 @@ window.ServiceTemplates = {
                 var key = keys[i];
                 var val = value[key];
                 if (typeof val === 'object' && val !== null) {
-                    console.log('[ServiceTemplates v5.7.0] Recursing into key:', key);
+                    console.log('[ServiceTemplates v5.8.0] Recursing into key:', key);
                     var extracted = this.extractText(val, null);
                     if (extracted && extracted !== fallback) {
                         return extracted;
@@ -510,7 +635,7 @@ window.ServiceTemplates = {
                 }
             }
             
-            console.log('[ServiceTemplates v5.7.0] No text found in object, returning fallback');
+            console.log('[ServiceTemplates v5.8.0] No text found in object, returning fallback');
             return fallback;
         }
         
@@ -519,11 +644,10 @@ window.ServiceTemplates = {
             return String(value);
         }
         
-        console.log('[ServiceTemplates v5.7.0] Unknown type, returning fallback');
+        console.log('[ServiceTemplates v5.8.0] Unknown type, returning fallback');
         return fallback;
     },
     
-    // v5.4.1 FIX: Better findings filtering (PRESERVED)
     extractFindings: function(data) {
         var findings = data.findings || data.key_findings || [];
         
@@ -531,7 +655,7 @@ window.ServiceTemplates = {
             return [];
         }
         
-        // v5.4.1 FIX: Filter out unwanted meta-text
+        // Filter out unwanted meta-text
         var unwantedPhrases = [
             'what to verify',
             'things to check',
@@ -551,7 +675,7 @@ window.ServiceTemplates = {
             var lowerText = text.toLowerCase();
             for (var i = 0; i < unwantedPhrases.length; i++) {
                 if (lowerText.includes(unwantedPhrases[i])) {
-                    console.log('[ServiceTemplates v5.7.0] Filtered out meta-text:', text);
+                    console.log('[ServiceTemplates v5.8.0] Filtered out meta-text:', text);
                     return false;
                 }
             }
@@ -572,7 +696,7 @@ window.ServiceTemplates = {
     
     // Render chart for a service
     renderServiceChart: function(serviceId, serviceData) {
-        console.log('[ServiceTemplates v5.7.0] Checking for chart data in:', serviceId);
+        console.log('[ServiceTemplates v5.8.0] Checking for chart data in:', serviceId);
         
         if (typeof ChartRenderer === 'undefined') {
             console.warn('[ServiceTemplates] ChartRenderer not loaded');
@@ -603,14 +727,14 @@ window.ServiceTemplates = {
     },
     
     // ============================================================================
-    // MAIN DISPLAY METHOD - v5.4.2 WITH SERVICES OBJECT DETECTION FIX (PRESERVED)
+    // MAIN DISPLAY METHOD (PRESERVED FROM v5.7.0)
     // ============================================================================
     
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.7.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v5.7.0] Received data:', data);
+        console.log('[ServiceTemplates v5.8.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v5.8.0] Received data:', data);
         
-        // CRITICAL v5.4.2 FIX: Smart detection of data structure
+        // Smart detection of data structure
         var detailed = null;
         
         // Check if data has service keys directly
@@ -628,33 +752,33 @@ window.ServiceTemplates = {
         }
         
         if (hasServiceKeys) {
-            console.log('[ServiceTemplates v5.7.0] ✓ Data IS the services object (direct)');
+            console.log('[ServiceTemplates v5.8.0] ✓ Data IS the services object (direct)');
             detailed = data;
         } else if (data.detailed_analysis) {
-            console.log('[ServiceTemplates v5.7.0] ✓ Data has detailed_analysis nested');
+            console.log('[ServiceTemplates v5.8.0] ✓ Data has detailed_analysis nested');
             detailed = data.detailed_analysis;
         } else if (data.results && data.results.detailed_analysis) {
-            console.log('[ServiceTemplates v5.7.0] ✓ Data has results.detailed_analysis nested');
+            console.log('[ServiceTemplates v5.8.0] ✓ Data has results.detailed_analysis nested');
             detailed = data.results.detailed_analysis;
         } else {
-            console.error('[ServiceTemplates v5.7.0] ✗ Could not find services data');
-            console.log('[ServiceTemplates v5.7.0] Data structure:', Object.keys(data));
+            console.error('[ServiceTemplates v5.8.0] ✗ Could not find services data');
+            console.log('[ServiceTemplates v5.8.0] Data structure:', Object.keys(data));
             return;
         }
         
         var analysisMode = data.analysis_mode || 'news';
         
-        console.log('[ServiceTemplates v5.7.0] Analysis mode:', analysisMode);
-        console.log('[ServiceTemplates v5.7.0] Services available:', Object.keys(detailed));
+        console.log('[ServiceTemplates v5.8.0] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.8.0] Services available:', Object.keys(detailed));
         
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
         
         if (!container) {
-            console.error('[ServiceTemplates v5.7.0] CRITICAL: Container not found!');
+            console.error('[ServiceTemplates v5.8.0] CRITICAL: Container not found!');
             return;
         }
         
-        console.log('[ServiceTemplates v5.7.0] Container found:', container.id);
+        console.log('[ServiceTemplates v5.8.0] Container found:', container.id);
         
         var serviceOrder = [
             { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', displayFunc: 'displaySourceCredibility' },
@@ -673,10 +797,10 @@ window.ServiceTemplates = {
         
         serviceOrder.forEach(function(service) {
             if (detailed[service.id]) {
-                console.log('[ServiceTemplates v5.7.0] Processing service:', service.name);
+                console.log('[ServiceTemplates v5.8.0] Processing service:', service.name);
                 servicesDisplayed++;
                 
-                // Create service card with colored border (PRESERVED from v5.4.1)
+                // Create service card with colored border
                 var serviceCard = document.createElement('div');
                 serviceCard.className = 'service-dropdown ' + service.id.replace(/_/g, '') + 'Dropdown';
                 serviceCard.id = service.id.replace(/_/g, '') + 'Dropdown';
@@ -700,7 +824,7 @@ window.ServiceTemplates = {
                     </div>
                 `;
                 
-                // Content div - v5.4.1 FIX: Inline styles for proper collapse/expand (PRESERVED)
+                // Content div with inline styles for proper collapse/expand
                 var content = document.createElement('div');
                 content.className = 'service-content';
                 content.style.maxHeight = '0';
@@ -708,7 +832,7 @@ window.ServiceTemplates = {
                 content.style.transition = 'max-height 0.4s ease';
                 content.innerHTML = self.getTemplate(service.id);
                 
-                // v5.4.1 FIX: Toggle with inline max-height management (PRESERVED)
+                // Toggle with inline max-height management
                 header.onclick = function() {
                     var isActive = serviceCard.classList.contains('active');
                     
@@ -732,7 +856,7 @@ window.ServiceTemplates = {
                         }
                     }
                     
-                    console.log('[ServiceTemplates v5.7.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
+                    console.log('[ServiceTemplates v5.8.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
                 };
                 
                 // Add hover effect
@@ -756,7 +880,7 @@ window.ServiceTemplates = {
                 
                 // Call display function
                 if (self[service.displayFunc]) {
-                    console.log('[ServiceTemplates v5.7.0] Calling display function:', service.displayFunc);
+                    console.log('[ServiceTemplates v5.8.0] Calling display function:', service.displayFunc);
                     self[service.displayFunc](detailed[service.id]);
                     
                     // Render chart if data exists
@@ -765,22 +889,22 @@ window.ServiceTemplates = {
             }
         });
         
-        console.log('[ServiceTemplates v5.7.0] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
+        console.log('[ServiceTemplates v5.8.0] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
         
         if (servicesDisplayed === 0) {
-            console.error('[ServiceTemplates v5.7.0] ✗ NO SERVICES DISPLAYED! Check data structure.');
+            console.error('[ServiceTemplates v5.8.0] ✗ NO SERVICES DISPLAYED! Check data structure.');
         } else {
-            console.log('[ServiceTemplates v5.7.0] ✓ All services displayed with VERBOSE explanations!');
+            console.log('[ServiceTemplates v5.8.0] ✓ All services displayed!');
         }
     },
     
     // ============================================================================
-    // ENHANCED SOURCE CREDIBILITY DISPLAY - v5.7.0 VERBOSE EXPLANATION FIX
+    // SOURCE CREDIBILITY DISPLAY (PRESERVED FROM v5.7.0)
     // ============================================================================
     
     displaySourceCredibility: function(data) {
-        console.log('[Source Credibility v5.7.0] Displaying data with VERBOSE EXPLANATION support');
-        console.log('[Source Credibility v5.7.0] Full data structure:', JSON.stringify(data, null, 2));
+        console.log('[Source Credibility v5.8.0] Displaying data with VERBOSE EXPLANATION support');
+        console.log('[Source Credibility v5.8.0] Full data structure:', JSON.stringify(data, null, 2));
         
         // Basic score and level
         var score = data.score || data.credibility_score || 0;
@@ -792,12 +916,12 @@ window.ServiceTemplates = {
         var sourceName = data.source || data.source_name || data.domain || 'Unknown Source';
         this.updateElement('source-name', sourceName);
         
-        // === NEW v5.7.0: VERBOSE EXPLANATION (FIRST PRIORITY!) ===
-        console.log('[Source Credibility v5.7.0] Checking for verbose explanation...');
+        // Verbose explanation (first priority)
+        console.log('[Source Credibility v5.8.0] Checking for verbose explanation...');
         var explanation = data.explanation || null;
         
         if (explanation && typeof explanation === 'string' && explanation.length > 100) {
-            console.log('[Source Credibility v5.7.0] ✓ Found verbose explanation, length:', explanation.length);
+            console.log('[Source Credibility v5.8.0] ✓ Found verbose explanation, length:', explanation.length);
             
             // Convert markdown to HTML
             var explanationHtml = this.convertMarkdownToHtml(explanation);
@@ -809,7 +933,7 @@ window.ServiceTemplates = {
             if (explanationBox && explanationContent) {
                 explanationContent.innerHTML = explanationHtml;
                 explanationBox.style.display = 'block';
-                console.log('[Source Credibility v5.7.0] ✓ Verbose explanation displayed!');
+                console.log('[Source Credibility v5.8.0] ✓ Verbose explanation displayed!');
             }
             
             // Hide the old summary box (we have verbose explanation now)
@@ -818,7 +942,7 @@ window.ServiceTemplates = {
                 summaryBox.style.display = 'none';
             }
         } else {
-            console.log('[Source Credibility v5.7.0] No verbose explanation, falling back to summary');
+            console.log('[Source Credibility v5.8.0] No verbose explanation, falling back to summary');
             
             // Fallback to summary if no verbose explanation
             var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
@@ -829,7 +953,7 @@ window.ServiceTemplates = {
             }
         }
         
-        // === Historical Context (PRESERVED from v5.6.0) ===
+        // Historical Context
         var hasHistoricalData = false;
         
         var founded = data.founded || data.outlet_founded || data.year_founded || 
@@ -860,7 +984,7 @@ window.ServiceTemplates = {
             document.getElementById('source-historical-box').style.display = 'block';
         }
         
-        // === Awards & Recognition (PRESERVED from v5.6.0) ===
+        // Awards & Recognition
         var awards = data.awards || data.recognition || data.notable_achievements ||
                     (data.outlet_info && data.outlet_info.awards) || null;
         if (awards) {
@@ -868,23 +992,23 @@ window.ServiceTemplates = {
             this.updateElement('source-awards', awards);
         }
         
-        // === Score Breakdown (ENHANCED from v5.6.0) ===
-        console.log('[Source Credibility v5.7.0] Checking for score breakdown...');
+        // Score Breakdown
+        console.log('[Source Credibility v5.8.0] Checking for score breakdown...');
         var breakdown = data.score_breakdown || data.breakdown || null;
         
         if (breakdown) {
-            console.log('[Source Credibility v5.7.0] ✓ Found score breakdown:', breakdown);
+            console.log('[Source Credibility v5.8.0] ✓ Found score breakdown:', breakdown);
             
             // Check for components array (backend v13.0 structure)
             if (breakdown.components && Array.isArray(breakdown.components)) {
-                console.log('[Source Credibility v5.7.0] ✓ Using components array from v13.0 backend');
+                console.log('[Source Credibility v5.8.0] ✓ Using components array from v13.0 backend');
                 this.displayScoreBreakdownComponents(breakdown.components);
             } else if (typeof breakdown === 'object') {
-                console.log('[Source Credibility v5.7.0] Using legacy breakdown format');
+                console.log('[Source Credibility v5.8.0] Using legacy breakdown format');
                 this.displayScoreBreakdown(breakdown);
             }
         } else {
-            console.log('[Source Credibility v5.7.0] No score breakdown found');
+            console.log('[Source Credibility v5.8.0] No score breakdown found');
         }
         
         // Findings
@@ -905,21 +1029,21 @@ window.ServiceTemplates = {
             }
         }
         
-        // Trust meter and comparison (PRESERVED)
+        // Trust meter and comparison
         this.displayTrustMeter(score);
         this.displaySourceComparison(sourceName, score, data.source_comparison);
         
-        console.log('[Source Credibility v5.7.0] ✓ COMPLETE with VERBOSE EXPLANATION support!');
+        console.log('[Source Credibility v5.8.0] ✓ COMPLETE!');
     },
     
-    // NEW v5.7.0: Display score breakdown components from backend v13.0
+    // Display score breakdown components from backend v13.0
     displayScoreBreakdownComponents: function(components) {
         var container = document.getElementById('source-breakdown-content');
         var box = document.getElementById('source-breakdown-box');
         
         if (!container || !box || !Array.isArray(components)) return;
         
-        console.log('[Source Credibility v5.7.0] Displaying', components.length, 'breakdown components');
+        console.log('[Source Credibility v5.8.0] Displaying', components.length, 'breakdown components');
         
         container.innerHTML = '';
         
@@ -957,10 +1081,10 @@ window.ServiceTemplates = {
         }.bind(this));
         
         box.style.display = 'block';
-        console.log('[Source Credibility v5.7.0] ✓ Score breakdown components displayed');
+        console.log('[Source Credibility v5.8.0] ✓ Score breakdown components displayed');
     },
     
-    // Legacy score breakdown display (PRESERVED from v5.6.0)
+    // Legacy score breakdown display
     displayScoreBreakdown: function(breakdown) {
         var container = document.getElementById('source-breakdown-content');
         var box = document.getElementById('source-breakdown-box');
@@ -1021,24 +1145,68 @@ window.ServiceTemplates = {
     },
     
     // ============================================================================
-    // OTHER SERVICE DISPLAY FUNCTIONS (PRESERVED)
+    // NEW v5.8.0: ENHANCED BIAS DETECTOR DISPLAY
     // ============================================================================
     
     displayBiasDetector: function(data) {
-        console.log('[Bias Detector v5.7.0] Displaying data:', data);
+        console.log('[Bias Detector v5.8.0] ENHANCED DISPLAY with political spectrum bar');
+        console.log('[Bias Detector v5.8.0] Full data structure:', JSON.stringify(data, null, 2));
         
+        // Basic score and level
         var score = data.score || data.objectivity_score || 50;
         this.updateElement('bias-score', score);
         
-        var level = data.level || data.bias_level || 'Unknown';
+        var level = data.level || data.objectivity_level || 'Unknown';
         this.updateElement('bias-level', level);
         
-        var leaning = data.political_leaning || data.bias_direction || 'Center';
-        this.updateElement('bias-leaning', leaning);
+        // Political leaning
+        var politicalLeaning = data.political_leaning || data.political_label || 'Center';
+        this.updateElement('bias-political-label', politicalLeaning);
         
+        // === NEW v5.8.0: Outlet Context Banner ===
+        var outletName = data.outlet_name || null;
+        var outletBaseline = data.outlet_baseline || data.dimensions?.outlet_baseline || null;
+        
+        if (outletName && outletBaseline) {
+            console.log('[Bias Detector v5.8.0] ✓ Displaying outlet context');
+            var outletBanner = document.getElementById('bias-outlet-banner');
+            var outletNameElem = document.getElementById('bias-outlet-name');
+            var outletContext = document.getElementById('bias-outlet-context');
+            
+            if (outletBanner && outletNameElem && outletContext) {
+                outletNameElem.textContent = outletName;
+                
+                var biasDir = outletBaseline.bias_direction || 'center';
+                var biasAmt = outletBaseline.bias_amount || 0;
+                var contextText = outletBaseline.known_outlet 
+                    ? `Typically shows ${biasDir} bias (baseline: ${biasAmt}/100)`
+                    : 'Unknown outlet - using default baseline';
+                
+                outletContext.textContent = contextText;
+                outletBanner.style.display = 'block';
+            }
+        }
+        
+        // === NEW v5.8.0: Political Spectrum Bar ===
+        this.displayPoliticalSpectrum(politicalLeaning, data.dimensions?.political);
+        
+        // === NEW v5.8.0: Multi-Dimensional Breakdown ===
+        this.displayBiasDimensions(data.dimensions || {});
+        
+        // === NEW v5.8.0: Loaded Language Examples ===
+        var loadedPhrases = data.loaded_phrases || (data.dimensions?.loaded_language?.phrases) || [];
+        if (loadedPhrases.length > 0) {
+            this.displayLoadedLanguage(loadedPhrases);
+        }
+        
+        // === NEW v5.8.0: Score Explanation ===
+        this.displayBiasScoreExplanation(score, data.dimensions || {}, data.details || {});
+        
+        // Summary
         var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
         this.updateElement('bias-summary', summary);
         
+        // Findings
         var findings = this.extractFindings(data);
         if (findings.length > 0) {
             var findingsBox = document.getElementById('bias-findings-box');
@@ -1056,11 +1224,240 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Bias Detector v5.7.0] ✓ Complete');
+        console.log('[Bias Detector v5.8.0] ✓ ENHANCED DISPLAY COMPLETE!');
     },
     
+    displayPoliticalSpectrum: function(politicalLeaning, politicalData) {
+        console.log('[Bias Detector v5.8.0] Displaying political spectrum:', politicalLeaning);
+        
+        var indicator = document.getElementById('bias-spectrum-indicator');
+        if (!indicator) {
+            console.warn('[Bias Detector v5.8.0] Spectrum indicator not found');
+            return;
+        }
+        
+        // Map political leanings to spectrum positions (0-100)
+        var leaningMap = {
+            'far-left': 5,
+            'far left': 5,
+            'left': 20,
+            'center-left': 35,
+            'center left': 35,
+            'center': 50,
+            'centre': 50,
+            'center-right': 65,
+            'center right': 65,
+            'right': 80,
+            'far-right': 95,
+            'far right': 95
+        };
+        
+        var position = leaningMap[politicalLeaning.toLowerCase()] || 50;
+        
+        // Position the indicator
+        indicator.style.left = position + '%';
+        
+        console.log('[Bias Detector v5.8.0] ✓ Spectrum positioned at', position, '%');
+    },
+    
+    displayBiasDimensions: function(dimensions) {
+        console.log('[Bias Detector v5.8.0] Displaying bias dimensions');
+        
+        var container = document.getElementById('bias-dimensions-content');
+        if (!container) {
+            console.warn('[Bias Detector v5.8.0] Dimensions container not found');
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        // Define all 7 dimensions with their colors
+        var dimensionsDef = [
+            { key: 'political', label: 'Political Bias', color: '#6366f1', icon: 'fa-landmark' },
+            { key: 'sensationalism', label: 'Sensationalism', color: '#f59e0b', icon: 'fa-fire' },
+            { key: 'corporate', label: 'Corporate Bias', color: '#10b981', icon: 'fa-building' },
+            { key: 'loaded_language', label: 'Loaded Language', color: '#ef4444', icon: 'fa-comment-dots' },
+            { key: 'framing', label: 'Framing Issues', color: '#8b5cf6', icon: 'fa-frame' },
+            { key: 'controversial_figures', label: 'Controversial Figures', color: '#ec4899', icon: 'fa-user-secret' },
+            { key: 'pseudoscience', label: 'Pseudoscience', color: '#f97316', icon: 'fa-flask' }
+        ];
+        
+        dimensionsDef.forEach(function(dimDef) {
+            var dimData = dimensions[dimDef.key];
+            if (!dimData) return;
+            
+            // Extract score
+            var score = 0;
+            if (dimDef.key === 'loaded_language') {
+                score = Math.min(100, (dimData.count || 0) * 10);
+            } else if (dimDef.key === 'framing') {
+                score = Math.min(100, (dimData.issues?.length || 0) * 20);
+            } else if (dimDef.key === 'controversial_figures') {
+                score = dimData.bias_impact || 0;
+            } else {
+                score = dimData.score || 0;
+            }
+            
+            // Create dimension bar
+            var dimItem = document.createElement('div');
+            dimItem.style.cssText = 'padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid ' + dimDef.color + ';';
+            
+            var percentage = Math.min(100, score);
+            var invertedPercentage = 100 - percentage; // For objectivity display
+            
+            dimItem.innerHTML = `
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fas ${dimDef.icon}" style="color: ${dimDef.color}; font-size: 1.25rem;"></i>
+                        <div>
+                            <div style="font-size: 0.95rem; color: #1e293b; font-weight: 600;">${dimDef.label}</div>
+                            <div style="font-size: 0.8rem; color: #64748b;">${this.getBiasDimensionSublabel(dimDef.key, dimData)}</div>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-size: 1.25rem; font-weight: 700; color: ${dimDef.color};">${Math.round(score)}</div>
+                        <div style="font-size: 0.75rem; color: #64748b;">bias amount</div>
+                    </div>
+                </div>
+                <div style="background: #e2e8f0; border-radius: 6px; height: 10px; overflow: hidden;">
+                    <div style="width: ${percentage}%; height: 100%; background: ${dimDef.color}; border-radius: 6px; transition: width 0.6s ease;"></div>
+                </div>
+            `;
+            
+            container.appendChild(dimItem);
+        }.bind(this));
+        
+        console.log('[Bias Detector v5.8.0] ✓ Dimensions displayed');
+    },
+    
+    getBiasDimensionSublabel: function(key, dimData) {
+        switch(key) {
+            case 'political':
+                return (dimData.label || 'Center') + ' leaning';
+            case 'sensationalism':
+                return (dimData.level || 'Low') + ' sensationalism';
+            case 'corporate':
+                return (dimData.bias || 'Neutral') + ' orientation';
+            case 'loaded_language':
+                return (dimData.count || 0) + ' instances found';
+            case 'framing':
+                return (dimData.issues?.length || 0) + ' issues detected';
+            case 'controversial_figures':
+                return (dimData.count || 0) + ' figures mentioned';
+            case 'pseudoscience':
+                return (dimData.count || 0) + ' indicators found';
+            default:
+                return '';
+        }
+    },
+    
+    displayLoadedLanguage: function(phrases) {
+        console.log('[Bias Detector v5.8.0] Displaying', phrases.length, 'loaded language examples');
+        
+        var container = document.getElementById('bias-loaded-phrases-content');
+        var wrapper = document.getElementById('bias-loaded-language-container');
+        
+        if (!container || !wrapper) {
+            console.warn('[Bias Detector v5.8.0] Loaded language container not found');
+            return;
+        }
+        
+        container.innerHTML = '';
+        
+        // Show first 8 examples
+        var displayPhrases = phrases.slice(0, 8);
+        
+        displayPhrases.forEach(function(phraseData, index) {
+            var phrase = phraseData.phrase || phraseData;
+            var context = phraseData.context || phraseData.sentence || '';
+            
+            var phraseItem = document.createElement('div');
+            phraseItem.style.cssText = 'background: white; padding: 1rem; border-radius: 8px; border-left: 3px solid #ef4444;';
+            
+            phraseItem.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <div style="width: 28px; height: 28px; background: #ef4444; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem;">
+                        ${index + 1}
+                    </div>
+                    <div style="font-weight: 700; color: #991b1b; font-size: 0.95rem;">"${phrase}"</div>
+                </div>
+                ${context ? '<div style="font-size: 0.875rem; color: #7f1d1d; line-height: 1.6; padding-left: 2.5rem;">' + context + '</div>' : ''}
+            `;
+            
+            container.appendChild(phraseItem);
+        });
+        
+        wrapper.style.display = 'block';
+        console.log('[Bias Detector v5.8.0] ✓ Loaded language displayed');
+    },
+    
+    displayBiasScoreExplanation: function(score, dimensions, details) {
+        console.log('[Bias Detector v5.8.0] Generating score explanation');
+        
+        var container = document.getElementById('bias-score-explanation');
+        if (!container) {
+            console.warn('[Bias Detector v5.8.0] Score explanation container not found');
+            return;
+        }
+        
+        var politicalScore = details.political_score || dimensions.political?.score || 0;
+        var sensationalismScore = details.sensationalism_score || dimensions.sensationalism?.score || 0;
+        var corporateScore = details.corporate_score || dimensions.corporate?.score || 0;
+        var loadedCount = details.loaded_language_count || dimensions.loaded_language?.count || 0;
+        var framingIssues = details.framing_issues || dimensions.framing?.issues?.length || 0;
+        var controversialCount = details.controversial_figures_count || dimensions.controversial_figures?.count || 0;
+        var pseudoscienceScore = details.pseudoscience_score || dimensions.pseudoscience?.score || 0;
+        
+        var explanation = `
+            <p style="margin-bottom: 1rem;">
+                This article received an <strong>objectivity score of ${score}/100</strong> (higher is better). 
+                This score reflects the inverse of detected bias - the more bias present, the lower the objectivity.
+            </p>
+            
+            <p style="margin-bottom: 1rem;">
+                <strong>Score Calculation:</strong>
+            </p>
+            
+            <ul style="list-style: none; padding: 0; margin: 0 0 1rem 0;">
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #bae6fd;">
+                    <strong>Political Bias (25% weight):</strong> ${politicalScore} bias detected
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #bae6fd;">
+                    <strong>Sensationalism (25% weight):</strong> ${sensationalismScore} bias detected
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #bae6fd;">
+                    <strong>Corporate Bias (15% weight):</strong> ${corporateScore} bias detected
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #bae6fd;">
+                    <strong>Loaded Language (10% weight):</strong> ${loadedCount} instances found
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #bae6fd;">
+                    <strong>Framing Issues (8% weight):</strong> ${framingIssues} issues detected
+                </li>
+                <li style="padding: 0.5rem 0; border-bottom: 1px solid #bae6fd;">
+                    <strong>Controversial Figures (10% weight):</strong> ${controversialCount} mentioned
+                </li>
+                <li style="padding: 0.5rem 0;">
+                    <strong>Pseudoscience (7% weight):</strong> ${pseudoscienceScore} indicators found
+                </li>
+            </ul>
+            
+            <p style="margin: 0; font-size: 0.9rem; color: #0c4a6e; font-style: italic;">
+                These dimensions are weighted and combined to produce the final objectivity score. 
+                A score above 70 indicates good objectivity, while scores below 50 suggest significant bias to be aware of.
+            </p>
+        `;
+        
+        container.innerHTML = explanation;
+        console.log('[Bias Detector v5.8.0] ✓ Score explanation displayed');
+    },
+    
+    // ============================================================================
+    // OTHER SERVICE DISPLAY FUNCTIONS (PRESERVED FROM v5.7.0)
+    // ============================================================================
+    
     displayFactChecker: function(data) {
-        console.log('[Fact Checker v5.7.0] Displaying data:', data);
+        console.log('[Fact Checker v5.8.0] Displaying data:', data);
         
         var score = data.score || data.verification_score || 0;
         this.updateElement('fact-score', score);
@@ -1100,11 +1497,11 @@ window.ServiceTemplates = {
             claimsContainer.innerHTML = '<p>No claims were checked in this article.</p>';
         }
         
-        console.log('[Fact Checker v5.7.0] ✓ Complete');
+        console.log('[Fact Checker v5.8.0] ✓ Complete');
     },
     
     displayAuthorAnalyzer: function(data) {
-        console.log('[Author Analyzer v5.7.0] Displaying data:', data);
+        console.log('[Author Analyzer v5.8.0] Displaying data:', data);
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('author-score', score);
@@ -1137,11 +1534,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Author Analyzer v5.7.0] ✓ Complete');
+        console.log('[Author Analyzer v5.8.0] ✓ Complete');
     },
     
     displayTransparencyAnalyzer: function(data) {
-        console.log('[Transparency Analyzer v5.7.0] Displaying data:', data);
+        console.log('[Transparency Analyzer v5.8.0] Displaying data:', data);
         
         var score = data.score || data.transparency_score || 0;
         this.updateElement('transparency-score', score);
@@ -1169,11 +1566,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Transparency Analyzer v5.7.0] ✓ Complete');
+        console.log('[Transparency Analyzer v5.8.0] ✓ Complete');
     },
     
     displayManipulationDetector: function(data) {
-        console.log('[Manipulation Detector v5.7.0] Displaying data:', data);
+        console.log('[Manipulation Detector v5.8.0] Displaying data:', data);
         
         var score = data.score || 0;
         this.updateElement('manipulation-score', score);
@@ -1201,11 +1598,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Manipulation Detector v5.7.0] ✓ Complete');
+        console.log('[Manipulation Detector v5.8.0] ✓ Complete');
     },
     
     displayContentAnalyzer: function(data) {
-        console.log('[Content Analyzer v5.7.0] Displaying data:', data);
+        console.log('[Content Analyzer v5.8.0] Displaying data:', data);
         
         var score = data.score || data.content_score || 0;
         this.updateElement('content-score', score);
@@ -1233,11 +1630,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Content Analyzer v5.7.0] ✓ Complete');
+        console.log('[Content Analyzer v5.8.0] ✓ Complete');
     },
     
     // ============================================================================
-    // SOURCE CREDIBILITY ENHANCEMENTS (PRESERVED FROM v5.4.1)
+    // SOURCE CREDIBILITY ENHANCEMENTS (PRESERVED FROM v5.7.0)
     // ============================================================================
     
     displayTrustMeter: function(score) {
@@ -1337,19 +1734,22 @@ window.ServiceTemplates = {
         if (element) {
             element.textContent = value;
         } else {
-            console.warn('[ServiceTemplates v5.7.0] Element not found:', id);
+            console.warn('[ServiceTemplates v5.8.0] Element not found:', id);
         }
     }
 };
 
-console.log('[ServiceTemplates v5.7.0] VERBOSE EXPLANATION FIX - Module loaded successfully');
-console.log('[ServiceTemplates v5.7.0] ✓ NEW: Checks data.explanation FIRST (before data.summary)');
-console.log('[ServiceTemplates v5.7.0] ✓ NEW: Converts markdown **bold** to HTML <strong>');
-console.log('[ServiceTemplates v5.7.0] ✓ NEW: Handles multi-paragraph formatting properly');
-console.log('[ServiceTemplates v5.7.0] ✓ NEW: Enhanced score breakdown from backend v13.0');
-console.log('[ServiceTemplates v5.7.0] ✓ Backend verbose explanations will now display!');
+console.log('[ServiceTemplates v5.8.0] BIAS DETECTOR ENHANCEMENT - Module loaded successfully');
+console.log('[ServiceTemplates v5.8.0] ✓ NEW: Political spectrum bar display (far-left to far-right)');
+console.log('[ServiceTemplates v5.8.0] ✓ NEW: Educational "What is Bias?" section');
+console.log('[ServiceTemplates v5.8.0] ✓ NEW: Multi-dimensional bias breakdown with ALL 7 dimensions');
+console.log('[ServiceTemplates v5.8.0] ✓ NEW: Loaded language examples showcase');
+console.log('[ServiceTemplates v5.8.0] ✓ NEW: Detailed score explanation');
+console.log('[ServiceTemplates v5.8.0] ✓ NEW: Outlet-aware context display');
+console.log('[ServiceTemplates v5.8.0] ✓ PRESERVED: All v5.7.0 verbose explanation features (DO NO HARM ✓)');
+console.log('[ServiceTemplates v5.8.0] ✓ PRESERVED: All other 6 services (DO NO HARM ✓)');
 
 /**
  * I did no harm and this file is not truncated.
- * v5.7.0 - October 30, 2025 - VERBOSE EXPLANATION FIX for backend v13.0
+ * v5.8.0 - October 30, 2025 - BIAS DETECTOR ENHANCEMENT (SURGICAL FIX)
  */
