@@ -4171,3 +4171,389 @@ body {
    ============================================================================ */
 
 /* I did no harm and this file is not truncated */
+/**
+ * TruthLens CSS Additions for Bias Detector v5.8.0
+ * Date: October 30, 2025
+ * 
+ * APPEND THESE STYLES TO THE END OF YOUR static/css/main.css FILE
+ * 
+ * These styles support the enhanced bias detector display with:
+ * - Political spectrum bar (far-left to far-right)
+ * - Educational "What is Bias?" section
+ * - Multi-dimensional bias breakdown
+ * - Loaded language examples
+ * - Score explanation
+ * 
+ * DEPLOYMENT INSTRUCTIONS:
+ * 1. Open your existing static/css/main.css file
+ * 2. Scroll to the VERY BOTTOM
+ * 3. Copy everything below this comment block
+ * 4. Paste it at the end of main.css
+ * 5. Save the file
+ */
+
+/* ============================================================================
+   BIAS DETECTOR v5.8.0 ENHANCEMENTS
+   Date: October 30, 2025
+   ============================================================================ */
+
+/* Bias Detector Enhanced Container */
+.bias-detector-enhanced-v2 {
+    padding: 1rem;
+}
+
+/* Outlet Context Banner */
+#bias-outlet-banner {
+    margin: 1.5rem 0;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+    border-radius: 12px;
+    border-left: 4px solid #6366f1;
+}
+
+/* Political Spectrum Container */
+#bias-spectrum-container {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 2px solid #e2e8f0;
+}
+
+/* Political Spectrum Bar */
+.bias-spectrum-bar {
+    height: 48px;
+    border-radius: 24px;
+    background: linear-gradient(
+        90deg, 
+        #dc2626 0%, 
+        #f97316 20%, 
+        #fbbf24 40%, 
+        #94a3b8 50%, 
+        #60a5fa 60%, 
+        #3b82f6 80%, 
+        #1e40af 100%
+    );
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+    position: relative;
+    overflow: visible;
+}
+
+/* Spectrum Indicator (Arrow) */
+#bias-spectrum-indicator {
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 10;
+}
+
+#bias-spectrum-indicator > div:first-child {
+    width: 4px;
+    height: 64px;
+    background: #1e293b;
+    margin: 0 auto;
+    border-radius: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+#bias-spectrum-indicator > div:last-child {
+    width: 0;
+    height: 0;
+    border-left: 12px solid transparent;
+    border-right: 12px solid transparent;
+    border-top: 16px solid #1e293b;
+    margin: -2px auto 0;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+/* Spectrum Labels */
+.spectrum-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding: 0 0.5rem;
+}
+
+.spectrum-label-left,
+.spectrum-label-center,
+.spectrum-label-right {
+    text-align: center;
+}
+
+.spectrum-label-left {
+    text-align: left;
+}
+
+.spectrum-label-right {
+    text-align: right;
+}
+
+/* Educational Section */
+.bias-education-section {
+    margin: 2rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-radius: 16px;
+    border: 2px solid #f59e0b;
+}
+
+.bias-education-card {
+    background: white;
+    padding: 1.25rem;
+    border-radius: 8px;
+    margin-bottom: 1.25rem;
+}
+
+.bias-education-card:last-child {
+    margin-bottom: 0;
+}
+
+.bias-education-card.political {
+    border-left: 4px solid #f59e0b;
+}
+
+.bias-education-card.neutral {
+    border-left: 4px solid #3b82f6;
+}
+
+.bias-education-card.importance {
+    border-left: 4px solid #10b981;
+}
+
+/* Bias Dimensions Container */
+#bias-dimensions-container {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 2px solid #e2e8f0;
+}
+
+#bias-dimensions-content {
+    display: grid;
+    gap: 1rem;
+}
+
+/* Individual Dimension Item */
+.bias-dimension-item {
+    padding: 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.bias-dimension-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Dimension Bar */
+.dimension-bar-container {
+    background: #e2e8f0;
+    border-radius: 6px;
+    height: 10px;
+    overflow: hidden;
+    margin-top: 0.75rem;
+}
+
+.dimension-bar-fill {
+    height: 100%;
+    border-radius: 6px;
+    transition: width 0.6s ease;
+}
+
+/* Loaded Language Container */
+#bias-loaded-language-container {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-radius: 16px;
+    border: 2px solid #ef4444;
+}
+
+#bias-loaded-phrases-content {
+    display: grid;
+    gap: 0.75rem;
+}
+
+/* Loaded Phrase Item */
+.loaded-phrase-item {
+    background: white;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #ef4444;
+}
+
+.loaded-phrase-number {
+    width: 28px;
+    height: 28px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+/* Score Explanation Box */
+.bias-score-explanation-box {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    border-left: 4px solid #3b82f6;
+}
+
+#bias-score-explanation {
+    font-size: 0.95rem;
+    color: #0c4a6e;
+    line-height: 1.7;
+}
+
+#bias-score-explanation ul {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+}
+
+#bias-score-explanation li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #bae6fd;
+}
+
+#bias-score-explanation li:last-child {
+    border-bottom: none;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    #bias-spectrum-container {
+        padding: 1rem;
+    }
+    
+    .bias-education-section {
+        padding: 1.5rem;
+    }
+    
+    #bias-dimensions-container {
+        padding: 1rem;
+    }
+    
+    #bias-loaded-language-container {
+        padding: 1rem;
+    }
+    
+    .bias-score-explanation-box {
+        padding: 1rem;
+    }
+    
+    #bias-spectrum-indicator > div:first-child {
+        height: 54px;
+    }
+}
+
+@media (max-width: 480px) {
+    .bias-spectrum-bar {
+        height: 40px;
+    }
+    
+    #bias-spectrum-indicator > div:first-child {
+        height: 48px;
+    }
+    
+    .spectrum-labels {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .spectrum-label-left,
+    .spectrum-label-center,
+    .spectrum-label-right {
+        text-align: center;
+    }
+}
+
+/* Animation for spectrum indicator */
+@keyframes spectrum-pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+#bias-spectrum-indicator {
+    animation: spectrum-pulse 2s ease-in-out infinite;
+}
+
+/* Dimension Icons */
+.dimension-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    margin-right: 0.75rem;
+}
+
+.dimension-icon.political {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    color: white;
+}
+
+.dimension-icon.sensationalism {
+    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
+    color: white;
+}
+
+.dimension-icon.corporate {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+}
+
+.dimension-icon.loaded {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: white;
+}
+
+.dimension-icon.framing {
+    background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%);
+    color: white;
+}
+
+.dimension-icon.controversial {
+    background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+    color: white;
+}
+
+.dimension-icon.pseudoscience {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: white;
+}
+
+/* ============================================================================
+   END OF BIAS DETECTOR v5.8.0 ENHANCEMENTS
+   ============================================================================ */
+
+/**
+ * DEPLOYMENT VERIFICATION:
+ * After adding these styles, test by:
+ * 1. Analyzing any news article
+ * 2. Opening the Bias Detection dropdown
+ * 3. Verify you see:
+ *    - Political spectrum bar with arrow indicator
+ *    - Yellow educational section about bias
+ *    - Multi-dimensional breakdown with colored bars
+ *    - Loaded language examples (if found)
+ *    - Blue score explanation box
+ */
+
+/* I did no harm and this file is not truncated. */
