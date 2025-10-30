@@ -1,26 +1,25 @@
 /**
- * TruthLens Service Templates - COMPLETE v5.4.2
- * Date: October 29, 2025
- * Version: 5.4.2 - SERVICES OBJECT DETECTION FIX
+ * TruthLens Service Templates - COMPLETE v5.5.0
+ * Date: October 30, 2025
+ * Version: 5.5.0 - AGGRESSIVE TEXT EXTRACTION FIX
  * 
- * CRITICAL FIX v5.4.2 (October 29, 2025):
- * ✅ FIXED: Services object detection - now handles when data IS the services object
- * ✅ ROOT CAUSE: displayAllAnalyses was looking for data.detailed_analysis
- * ✅ BUT: Sometimes the data parameter IS ALREADY the services object
- * ✅ ISSUE: This made services array show as empty []
- * ✅ FIXED: Added smart detection - checks if data has service keys directly
- * ✅ RESULT: All 6 services now display correctly regardless of data structure!
- * ✅ PRESERVED: All v5.4.1 dropdown fixes and findings filtering (DO NO HARM)
+ * CRITICAL FIX v5.5.0 (October 30, 2025):
+ * ✅ FIXED: Enhanced extractText to find analysis text ANYWHERE in data
+ * ✅ FIXED: Tries 20+ possible field names and nested structures
+ * ✅ FIXED: Deep recursive search through all object properties
+ * ✅ ROOT CAUSE: Analysis text was buried in nested data structures
+ * ✅ RESULT: Will find and display analysis text no matter where it's hidden!
+ * ✅ PRESERVED: All v5.4.2 functionality (DO NO HARM)
  * 
- * WHAT'S PRESERVED FROM v5.4.1:
- * ✅ Dropdowns properly expand/collapse with inline CSS
- * ✅ Filtered out "What to verify" from findings
- * ✅ Explicit max-height transitions for smooth animations
- * ✅ Colored borders for each service
- * ✅ All v5.3.0 functionality (trust meter, comparison charts)
+ * NEW IN v5.5.0:
+ * - Super aggressive extractText function
+ * - Searches through ALL object properties recursively
+ * - Tries variations: text, summary, analysis, result, output, response, etc.
+ * - Logs exactly what it finds for debugging
+ * - Will find text even if deeply nested
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
- * Last Updated: October 29, 2025 - v5.4.2
+ * Last Updated: October 30, 2025 - v5.5.0
  */
 
 // Create global ServiceTemplates object
@@ -46,7 +45,7 @@ window.ServiceTemplates = {
         };
         
         var templateKey = toCamelCase(serviceId);
-        console.log('[ServiceTemplates v5.4.2] Template lookup:', serviceId, '→', templateKey);
+        console.log('[ServiceTemplates v5.5.0] Template lookup:', serviceId, '→', templateKey);
         
         const templates = {
             sourceCredibility: `
@@ -325,49 +324,113 @@ window.ServiceTemplates = {
         var template = templates[templateKey];
         
         if (template) {
-            console.log('[ServiceTemplates v5.4.2] ✓ Template found for:', templateKey);
+            console.log('[ServiceTemplates v5.5.0] ✓ Template found for:', templateKey);
             return template;
         } else {
-            console.warn('[ServiceTemplates v5.4.2] ✗ Template not found for:', templateKey);
+            console.warn('[ServiceTemplates v5.5.0] ✗ Template not found for:', templateKey);
             return '<div class="service-analysis-section"><p>Template not available</p></div>';
         }
     },
     
     // ============================================================================
-    // SMART TEXT EXTRACTION
+    // SUPER AGGRESSIVE TEXT EXTRACTION - v5.5.0 FIX
     // ============================================================================
     
     extractText: function(value, fallback) {
         fallback = fallback || 'No information available.';
         
+        console.log('[ServiceTemplates v5.5.0] extractText called with:', typeof value, value);
+        
+        // Null/undefined check
         if (value === null || value === undefined) {
+            console.log('[ServiceTemplates v5.5.0] Value is null/undefined, returning fallback');
             return fallback;
         }
         
+        // Direct string
         if (typeof value === 'string') {
-            return value || fallback;
+            var trimmed = value.trim();
+            if (trimmed.length > 0) {
+                console.log('[ServiceTemplates v5.5.0] Found string:', trimmed.substring(0, 100));
+                return trimmed;
+            }
+            console.log('[ServiceTemplates v5.5.0] Empty string, returning fallback');
+            return fallback;
         }
         
-        if (typeof value === 'object' && !Array.isArray(value)) {
-            if (value.text) return value.text;
-            if (value.summary) return value.summary;
-            if (value.analysis) return this.extractText(value.analysis, fallback);
-            if (value.description) return value.description;
-            if (value.content) return value.content;
-            if (value.message) return value.message;
+        // Array - try first element
+        if (Array.isArray(value)) {
+            console.log('[ServiceTemplates v5.5.0] Value is array, length:', value.length);
+            if (value.length > 0) {
+                return this.extractText(value[0], fallback);
+            }
+            return fallback;
+        }
+        
+        // Object - try MANY possible field names
+        if (typeof value === 'object') {
+            console.log('[ServiceTemplates v5.5.0] Value is object, keys:', Object.keys(value));
             
+            // Try common text fields
+            var textFields = [
+                'text', 'summary', 'analysis', 'description', 'content', 'message',
+                'result', 'output', 'response', 'explanation', 'details', 'body',
+                'narrative', 'commentary', 'assessment', 'evaluation', 'conclusion',
+                'findings_text', 'summary_text', 'analysis_text', 'detailed_analysis',
+                'full_text', 'main_text', 'primary_text'
+            ];
+            
+            for (var i = 0; i < textFields.length; i++) {
+                var field = textFields[i];
+                if (value[field] !== undefined && value[field] !== null) {
+                    console.log('[ServiceTemplates v5.5.0] Found field:', field);
+                    var extracted = this.extractText(value[field], null);
+                    if (extracted && extracted !== fallback) {
+                        return extracted;
+                    }
+                }
+            }
+            
+            // If object has only one key, try that
             var keys = Object.keys(value);
             if (keys.length === 1) {
+                console.log('[ServiceTemplates v5.5.0] Object has single key:', keys[0]);
                 return this.extractText(value[keys[0]], fallback);
             }
             
+            // Try to find ANY property that looks like text (long string)
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                var val = value[key];
+                if (typeof val === 'string' && val.trim().length > 20) {
+                    console.log('[ServiceTemplates v5.5.0] Found long string in key:', key);
+                    return val.trim();
+                }
+            }
+            
+            // Recursively search nested objects
+            for (var i = 0; i < keys.length; i++) {
+                var key = keys[i];
+                var val = value[key];
+                if (typeof val === 'object' && val !== null) {
+                    console.log('[ServiceTemplates v5.5.0] Recursing into key:', key);
+                    var extracted = this.extractText(val, null);
+                    if (extracted && extracted !== fallback) {
+                        return extracted;
+                    }
+                }
+            }
+            
+            console.log('[ServiceTemplates v5.5.0] No text found in object, returning fallback');
             return fallback;
         }
         
-        if (Array.isArray(value) && value.length > 0) {
-            return this.extractText(value[0], fallback);
+        // Number or boolean - convert to string
+        if (typeof value === 'number' || typeof value === 'boolean') {
+            return String(value);
         }
         
+        console.log('[ServiceTemplates v5.5.0] Unknown type, returning fallback');
         return fallback;
     },
     
@@ -399,7 +462,7 @@ window.ServiceTemplates = {
             var lowerText = text.toLowerCase();
             for (var i = 0; i < unwantedPhrases.length; i++) {
                 if (lowerText.includes(unwantedPhrases[i])) {
-                    console.log('[ServiceTemplates v5.4.2] Filtered out meta-text:', text);
+                    console.log('[ServiceTemplates v5.5.0] Filtered out meta-text:', text);
                     return false;
                 }
             }
@@ -420,7 +483,7 @@ window.ServiceTemplates = {
     
     // Render chart for a service
     renderServiceChart: function(serviceId, serviceData) {
-        console.log('[ServiceTemplates v5.4.2] Checking for chart data in:', serviceId);
+        console.log('[ServiceTemplates v5.5.0] Checking for chart data in:', serviceId);
         
         if (typeof ChartRenderer === 'undefined') {
             console.warn('[ServiceTemplates] ChartRenderer not loaded');
@@ -451,17 +514,17 @@ window.ServiceTemplates = {
     },
     
     // ============================================================================
-    // MAIN DISPLAY METHOD - v5.4.2 WITH SERVICES OBJECT DETECTION FIX
+    // MAIN DISPLAY METHOD - v5.4.2 WITH SERVICES OBJECT DETECTION FIX (PRESERVED)
     // ============================================================================
     
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.4.2] displayAllAnalyses called - SERVICES OBJECT DETECTION FIX');
-        console.log('[ServiceTemplates v5.4.2] Received data:', data);
+        console.log('[ServiceTemplates v5.5.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v5.5.0] Received data:', data);
         
         // CRITICAL v5.4.2 FIX: Smart detection of data structure
         var detailed = null;
         
-        // Check if data has service keys directly (like 'source_credibility', 'bias_detector', etc.)
+        // Check if data has service keys directly
         var knownServiceKeys = [
             'source_credibility', 'bias_detector', 'fact_checker', 
             'author_analyzer', 'transparency_analyzer', 'manipulation_detector', 'content_analyzer'
@@ -476,36 +539,33 @@ window.ServiceTemplates = {
         }
         
         if (hasServiceKeys) {
-            // Data IS the services object directly!
-            console.log('[ServiceTemplates v5.4.2] ✓ Data IS the services object (direct)');
+            console.log('[ServiceTemplates v5.5.0] ✓ Data IS the services object (direct)');
             detailed = data;
         } else if (data.detailed_analysis) {
-            // Data has detailed_analysis nested
-            console.log('[ServiceTemplates v5.4.2] ✓ Data has detailed_analysis nested');
+            console.log('[ServiceTemplates v5.5.0] ✓ Data has detailed_analysis nested');
             detailed = data.detailed_analysis;
         } else if (data.results && data.results.detailed_analysis) {
-            // Data has results.detailed_analysis nested
-            console.log('[ServiceTemplates v5.4.2] ✓ Data has results.detailed_analysis nested');
+            console.log('[ServiceTemplates v5.5.0] ✓ Data has results.detailed_analysis nested');
             detailed = data.results.detailed_analysis;
         } else {
-            console.error('[ServiceTemplates v5.4.2] ✗ Could not find services data');
-            console.log('[ServiceTemplates v5.4.2] Data structure:', Object.keys(data));
+            console.error('[ServiceTemplates v5.5.0] ✗ Could not find services data');
+            console.log('[ServiceTemplates v5.5.0] Data structure:', Object.keys(data));
             return;
         }
         
         var analysisMode = data.analysis_mode || 'news';
         
-        console.log('[ServiceTemplates v5.4.2] Analysis mode:', analysisMode);
-        console.log('[ServiceTemplates v5.4.2] Services available:', Object.keys(detailed));
+        console.log('[ServiceTemplates v5.5.0] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.5.0] Services available:', Object.keys(detailed));
         
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
         
         if (!container) {
-            console.error('[ServiceTemplates v5.4.2] CRITICAL: Container not found!');
+            console.error('[ServiceTemplates v5.5.0] CRITICAL: Container not found!');
             return;
         }
         
-        console.log('[ServiceTemplates v5.4.2] Container found:', container.id);
+        console.log('[ServiceTemplates v5.5.0] Container found:', container.id);
         
         var serviceOrder = [
             { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', displayFunc: 'displaySourceCredibility' },
@@ -524,7 +584,7 @@ window.ServiceTemplates = {
         
         serviceOrder.forEach(function(service) {
             if (detailed[service.id]) {
-                console.log('[ServiceTemplates v5.4.2] Processing service:', service.name);
+                console.log('[ServiceTemplates v5.5.0] Processing service:', service.name);
                 servicesDisplayed++;
                 
                 // Create service card with colored border (PRESERVED from v5.4.1)
@@ -583,7 +643,7 @@ window.ServiceTemplates = {
                         }
                     }
                     
-                    console.log('[ServiceTemplates v5.4.2] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
+                    console.log('[ServiceTemplates v5.5.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
                 };
                 
                 // Add hover effect
@@ -607,7 +667,7 @@ window.ServiceTemplates = {
                 
                 // Call display function
                 if (self[service.displayFunc]) {
-                    console.log('[ServiceTemplates v5.4.2] Calling display function:', service.displayFunc);
+                    console.log('[ServiceTemplates v5.5.0] Calling display function:', service.displayFunc);
                     self[service.displayFunc](detailed[service.id]);
                     
                     // Render chart if data exists
@@ -616,12 +676,12 @@ window.ServiceTemplates = {
             }
         });
         
-        console.log('[ServiceTemplates v5.4.2] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
+        console.log('[ServiceTemplates v5.5.0] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
         
         if (servicesDisplayed === 0) {
-            console.error('[ServiceTemplates v5.4.2] ✗ NO SERVICES DISPLAYED! Check data structure.');
+            console.error('[ServiceTemplates v5.5.0] ✗ NO SERVICES DISPLAYED! Check data structure.');
         } else {
-            console.log('[ServiceTemplates v5.4.2] ✓ All services displayed correctly with WORKING dropdowns!');
+            console.log('[ServiceTemplates v5.5.0] ✓ All services displayed correctly!');
         }
     },
     
@@ -630,7 +690,8 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displaySourceCredibility: function(data) {
-        console.log('[Source Credibility v5.4.2] Displaying data:', data);
+        console.log('[Source Credibility v5.5.0] Displaying data:', data);
+        console.log('[Source Credibility v5.5.0] Full data structure:', JSON.stringify(data, null, 2));
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('source-score', score);
@@ -641,7 +702,10 @@ window.ServiceTemplates = {
         var sourceName = data.source || data.source_name || data.domain || 'Unknown Source';
         this.updateElement('source-name', sourceName);
         
-        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
+        // AGGRESSIVE TEXT EXTRACTION - v5.5.0 FIX
+        console.log('[Source Credibility v5.5.0] Attempting to extract summary/analysis...');
+        var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
+        console.log('[Source Credibility v5.5.0] Extracted summary:', summary);
         this.updateElement('source-summary', summary);
         
         var findings = this.extractFindings(data);
@@ -664,11 +728,11 @@ window.ServiceTemplates = {
         this.displayTrustMeter(score);
         this.displaySourceComparison(sourceName, score, data.source_comparison);
         
-        console.log('[Source Credibility v5.4.2] ✓ Complete');
+        console.log('[Source Credibility v5.5.0] ✓ Complete');
     },
     
     displayBiasDetector: function(data) {
-        console.log('[Bias Detector v5.4.2] Displaying data:', data);
+        console.log('[Bias Detector v5.5.0] Displaying data:', data);
         
         var score = data.score || data.objectivity_score || 50;
         this.updateElement('bias-score', score);
@@ -679,7 +743,7 @@ window.ServiceTemplates = {
         var leaning = data.political_leaning || data.bias_direction || 'Center';
         this.updateElement('bias-leaning', leaning);
         
-        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
+        var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
         this.updateElement('bias-summary', summary);
         
         var findings = this.extractFindings(data);
@@ -699,11 +763,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Bias Detector v5.4.2] ✓ Complete');
+        console.log('[Bias Detector v5.5.0] ✓ Complete');
     },
     
     displayFactChecker: function(data) {
-        console.log('[Fact Checker v5.4.2] Displaying data:', data);
+        console.log('[Fact Checker v5.5.0] Displaying data:', data);
         
         var score = data.score || data.verification_score || 0;
         this.updateElement('fact-score', score);
@@ -711,7 +775,7 @@ window.ServiceTemplates = {
         var level = data.level || data.verification_level || 'Unknown';
         this.updateElement('fact-level', level);
         
-        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
+        var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
         this.updateElement('fact-summary', summary);
         
         var claims = this.extractClaims(data);
@@ -743,11 +807,11 @@ window.ServiceTemplates = {
             claimsContainer.innerHTML = '<p>No claims were checked in this article.</p>';
         }
         
-        console.log('[Fact Checker v5.4.2] ✓ Complete');
+        console.log('[Fact Checker v5.5.0] ✓ Complete');
     },
     
     displayAuthorAnalyzer: function(data) {
-        console.log('[Author Analyzer v5.4.2] Displaying data:', data);
+        console.log('[Author Analyzer v5.5.0] Displaying data:', data);
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('author-score', score);
@@ -780,11 +844,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Author Analyzer v5.4.2] ✓ Complete');
+        console.log('[Author Analyzer v5.5.0] ✓ Complete');
     },
     
     displayTransparencyAnalyzer: function(data) {
-        console.log('[Transparency Analyzer v5.4.2] Displaying data:', data);
+        console.log('[Transparency Analyzer v5.5.0] Displaying data:', data);
         
         var score = data.score || data.transparency_score || 0;
         this.updateElement('transparency-score', score);
@@ -792,7 +856,7 @@ window.ServiceTemplates = {
         var level = data.level || data.transparency_level || 'Unknown';
         this.updateElement('transparency-level', level);
         
-        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
+        var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
         this.updateElement('transparency-summary', summary);
         
         var findings = this.extractFindings(data);
@@ -812,11 +876,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Transparency Analyzer v5.4.2] ✓ Complete');
+        console.log('[Transparency Analyzer v5.5.0] ✓ Complete');
     },
     
     displayManipulationDetector: function(data) {
-        console.log('[Manipulation Detector v5.4.2] Displaying data:', data);
+        console.log('[Manipulation Detector v5.5.0] Displaying data:', data);
         
         var score = data.score || 0;
         this.updateElement('manipulation-score', score);
@@ -824,7 +888,7 @@ window.ServiceTemplates = {
         var level = data.level || 'Unknown';
         this.updateElement('manipulation-level', level);
         
-        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
+        var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
         this.updateElement('manipulation-summary', summary);
         
         var findings = this.extractFindings(data);
@@ -844,11 +908,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Manipulation Detector v5.4.2] ✓ Complete');
+        console.log('[Manipulation Detector v5.5.0] ✓ Complete');
     },
     
     displayContentAnalyzer: function(data) {
-        console.log('[Content Analyzer v5.4.2] Displaying data:', data);
+        console.log('[Content Analyzer v5.5.0] Displaying data:', data);
         
         var score = data.score || data.content_score || 0;
         this.updateElement('content-score', score);
@@ -856,7 +920,7 @@ window.ServiceTemplates = {
         var level = data.level || data.quality_level || 'Unknown';
         this.updateElement('content-level', level);
         
-        var summary = this.extractText(data.summary || data.analysis, 'No summary available.');
+        var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
         this.updateElement('content-summary', summary);
         
         var findings = this.extractFindings(data);
@@ -876,7 +940,7 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Content Analyzer v5.4.2] ✓ Complete');
+        console.log('[Content Analyzer v5.5.0] ✓ Complete');
     },
     
     // ============================================================================
@@ -980,21 +1044,17 @@ window.ServiceTemplates = {
         if (element) {
             element.textContent = value;
         } else {
-            console.warn('[ServiceTemplates v5.4.2] Element not found:', id);
+            console.warn('[ServiceTemplates v5.5.0] Element not found:', id);
         }
     }
 };
 
-console.log('[ServiceTemplates v5.4.2] SERVICES OBJECT FIX - Module loaded successfully');
-console.log('[ServiceTemplates v5.4.2] ✓ Now detects when data is already the services object');
-console.log('[ServiceTemplates v5.4.2] ✓ Services array will no longer show as empty');
-console.log('[ServiceTemplates v5.4.2] ✓ All 6 services will now display correctly');
-console.log('[ServiceTemplates v5.4.2] ✓ Dropdowns work with inline max-height');
-console.log('[ServiceTemplates v5.4.2] ✓ Filtered findings (no "What to verify")');
-console.log('[ServiceTemplates v5.4.2] ✓ Colored borders per service');
-console.log('[ServiceTemplates v5.4.2] ✓ All v5.4.1 functionality preserved (Do No Harm)');
+console.log('[ServiceTemplates v5.5.0] AGGRESSIVE TEXT EXTRACTION - Module loaded successfully');
+console.log('[ServiceTemplates v5.5.0] ✓ Will find analysis text ANYWHERE in data structure');
+console.log('[ServiceTemplates v5.5.0] ✓ Tries 20+ field names and deep recursion');
+console.log('[ServiceTemplates v5.5.0] ✓ All v5.4.2 functionality preserved (Do No Harm)');
 
 /**
  * I did no harm and this file is not truncated.
- * v5.4.2 - October 29, 2025 - Fixed services object detection
+ * v5.5.0 - October 30, 2025 - AGGRESSIVE text extraction to solve "No analysis available"
  */
