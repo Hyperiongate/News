@@ -1,27 +1,28 @@
 """
-Data Transformer - WITH V4.0 EDUCATIONAL FIELDS PRESERVATION
+Data Transformer - v3.1 WITH V13.0 SOURCE CREDIBILITY VERBOSE EXPLANATION FIX
 Date: October 13, 2025
-Last Updated: October 21, 2025 - CRITICAL FIX FOR SOURCE CREDIBILITY
-Version: 3.0 - FIX READERSHIP & AWARDS MAPPING
+Last Updated: October 30, 2025 - CRITICAL FIX FOR V13.0 VERBOSE EXPLANATIONS
+Version: 3.1 - PRESERVE EXPLANATION & SCORE_BREAKDOWN
 
-CRITICAL CHANGES FROM 2.8:
-- FIXED: _transform_transparency now preserves v4.0 educational fields
-- FIXED: _transform_manipulation now preserves v4.0 educational fields
-- NEW: Preserves article_type, what_to_look_for, transparency_lessons, findings
-- NEW: Preserves how_to_spot, manipulation_lessons, risk_profile, tactics_found
-- All existing functionality maintained (charts, all_authors, type safety)
+CRITICAL CHANGES FROM 3.0:
+✅ FIX: _transform_source_credibility now preserves v13.0 'explanation' field
+✅ FIX: _transform_source_credibility now preserves v13.0 'score_breakdown' field
+✅ RESULT: Verbose multi-paragraph explanations now reach frontend!
+✅ PRESERVED: All v3.0 functionality (readership, awards, educational fields)
 
 THE BUG:
-Transparency & Manipulation v4.0 services send rich educational data like:
-  - article_type, what_to_look_for, transparency_lessons, findings, expectations
-  - how_to_spot, manipulation_lessons, risk_profile
-But DataTransformer was only preserving score and basic metrics, discarding all educational content!
+Backend source_credibility.py v13.0 generates:
+  - explanation: "**Overall Credibility Assessment:** BBC receives..." (multi-paragraph verbose text)
+  - score_breakdown: { components: [...] } (detailed component analysis)
+But DataTransformer v3.0 was NOT preserving these fields, so they never reached frontend!
 
 THE FIX:
-Added comprehensive field preservation in both _transform_transparency and _transform_manipulation
-Now ALL v4.0 educational fields pass through to the frontend
+Added explicit preservation of 'explanation' and 'score_breakdown' fields in
+_transform_source_credibility() function.
 
 Save as: services/data_transformer.py (REPLACE existing file)
+
+I did no harm and this file is not truncated.
 """
 
 import logging
@@ -34,7 +35,7 @@ logger = logging.getLogger(__name__)
 class DataTransformer:
     """
     THE single transformer that ensures data matches the contract
-    v2.9: Now preserves v4.0 educational content from Transparency & Manipulation
+    v3.1: Now preserves v13.0 verbose explanations from Source Credibility
     """
     
     # Source name mapping
@@ -105,7 +106,7 @@ class DataTransformer:
     def transform_response(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform the raw NewsAnalyzer response to match frontend contract"""
         
-        logger.info("[DataTransformer v2.9] Starting transformation")
+        logger.info("[DataTransformer v3.1] Starting transformation")
         logger.info(f"[DataTransformer] Raw data keys: {list(raw_data.keys())}")
         
         # Check if charts are in the data
@@ -137,7 +138,7 @@ class DataTransformer:
         # Get source and author from article_summary or top level
         article = raw_data.get('article_summary', {})
         if not isinstance(article, dict):
-            logger.warning(f"[DataTransformer v2.9] article_summary is not a dict (type: {type(article)}), using empty dict")
+            logger.warning(f"[DataTransformer v3.1] article_summary is not a dict (type: {type(article)}), using empty dict")
             article = {}
         
         source = DataTransformer._get_source_name(raw_data, article)
@@ -166,14 +167,20 @@ class DataTransformer:
                 score_in_data = raw_service_data.get('score', 'NOT FOUND')
                 has_chart_data = 'chart_data' in raw_service_data
                 
+                # v3.1: Check for v13.0 verbose explanation fields
+                if service_name == 'source_credibility':
+                    has_explanation = 'explanation' in raw_service_data
+                    has_breakdown = 'score_breakdown' in raw_service_data
+                    logger.info(f"[DataTransformer v3.1] source_credibility has explanation: {has_explanation}, breakdown: {has_breakdown}")
+                
                 # v2.9: Check for v4.0 educational fields
                 has_educational = False
                 if service_name == 'transparency_analyzer':
                     has_educational = 'article_type' in raw_service_data or 'what_to_look_for' in raw_service_data
-                    logger.info(f"[DataTransformer v2.9] transparency has educational content: {has_educational}")
+                    logger.info(f"[DataTransformer v3.1] transparency has educational content: {has_educational}")
                 elif service_name == 'manipulation_detector':
                     has_educational = 'article_type' in raw_service_data or 'how_to_spot' in raw_service_data
-                    logger.info(f"[DataTransformer v2.9] manipulation has educational content: {has_educational}")
+                    logger.info(f"[DataTransformer v3.1] manipulation has educational content: {has_educational}")
                 
                 logger.info(f"[DataTransformer] {service_name} - score: {score_in_data}, has_chart_data: {has_chart_data}")
                 logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:15]}")
@@ -189,9 +196,16 @@ class DataTransformer:
             # Verify score AND chart_data made it through
             final_score = transformed.get('score', 'MISSING')
             final_chart = 'chart_data' in transformed
+            
+            # v3.1: Verify explanation made it through
+            if service_name == 'source_credibility':
+                final_explanation = 'explanation' in transformed
+                final_breakdown = 'score_breakdown' in transformed
+                logger.info(f"[DataTransformer v3.1] source_credibility - explanation preserved: {final_explanation}, breakdown preserved: {final_breakdown}")
+            
             logger.info(f"[DataTransformer] {service_name} - final score: {final_score}, chart preserved: {final_chart}")
             
-        logger.info(f"[DataTransformer v2.9] Transformation complete - Source: {source}")
+        logger.info(f"[DataTransformer v3.1] Transformation complete - Source: {source}")
         
         return response
     
@@ -255,7 +269,7 @@ class DataTransformer:
         """Transform a single service's data to match contract"""
         
         if not isinstance(article, dict):
-            logger.warning(f"[DataTransformer v2.9] article parameter is type {type(article)}, converting to empty dict")
+            logger.warning(f"[DataTransformer v3.1] article parameter is type {type(article)}, converting to empty dict")
             article = {}
         
         template = DataContract.get_service_template(service_name)
@@ -284,7 +298,10 @@ class DataTransformer:
         raw_data: Dict[str, Any],
         source: str
     ) -> Dict[str, Any]:
-        """Transform source credibility data - v3.0 FIX FOR READERSHIP & AWARDS"""
+        """
+        Transform source credibility data
+        v3.1: NOW PRESERVES V13.0 VERBOSE EXPLANATION & SCORE_BREAKDOWN!
+        """
         
         result = template.copy()
         
@@ -295,7 +312,7 @@ class DataTransformer:
             50
         )
         
-        logger.info(f"[Transform SourceCred v3.0] Using score: {score} from raw_data")
+        logger.info(f"[Transform SourceCred v3.1] Using score: {score} from raw_data")
         
         metadata = DataTransformer.SOURCE_METADATA.get(source, {})
         
@@ -307,8 +324,7 @@ class DataTransformer:
         result['type'] = raw_data.get('source_type', metadata.get('type', 'News Outlet'))
         result['ownership'] = metadata.get('ownership', 'Unknown')
         
-        # CRITICAL FIX v3.0: Get readership and awards from raw_data first, then fallback to metadata
-        # Source credibility returns: 'readership', 'daily_readers', 'monthly_unique_visitors'
+        # v3.0: Get readership and awards from raw_data first, then fallback to metadata
         result['readership'] = (
             raw_data.get('readership') or 
             raw_data.get('daily_readers') or 
@@ -316,11 +332,9 @@ class DataTransformer:
             metadata.get('readership', 'Unknown')
         )
         
-        # CRITICAL FIX v3.0: Get awards from raw_data first (can be string or list)
-        # Source credibility returns: 'awards' (can be string or list from other_awards)
+        # v3.0: Get awards from raw_data first (can be string or list)
         awards_from_data = raw_data.get('awards') or raw_data.get('other_awards')
         if awards_from_data:
-            # If it's a list, join it; if it's a string, use it
             if isinstance(awards_from_data, list):
                 result['awards'] = ', '.join(awards_from_data) if awards_from_data else 'N/A'
             else:
@@ -328,8 +342,8 @@ class DataTransformer:
         else:
             result['awards'] = metadata.get('awards', 'N/A')
         
-        logger.info(f"[Transform SourceCred v3.0] Final: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
-        logger.info(f"[Transform SourceCred v3.0] Readership: {result['readership']}, Awards: {result['awards']}")
+        logger.info(f"[Transform SourceCred v3.1] Final: {source_name}, Score: {result['score']}, Founded: {result['founded']}")
+        logger.info(f"[Transform SourceCred v3.1] Readership: {result['readership']}, Awards: {result['awards']}")
         
         if result['score'] >= 80:
             result['reputation'] = 'Excellent'
@@ -349,7 +363,35 @@ class DataTransformer:
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
         
+        # ============================================================================
+        # v3.1: CRITICAL FIX - PRESERVE V13.0 VERBOSE EXPLANATION & SCORE_BREAKDOWN
+        # ============================================================================
+        if 'explanation' in raw_data and raw_data['explanation']:
+            result['explanation'] = raw_data['explanation']
+            logger.info(f"[Transform SourceCred v3.1] ✓ Preserved explanation field (length: {len(raw_data['explanation'])})")
+        else:
+            logger.warning(f"[Transform SourceCred v3.1] ✗ No explanation field in raw_data")
+        
+        if 'score_breakdown' in raw_data and raw_data['score_breakdown']:
+            result['score_breakdown'] = raw_data['score_breakdown']
+            logger.info(f"[Transform SourceCred v3.1] ✓ Preserved score_breakdown field")
+        else:
+            logger.warning(f"[Transform SourceCred v3.1] ✗ No score_breakdown field in raw_data")
+        
+        # Also preserve summary if present (for fallback)
+        if 'summary' in raw_data and raw_data['summary']:
+            result['summary'] = raw_data['summary']
+            logger.info(f"[Transform SourceCred v3.1] ✓ Preserved summary field")
+        
+        # Preserve findings if present
+        if 'findings' in raw_data and raw_data['findings']:
+            result['findings'] = raw_data['findings']
+            logger.info(f"[Transform SourceCred v3.1] ✓ Preserved findings field")
+        # ============================================================================
+        
         DataTransformer._preserve_chart_data(result, raw_data)
+        
+        logger.info(f"[Transform SourceCred v3.1] Transformation complete with verbose explanation support")
         
         return result
     
@@ -365,10 +407,10 @@ class DataTransformer:
         
         try:
             if not isinstance(article, dict):
-                logger.warning(f"[Transform Author v2.9] article is type {type(article)}, using empty dict")
+                logger.warning(f"[Transform Author v3.1] article is type {type(article)}, using empty dict")
                 article = {}
             
-            logger.info(f"[Transform Author v2.9] Raw data keys: {list(raw_data.keys())[:20]}")
+            logger.info(f"[Transform Author v3.1] Raw data keys: {list(raw_data.keys())[:20]}")
             
             author = (
                 raw_data.get('name') or
@@ -385,25 +427,25 @@ class DataTransformer:
                 70
             )
             
-            logger.info(f"[Transform Author v2.9] Primary: {author}, Score: {cred_score}")
+            logger.info(f"[Transform Author v3.1] Primary: {author}, Score: {cred_score}")
             
             # PRESERVE ALL_AUTHORS AND PRIMARY_AUTHOR
             if 'all_authors' in raw_data and raw_data.get('all_authors'):
                 result['all_authors'] = raw_data['all_authors']
-                logger.info(f"[Transform Author v2.9] ✓ Preserved all_authors: {raw_data['all_authors']}")
+                logger.info(f"[Transform Author v3.1] ✓ Preserved all_authors: {raw_data['all_authors']}")
             elif 'authors' in raw_data and raw_data.get('authors'):
                 result['all_authors'] = raw_data['authors']
-                logger.info(f"[Transform Author v2.9] ✓ Preserved authors as all_authors: {raw_data['authors']}")
+                logger.info(f"[Transform Author v3.1] ✓ Preserved authors as all_authors: {raw_data['authors']}")
             elif article.get('author') and ',' in str(article.get('author', '')):
                 result['all_authors'] = article.get('author')
-                logger.info(f"[Transform Author v2.9] ✓ Preserved from article.author: {article.get('author')}")
+                logger.info(f"[Transform Author v3.1] ✓ Preserved from article.author: {article.get('author')}")
             
             if 'primary_author' in raw_data and raw_data.get('primary_author'):
                 result['primary_author'] = raw_data['primary_author']
-                logger.info(f"[Transform Author v2.9] ✓ Preserved primary_author: {raw_data['primary_author']}")
+                logger.info(f"[Transform Author v3.1] ✓ Preserved primary_author: {raw_data['primary_author']}")
             else:
                 result['primary_author'] = author
-                logger.info(f"[Transform Author v2.9] ✓ Set primary_author from name: {author}")
+                logger.info(f"[Transform Author v3.1] ✓ Set primary_author from name: {author}")
             
             result['name'] = author
             result['author_name'] = author
@@ -467,17 +509,17 @@ class DataTransformer:
             
             DataTransformer._preserve_chart_data(result, raw_data)
             
-            logger.info(f"[Transform Author v2.9] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
+            logger.info(f"[Transform Author v3.1] Final score: {result['score']}, all_authors preserved: {'all_authors' in result}")
             
             return result
             
         except Exception as e:
-            logger.error(f"[Transform Author v2.9] ERROR: {e}", exc_info=True)
+            logger.error(f"[Transform Author v3.1] ERROR: {e}", exc_info=True)
             result['name'] = 'Unknown Author'
             result['author_name'] = 'Unknown Author'
             result['score'] = 50
             result['credibility_score'] = 50
-            logger.error(f"[Transform Author v2.9] Returning safe defaults due to error")
+            logger.error(f"[Transform Author v3.1] Returning safe defaults due to error")
             return result
     
     @staticmethod
@@ -605,13 +647,13 @@ class DataTransformer:
         for field in v4_fields:
             if field in raw_data:
                 result[field] = raw_data[field]
-                logger.info(f"[Transform Transparency v2.9] ✓ Preserved {field}")
+                logger.info(f"[Transform Transparency v3.1] ✓ Preserved {field}")
         
         # ============================================================================
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Transparency v2.9] Final score: {result['score']}, Educational fields: {'article_type' in result}")
+        logger.info(f"[Transform Transparency v3.1] Final score: {result['score']}, Educational fields: {'article_type' in result}")
         
         return result
     
@@ -653,13 +695,13 @@ class DataTransformer:
         for field in v4_fields:
             if field in raw_data:
                 result[field] = raw_data[field]
-                logger.info(f"[Transform Manipulation v2.9] ✓ Preserved {field}")
+                logger.info(f"[Transform Manipulation v3.1] ✓ Preserved {field}")
         
         # ============================================================================
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Manipulation v2.9] Final score: {result['score']}, Educational fields: {'article_type' in result}")
+        logger.info(f"[Transform Manipulation v3.1] Final score: {result['score']}, Educational fields: {'article_type' in result}")
         
         return result
     
@@ -690,4 +732,7 @@ class DataTransformer:
         
         return result
 
-# This file is not truncated
+
+logger.info("[DataTransformer v3.1] Module loaded - WITH V13.0 VERBOSE EXPLANATION SUPPORT")
+
+# I did no harm and this file is not truncated
