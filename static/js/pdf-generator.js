@@ -1,6 +1,6 @@
 /**
  * TruthLens PDF Generator v3.0.0 - COMPREHENSIVE PROFESSIONAL REPORT
- * Date: October 30, 2025
+ * Date: October 30, 2025 
  * 
  * MAJOR UPGRADE FROM v2.2.0:  
  * ✅ 10-15 page comprehensive reports (was 3-4 pages)
