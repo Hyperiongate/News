@@ -1,4 +1,4 @@
-"""
+""" 
 News Outlet Metadata Database - COMPREHENSIVE EDITION
 Date: October 31, 2025
 Version: 1.1 - EXPANDED TO TOP 40 OUTLETS (Option B)
