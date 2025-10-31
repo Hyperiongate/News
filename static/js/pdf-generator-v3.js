@@ -1,6 +1,7 @@
 /**
  * TruthLens PDF Generator v3.0.0 - COMPREHENSIVE PROFESSIONAL REPORT
- * Date: October 30, 2025 
+ * Date: October 31, 2025
+ * Last Updated: October 31, 2025 - Fixed deployment encoding issues
  * 
  * MAJOR UPGRADE FROM v2.2.0:  
  * ✅ 10-15 page comprehensive reports (was 3-4 pages)
@@ -21,11 +22,9 @@
  * and share with others. It must include EVERYTHING from the online analysis.
  * 
  * DEPLOYMENT:
- * 1. Save as: static/js/pdf-generator.js
+ * 1. Save as: static/js/pdf-generator-v3.js
  * 2. Load AFTER jsPDF library in index.html
  * 3. Requires window.lastAnalysisData to be set by analysis
- * 
- * Last Updated: October 30, 2025
  */
 
 (function() {
@@ -134,79 +133,79 @@
             yPos += 8;
         }
         
-        // ==================== COVER PAGE ====================
-        addCoverPage(doc, data, leftMargin, rightMargin, pageHeight);
+        // COVER PAGE
+        addCoverPage(doc, data, leftMargin, rightMargin, pageHeight, pageWidth);
         
-        // ==================== TABLE OF CONTENTS ====================
+        // TABLE OF CONTENTS
         doc.addPage();
         yPos = 20;
         addTableOfContents(doc, data, leftMargin, yPos);
         
-        // ==================== EXECUTIVE SUMMARY ====================
+        // EXECUTIVE SUMMARY
         doc.addPage();
         yPos = 20;
-        addExecutiveSummary(doc, data, leftMargin, rightMargin, checkPageBreak);
+        addExecutiveSummary(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== ARTICLE METADATA ====================
+        // ARTICLE METADATA
         checkPageBreak(40);
         addSectionDivider();
-        addArticleMetadata(doc, data, leftMargin, rightMargin, checkPageBreak);
+        yPos = addArticleMetadata(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== SCORE BREAKDOWN ====================
+        // SCORE BREAKDOWN
         checkPageBreak(80);
         addSectionDivider();
-        addDetailedScoreBreakdown(doc, data, leftMargin, rightMargin, checkPageBreak);
+        yPos = addDetailedScoreBreakdown(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== SOURCE CREDIBILITY (2 pages) ====================
+        // SOURCE CREDIBILITY (2 pages)
         doc.addPage();
         yPos = 20;
-        addSourceCredibilitySection(doc, data, leftMargin, rightMargin, checkPageBreak);
+        addSourceCredibilitySection(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== BIAS DETECTION (2 pages) ====================
+        // BIAS DETECTION (2 pages)
         doc.addPage();
         yPos = 20;
-        addBiasDetectionSection(doc, data, leftMargin, rightMargin, pageWidth, checkPageBreak);
+        addBiasDetectionSection(doc, data, leftMargin, rightMargin, pageWidth, checkPageBreak, yPos);
         
-        // ==================== FACT CHECKING (2 pages) ====================
+        // FACT CHECKING (2 pages)
         doc.addPage();
         yPos = 20;
-        addFactCheckingSection(doc, data, leftMargin, rightMargin, checkPageBreak);
+        addFactCheckingSection(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== AUTHOR ANALYSIS ====================
+        // AUTHOR ANALYSIS
         doc.addPage();
         yPos = 20;
-        addAuthorAnalysisSection(doc, data, leftMargin, rightMargin, checkPageBreak);
+        addAuthorAnalysisSection(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== TRANSPARENCY ====================
+        // TRANSPARENCY
         checkPageBreak(100);
         if (yPos > 100) {
             doc.addPage();
             yPos = 20;
         }
-        addTransparencySection(doc, data, leftMargin, rightMargin, checkPageBreak);
+        yPos = addTransparencySection(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== MANIPULATION DETECTION ====================
+        // MANIPULATION DETECTION
         checkPageBreak(100);
         if (yPos > 100) {
             doc.addPage();
             yPos = 20;
         }
-        addManipulationSection(doc, data, leftMargin, rightMargin, checkPageBreak);
+        yPos = addManipulationSection(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== CONTENT QUALITY ====================
+        // CONTENT QUALITY
         checkPageBreak(100);
         if (yPos > 100) {
             doc.addPage();
             yPos = 20;
         }
-        addContentQualitySection(doc, data, leftMargin, rightMargin, checkPageBreak);
+        yPos = addContentQualitySection(doc, data, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== METHODOLOGY APPENDIX ====================
+        // METHODOLOGY APPENDIX
         doc.addPage();
         yPos = 20;
-        addMethodologyAppendix(doc, leftMargin, rightMargin, checkPageBreak);
+        addMethodologyAppendix(doc, leftMargin, rightMargin, checkPageBreak, yPos);
         
-        // ==================== FOOTER (all pages) ====================
+        // FOOTER (all pages)
         const totalPages = doc.internal.pages.length - 1;
         for (let i = 1; i <= totalPages; i++) {
             doc.setPage(i);
@@ -214,38 +213,38 @@
             doc.setFontSize(8);
             doc.setTextColor(148, 163, 184);
             doc.text('Generated by TruthLens - Professional News Analysis', leftMargin, footerY);
-            doc.text(`Page ${i} of ${totalPages}`, rightMargin, footerY, { align: 'right' });
+            doc.text('Page ' + i + ' of ' + totalPages, rightMargin, footerY, { align: 'right' });
             
             // Add analysis date
             const dateStr = new Date().toLocaleDateString();
             doc.text(dateStr, pageWidth / 2, footerY, { align: 'center' });
         }
         
-        // ==================== SAVE PDF ====================
+        // SAVE PDF
         const timestamp = new Date().getTime();
         const source = (data.source || 'article').replace(/[^a-z0-9]/gi, '-').toLowerCase();
-        const filename = `truthlens-comprehensive-${source}-${timestamp}.pdf`;
+        const filename = 'truthlens-comprehensive-' + source + '-' + timestamp + '.pdf';
         doc.save(filename);
         
-        console.log('[PDFGenerator v3.0.0] ✅ Comprehensive PDF saved:', filename);
-        console.log(`[PDFGenerator v3.0.0] ✅ Total pages: ${totalPages}`);
+        console.log('[PDFGenerator v3.0.0] PDF saved:', filename);
+        console.log('[PDFGenerator v3.0.0] Total pages: ' + totalPages);
     }
 
     /**
      * COVER PAGE - Professional front page
      */
-    function addCoverPage(doc, data, leftMargin, rightMargin, pageHeight) {
+    function addCoverPage(doc, data, leftMargin, rightMargin, pageHeight, pageWidth) {
         let yPos = 60;
         
         // Main title
         doc.setFontSize(28);
-        doc.setTextColor(30, 64, 175); // Deep blue
+        doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
         doc.text('TruthLens', leftMargin, yPos);
         yPos += 12;
         
         doc.setFontSize(20);
-        doc.setTextColor(59, 130, 246); // Blue
+        doc.setTextColor(59, 130, 246);
         doc.text('Professional News Analysis Report', leftMargin, yPos);
         yPos += 25;
         
@@ -255,7 +254,7 @@
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
         const splitTitle = doc.splitTextToSize(articleTitle, rightMargin - leftMargin);
-        splitTitle.forEach(line => {
+        splitTitle.forEach(function(line) {
             doc.text(line, leftMargin, yPos);
             yPos += 8;
         });
@@ -265,12 +264,12 @@
         doc.setFontSize(14);
         doc.setTextColor(71, 85, 105);
         doc.setFont('helvetica', 'normal');
-        doc.text(`Source: ${data.source || 'Unknown Source'}`, leftMargin, yPos);
+        doc.text('Source: ' + (data.source || 'Unknown Source'), leftMargin, yPos);
         yPos += 8;
         
         // Author
         if (data.author && data.author !== 'Unknown Author') {
-            doc.text(`Author: ${data.author}`, leftMargin, yPos);
+            doc.text('Author: ' + data.author, leftMargin, yPos);
             yPos += 15;
         } else {
             yPos += 15;
@@ -287,11 +286,11 @@
         // Score number
         doc.setFontSize(48);
         if (trustScore >= 70) {
-            doc.setTextColor(16, 185, 129); // Green
+            doc.setTextColor(16, 185, 129);
         } else if (trustScore >= 40) {
-            doc.setTextColor(59, 130, 246); // Blue
+            doc.setTextColor(59, 130, 246);
         } else {
-            doc.setTextColor(239, 68, 68); // Red
+            doc.setTextColor(239, 68, 68);
         }
         doc.setFont('helvetica', 'bold');
         doc.text(trustScore.toString(), 105, yPos + 25, { align: 'center' });
@@ -319,12 +318,12 @@
         doc.setTextColor(100, 116, 139);
         doc.setFont('helvetica', 'normal');
         const now = new Date();
-        doc.text(`Analysis completed: ${now.toLocaleDateString()} at ${now.toLocaleTimeString()}`, 105, yPos, { align: 'center' });
+        doc.text('Analysis completed: ' + now.toLocaleDateString() + ' at ' + now.toLocaleTimeString(), 105, yPos, { align: 'center' });
         
         // Report type
         yPos += 8;
         doc.setFontSize(10);
-        doc.text('Comprehensive Professional Analysis • 7 AI Services • Expert-Grade Report', 105, yPos, { align: 'center' });
+        doc.text('Comprehensive Professional Analysis - 7 AI Services - Expert-Grade Report', 105, yPos, { align: 'center' });
     }
 
     /**
@@ -355,9 +354,9 @@
         doc.setTextColor(71, 85, 105);
         doc.setFont('helvetica', 'normal');
         
-        sections.forEach(section => {
+        sections.forEach(function(section) {
             doc.text(section.title, leftMargin + 5, yPos);
-            doc.text(`Page ${section.page}`, 180, yPos, { align: 'right' });
+            doc.text('Page ' + section.page, 180, yPos, { align: 'right' });
             
             // Dotted line
             doc.setDrawColor(203, 213, 225);
@@ -386,7 +385,7 @@
         doc.setFont('helvetica', 'normal');
         const aboutText = 'This comprehensive analysis evaluates news articles across 7 critical dimensions using advanced AI and natural language processing. Each section provides detailed findings, evidence, and actionable insights to help you assess credibility and identify potential bias or manipulation.';
         const splitAbout = doc.splitTextToSize(aboutText, 160);
-        splitAbout.forEach(line => {
+        splitAbout.forEach(function(line) {
             doc.text(line, leftMargin + 5, yPos);
             yPos += 5;
         });
@@ -395,8 +394,8 @@
     /**
      * EXECUTIVE SUMMARY - 2 pages of comprehensive overview
      */
-    function addExecutiveSummary(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addExecutiveSummary(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(20);
         doc.setTextColor(30, 64, 175);
@@ -424,7 +423,7 @@
         // Get the bottom line / findings summary
         const summaryText = data.findings_summary || extractBottomLine(data);
         const splitSummary = doc.splitTextToSize(summaryText, rightMargin - leftMargin - 10);
-        splitSummary.forEach(line => {
+        splitSummary.forEach(function(line) {
             doc.text(line, leftMargin + 5, yPos);
             yPos += 5;
         });
@@ -463,7 +462,7 @@
             }
         ];
         
-        kpis.forEach(kpi => {
+        kpis.forEach(function(kpi) {
             checkPageBreak(15);
             
             doc.setFontSize(10);
@@ -480,7 +479,7 @@
             } else {
                 doc.setTextColor(239, 68, 68);
             }
-            doc.text(`${kpi.score}/100`, leftMargin + 60, yPos);
+            doc.text(kpi.score + '/100', leftMargin + 60, yPos);
             
             // Status
             doc.setFont('helvetica', 'normal');
@@ -523,7 +522,7 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             
-            findings.slice(0, 8).forEach((finding, index) => {
+            findings.slice(0, 8).forEach(function(finding, index) {
                 checkPageBreak(15);
                 
                 // Number badge
@@ -539,7 +538,7 @@
                 doc.setTextColor(51, 65, 85);
                 doc.setFont('helvetica', 'normal');
                 const splitFinding = doc.splitTextToSize(finding, rightMargin - leftMargin - 10);
-                splitFinding.forEach(line => {
+                splitFinding.forEach(function(line) {
                     checkPageBreak(6);
                     doc.text(line, leftMargin + 10, yPos);
                     yPos += 5;
@@ -572,25 +571,27 @@
         
         let recommendation = '';
         if (trustScore >= 70) {
-            recommendation = '✓ This source demonstrates strong credibility. Information can generally be trusted, though always verify critical claims through multiple sources.';
+            recommendation = 'This source demonstrates strong credibility. Information can generally be trusted, though always verify critical claims through multiple sources.';
         } else if (trustScore >= 40) {
-            recommendation = '⚠ This source shows mixed credibility indicators. Cross-reference important claims with other reputable sources before sharing or acting on information.';
+            recommendation = 'This source shows mixed credibility indicators. Cross-reference important claims with other reputable sources before sharing or acting on information.';
         } else {
-            recommendation = '⚠ This source raises significant credibility concerns. Verify all claims independently through established, trustworthy sources before accepting as fact.';
+            recommendation = 'This source raises significant credibility concerns. Verify all claims independently through established, trustworthy sources before accepting as fact.';
         }
         
         const splitRec = doc.splitTextToSize(recommendation, rightMargin - leftMargin - 10);
-        splitRec.forEach(line => {
+        splitRec.forEach(function(line) {
             doc.text(line, leftMargin + 5, yPos);
             yPos += 5;
         });
+        
+        return yPos;
     }
 
     /**
      * ARTICLE METADATA - Detailed article information
      */
-    function addArticleMetadata(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addArticleMetadata(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(16);
         doc.setTextColor(30, 64, 175);
@@ -611,7 +612,7 @@
             { label: 'Analysis Duration', value: 'Complete' }
         ];
         
-        metadata.forEach(item => {
+        metadata.forEach(function(item) {
             checkPageBreak(8);
             doc.setFont('helvetica', 'bold');
             doc.text(item.label + ':', leftMargin, yPos);
@@ -635,18 +636,20 @@
         
         const summary = extractSummary(data);
         const splitSum = doc.splitTextToSize(summary, rightMargin - leftMargin);
-        splitSum.forEach(line => {
+        splitSum.forEach(function(line) {
             checkPageBreak(6);
             doc.text(line, leftMargin, yPos);
             yPos += 5;
         });
+        
+        return yPos;
     }
 
     /**
      * DETAILED SCORE BREAKDOWN - Comprehensive scoring table
      */
-    function addDetailedScoreBreakdown(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addDetailedScoreBreakdown(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(16);
         doc.setTextColor(30, 64, 175);
@@ -663,16 +666,16 @@
         const detailed = data.detailed_analysis || data.results || {};
         
         const services = [
-            { name: 'Source Credibility', key: 'source_credibility', weight: '25%', icon: '🛡️' },
-            { name: 'Bias Detection', key: 'bias_detector', weight: '20%', icon: '⚖️' },
-            { name: 'Fact Checking', key: 'fact_checker', weight: '15%', icon: '✓' },
-            { name: 'Author Analysis', key: 'author_analyzer', weight: '15%', icon: '👤' },
-            { name: 'Transparency', key: 'transparency_analyzer', weight: '10%', icon: '👁️' },
-            { name: 'Manipulation Detection', key: 'manipulation_detector', weight: '10%', icon: '⚠️' },
-            { name: 'Content Quality', key: 'content_analyzer', weight: '5%', icon: '📄' }
+            { name: 'Source Credibility', key: 'source_credibility', weight: '25%' },
+            { name: 'Bias Detection', key: 'bias_detector', weight: '20%' },
+            { name: 'Fact Checking', key: 'fact_checker', weight: '15%' },
+            { name: 'Author Analysis', key: 'author_analyzer', weight: '15%' },
+            { name: 'Transparency', key: 'transparency_analyzer', weight: '10%' },
+            { name: 'Manipulation Detection', key: 'manipulation_detector', weight: '10%' },
+            { name: 'Content Quality', key: 'content_analyzer', weight: '5%' }
         ];
         
-        services.forEach(service => {
+        services.forEach(function(service) {
             checkPageBreak(20);
             
             const serviceData = detailed[service.key] || {};
@@ -686,13 +689,13 @@
             doc.setFontSize(11);
             doc.setTextColor(30, 41, 59);
             doc.setFont('helvetica', 'bold');
-            doc.text(`${service.icon} ${service.name}`, leftMargin + 3, yPos + 6);
+            doc.text(service.name, leftMargin + 3, yPos + 6);
             
             // Weight
             doc.setFontSize(9);
             doc.setTextColor(100, 116, 139);
             doc.setFont('helvetica', 'normal');
-            doc.text(`Weight: ${service.weight}`, leftMargin + 3, yPos + 12);
+            doc.text('Weight: ' + service.weight, leftMargin + 3, yPos + 12);
             
             // Score
             doc.setFontSize(14);
@@ -704,7 +707,7 @@
             } else {
                 doc.setTextColor(239, 68, 68);
             }
-            doc.text(`${score}/100`, rightMargin - 35, yPos + 11);
+            doc.text(score + '/100', rightMargin - 35, yPos + 11);
             
             yPos += 20;
             
@@ -753,22 +756,24 @@
         doc.setFont('helvetica', 'normal');
         const calcText = 'The overall trust score is calculated as a weighted average of all service scores, with higher weights assigned to more critical dimensions like source credibility and bias detection.';
         const splitCalc = doc.splitTextToSize(calcText, rightMargin - leftMargin - 10);
-        splitCalc.forEach(line => {
+        splitCalc.forEach(function(line) {
             doc.text(line, leftMargin + 5, yPos);
             yPos += 4;
         });
+        
+        return yPos;
     }
 
     /**
      * SOURCE CREDIBILITY SECTION - 2 pages with full details
      */
-    function addSourceCredibilitySection(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addSourceCredibilitySection(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
-        doc.text('🛡️ Source Credibility Analysis', leftMargin, yPos);
+        doc.text('Source Credibility Analysis', leftMargin, yPos);
         yPos += 12;
         
         const credData = (data.detailed_analysis || data.results || {}).source_credibility || {};
@@ -791,7 +796,7 @@
         } else {
             doc.setTextColor(239, 68, 68);
         }
-        doc.text(`${score}/100`, leftMargin + 3, yPos + 16);
+        doc.text(score + '/100', leftMargin + 3, yPos + 16);
         
         // Rating level
         const level = credData.level || getScoreStatus(score);
@@ -808,7 +813,7 @@
         const analysis = extractText(credData.analysis || credData.summary, 'Credibility analysis assesses the reputation and reliability of the source outlet.');
         if (isCleanContent(analysis)) {
             const splitAnalysis = doc.splitTextToSize(analysis, rightMargin - leftMargin);
-            splitAnalysis.forEach(line => {
+            splitAnalysis.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
@@ -830,14 +835,14 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             
-            factors.slice(0, 8).forEach(factor => {
+            factors.slice(0, 8).forEach(function(factor) {
                 checkPageBreak(12);
                 
                 const factorText = extractText(factor, '');
                 if (isCleanContent(factorText)) {
-                    doc.text('•', leftMargin, yPos);
+                    doc.text('*', leftMargin, yPos);
                     const splitFactor = doc.splitTextToSize(factorText, rightMargin - leftMargin - 5);
-                    splitFactor.forEach(line => {
+                    splitFactor.forEach(function(line) {
                         checkPageBreak(6);
                         doc.text(line, leftMargin + 5, yPos);
                         yPos += 5;
@@ -849,7 +854,7 @@
         
         yPos += 10;
         
-        // Source comparison (if available)
+        // Source comparison
         doc.setFontSize(12);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
@@ -871,7 +876,7 @@
             { name: 'Industry Average', score: 75 }
         ];
         
-        outlets.forEach(outlet => {
+        outlets.forEach(function(outlet) {
             checkPageBreak(10);
             
             doc.setFontSize(9);
@@ -911,12 +916,12 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             
-            findings.forEach(finding => {
+            findings.forEach(function(finding) {
                 checkPageBreak(12);
                 
-                doc.text('✓', leftMargin, yPos);
+                doc.text('*', leftMargin, yPos);
                 const splitFinding = doc.splitTextToSize(finding, rightMargin - leftMargin - 5);
-                splitFinding.forEach(line => {
+                splitFinding.forEach(function(line) {
                     checkPageBreak(6);
                     doc.text(line, leftMargin + 5, yPos);
                     yPos += 5;
@@ -924,18 +929,20 @@
                 yPos += 3;
             });
         }
+        
+        return yPos;
     }
 
     /**
      * BIAS DETECTION SECTION - 2 pages with political spectrum
      */
-    function addBiasDetectionSection(doc, data, leftMargin, rightMargin, pageWidth, checkPageBreak) {
-        let yPos = 20;
+    function addBiasDetectionSection(doc, data, leftMargin, rightMargin, pageWidth, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
-        doc.text('⚖️ Bias Detection & Political Analysis', leftMargin, yPos);
+        doc.text('Bias Detection & Political Analysis', leftMargin, yPos);
         yPos += 12;
         
         const biasData = (data.detailed_analysis || data.results || {}).bias_detector || {};
@@ -958,7 +965,7 @@
         } else {
             doc.setTextColor(239, 68, 68);
         }
-        doc.text(`${score}/100`, leftMargin + 3, yPos + 16);
+        doc.text(score + '/100', leftMargin + 3, yPos + 16);
         
         yPos += 28;
         
@@ -1024,7 +1031,7 @@
         doc.setFontSize(11);
         doc.setTextColor(30, 41, 59);
         doc.setFont('helvetica', 'bold');
-        doc.text(`Detected Political Leaning: ${politicalLabel}`, leftMargin, yPos);
+        doc.text('Detected Political Leaning: ' + politicalLabel, leftMargin, yPos);
         
         yPos += 15;
         
@@ -1037,7 +1044,7 @@
         
         const dimensions = biasData.dimensions || [];
         if (dimensions.length > 0) {
-            dimensions.slice(0, 7).forEach(dim => {
+            dimensions.slice(0, 7).forEach(function(dim) {
                 checkPageBreak(10);
                 
                 const dimName = dim.name || extractText(dim, '');
@@ -1084,7 +1091,7 @@
             doc.text('These words and phrases carry emotional weight or bias:', leftMargin, yPos);
             yPos += 10;
             
-            loadedLang.slice(0, 5).forEach((example, idx) => {
+            loadedLang.slice(0, 5).forEach(function(example, idx) {
                 checkPageBreak(15);
                 
                 const word = example.word || example.phrase || extractText(example, '');
@@ -1097,14 +1104,14 @@
                     doc.setFontSize(9);
                     doc.setTextColor(127, 29, 29);
                     doc.setFont('helvetica', 'bold');
-                    doc.text(`${idx + 1}. "${word}"`, leftMargin + 2, yPos);
+                    doc.text((idx + 1) + '. "' + word + '"', leftMargin + 2, yPos);
                     
                     if (context && isCleanContent(context)) {
                         doc.setFont('helvetica', 'normal');
                         doc.setTextColor(71, 85, 105);
                         const splitContext = doc.splitTextToSize(context, rightMargin - leftMargin - 4);
                         let contextY = yPos + 5;
-                        splitContext.forEach(line => {
+                        splitContext.forEach(function(line) {
                             doc.text(line, leftMargin + 2, contextY);
                             contextY += 4;
                         });
@@ -1133,24 +1140,26 @@
         const summary = extractText(biasData.summary || biasData.analysis, 'Bias analysis evaluates political leaning and objectivity.');
         if (isCleanContent(summary)) {
             const splitSummary = doc.splitTextToSize(summary, rightMargin - leftMargin);
-            splitSummary.forEach(line => {
+            splitSummary.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
             });
         }
+        
+        return yPos;
     }
 
     /**
      * FACT CHECKING SECTION - 2 pages with ALL claims
      */
-    function addFactCheckingSection(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addFactCheckingSection(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
-        doc.text('✓ Fact-Checking Analysis', leftMargin, yPos);
+        doc.text('Fact-Checking Analysis', leftMargin, yPos);
         yPos += 12;
         
         const factData = (data.detailed_analysis || data.results || {}).fact_checker || {};
@@ -1174,13 +1183,13 @@
         } else {
             doc.setTextColor(239, 68, 68);
         }
-        doc.text(`${score}/100`, leftMargin + 3, yPos + 16);
+        doc.text(score + '/100', leftMargin + 3, yPos + 16);
         
         // Claims summary
         doc.setFontSize(10);
         doc.setTextColor(71, 85, 105);
         doc.setFont('helvetica', 'normal');
-        doc.text(`${claims.length} claims analyzed`, leftMargin + 85, yPos + 12);
+        doc.text(claims.length + ' claims analyzed', leftMargin + 85, yPos + 12);
         
         yPos += 28;
         
@@ -1190,7 +1199,7 @@
         const overview = extractText(factData.summary || factData.analysis, 'Fact-checking evaluates the accuracy of specific claims made in the article.');
         if (isCleanContent(overview)) {
             const splitOverview = doc.splitTextToSize(overview, rightMargin - leftMargin);
-            splitOverview.forEach(line => {
+            splitOverview.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
@@ -1207,7 +1216,7 @@
             doc.text('Detailed Claim Analysis', leftMargin, yPos);
             yPos += 10;
             
-            claims.forEach((claim, idx) => {
+            claims.forEach(function(claim, idx) {
                 checkPageBreak(40);
                 
                 // Claim header box
@@ -1229,7 +1238,7 @@
                 doc.setFontSize(10);
                 doc.setTextColor(30, 41, 59);
                 doc.setFont('helvetica', 'bold');
-                doc.text(`Claim #${idx + 1}`, leftMargin + 3, yPos + 5);
+                doc.text('Claim #' + (idx + 1), leftMargin + 3, yPos + 5);
                 
                 // Verdict badge
                 doc.setFontSize(9);
@@ -1245,7 +1254,7 @@
                 const claimText = claim.claim || claim.text || extractText(claim, '');
                 if (isCleanContent(claimText)) {
                     const splitClaim = doc.splitTextToSize(claimText, rightMargin - leftMargin - 4);
-                    splitClaim.forEach(line => {
+                    splitClaim.forEach(function(line) {
                         checkPageBreak(6);
                         doc.text(line, leftMargin + 2, yPos);
                         yPos += 5;
@@ -1259,7 +1268,7 @@
                     doc.setFontSize(9);
                     doc.setTextColor(100, 116, 139);
                     doc.setFont('helvetica', 'italic');
-                    doc.text(`Verification: ${claim.method}`, leftMargin + 2, yPos);
+                    doc.text('Verification: ' + claim.method, leftMargin + 2, yPos);
                     yPos += 6;
                 }
                 
@@ -1269,7 +1278,7 @@
                     doc.setTextColor(71, 85, 105);
                     doc.setFont('helvetica', 'normal');
                     const splitExpl = doc.splitTextToSize(claim.explanation, rightMargin - leftMargin - 4);
-                    splitExpl.forEach(line => {
+                    splitExpl.forEach(function(line) {
                         checkPageBreak(5);
                         doc.text(line, leftMargin + 2, yPos);
                         yPos += 4;
@@ -1285,18 +1294,20 @@
             doc.text('No specific claims were extracted for fact-checking.', leftMargin, yPos);
             yPos += 10;
         }
+        
+        return yPos;
     }
 
     /**
      * AUTHOR ANALYSIS SECTION
      */
-    function addAuthorAnalysisSection(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addAuthorAnalysisSection(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
-        doc.text('👤 Author Analysis', leftMargin, yPos);
+        doc.text('Author Analysis', leftMargin, yPos);
         yPos += 12;
         
         const authorData = (data.detailed_analysis || data.results || {}).author_analyzer || {};
@@ -1320,7 +1331,7 @@
         } else {
             doc.setTextColor(239, 68, 68);
         }
-        doc.text(`${score}/100`, leftMargin + 3, yPos + 16);
+        doc.text(score + '/100', leftMargin + 3, yPos + 16);
         
         yPos += 28;
         
@@ -1367,7 +1378,7 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             const splitBio = doc.splitTextToSize(authorData.biography, rightMargin - leftMargin);
-            splitBio.forEach(line => {
+            splitBio.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
@@ -1389,24 +1400,26 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             const splitAnalysis = doc.splitTextToSize(analysis, rightMargin - leftMargin);
-            splitAnalysis.forEach(line => {
+            splitAnalysis.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
             });
         }
+        
+        return yPos;
     }
 
     /**
      * TRANSPARENCY SECTION
      */
-    function addTransparencySection(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addTransparencySection(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
-        doc.text('👁️ Transparency Assessment', leftMargin, yPos);
+        doc.text('Transparency Assessment', leftMargin, yPos);
         yPos += 12;
         
         const transData = (data.detailed_analysis || data.results || {}).transparency_analyzer || {};
@@ -1429,7 +1442,7 @@
         } else {
             doc.setTextColor(239, 68, 68);
         }
-        doc.text(`${score}/100`, leftMargin + 3, yPos + 16);
+        doc.text(score + '/100', leftMargin + 3, yPos + 16);
         
         yPos += 28;
         
@@ -1440,7 +1453,7 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             const splitAnalysis = doc.splitTextToSize(analysis, rightMargin - leftMargin);
-            splitAnalysis.forEach(line => {
+            splitAnalysis.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
@@ -1462,11 +1475,11 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             
-            findings.forEach(finding => {
+            findings.forEach(function(finding) {
                 checkPageBreak(12);
-                doc.text('✓', leftMargin, yPos);
+                doc.text('*', leftMargin, yPos);
                 const splitFinding = doc.splitTextToSize(finding, rightMargin - leftMargin - 5);
-                splitFinding.forEach(line => {
+                splitFinding.forEach(function(line) {
                     checkPageBreak(6);
                     doc.text(line, leftMargin + 5, yPos);
                     yPos += 5;
@@ -1474,18 +1487,20 @@
                 yPos += 3;
             });
         }
+        
+        return yPos;
     }
 
     /**
      * MANIPULATION DETECTION SECTION
      */
-    function addManipulationSection(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addManipulationSection(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
-        doc.text('⚠️ Manipulation Detection', leftMargin, yPos);
+        doc.text('Manipulation Detection', leftMargin, yPos);
         yPos += 12;
         
         const manipData = (data.detailed_analysis || data.results || {}).manipulation_detector || {};
@@ -1508,7 +1523,7 @@
         } else {
             doc.setTextColor(239, 68, 68);
         }
-        doc.text(`${score}/100`, leftMargin + 3, yPos + 16);
+        doc.text(score + '/100', leftMargin + 3, yPos + 16);
         
         yPos += 28;
         
@@ -1519,7 +1534,7 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             const splitAnalysis = doc.splitTextToSize(analysis, rightMargin - leftMargin);
-            splitAnalysis.forEach(line => {
+            splitAnalysis.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
@@ -1541,11 +1556,11 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             
-            findings.forEach(finding => {
+            findings.forEach(function(finding) {
                 checkPageBreak(12);
-                doc.text('•', leftMargin, yPos);
+                doc.text('*', leftMargin, yPos);
                 const splitFinding = doc.splitTextToSize(finding, rightMargin - leftMargin - 5);
-                splitFinding.forEach(line => {
+                splitFinding.forEach(function(line) {
                     checkPageBreak(6);
                     doc.text(line, leftMargin + 5, yPos);
                     yPos += 5;
@@ -1553,18 +1568,20 @@
                 yPos += 3;
             });
         }
+        
+        return yPos;
     }
 
     /**
      * CONTENT QUALITY SECTION
      */
-    function addContentQualitySection(doc, data, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addContentQualitySection(doc, data, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
         doc.setFont('helvetica', 'bold');
-        doc.text('📄 Content Quality Evaluation', leftMargin, yPos);
+        doc.text('Content Quality Evaluation', leftMargin, yPos);
         yPos += 12;
         
         const qualityData = (data.detailed_analysis || data.results || {}).content_analyzer || {};
@@ -1587,7 +1604,7 @@
         } else {
             doc.setTextColor(239, 68, 68);
         }
-        doc.text(`${score}/100`, leftMargin + 3, yPos + 16);
+        doc.text(score + '/100', leftMargin + 3, yPos + 16);
         
         yPos += 28;
         
@@ -1598,7 +1615,7 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             const splitAnalysis = doc.splitTextToSize(analysis, rightMargin - leftMargin);
-            splitAnalysis.forEach(line => {
+            splitAnalysis.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
@@ -1620,11 +1637,11 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             
-            findings.forEach(finding => {
+            findings.forEach(function(finding) {
                 checkPageBreak(12);
-                doc.text('•', leftMargin, yPos);
+                doc.text('*', leftMargin, yPos);
                 const splitFinding = doc.splitTextToSize(finding, rightMargin - leftMargin - 5);
-                splitFinding.forEach(line => {
+                splitFinding.forEach(function(line) {
                     checkPageBreak(6);
                     doc.text(line, leftMargin + 5, yPos);
                     yPos += 5;
@@ -1632,13 +1649,15 @@
                 yPos += 3;
             });
         }
+        
+        return yPos;
     }
 
     /**
      * METHODOLOGY APPENDIX
      */
-    function addMethodologyAppendix(doc, leftMargin, rightMargin, checkPageBreak) {
-        let yPos = 20;
+    function addMethodologyAppendix(doc, leftMargin, rightMargin, checkPageBreak, startYPos) {
+        let yPos = startYPos;
         
         doc.setFontSize(18);
         doc.setTextColor(30, 64, 175);
@@ -1673,7 +1692,7 @@
             }
         ];
         
-        sections.forEach(section => {
+        sections.forEach(function(section) {
             checkPageBreak(30);
             
             doc.setFontSize(12);
@@ -1686,7 +1705,7 @@
             doc.setTextColor(51, 65, 85);
             doc.setFont('helvetica', 'normal');
             const splitText = doc.splitTextToSize(section.text, rightMargin - leftMargin);
-            splitText.forEach(line => {
+            splitText.forEach(function(line) {
                 checkPageBreak(6);
                 doc.text(line, leftMargin, yPos);
                 yPos += 5;
@@ -1694,9 +1713,11 @@
             
             yPos += 10;
         });
+        
+        return yPos;
     }
 
-    // ==================== HELPER FUNCTIONS ====================
+    // HELPER FUNCTIONS
 
     function extractScore(serviceData) {
         if (!serviceData) return 0;
@@ -1730,11 +1751,11 @@
         const source = data.source || 'this source';
         
         if (trustScore >= 70) {
-            return `Analysis indicates ${source} demonstrates strong credibility across multiple dimensions. Information can generally be trusted with standard verification practices.`;
+            return 'Analysis indicates ' + source + ' demonstrates strong credibility across multiple dimensions. Information can generally be trusted with standard verification practices.';
         } else if (trustScore >= 40) {
-            return `Analysis shows mixed credibility indicators for ${source}. Cross-reference important claims with other reputable sources before sharing or acting on information.`;
+            return 'Analysis shows mixed credibility indicators for ' + source + '. Cross-reference important claims with other reputable sources before sharing or acting on information.';
         } else {
-            return `Analysis identifies significant credibility concerns with ${source}. Verify all claims independently through established, trustworthy sources before accepting as fact.`;
+            return 'Analysis identifies significant credibility concerns with ' + source + '. Verify all claims independently through established, trustworthy sources before accepting as fact.';
         }
     }
 
@@ -1748,21 +1769,21 @@
         }
         
         return findings
-            .map(f => extractText(f, ''))
-            .filter(text => isCleanContent(text))
+            .map(function(f) { return extractText(f, ''); })
+            .filter(function(text) { return isCleanContent(text); })
             .slice(0, 10);
     }
 
     function extractFindingsFromServices(results) {
         const findings = [];
         
-        Object.keys(results).forEach(serviceKey => {
+        Object.keys(results).forEach(function(serviceKey) {
             const service = results[serviceKey];
             
             if (service.findings && Array.isArray(service.findings)) {
-                findings.push(...service.findings);
+                findings.push.apply(findings, service.findings);
             } else if (service.key_findings && Array.isArray(service.key_findings)) {
-                findings.push(...service.key_findings);
+                findings.push.apply(findings, service.key_findings);
             }
         });
         
@@ -1779,8 +1800,8 @@
         }
         
         return findings
-            .map(f => extractText(f, ''))
-            .filter(text => isCleanContent(text))
+            .map(function(f) { return extractText(f, ''); })
+            .filter(function(text) { return isCleanContent(text); })
             .slice(0, 5);
     }
 
@@ -1817,14 +1838,17 @@
         return fallback;
     }
 
-    console.log('[PDFGenerator v3.0.0] ✅ Ready - Comprehensive 10-15 page reports');
+    console.log('[PDFGenerator v3.0.0] Ready - Comprehensive 10-15 page reports');
     
 })();
 
 /**
  * I did no harm and this file is not truncated.
- * v3.0.0 - October 30, 2025 - COMPREHENSIVE PROFESSIONAL REPORT GENERATOR
+ * v3.0.0 - October 31, 2025 - COMPREHENSIVE PROFESSIONAL REPORT GENERATOR
  * 
  * This version creates 10-15 page professional reports with EVERYTHING from
  * the online analysis. This is the premium deliverable users will pay for.
+ * 
+ * Fixed: Encoding issues, proper string concatenation, removed template literals
+ * that could cause deployment issues on some systems.
  */
