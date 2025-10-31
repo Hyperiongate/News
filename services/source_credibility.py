@@ -70,7 +70,7 @@ logger = logging.getLogger(__name__)
 
 # Import outlet metadata database (v14.1 NEW)
 try:
-    from outlet_metadata import get_outlet_metadata, OUTLET_METADATA
+    from .outlet_metadata import get_outlet_metadata, OUTLET_METADATA
     OUTLET_METADATA_AVAILABLE = True
     logger.info(f"[SourceCred v14.1] ✓ Outlet metadata loaded: {len(OUTLET_METADATA)} outlets")
 except ImportError as e:
