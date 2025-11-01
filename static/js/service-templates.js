@@ -1,26 +1,30 @@
 /**
- * TruthLens Service Templates - BIAS DETECTOR ENHANCEMENT v5.8.0
- * Date: October 30, 2025
- * Version: 5.8.0 - ENHANCED BIAS DETECTOR WITH POLITICAL SPECTRUM BAR
+ * TruthLens Service Templates - MANIPULATION DETECTOR WOW FACTOR v5.9.0
+ * Date: November 1, 2025
+ * Version: 5.9.0 - MANIPULATION DETECTOR ENHANCEMENT WITH WOW FACTOR
  * 
- * CRITICAL UPDATE v5.8.0 (October 30, 2025):
- * ✅ NEW: Political spectrum bar display (far-left to far-right)
- * ✅ NEW: "What is Bias?" educational section
- * ✅ NEW: Multi-dimensional bias breakdown with ALL 7 dimensions
- * ✅ NEW: Loaded language examples showcase
- * ✅ NEW: Score explanation (why this specific score)
- * ✅ NEW: Outlet-aware context display
- * ✅ PRESERVED: All v5.7.0 verbose explanation features (DO NO HARM ✓)
+ * CRITICAL UPDATE v5.9.0 (November 1, 2025):
+ * ✅ NEW: "What is Manipulation?" educational introduction
+ * ✅ NEW: "How We Analyze" methodology with 8 detection techniques
+ * ✅ NEW: "Did You Know?" psychology facts section
+ * ✅ NEW: Clickbait meter with specific examples
+ * ✅ NEW: Emotional intensity gauge with breakdown
+ * ✅ NEW: Loaded language word cloud visualization
+ * ✅ NEW: Logical fallacies with explanations
+ * ✅ NEW: All manipulation tactics with specific examples
+ * ✅ NEW: Visual data displays (meters, gauges, charts)
+ * ✅ NEW: Article type context awareness
+ * ✅ PRESERVED: All v5.8.0 bias detector features (DO NO HARM ✓)
  * ✅ PRESERVED: All other 6 services unchanged (DO NO HARM ✓)
  * 
  * WHAT CHANGED:
- * - displayBiasDetector() completely rewritten with rich visualizations
- * - Added political spectrum bar instead of circle meter
- * - Added educational content about bias types
- * - All other services untouched (source credibility, fact checker, etc.)
+ * - manipulationDetector template completely rewritten with rich visualizations
+ * - displayManipulationDetector() enhanced to show ALL v5.0 WOW FACTOR fields
+ * - Added helper functions for psychology facts, tactics display, visual meters
+ * - All other services untouched (source credibility, bias, fact checker, etc.)
  * 
  * Save as: static/js/service-templates.js (REPLACE existing file)
- * Last Updated: October 30, 2025 - v5.8.0
+ * Last Updated: November 1, 2025 - v5.9.0
  * 
  * I did no harm and this file is not truncated.
  */
@@ -48,7 +52,7 @@ window.ServiceTemplates = {
         };
         
         var templateKey = toCamelCase(serviceId);
-        console.log('[ServiceTemplates v5.8.0] Template lookup:', serviceId, '→', templateKey);
+        console.log('[ServiceTemplates v5.9.0] Template lookup:', serviceId, '→', templateKey);
         
         const templates = {
             sourceCredibility: `
@@ -449,23 +453,156 @@ window.ServiceTemplates = {
             
             manipulationDetector: `
                 <div class="service-analysis-section">
-                    <div class="manipulation-detector-enhanced">
-                        <!-- Score Display -->
+                    <div class="manipulation-detector-enhanced-v2">
+                        <!-- NEW v5.9.0: Score Display with Context -->
                         <div class="score-display-large">
                             <div class="score-circle">
                                 <div class="score-number" id="manipulation-score">--</div>
                                 <div class="score-max">/100</div>
                             </div>
                             <div class="score-label" id="manipulation-level">Analyzing...</div>
+                            <div style="font-size: 0.85rem; color: #64748b; margin-top: 0.5rem; font-weight: 500;">
+                                Integrity Score (Higher is Better)
+                            </div>
                         </div>
                         
-                        <!-- Summary -->
+                        <!-- NEW v5.9.0: Article Type Context Banner -->
+                        <div id="manipulation-article-type-banner" style="display: none; margin: 1.5rem 0; padding: 1rem 1.5rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border-left: 4px solid #f59e0b;">
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-file-alt" style="font-size: 1.5rem; color: #f59e0b;"></i>
+                                <div style="flex: 1;">
+                                    <div style="font-weight: 700; color: #78350f; font-size: 1rem; margin-bottom: 0.25rem;">
+                                        Article Type: <span id="manipulation-article-type">--</span>
+                                    </div>
+                                    <div style="font-size: 0.9rem; color: #92400e;" id="manipulation-type-context">
+                                        <!-- Article type context will be inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: "What is Manipulation?" Educational Introduction -->
+                        <div id="manipulation-introduction-container" style="display: none; margin: 2rem 0; padding: 2rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 16px; border: 2px solid #f59e0b;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #92400e; font-size: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-graduation-cap" style="color: #f59e0b;"></i>
+                                What is Manipulation?
+                            </h4>
+                            <div id="manipulation-introduction-content" style="display: grid; gap: 1.25rem;">
+                                <!-- Introduction sections will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: "How We Analyze" Methodology -->
+                        <div id="manipulation-methodology-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-microscope" style="color: #ef4444;"></i>
+                                How We Analyze Manipulation
+                            </h4>
+                            <div id="manipulation-methodology-content" style="display: grid; gap: 1rem;">
+                                <!-- Methodology sections will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: "Did You Know?" Psychology Facts -->
+                        <div id="manipulation-psychology-facts-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%); border-radius: 16px; border: 2px solid #3b82f6;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #0c4a6e; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-brain" style="color: #3b82f6;"></i>
+                                Did You Know? Psychology of Manipulation
+                            </h4>
+                            <div id="manipulation-psychology-facts-content" style="display: grid; gap: 1rem;">
+                                <!-- Psychology facts will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: Clickbait Meter -->
+                        <div id="manipulation-clickbait-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-tachometer-alt" style="color: #f97316;"></i>
+                                Clickbait Meter
+                            </h4>
+                            
+                            <!-- Meter Gauge -->
+                            <div style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">Clickbait Level</span>
+                                    <span style="font-size: 1.25rem; font-weight: 700; color: #1e293b;" id="manipulation-clickbait-value">0</span>
+                                </div>
+                                <div style="height: 12px; background: #e5e7eb; border-radius: 6px; overflow: hidden;">
+                                    <div id="manipulation-clickbait-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #10b981 0%, #f59e0b 50%, #ef4444 100%); border-radius: 6px; transition: width 0.8s ease;"></div>
+                                </div>
+                            </div>
+                            
+                            <div id="manipulation-clickbait-examples" style="display: grid; gap: 0.75rem;">
+                                <!-- Clickbait examples will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: Emotional Manipulation Intensity Gauge -->
+                        <div id="manipulation-emotional-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 16px; border: 2px solid #ef4444;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #991b1b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-heart-pulse" style="color: #ef4444;"></i>
+                                Emotional Manipulation Analysis
+                            </h4>
+                            
+                            <!-- Intensity Gauge -->
+                            <div style="margin-bottom: 1.5rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="font-size: 0.9rem; color: #7f1d1d; font-weight: 600;">Emotional Intensity</span>
+                                    <span style="font-size: 1.25rem; font-weight: 700; color: #991b1b;" id="manipulation-emotional-intensity">0</span>
+                                </div>
+                                <div style="height: 12px; background: #fecaca; border-radius: 6px; overflow: hidden;">
+                                    <div id="manipulation-emotional-bar" style="height: 100%; width: 0%; background: #ef4444; border-radius: 6px; transition: width 0.8s ease;"></div>
+                                </div>
+                            </div>
+                            
+                            <div id="manipulation-emotional-breakdown" style="display: grid; gap: 0.75rem;">
+                                <!-- Emotional breakdown will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: Loaded Language Word Cloud -->
+                        <div id="manipulation-loaded-language-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-comment-dots" style="color: #8b5cf6;"></i>
+                                Loaded Language Word Cloud
+                            </h4>
+                            <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 1rem; line-height: 1.6;">
+                                Emotionally charged words that may influence perception:
+                            </div>
+                            <div id="manipulation-loaded-language-words" style="display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; padding: 1rem; background: #f8fafc; border-radius: 8px;">
+                                <!-- Word cloud items will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: Logical Fallacies -->
+                        <div id="manipulation-fallacies-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%); border-radius: 16px; border: 2px solid #eab308;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #854d0e; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-exclamation-circle" style="color: #eab308;"></i>
+                                Logical Fallacies Detected
+                            </h4>
+                            <div id="manipulation-fallacies-list" style="display: grid; gap: 0.75rem;">
+                                <!-- Fallacy items will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- NEW v5.9.0: All Manipulation Tactics -->
+                        <div id="manipulation-all-tactics-container" style="display: none; margin: 2rem 0; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 0.75rem;">
+                                <i class="fas fa-list-ul" style="color: #ef4444;"></i>
+                                All Detected Manipulation Tactics
+                            </h4>
+                            <div id="manipulation-all-tactics-list" style="display: grid; gap: 1rem;">
+                                <!-- All tactics will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Summary (preserved) -->
                         <div class="analysis-text-box">
-                            <h4><i class="fas fa-clipboard-list"></i> Analysis</h4>
+                            <h4><i class="fas fa-clipboard-list"></i> Analysis Summary</h4>
                             <p id="manipulation-summary">Loading analysis...</p>
                         </div>
                         
-                        <!-- Findings -->
+                        <!-- Findings (preserved) -->
                         <div class="findings-box" id="manipulation-findings-box" style="display: none;">
                             <h4><i class="fas fa-list-check"></i> Key Findings</h4>
                             <ul id="manipulation-findings-list"></ul>
@@ -505,10 +642,10 @@ window.ServiceTemplates = {
         var template = templates[templateKey];
         
         if (template) {
-            console.log('[ServiceTemplates v5.8.0] ✓ Template found for:', templateKey);
+            console.log('[ServiceTemplates v5.9.0] ✓ Template found for:', templateKey);
             return template;
         } else {
-            console.warn('[ServiceTemplates v5.8.0] ✗ Template not found for:', templateKey);
+            console.warn('[ServiceTemplates v5.9.0] ✗ Template not found for:', templateKey);
             return '<div class="service-analysis-section"><p>Template not available</p></div>';
         }
     },
@@ -522,7 +659,7 @@ window.ServiceTemplates = {
             return '';
         }
         
-        console.log('[ServiceTemplates v5.8.0] Converting markdown, input length:', text.length);
+        console.log('[ServiceTemplates v5.9.0] Converting markdown, input length:', text.length);
         
         // Convert **bold** to <strong>
         text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
@@ -541,7 +678,7 @@ window.ServiceTemplates = {
             return '';
         }).filter(function(p) { return p.length > 0; }).join('');
         
-        console.log('[ServiceTemplates v5.8.0] ✓ Converted to HTML, output length:', html.length);
+        console.log('[ServiceTemplates v5.9.0] ✓ Converted to HTML, output length:', html.length);
         
         return html;
     },
@@ -553,11 +690,11 @@ window.ServiceTemplates = {
     extractText: function(value, fallback) {
         fallback = fallback || 'No information available.';
         
-        console.log('[ServiceTemplates v5.8.0] extractText called with:', typeof value, value);
+        console.log('[ServiceTemplates v5.9.0] extractText called with:', typeof value, value);
         
         // Null/undefined check
         if (value === null || value === undefined) {
-            console.log('[ServiceTemplates v5.8.0] Value is null/undefined, returning fallback');
+            console.log('[ServiceTemplates v5.9.0] Value is null/undefined, returning fallback');
             return fallback;
         }
         
@@ -565,16 +702,16 @@ window.ServiceTemplates = {
         if (typeof value === 'string') {
             var trimmed = value.trim();
             if (trimmed.length > 0) {
-                console.log('[ServiceTemplates v5.8.0] Found string:', trimmed.substring(0, 100));
+                console.log('[ServiceTemplates v5.9.0] Found string:', trimmed.substring(0, 100));
                 return trimmed;
             }
-            console.log('[ServiceTemplates v5.8.0] Empty string, returning fallback');
+            console.log('[ServiceTemplates v5.9.0] Empty string, returning fallback');
             return fallback;
         }
         
         // Array - try first element
         if (Array.isArray(value)) {
-            console.log('[ServiceTemplates v5.8.0] Value is array, length:', value.length);
+            console.log('[ServiceTemplates v5.9.0] Value is array, length:', value.length);
             if (value.length > 0) {
                 return this.extractText(value[0], fallback);
             }
@@ -583,7 +720,7 @@ window.ServiceTemplates = {
         
         // Object - try MANY possible field names
         if (typeof value === 'object') {
-            console.log('[ServiceTemplates v5.8.0] Value is object, keys:', Object.keys(value));
+            console.log('[ServiceTemplates v5.9.0] Value is object, keys:', Object.keys(value));
             
             // Try common text fields
             var textFields = [
@@ -597,7 +734,7 @@ window.ServiceTemplates = {
             for (var i = 0; i < textFields.length; i++) {
                 var field = textFields[i];
                 if (value[field] !== undefined && value[field] !== null) {
-                    console.log('[ServiceTemplates v5.8.0] Found field:', field);
+                    console.log('[ServiceTemplates v5.9.0] Found field:', field);
                     var extracted = this.extractText(value[field], null);
                     if (extracted && extracted !== fallback) {
                         return extracted;
@@ -608,7 +745,7 @@ window.ServiceTemplates = {
             // If object has only one key, try that
             var keys = Object.keys(value);
             if (keys.length === 1) {
-                console.log('[ServiceTemplates v5.8.0] Object has single key:', keys[0]);
+                console.log('[ServiceTemplates v5.9.0] Object has single key:', keys[0]);
                 return this.extractText(value[keys[0]], fallback);
             }
             
@@ -617,7 +754,7 @@ window.ServiceTemplates = {
                 var key = keys[i];
                 var val = value[key];
                 if (typeof val === 'string' && val.trim().length > 20) {
-                    console.log('[ServiceTemplates v5.8.0] Found long string in key:', key);
+                    console.log('[ServiceTemplates v5.9.0] Found long string in key:', key);
                     return val.trim();
                 }
             }
@@ -627,7 +764,7 @@ window.ServiceTemplates = {
                 var key = keys[i];
                 var val = value[key];
                 if (typeof val === 'object' && val !== null) {
-                    console.log('[ServiceTemplates v5.8.0] Recursing into key:', key);
+                    console.log('[ServiceTemplates v5.9.0] Recursing into key:', key);
                     var extracted = this.extractText(val, null);
                     if (extracted && extracted !== fallback) {
                         return extracted;
@@ -635,7 +772,7 @@ window.ServiceTemplates = {
                 }
             }
             
-            console.log('[ServiceTemplates v5.8.0] No text found in object, returning fallback');
+            console.log('[ServiceTemplates v5.9.0] No text found in object, returning fallback');
             return fallback;
         }
         
@@ -644,7 +781,7 @@ window.ServiceTemplates = {
             return String(value);
         }
         
-        console.log('[ServiceTemplates v5.8.0] Unknown type, returning fallback');
+        console.log('[ServiceTemplates v5.9.0] Unknown type, returning fallback');
         return fallback;
     },
     
@@ -675,7 +812,7 @@ window.ServiceTemplates = {
             var lowerText = text.toLowerCase();
             for (var i = 0; i < unwantedPhrases.length; i++) {
                 if (lowerText.includes(unwantedPhrases[i])) {
-                    console.log('[ServiceTemplates v5.8.0] Filtered out meta-text:', text);
+                    console.log('[ServiceTemplates v5.9.0] Filtered out meta-text:', text);
                     return false;
                 }
             }
@@ -696,7 +833,7 @@ window.ServiceTemplates = {
     
     // Render chart for a service
     renderServiceChart: function(serviceId, serviceData) {
-        console.log('[ServiceTemplates v5.8.0] Checking for chart data in:', serviceId);
+        console.log('[ServiceTemplates v5.9.0] Checking for chart data in:', serviceId);
         
         if (typeof ChartRenderer === 'undefined') {
             console.warn('[ServiceTemplates] ChartRenderer not loaded');
@@ -731,8 +868,8 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.8.0] displayAllAnalyses called');
-        console.log('[ServiceTemplates v5.8.0] Received data:', data);
+        console.log('[ServiceTemplates v5.9.0] displayAllAnalyses called');
+        console.log('[ServiceTemplates v5.9.0] Received data:', data);
         
         // Smart detection of data structure
         var detailed = null;
@@ -752,33 +889,33 @@ window.ServiceTemplates = {
         }
         
         if (hasServiceKeys) {
-            console.log('[ServiceTemplates v5.8.0] ✓ Data IS the services object (direct)');
+            console.log('[ServiceTemplates v5.9.0] ✓ Data IS the services object (direct)');
             detailed = data;
         } else if (data.detailed_analysis) {
-            console.log('[ServiceTemplates v5.8.0] ✓ Data has detailed_analysis nested');
+            console.log('[ServiceTemplates v5.9.0] ✓ Data has detailed_analysis nested');
             detailed = data.detailed_analysis;
         } else if (data.results && data.results.detailed_analysis) {
-            console.log('[ServiceTemplates v5.8.0] ✓ Data has results.detailed_analysis nested');
+            console.log('[ServiceTemplates v5.9.0] ✓ Data has results.detailed_analysis nested');
             detailed = data.results.detailed_analysis;
         } else {
-            console.error('[ServiceTemplates v5.8.0] ✗ Could not find services data');
-            console.log('[ServiceTemplates v5.8.0] Data structure:', Object.keys(data));
+            console.error('[ServiceTemplates v5.9.0] ✗ Could not find services data');
+            console.log('[ServiceTemplates v5.9.0] Data structure:', Object.keys(data));
             return;
         }
         
         var analysisMode = data.analysis_mode || 'news';
         
-        console.log('[ServiceTemplates v5.8.0] Analysis mode:', analysisMode);
-        console.log('[ServiceTemplates v5.8.0] Services available:', Object.keys(detailed));
+        console.log('[ServiceTemplates v5.9.0] Analysis mode:', analysisMode);
+        console.log('[ServiceTemplates v5.9.0] Services available:', Object.keys(detailed));
         
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
         
         if (!container) {
-            console.error('[ServiceTemplates v5.8.0] CRITICAL: Container not found!');
+            console.error('[ServiceTemplates v5.9.0] CRITICAL: Container not found!');
             return;
         }
         
-        console.log('[ServiceTemplates v5.8.0] Container found:', container.id);
+        console.log('[ServiceTemplates v5.9.0] Container found:', container.id);
         
         var serviceOrder = [
             { id: 'source_credibility', name: 'Source Credibility', icon: 'fa-shield-alt', displayFunc: 'displaySourceCredibility' },
@@ -797,7 +934,7 @@ window.ServiceTemplates = {
         
         serviceOrder.forEach(function(service) {
             if (detailed[service.id]) {
-                console.log('[ServiceTemplates v5.8.0] Processing service:', service.name);
+                console.log('[ServiceTemplates v5.9.0] Processing service:', service.name);
                 servicesDisplayed++;
                 
                 // Create service card with colored border
@@ -848,7 +985,7 @@ window.ServiceTemplates = {
                     } else {
                         // Expand
                         serviceCard.classList.add('active');
-                        content.style.maxHeight = '5000px'; // Large enough for all content
+                        content.style.maxHeight = '10000px'; // Large enough for WOW FACTOR content
                         serviceCard.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
                         var toggleIcon = header.querySelector('.service-toggle i');
                         if (toggleIcon) {
@@ -856,7 +993,7 @@ window.ServiceTemplates = {
                         }
                     }
                     
-                    console.log('[ServiceTemplates v5.8.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
+                    console.log('[ServiceTemplates v5.9.0] Toggled:', service.name, '→', !isActive ? 'expanded' : 'collapsed');
                 };
                 
                 // Add hover effect
@@ -880,7 +1017,7 @@ window.ServiceTemplates = {
                 
                 // Call display function
                 if (self[service.displayFunc]) {
-                    console.log('[ServiceTemplates v5.8.0] Calling display function:', service.displayFunc);
+                    console.log('[ServiceTemplates v5.9.0] Calling display function:', service.displayFunc);
                     self[service.displayFunc](detailed[service.id]);
                     
                     // Render chart if data exists
@@ -889,12 +1026,12 @@ window.ServiceTemplates = {
             }
         });
         
-        console.log('[ServiceTemplates v5.8.0] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
+        console.log('[ServiceTemplates v5.9.0] ✓ Services displayed:', servicesDisplayed, 'of', serviceOrder.length);
         
         if (servicesDisplayed === 0) {
-            console.error('[ServiceTemplates v5.8.0] ✗ NO SERVICES DISPLAYED! Check data structure.');
+            console.error('[ServiceTemplates v5.9.0] ✗ NO SERVICES DISPLAYED! Check data structure.');
         } else {
-            console.log('[ServiceTemplates v5.8.0] ✓ All services displayed!');
+            console.log('[ServiceTemplates v5.9.0] ✓ All services displayed!');
         }
     },
     
@@ -903,8 +1040,8 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displaySourceCredibility: function(data) {
-        console.log('[Source Credibility v5.8.0] Displaying data with VERBOSE EXPLANATION support');
-        console.log('[Source Credibility v5.8.0] Full data structure:', JSON.stringify(data, null, 2));
+        console.log('[Source Credibility v5.9.0] Displaying data with VERBOSE EXPLANATION support');
+        console.log('[Source Credibility v5.9.0] Full data structure:', JSON.stringify(data, null, 2));
         
         // Basic score and level
         var score = data.score || data.credibility_score || 0;
@@ -917,11 +1054,11 @@ window.ServiceTemplates = {
         this.updateElement('source-name', sourceName);
         
         // Verbose explanation (first priority)
-        console.log('[Source Credibility v5.8.0] Checking for verbose explanation...');
+        console.log('[Source Credibility v5.9.0] Checking for verbose explanation...');
         var explanation = data.explanation || null;
         
         if (explanation && typeof explanation === 'string' && explanation.length > 100) {
-            console.log('[Source Credibility v5.8.0] ✓ Found verbose explanation, length:', explanation.length);
+            console.log('[Source Credibility v5.9.0] ✓ Found verbose explanation, length:', explanation.length);
             
             // Convert markdown to HTML
             var explanationHtml = this.convertMarkdownToHtml(explanation);
@@ -933,7 +1070,7 @@ window.ServiceTemplates = {
             if (explanationBox && explanationContent) {
                 explanationContent.innerHTML = explanationHtml;
                 explanationBox.style.display = 'block';
-                console.log('[Source Credibility v5.8.0] ✓ Verbose explanation displayed!');
+                console.log('[Source Credibility v5.9.0] ✓ Verbose explanation displayed!');
             }
             
             // Hide the old summary box (we have verbose explanation now)
@@ -942,7 +1079,7 @@ window.ServiceTemplates = {
                 summaryBox.style.display = 'none';
             }
         } else {
-            console.log('[Source Credibility v5.8.0] No verbose explanation, falling back to summary');
+            console.log('[Source Credibility v5.9.0] No verbose explanation, falling back to summary');
             
             // Fallback to summary if no verbose explanation
             var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
@@ -993,22 +1130,22 @@ window.ServiceTemplates = {
         }
         
         // Score Breakdown
-        console.log('[Source Credibility v5.8.0] Checking for score breakdown...');
+        console.log('[Source Credibility v5.9.0] Checking for score breakdown...');
         var breakdown = data.score_breakdown || data.breakdown || null;
         
         if (breakdown) {
-            console.log('[Source Credibility v5.8.0] ✓ Found score breakdown:', breakdown);
+            console.log('[Source Credibility v5.9.0] ✓ Found score breakdown:', breakdown);
             
             // Check for components array (backend v13.0 structure)
             if (breakdown.components && Array.isArray(breakdown.components)) {
-                console.log('[Source Credibility v5.8.0] ✓ Using components array from v13.0 backend');
+                console.log('[Source Credibility v5.9.0] ✓ Using components array from v13.0 backend');
                 this.displayScoreBreakdownComponents(breakdown.components);
             } else if (typeof breakdown === 'object') {
-                console.log('[Source Credibility v5.8.0] Using legacy breakdown format');
+                console.log('[Source Credibility v5.9.0] Using legacy breakdown format');
                 this.displayScoreBreakdown(breakdown);
             }
         } else {
-            console.log('[Source Credibility v5.8.0] No score breakdown found');
+            console.log('[Source Credibility v5.9.0] No score breakdown found');
         }
         
         // Findings
@@ -1033,7 +1170,7 @@ window.ServiceTemplates = {
         this.displayTrustMeter(score);
         this.displaySourceComparison(sourceName, score, data.source_comparison);
         
-        console.log('[Source Credibility v5.8.0] ✓ COMPLETE!');
+        console.log('[Source Credibility v5.9.0] ✓ COMPLETE!');
     },
     
     // Display score breakdown components from backend v13.0
@@ -1043,7 +1180,7 @@ window.ServiceTemplates = {
         
         if (!container || !box || !Array.isArray(components)) return;
         
-        console.log('[Source Credibility v5.8.0] Displaying', components.length, 'breakdown components');
+        console.log('[Source Credibility v5.9.0] Displaying', components.length, 'breakdown components');
         
         container.innerHTML = '';
         
@@ -1081,7 +1218,7 @@ window.ServiceTemplates = {
         }.bind(this));
         
         box.style.display = 'block';
-        console.log('[Source Credibility v5.8.0] ✓ Score breakdown components displayed');
+        console.log('[Source Credibility v5.9.0] ✓ Score breakdown components displayed');
     },
     
     // Legacy score breakdown display
@@ -1145,12 +1282,12 @@ window.ServiceTemplates = {
     },
     
     // ============================================================================
-    // NEW v5.8.0: ENHANCED BIAS DETECTOR DISPLAY
+    // BIAS DETECTOR DISPLAY (PRESERVED FROM v5.8.0)
     // ============================================================================
     
     displayBiasDetector: function(data) {
-        console.log('[Bias Detector v5.8.0] ENHANCED DISPLAY with political spectrum bar');
-        console.log('[Bias Detector v5.8.0] Full data structure:', JSON.stringify(data, null, 2));
+        console.log('[Bias Detector v5.9.0] ENHANCED DISPLAY with political spectrum bar');
+        console.log('[Bias Detector v5.9.0] Full data structure:', JSON.stringify(data, null, 2));
         
         // Basic score and level
         var score = data.score || data.objectivity_score || 50;
@@ -1168,7 +1305,7 @@ window.ServiceTemplates = {
         var outletBaseline = data.outlet_baseline || data.dimensions?.outlet_baseline || null;
         
         if (outletName && outletBaseline) {
-            console.log('[Bias Detector v5.8.0] ✓ Displaying outlet context');
+            console.log('[Bias Detector v5.9.0] ✓ Displaying outlet context');
             var outletBanner = document.getElementById('bias-outlet-banner');
             var outletNameElem = document.getElementById('bias-outlet-name');
             var outletContext = document.getElementById('bias-outlet-context');
@@ -1224,15 +1361,15 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Bias Detector v5.8.0] ✓ ENHANCED DISPLAY COMPLETE!');
+        console.log('[Bias Detector v5.9.0] ✓ ENHANCED DISPLAY COMPLETE!');
     },
     
     displayPoliticalSpectrum: function(politicalLeaning, politicalData) {
-        console.log('[Bias Detector v5.8.0] Displaying political spectrum:', politicalLeaning);
+        console.log('[Bias Detector v5.9.0] Displaying political spectrum:', politicalLeaning);
         
         var indicator = document.getElementById('bias-spectrum-indicator');
         if (!indicator) {
-            console.warn('[Bias Detector v5.8.0] Spectrum indicator not found');
+            console.warn('[Bias Detector v5.9.0] Spectrum indicator not found');
             return;
         }
         
@@ -1257,15 +1394,15 @@ window.ServiceTemplates = {
         // Position the indicator
         indicator.style.left = position + '%';
         
-        console.log('[Bias Detector v5.8.0] ✓ Spectrum positioned at', position, '%');
+        console.log('[Bias Detector v5.9.0] ✓ Spectrum positioned at', position, '%');
     },
     
     displayBiasDimensions: function(dimensions) {
-        console.log('[Bias Detector v5.8.0] Displaying bias dimensions');
+        console.log('[Bias Detector v5.9.0] Displaying bias dimensions');
         
         var container = document.getElementById('bias-dimensions-content');
         if (!container) {
-            console.warn('[Bias Detector v5.8.0] Dimensions container not found');
+            console.warn('[Bias Detector v5.9.0] Dimensions container not found');
             return;
         }
         
@@ -1327,7 +1464,7 @@ window.ServiceTemplates = {
             container.appendChild(dimItem);
         }.bind(this));
         
-        console.log('[Bias Detector v5.8.0] ✓ Dimensions displayed');
+        console.log('[Bias Detector v5.9.0] ✓ Dimensions displayed');
     },
     
     getBiasDimensionSublabel: function(key, dimData) {
@@ -1352,13 +1489,13 @@ window.ServiceTemplates = {
     },
     
     displayLoadedLanguage: function(phrases) {
-        console.log('[Bias Detector v5.8.0] Displaying', phrases.length, 'loaded language examples');
+        console.log('[Bias Detector v5.9.0] Displaying', phrases.length, 'loaded language examples');
         
         var container = document.getElementById('bias-loaded-phrases-content');
         var wrapper = document.getElementById('bias-loaded-language-container');
         
         if (!container || !wrapper) {
-            console.warn('[Bias Detector v5.8.0] Loaded language container not found');
+            console.warn('[Bias Detector v5.9.0] Loaded language container not found');
             return;
         }
         
@@ -1388,15 +1525,15 @@ window.ServiceTemplates = {
         });
         
         wrapper.style.display = 'block';
-        console.log('[Bias Detector v5.8.0] ✓ Loaded language displayed');
+        console.log('[Bias Detector v5.9.0] ✓ Loaded language displayed');
     },
     
     displayBiasScoreExplanation: function(score, dimensions, details) {
-        console.log('[Bias Detector v5.8.0] Generating score explanation');
+        console.log('[Bias Detector v5.9.0] Generating score explanation');
         
         var container = document.getElementById('bias-score-explanation');
         if (!container) {
-            console.warn('[Bias Detector v5.8.0] Score explanation container not found');
+            console.warn('[Bias Detector v5.9.0] Score explanation container not found');
             return;
         }
         
@@ -1449,7 +1586,7 @@ window.ServiceTemplates = {
         `;
         
         container.innerHTML = explanation;
-        console.log('[Bias Detector v5.8.0] ✓ Score explanation displayed');
+        console.log('[Bias Detector v5.9.0] ✓ Score explanation displayed');
     },
     
     // ============================================================================
@@ -1457,7 +1594,7 @@ window.ServiceTemplates = {
     // ============================================================================
     
     displayFactChecker: function(data) {
-        console.log('[Fact Checker v5.8.0] Displaying data:', data);
+        console.log('[Fact Checker v5.9.0] Displaying data:', data);
         
         var score = data.score || data.verification_score || 0;
         this.updateElement('fact-score', score);
@@ -1497,11 +1634,11 @@ window.ServiceTemplates = {
             claimsContainer.innerHTML = '<p>No claims were checked in this article.</p>';
         }
         
-        console.log('[Fact Checker v5.8.0] ✓ Complete');
+        console.log('[Fact Checker v5.9.0] ✓ Complete');
     },
     
     displayAuthorAnalyzer: function(data) {
-        console.log('[Author Analyzer v5.8.0] Displaying data:', data);
+        console.log('[Author Analyzer v5.9.0] Displaying data:', data);
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('author-score', score);
@@ -1534,11 +1671,11 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Author Analyzer v5.8.0] ✓ Complete');
+        console.log('[Author Analyzer v5.9.0] ✓ Complete');
     },
     
     displayTransparencyAnalyzer: function(data) {
-        console.log('[Transparency Analyzer v5.8.0] Displaying data:', data);
+        console.log('[Transparency Analyzer v5.9.0] Displaying data:', data);
         
         var score = data.score || data.transparency_score || 0;
         this.updateElement('transparency-score', score);
@@ -1566,21 +1703,78 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Transparency Analyzer v5.8.0] ✓ Complete');
+        console.log('[Transparency Analyzer v5.9.0] ✓ Complete');
     },
     
+    // ============================================================================
+    // NEW v5.9.0: MANIPULATION DETECTOR WOW FACTOR DISPLAY
+    // ============================================================================
+    
     displayManipulationDetector: function(data) {
-        console.log('[Manipulation Detector v5.8.0] Displaying data:', data);
+        console.log('[Manipulation Detector v5.9.0] WOW FACTOR DISPLAY - Full data structure:', JSON.stringify(data, null, 2));
         
-        var score = data.score || 0;
+        // Basic score and level
+        var score = data.score || data.integrity_score || 0;
         this.updateElement('manipulation-score', score);
         
-        var level = data.level || 'Unknown';
+        var level = data.level || data.integrity_level || 'Unknown';
         this.updateElement('manipulation-level', level);
         
+        // === NEW v5.9.0: Article Type Context Banner ===
+        var articleType = data.article_type || 'News Report';
+        var typeConfidence = data.type_confidence || 70;
+        
+        var articleTypeBanner = document.getElementById('manipulation-article-type-banner');
+        var articleTypeElem = document.getElementById('manipulation-article-type');
+        var typeContextElem = document.getElementById('manipulation-type-context');
+        
+        if (articleTypeBanner && articleTypeElem && typeContextElem) {
+            articleTypeElem.textContent = articleType;
+            
+            var typeContextText = '';
+            if (articleType === 'Opinion/Editorial') {
+                typeContextText = 'Opinion pieces naturally use more persuasive language - expectations adjusted';
+            } else if (articleType === 'Breaking News') {
+                typeContextText = 'Breaking news may contain urgency language - context considered';
+            } else if (articleType === 'Analysis') {
+                typeContextText = 'Analysis articles use interpretive language - context considered';
+            } else {
+                typeContextText = 'News report expected to minimize manipulation tactics';
+            }
+            
+            typeContextElem.textContent = typeContextText + ` (${typeConfidence}% confidence)`;
+            articleTypeBanner.style.display = 'block';
+        }
+        
+        // === NEW v5.9.0: "What is Manipulation?" Introduction ===
+        this.displayManipulationIntroduction(data.introduction);
+        
+        // === NEW v5.9.0: "How We Analyze" Methodology ===
+        this.displayManipulationMethodology(data.methodology);
+        
+        // === NEW v5.9.0: "Did You Know?" Psychology Facts ===
+        this.displayManipulationPsychologyFacts(data.did_you_know);
+        
+        // === NEW v5.9.0: Clickbait Meter ===
+        this.displayManipulationClickbait(data.clickbait_analysis);
+        
+        // === NEW v5.9.0: Emotional Manipulation Intensity Gauge ===
+        this.displayManipulationEmotional(data.emotional_analysis);
+        
+        // === NEW v5.9.0: Loaded Language Word Cloud ===
+        this.displayManipulationLoadedLanguage(data.loaded_language);
+        
+        // === NEW v5.9.0: Logical Fallacies ===
+        this.displayManipulationFallacies(data.logical_fallacies);
+        
+        // === NEW v5.9.0: All Manipulation Tactics ===
+        this.displayManipulationAllTactics(data.all_tactics || data.tactics_found);
+        
+        // Summary (preserved)
         var summary = this.extractText(data.summary || data.analysis || data, 'No summary available.');
         this.updateElement('manipulation-summary', summary);
         
+        // Findings (preserved)
         var findings = this.extractFindings(data);
         if (findings.length > 0) {
             var findingsBox = document.getElementById('manipulation-findings-box');
@@ -1598,11 +1792,367 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Manipulation Detector v5.8.0] ✓ Complete');
+        console.log('[Manipulation Detector v5.9.0] ✓ WOW FACTOR DISPLAY COMPLETE!');
+    },
+    
+    displayManipulationIntroduction: function(introduction) {
+        if (!introduction || !introduction.sections) {
+            console.log('[Manipulation v5.9.0] No introduction data');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying introduction');
+        
+        var container = document.getElementById('manipulation-introduction-content');
+        var wrapper = document.getElementById('manipulation-introduction-container');
+        
+        if (!container || !wrapper) return;
+        
+        container.innerHTML = '';
+        
+        introduction.sections.forEach(function(section) {
+            var sectionEl = document.createElement('div');
+            sectionEl.style.cssText = 'background: white; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #f59e0b;';
+            sectionEl.innerHTML = `
+                <div style="font-weight: 700; color: #78350f; margin-bottom: 0.5rem; font-size: 1rem;">
+                    ${section.heading}
+                </div>
+                <p style="margin: 0; color: #78350f; font-size: 0.95rem; line-height: 1.7;">
+                    ${section.content}
+                </p>
+            `;
+            container.appendChild(sectionEl);
+        });
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ Introduction displayed');
+    },
+    
+    displayManipulationMethodology: function(methodology) {
+        if (!methodology || !methodology.sections) {
+            console.log('[Manipulation v5.9.0] No methodology data');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying methodology');
+        
+        var container = document.getElementById('manipulation-methodology-content');
+        var wrapper = document.getElementById('manipulation-methodology-container');
+        
+        if (!container || !wrapper) return;
+        
+        container.innerHTML = '';
+        
+        methodology.sections.forEach(function(section) {
+            var techniqueEl = document.createElement('div');
+            techniqueEl.style.cssText = 'padding: 1rem; background: #f8fafc; border-radius: 8px; border-left: 4px solid #ef4444;';
+            techniqueEl.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <div style="font-size: 1.5rem;">${section.icon}</div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 0.95rem;">
+                        ${section.technique}
+                    </div>
+                </div>
+                <div style="font-size: 0.875rem; color: #475569; line-height: 1.6; padding-left: 2.25rem;">
+                    ${section.description}
+                </div>
+            `;
+            container.appendChild(techniqueEl);
+        });
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ Methodology displayed');
+    },
+    
+    displayManipulationPsychologyFacts: function(facts) {
+        if (!facts || !Array.isArray(facts) || facts.length === 0) {
+            console.log('[Manipulation v5.9.0] No psychology facts');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying', facts.length, 'psychology facts');
+        
+        var container = document.getElementById('manipulation-psychology-facts-content');
+        var wrapper = document.getElementById('manipulation-psychology-facts-container');
+        
+        if (!container || !wrapper) return;
+        
+        container.innerHTML = '';
+        
+        facts.forEach(function(factData) {
+            var factEl = document.createElement('div');
+            factEl.style.cssText = 'background: white; padding: 1.25rem; border-radius: 8px; border-left: 4px solid #3b82f6;';
+            factEl.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <div style="font-size: 1.5rem;">${factData.icon}</div>
+                    <div style="font-weight: 700; color: #0c4a6e; font-size: 1rem;">
+                        ${factData.fact}
+                    </div>
+                </div>
+                <div style="font-size: 0.875rem; color: #0369a1; line-height: 1.6; padding-left: 2.25rem;">
+                    ${factData.explanation}
+                </div>
+            `;
+            container.appendChild(factEl);
+        });
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ Psychology facts displayed');
+    },
+    
+    displayManipulationClickbait: function(clickbaitData) {
+        if (!clickbaitData || !clickbaitData.detected) {
+            console.log('[Manipulation v5.9.0] No clickbait detected');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying clickbait analysis');
+        
+        var container = document.getElementById('manipulation-clickbait-examples');
+        var wrapper = document.getElementById('manipulation-clickbait-container');
+        var valueElem = document.getElementById('manipulation-clickbait-value');
+        var barElem = document.getElementById('manipulation-clickbait-bar');
+        
+        if (!container || !wrapper) return;
+        
+        // Update meter
+        var score = clickbaitData.score || 0;
+        if (valueElem) valueElem.textContent = score + '/100';
+        if (barElem) {
+            setTimeout(function() {
+                barElem.style.width = score + '%';
+            }, 100);
+        }
+        
+        // Display examples
+        container.innerHTML = '';
+        
+        if (clickbaitData.examples && clickbaitData.examples.length > 0) {
+            clickbaitData.examples.forEach(function(example, index) {
+                var exampleEl = document.createElement('div');
+                exampleEl.style.cssText = 'background: white; padding: 1rem; border-radius: 8px; border-left: 3px solid #f97316;';
+                exampleEl.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <div style="width: 24px; height: 24px; background: #f97316; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">
+                            ${index + 1}
+                        </div>
+                        <div style="font-weight: 700; color: #9a3412; font-size: 0.9rem;">
+                            ${example.type.replace(/_/g, ' ').toUpperCase()}
+                        </div>
+                    </div>
+                    <div style="font-size: 0.875rem; color: #78350f; line-height: 1.6; padding-left: 2rem;">
+                        "${example.text}"
+                    </div>
+                    <div style="font-size: 0.8rem; color: #92400e; font-style: italic; padding-left: 2rem; margin-top: 0.5rem;">
+                        ${example.why_manipulative}
+                    </div>
+                `;
+                container.appendChild(exampleEl);
+            });
+        }
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ Clickbait displayed');
+    },
+    
+    displayManipulationEmotional: function(emotionalData) {
+        if (!emotionalData || !emotionalData.detected) {
+            console.log('[Manipulation v5.9.0] No emotional manipulation detected');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying emotional analysis');
+        
+        var container = document.getElementById('manipulation-emotional-breakdown');
+        var wrapper = document.getElementById('manipulation-emotional-container');
+        var intensityElem = document.getElementById('manipulation-emotional-intensity');
+        var barElem = document.getElementById('manipulation-emotional-bar');
+        
+        if (!container || !wrapper) return;
+        
+        // Update intensity gauge
+        var intensity = emotionalData.intensity || 0;
+        if (intensityElem) intensityElem.textContent = intensity + '/100';
+        if (barElem) {
+            setTimeout(function() {
+                barElem.style.width = intensity + '%';
+            }, 100);
+        }
+        
+        // Display breakdown
+        container.innerHTML = '';
+        
+        if (emotionalData.emotions_found) {
+            Object.keys(emotionalData.emotions_found).forEach(function(emotionType) {
+                var emotionData = emotionalData.emotions_found[emotionType];
+                var emotionEl = document.createElement('div');
+                emotionEl.style.cssText = 'background: white; padding: 1rem; border-radius: 8px; border-left: 3px solid #ef4444;';
+                emotionEl.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div style="font-weight: 700; color: #991b1b; font-size: 0.95rem;">
+                            ${emotionType.toUpperCase()}-Based Appeal
+                        </div>
+                        <div style="font-weight: 700; color: #991b1b;">
+                            ${emotionData.count} words found
+                        </div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #7f1d1d; margin-bottom: 0.5rem;">
+                        Words: ${emotionData.words.slice(0, 5).join(', ')}
+                    </div>
+                    ${emotionData.examples && emotionData.examples[0] ? 
+                        '<div style="font-size: 0.85rem; color: #7f1d1d; font-style: italic; padding: 0.5rem; background: #fef2f2; border-radius: 4px;">' +
+                        '"' + emotionData.examples[0].context + '"' +
+                        '</div>' : ''}
+                `;
+                container.appendChild(emotionEl);
+            });
+        }
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ Emotional analysis displayed');
+    },
+    
+    displayManipulationLoadedLanguage: function(loadedLanguageData) {
+        if (!loadedLanguageData || !loadedLanguageData.detected) {
+            console.log('[Manipulation v5.9.0] No loaded language detected');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying loaded language word cloud');
+        
+        var container = document.getElementById('manipulation-loaded-language-words');
+        var wrapper = document.getElementById('manipulation-loaded-language-container');
+        
+        if (!container || !wrapper) return;
+        
+        container.innerHTML = '';
+        
+        if (loadedLanguageData.word_cloud_data && loadedLanguageData.word_cloud_data.length > 0) {
+            loadedLanguageData.word_cloud_data.forEach(function(wordData) {
+                var fontSize = Math.min(2, 0.8 + (wordData.frequency * 0.15));
+                var wordEl = document.createElement('div');
+                wordEl.style.cssText = `
+                    display: inline-block;
+                    padding: 0.5rem 1rem;
+                    margin: 0.25rem;
+                    background: white;
+                    border: 2px solid #8b5cf6;
+                    border-radius: 8px;
+                    font-size: ${fontSize}rem;
+                    font-weight: 700;
+                    color: #6b21a8;
+                    box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
+                `;
+                wordEl.textContent = wordData.word;
+                wordEl.title = `Used ${wordData.frequency} times`;
+                container.appendChild(wordEl);
+            });
+        }
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ Loaded language displayed');
+    },
+    
+    displayManipulationFallacies: function(fallaciesData) {
+        if (!fallaciesData || !fallaciesData.detected) {
+            console.log('[Manipulation v5.9.0] No fallacies detected');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying logical fallacies');
+        
+        var container = document.getElementById('manipulation-fallacies-list');
+        var wrapper = document.getElementById('manipulation-fallacies-container');
+        
+        if (!container || !wrapper) return;
+        
+        container.innerHTML = '';
+        
+        if (fallaciesData.examples && fallaciesData.examples.length > 0) {
+            fallaciesData.examples.forEach(function(fallacy, index) {
+                var fallacyEl = document.createElement('div');
+                fallacyEl.style.cssText = 'background: white; padding: 1rem; border-radius: 8px; border-left: 3px solid #eab308;';
+                fallacyEl.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                        <div style="width: 24px; height: 24px; background: #eab308; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.75rem;">
+                            ${index + 1}
+                        </div>
+                        <div style="font-weight: 700; color: #854d0e; font-size: 0.95rem;">
+                            ${fallacy.type}
+                        </div>
+                    </div>
+                    <div style="font-size: 0.85rem; color: #78350f; line-height: 1.6; padding-left: 2rem; margin-bottom: 0.5rem;">
+                        Pattern: "${fallacy.pattern}"
+                    </div>
+                    <div style="font-size: 0.85rem; color: #78350f; line-height: 1.6; padding-left: 2rem; padding: 0.5rem; background: #fefce8; border-radius: 4px; margin-bottom: 0.5rem;">
+                        Context: "${fallacy.context}"
+                    </div>
+                    <div style="font-size: 0.8rem; color: #92400e; font-style: italic; padding-left: 2rem;">
+                        Why it's a fallacy: ${fallacy.why_fallacy}
+                    </div>
+                `;
+                container.appendChild(fallacyEl);
+            });
+        }
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ Fallacies displayed');
+    },
+    
+    displayManipulationAllTactics: function(allTactics) {
+        if (!allTactics || !Array.isArray(allTactics) || allTactics.length === 0) {
+            console.log('[Manipulation v5.9.0] No tactics to display');
+            return;
+        }
+        
+        console.log('[Manipulation v5.9.0] Displaying', allTactics.length, 'manipulation tactics');
+        
+        var container = document.getElementById('manipulation-all-tactics-list');
+        var wrapper = document.getElementById('manipulation-all-tactics-container');
+        
+        if (!container || !wrapper) return;
+        
+        container.innerHTML = '';
+        
+        allTactics.forEach(function(tactic, index) {
+            var severityColor = '#10b981'; // green
+            if (tactic.severity === 'high') severityColor = '#ef4444';
+            else if (tactic.severity === 'medium') severityColor = '#f59e0b';
+            
+            var tacticEl = document.createElement('div');
+            tacticEl.style.cssText = 'background: #f8fafc; padding: 1.25rem; border-radius: 8px; border-left: 4px solid ' + severityColor + ';';
+            tacticEl.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <div style="font-size: 1.5rem;">${tactic.icon || '🎯'}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 700; color: #1e293b; font-size: 1rem;">
+                            ${tactic.name}
+                        </div>
+                        <div style="font-size: 0.8rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">
+                            ${tactic.category} • ${tactic.severity.toUpperCase()} SEVERITY
+                        </div>
+                    </div>
+                </div>
+                <div style="font-size: 0.875rem; color: #475569; line-height: 1.6; padding: 0.75rem; background: white; border-radius: 6px; margin-bottom: 0.5rem;">
+                    <strong>Example:</strong> "${tactic.example}"
+                </div>
+                ${tactic.word || tactic.phrase ? 
+                    '<div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">' +
+                    '<strong>Key phrase:</strong> "' + (tactic.word || tactic.phrase) + '"' +
+                    '</div>' : ''}
+                <div style="font-size: 0.85rem; color: #475569; font-style: italic; padding: 0.5rem; background: #fef3c7; border-radius: 4px; border-left: 3px solid #f59e0b;">
+                    <strong>Why manipulative:</strong> ${tactic.why_manipulative}
+                </div>
+            `;
+            container.appendChild(tacticEl);
+        });
+        
+        wrapper.style.display = 'block';
+        console.log('[Manipulation v5.9.0] ✓ All tactics displayed');
     },
     
     displayContentAnalyzer: function(data) {
-        console.log('[Content Analyzer v5.8.0] Displaying data:', data);
+        console.log('[Content Analyzer v5.9.0] Displaying data:', data);
         
         var score = data.score || data.content_score || 0;
         this.updateElement('content-score', score);
@@ -1630,7 +2180,7 @@ window.ServiceTemplates = {
             }
         }
         
-        console.log('[Content Analyzer v5.8.0] ✓ Complete');
+        console.log('[Content Analyzer v5.9.0] ✓ Complete');
     },
     
     // ============================================================================
@@ -1734,22 +2284,26 @@ window.ServiceTemplates = {
         if (element) {
             element.textContent = value;
         } else {
-            console.warn('[ServiceTemplates v5.8.0] Element not found:', id);
+            console.warn('[ServiceTemplates v5.9.0] Element not found:', id);
         }
     }
 };
 
-console.log('[ServiceTemplates v5.8.0] BIAS DETECTOR ENHANCEMENT - Module loaded successfully');
-console.log('[ServiceTemplates v5.8.0] ✓ NEW: Political spectrum bar display (far-left to far-right)');
-console.log('[ServiceTemplates v5.8.0] ✓ NEW: Educational "What is Bias?" section');
-console.log('[ServiceTemplates v5.8.0] ✓ NEW: Multi-dimensional bias breakdown with ALL 7 dimensions');
-console.log('[ServiceTemplates v5.8.0] ✓ NEW: Loaded language examples showcase');
-console.log('[ServiceTemplates v5.8.0] ✓ NEW: Detailed score explanation');
-console.log('[ServiceTemplates v5.8.0] ✓ NEW: Outlet-aware context display');
-console.log('[ServiceTemplates v5.8.0] ✓ PRESERVED: All v5.7.0 verbose explanation features (DO NO HARM ✓)');
-console.log('[ServiceTemplates v5.8.0] ✓ PRESERVED: All other 6 services (DO NO HARM ✓)');
+console.log('[ServiceTemplates v5.9.0] MANIPULATION DETECTOR WOW FACTOR - Module loaded successfully');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: "What is Manipulation?" educational introduction');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: "How We Analyze" methodology with 8 detection techniques');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: "Did You Know?" psychology facts section');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: Clickbait meter with specific examples');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: Emotional intensity gauge with breakdown');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: Loaded language word cloud visualization');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: Logical fallacies with explanations');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: All manipulation tactics with specific examples');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: Visual data displays (meters, gauges, charts)');
+console.log('[ServiceTemplates v5.9.0] ✓ NEW: Article type context awareness');
+console.log('[ServiceTemplates v5.9.0] ✓ PRESERVED: All v5.8.0 bias detector features (DO NO HARM ✓)');
+console.log('[ServiceTemplates v5.9.0] ✓ PRESERVED: All other 6 services unchanged (DO NO HARM ✓)');
 
 /**
  * I did no harm and this file is not truncated.
- * v5.8.0 - October 30, 2025 - BIAS DETECTOR ENHANCEMENT (SURGICAL FIX)
+ * v5.9.0 - November 1, 2025 - MANIPULATION DETECTOR WOW FACTOR (COMPREHENSIVE ENHANCEMENT)
  */
