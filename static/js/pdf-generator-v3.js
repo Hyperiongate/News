@@ -1,7 +1,7 @@
 /**
  * TruthLens PDF Generator v3.0.0 - COMPREHENSIVE PROFESSIONAL REPORT
- * Date: October 31, 2025
- * Last Updated: October 31, 2025 - Fixed deployment encoding issues
+ * Date: November 1, 2025
+ * Last Updated: November 1, 2025 - Fixed jsPDF circle() compatibility issue
  * 
  * MAJOR UPGRADE FROM v2.2.0:  
  * ✅ 10-15 page comprehensive reports (was 3-4 pages)
@@ -16,6 +16,10 @@
  * ✅ Methodology appendix
  * ✅ References section
  * ✅ Professional formatting throughout
+ * 
+ * FIXES IN THIS VERSION:
+ * ✅ Replaced doc.circle() with doc.ellipse() for jsPDF 2.5.1 compatibility
+ * ✅ Fixed deployment encoding issues (ES5 compatible)
  * 
  * PURPOSE:
  * This is the PREMIUM deliverable - the comprehensive report users will pay for
@@ -281,7 +285,7 @@
         
         // Score circle background
         doc.setFillColor(249, 250, 251);
-        doc.circle(105, yPos + 20, 35, 'F');
+        doc.ellipse(105, yPos + 20, 35, 35, 'F');
         
         // Score number
         doc.setFontSize(48);
@@ -527,7 +531,7 @@
                 
                 // Number badge
                 doc.setFillColor(59, 130, 246);
-                doc.circle(leftMargin + 3, yPos - 2, 3, 'F');
+                doc.ellipse(leftMargin + 3, yPos - 2, 3, 3, 'F');
                 doc.setTextColor(255, 255, 255);
                 doc.setFontSize(8);
                 doc.setFont('helvetica', 'bold');
@@ -1003,15 +1007,19 @@
         doc.setFillColor(220, 38, 38);
         doc.rect(leftMargin + zoneWidth * 4, yPos, zoneWidth, spectrumHeight, 'F');
         
-        // Position marker
+        // Position marker - using rectangle for compatibility
         const position = ((politicalLean + 1) / 2) * spectrumWidth;
-        doc.setFillColor(30, 41, 59);
-        doc.circle(leftMargin + position, yPos + spectrumHeight / 2, 4, 'F');
+        const markerX = leftMargin + position;
+        const markerY = yPos - 3;
         
-        // White border on marker
+        // Draw marker as small rectangle with point at bottom
+        doc.setFillColor(30, 41, 59);
+        doc.roundedRect(markerX - 3, markerY, 6, spectrumHeight + 6, 1, 1, 'F');
+        
+        // White border
         doc.setDrawColor(255, 255, 255);
-        doc.setLineWidth(1);
-        doc.circle(leftMargin + position, yPos + spectrumHeight / 2, 4);
+        doc.setLineWidth(1.5);
+        doc.roundedRect(markerX - 3, markerY, 6, spectrumHeight + 6, 1, 1, 'S');
         
         yPos += spectrumHeight + 5;
         
@@ -1844,11 +1852,11 @@
 
 /**
  * I did no harm and this file is not truncated.
- * v3.0.0 - October 31, 2025 - COMPREHENSIVE PROFESSIONAL REPORT GENERATOR
+ * v3.0.0 - November 1, 2025 - COMPREHENSIVE PROFESSIONAL REPORT GENERATOR
  * 
  * This version creates 10-15 page professional reports with EVERYTHING from
  * the online analysis. This is the premium deliverable users will pay for.
  * 
- * Fixed: Encoding issues, proper string concatenation, removed template literals
- * that could cause deployment issues on some systems.
+ * Fixed: jsPDF circle() compatibility - replaced with ellipse() for jsPDF 2.5.1
+ * Fixed: Encoding issues, proper string concatenation, ES5 compatibility
  */
