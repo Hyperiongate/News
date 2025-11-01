@@ -1007,19 +1007,19 @@
         doc.setFillColor(220, 38, 38);
         doc.rect(leftMargin + zoneWidth * 4, yPos, zoneWidth, spectrumHeight, 'F');
         
-        // Position marker - using rectangle for compatibility
+        // Position marker - using simplest possible rectangle
         const position = ((politicalLean + 1) / 2) * spectrumWidth;
         const markerX = leftMargin + position;
         const markerY = yPos - 3;
         
-        // Draw marker as small rectangle with point at bottom
-        doc.setFillColor(30, 41, 59);
-        doc.roundedRect(markerX - 3, markerY, 6, spectrumHeight + 6, 1, 1, 'F');
+        // Draw marker as plain rectangle (most compatible)
+        doc.setFillColor(255, 255, 255);
+        doc.rect(markerX - 4, markerY, 8, spectrumHeight + 6, 'F');
         
-        // White border
-        doc.setDrawColor(255, 255, 255);
-        doc.setLineWidth(1.5);
-        doc.roundedRect(markerX - 3, markerY, 6, spectrumHeight + 6, 1, 1, 'S');
+        // Black border
+        doc.setDrawColor(30, 41, 59);
+        doc.setLineWidth(2);
+        doc.rect(markerX - 4, markerY, 8, spectrumHeight + 6, 'S');
         
         yPos += spectrumHeight + 5;
         
