@@ -1,7 +1,8 @@
 """
-Manipulation Detector - v5.0 "WOW FACTOR" EDITION
+Manipulation Detector - v5.0.1 "WOW FACTOR" EDITION (BUGFIX)
 Date: November 1, 2025
-Last Updated: November 1, 2025 - THE MOST MEMORABLE FEATURE
+Last Updated: November 1, 2025 - FIXED PARAMETER BUG
+Version: 5.0.1 - CRITICAL BUGFIX
 
 VISION:
 🎯 Make manipulation detection the MOST INTERESTING part of the app
@@ -9,6 +10,11 @@ VISION:
 🎯 Specific examples from the actual text
 🎯 Beautiful visuals (charts, word clouds, meters)
 🎯 Educational AND entertaining
+
+BUGFIX IN v5.0.1:
+🐛 FIXED: NameError in _generate_visual_data - missing parameters
+🐛 FIXED: Method signature now includes authority, scarcity, social_proof, urgency
+✅ All detection results now properly passed to visual data generation
 
 NEW IN v5.0 - WOW FACTOR:
 ✅ "What is Manipulation?" - Clear introduction
@@ -273,7 +279,8 @@ class ManipulationDetector(BaseAnalyzer):
             # Visual data for charts
             visual_data = self._generate_visual_data(
                 clickbait_analysis, emotional_analysis, loaded_language,
-                fallacies, article_type, integrity_score
+                fallacies, authority_appeals, scarcity_tactics,
+                social_proof, urgency_tactics, article_type, integrity_score
             )
             
             # Educational findings
@@ -302,7 +309,7 @@ class ManipulationDetector(BaseAnalyzer):
                 'available': True,
                 'timestamp': time.time(),
                 'analysis_complete': True,
-                'version': '5.0.0-WOW',
+                'version': '5.0.1-WOW',
                 
                 # Core scores
                 'score': integrity_score,
@@ -1104,7 +1111,8 @@ class ManipulationDetector(BaseAnalyzer):
         return all_tactics
     
     def _generate_visual_data(self, clickbait, emotional, loaded_lang,
-                              fallacies, article_type, integrity_score) -> Dict[str, Any]:
+                              fallacies, authority, scarcity, social_proof, 
+                              urgency, article_type, integrity_score) -> Dict[str, Any]:
         """
         Generate data for visual elements (charts, graphs, meters)
         """
@@ -1334,7 +1342,12 @@ class ManipulationDetector(BaseAnalyzer):
 I did no harm and this file is not truncated.
 
 Date: November 1, 2025
-Version: 5.0.0 - WOW FACTOR EDITION
+Version: 5.0.1 - WOW FACTOR EDITION (BUGFIX)
+
+BUGFIX: Fixed NameError in _generate_visual_data method
+- Added missing parameters: authority, scarcity, social_proof, urgency
+- Method now properly receives all detection results
+- Visual data generation now works correctly
 
 This version transforms manipulation detection into the most memorable,
 educational, and visually engaging feature of TruthLens.
@@ -1354,6 +1367,7 @@ FEATURES:
 ✅ Memorable insights and findings
 
 READY FOR DEPLOYMENT - Creates "WOW!" moments! 🎯
+TESTED AND WORKING - Bug fixed! ✅
 
 NOTE: REQUIRES data_transformer.py UPDATE!
 See: data_transformer_v3.5_MANIPULATION_WOW.py
