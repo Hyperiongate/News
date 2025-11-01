@@ -1,24 +1,29 @@
 """
-Data Transformer - v3.4 OUTLET METADATA FIX (40 OUTLETS)
-Date: October 13, 2025
-Last Updated: November 1, 2025 - FIXED OUTLET METADATA PRESERVATION
-Version: 3.4 - CRITICAL FIX FOR 40-OUTLET METADATA DISPLAY
+Data Transformer - v3.5 MANIPULATION WOW SUPPORT
+Date: November 1, 2025
+Last Updated: November 1, 2025 - ADDED V5.0 MANIPULATION WOW FIELD PRESERVATION
+Version: 3.5 - CRITICAL UPDATE FOR MANIPULATION DETECTOR V5.0
 
-CRITICAL FIX FROM v3.3:
-✅ FIX: Removed fallback to old 6-outlet SOURCE_METADATA dictionary
-✅ FIX: Now trusts backend outlet_metadata.py (40 outlets) completely
-✅ FIX: Readership and awards now display from 40-outlet database
-✅ FIX: Added comprehensive logging to trace data flow
-✅ PRESERVED: All v3.3 functionality (transparency, manipulation, bias, author)
+CHANGES FROM v3.4:
+✅ ADDED: Full support for manipulation_detector v5.0 WOW FACTOR fields
+✅ PRESERVED: All v3.4 functionality (40-outlet metadata, transparency, bias, author)
+✅ ENHANCED: _transform_manipulation now preserves 15+ new v5.0 fields
+✅ LOGGING: Enhanced logging for manipulation WOW field preservation
 
-THE PROBLEM:
-Backend v14.1 generates data from 40-outlet outlet_metadata.py database.
-But transformer was falling back to old 6-outlet SOURCE_METADATA dict,
-so outlets like Politico showed "Unknown" instead of real data.
-
-THE SOLUTION:
-Trust the backend! If backend sends readership/awards, use them.
-Don't fall back to old dictionary. Backend knows best.
+NEW V5.0 MANIPULATION FIELDS PRESERVED:
+- introduction (educational intro)
+- methodology (8 detection techniques)
+- did_you_know (psychology facts)
+- clickbait_analysis (detailed clickbait detection)
+- emotional_analysis (emotion intensity gauge)
+- loaded_language (word cloud data)
+- logical_fallacies (fallacy detection)
+- authority_appeals (authority detection)
+- scarcity_tactics (scarcity detection)
+- social_proof (bandwagon detection)
+- urgency_tactics (urgency detection)
+- all_tactics (unified tactics list)
+- visual_data (chart/graph data)
 
 Save as: services/data_transformer.py (REPLACE existing file)
 
@@ -35,7 +40,7 @@ logger = logging.getLogger(__name__)
 class DataTransformer:
     """
     THE single transformer that ensures data matches the contract
-    v3.4: FIXED to trust backend's 40-outlet metadata instead of old 6-outlet fallback
+    v3.5: ADDED full support for manipulation_detector v5.0 WOW FACTOR
     """
     
     # Source name mapping
@@ -58,7 +63,7 @@ class DataTransformer:
         'nypost.com': 'New York Post'
     }
     
-    # DEPRECATED: Legacy metadata kept only for reference, NOT USED in v3.4
+    # DEPRECATED: Legacy metadata kept only for reference, NOT USED in v3.4+
     # Backend outlet_metadata.py (40 outlets) is authoritative source
     SOURCE_METADATA = {
         'NPR': {
@@ -107,7 +112,7 @@ class DataTransformer:
     def transform_response(raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """Transform the raw NewsAnalyzer response to match frontend contract"""
         
-        logger.info("[DataTransformer v3.4] Starting transformation")
+        logger.info("[DataTransformer v3.5] Starting transformation")
         logger.info(f"[DataTransformer] Raw data keys: {list(raw_data.keys())}")
         
         # Check if charts are in the data
@@ -139,7 +144,7 @@ class DataTransformer:
         # Get source and author from article_summary or top level
         article = raw_data.get('article_summary', {})
         if not isinstance(article, dict):
-            logger.warning(f"[DataTransformer v3.4] article_summary is not a dict (type: {type(article)}), using empty dict")
+            logger.warning(f"[DataTransformer v3.5] article_summary is not a dict (type: {type(article)}), using empty dict")
             article = {}
         
         source = DataTransformer._get_source_name(raw_data, article)
@@ -174,36 +179,51 @@ class DataTransformer:
                     readership_value = raw_service_data.get('readership', 'NOT FOUND')
                     has_awards = 'awards' in raw_service_data
                     awards_value = raw_service_data.get('awards', 'NOT FOUND')
-                    logger.info(f"[DataTransformer v3.4] source_credibility - readership in data: {has_readership}, value: {readership_value}")
-                    logger.info(f"[DataTransformer v3.4] source_credibility - awards in data: {has_awards}, value: {awards_value}")
+                    logger.info(f"[DataTransformer v3.5] source_credibility - readership in data: {has_readership}, value: {readership_value}")
+                    logger.info(f"[DataTransformer v3.5] source_credibility - awards in data: {has_awards}, value: {awards_value}")
                 
                 # v3.3: Check for ALL service rich fields
                 elif service_name == 'bias_detector':
                     has_findings = 'findings' in raw_service_data
                     has_summary = 'summary' in raw_service_data
                     has_dimensions = 'dimensions' in raw_service_data
-                    logger.info(f"[DataTransformer v3.4] bias_detector - findings: {has_findings}, summary: {has_summary}, dimensions: {has_dimensions}")
+                    logger.info(f"[DataTransformer v3.5] bias_detector - findings: {has_findings}, summary: {has_summary}, dimensions: {has_dimensions}")
                 
                 elif service_name == 'author_analyzer':
                     has_outlet_info = 'outlet_founded' in raw_service_data
                     has_verification = 'verification_status' in raw_service_data
                     has_trust_explanation = 'trust_explanation' in raw_service_data
-                    logger.info(f"[DataTransformer v3.4] author_analyzer - outlet_info: {has_outlet_info}, verification: {has_verification}, trust_explanation: {has_trust_explanation}")
+                    logger.info(f"[DataTransformer v3.5] author_analyzer - outlet_info: {has_outlet_info}, verification: {has_verification}, trust_explanation: {has_trust_explanation}")
                 
                 elif service_name == 'transparency_analyzer':
                     has_what_to_look_for = 'what_to_look_for' in raw_service_data
                     has_lessons = 'transparency_lessons' in raw_service_data
                     has_expectations = 'expectations' in raw_service_data
-                    logger.info(f"[DataTransformer v3.4] transparency - what_to_look_for: {has_what_to_look_for}, lessons: {has_lessons}, expectations: {has_expectations}")
+                    logger.info(f"[DataTransformer v3.5] transparency - what_to_look_for: {has_what_to_look_for}, lessons: {has_lessons}, expectations: {has_expectations}")
                 
+                # v3.5: NEW - Enhanced logging for manipulation WOW fields
                 elif service_name == 'manipulation_detector':
                     has_how_to_spot = 'how_to_spot' in raw_service_data
                     has_lessons = 'manipulation_lessons' in raw_service_data
                     has_risk = 'risk_profile' in raw_service_data
-                    logger.info(f"[DataTransformer v3.4] manipulation - how_to_spot: {has_how_to_spot}, lessons: {has_lessons}, risk_profile: {has_risk}")
+                    # NEW v5.0 WOW fields
+                    has_introduction = 'introduction' in raw_service_data
+                    has_methodology = 'methodology' in raw_service_data
+                    has_did_you_know = 'did_you_know' in raw_service_data
+                    has_clickbait = 'clickbait_analysis' in raw_service_data
+                    has_emotional = 'emotional_analysis' in raw_service_data
+                    has_loaded_lang = 'loaded_language' in raw_service_data
+                    has_fallacies = 'logical_fallacies' in raw_service_data
+                    has_visual = 'visual_data' in raw_service_data
+                    has_all_tactics = 'all_tactics' in raw_service_data
+                    
+                    logger.info(f"[DataTransformer v3.5] manipulation - v4.0 fields: how_to_spot: {has_how_to_spot}, lessons: {has_lessons}, risk: {has_risk}")
+                    logger.info(f"[DataTransformer v3.5] manipulation - v5.0 WOW: intro: {has_introduction}, method: {has_methodology}, facts: {has_did_you_know}")
+                    logger.info(f"[DataTransformer v3.5] manipulation - v5.0 DETECTION: clickbait: {has_clickbait}, emotional: {has_emotional}, loaded: {has_loaded_lang}, fallacies: {has_fallacies}")
+                    logger.info(f"[DataTransformer v3.5] manipulation - v5.0 VISUAL: visual_data: {has_visual}, all_tactics: {has_all_tactics}")
                 
                 logger.info(f"[DataTransformer] {service_name} - score: {score_in_data}, has_chart_data: {has_chart_data}")
-                logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:15]}")
+                logger.info(f"[DataTransformer] {service_name} - available keys: {list(raw_service_data.keys())[:20]}")
             
             transformed = DataTransformer._transform_service(
                 service_name, 
@@ -221,37 +241,50 @@ class DataTransformer:
             if service_name == 'source_credibility':
                 final_readership = transformed.get('readership', 'MISSING')
                 final_awards = transformed.get('awards', 'MISSING')
-                logger.info(f"[DataTransformer v3.4] source_credibility FINAL - readership: {final_readership}")
-                logger.info(f"[DataTransformer v3.4] source_credibility FINAL - awards: {final_awards}")
+                logger.info(f"[DataTransformer v3.5] source_credibility FINAL - readership: {final_readership}")
+                logger.info(f"[DataTransformer v3.5] source_credibility FINAL - awards: {final_awards}")
             
             # v3.3: Verify ALL service-specific preservation
             elif service_name == 'bias_detector':
                 final_findings = 'findings' in transformed
                 final_summary = 'summary' in transformed
                 final_dimensions = 'dimensions' in transformed
-                logger.info(f"[DataTransformer v3.4] bias_detector FINAL - findings: {final_findings}, summary: {final_summary}, dimensions: {final_dimensions}")
+                logger.info(f"[DataTransformer v3.5] bias_detector FINAL - findings: {final_findings}, summary: {final_summary}, dimensions: {final_dimensions}")
             
             elif service_name == 'author_analyzer':
                 final_outlet = 'outlet_founded' in transformed
                 final_verification = 'verification_status' in transformed
                 final_trust = 'trust_explanation' in transformed
-                logger.info(f"[DataTransformer v3.4] author_analyzer FINAL - outlet: {final_outlet}, verification: {final_verification}, trust: {final_trust}")
+                logger.info(f"[DataTransformer v3.5] author_analyzer FINAL - outlet: {final_outlet}, verification: {final_verification}, trust: {final_trust}")
             
             elif service_name == 'transparency_analyzer':
                 final_what_to_look = 'what_to_look_for' in transformed
                 final_lessons = 'transparency_lessons' in transformed
                 final_expectations = 'expectations' in transformed
-                logger.info(f"[DataTransformer v3.4] transparency FINAL - what_to_look_for: {final_what_to_look}, lessons: {final_lessons}, expectations: {final_expectations}")
+                logger.info(f"[DataTransformer v3.5] transparency FINAL - what_to_look_for: {final_what_to_look}, lessons: {final_lessons}, expectations: {final_expectations}")
             
+            # v3.5: Verify manipulation WOW field preservation
             elif service_name == 'manipulation_detector':
                 final_how_to = 'how_to_spot' in transformed
                 final_lessons = 'manipulation_lessons' in transformed
                 final_risk = 'risk_profile' in transformed
-                logger.info(f"[DataTransformer v3.4] manipulation FINAL - how_to_spot: {final_how_to}, lessons: {final_lessons}, risk_profile: {final_risk}")
+                # NEW v5.0 verification
+                final_intro = 'introduction' in transformed
+                final_method = 'methodology' in transformed
+                final_facts = 'did_you_know' in transformed
+                final_clickbait = 'clickbait_analysis' in transformed
+                final_emotional = 'emotional_analysis' in transformed
+                final_visual = 'visual_data' in transformed
+                final_all_tactics = 'all_tactics' in transformed
+                
+                logger.info(f"[DataTransformer v3.5] manipulation FINAL v4.0 - how_to_spot: {final_how_to}, lessons: {final_lessons}, risk: {final_risk}")
+                logger.info(f"[DataTransformer v3.5] manipulation FINAL v5.0 WOW - intro: {final_intro}, method: {final_method}, facts: {final_facts}")
+                logger.info(f"[DataTransformer v3.5] manipulation FINAL v5.0 DETECT - clickbait: {final_clickbait}, emotional: {final_emotional}")
+                logger.info(f"[DataTransformer v3.5] manipulation FINAL v5.0 VISUAL - visual_data: {final_visual}, all_tactics: {final_all_tactics}")
             
             logger.info(f"[DataTransformer] {service_name} - final score: {final_score}, chart preserved: {final_chart}")
             
-        logger.info(f"[DataTransformer v3.4] Transformation complete - Source: {source}")
+        logger.info(f"[DataTransformer v3.5] Transformation complete - Source: {source}")
         
         return response
     
@@ -315,7 +348,7 @@ class DataTransformer:
         """Transform a single service's data to match contract"""
         
         if not isinstance(article, dict):
-            logger.warning(f"[DataTransformer v3.4] article parameter is type {type(article)}, converting to empty dict")
+            logger.warning(f"[DataTransformer v3.5] article parameter is type {type(article)}, converting to empty dict")
             article = {}
         
         template = DataContract.get_service_template(service_name)
@@ -358,7 +391,7 @@ class DataTransformer:
             50
         )
         
-        logger.info(f"[Transform SourceCred v3.4] Using score: {score} from raw_data")
+        logger.info(f"[Transform SourceCred v3.5] Using score: {score} from raw_data")
         
         # Basic fields
         source_name = raw_data.get('source_name', source)
@@ -369,30 +402,25 @@ class DataTransformer:
         result['type'] = raw_data.get('source_type') or raw_data.get('type', 'News Outlet')
         
         # v3.4: CRITICAL FIX - Trust backend for ownership
-        # Backend v14.1 gets this from outlet_metadata.py (40 outlets)
         result['ownership'] = raw_data.get('ownership', 'Unknown')
         
         # v3.4: CRITICAL FIX - Trust backend for readership
-        # Backend v14.1 line 249: 'readership': outlet_metadata.get('readership') if outlet_metadata else ...
-        # DO NOT fall back to old SOURCE_METADATA dict!
         readership_from_backend = raw_data.get('readership')
         if readership_from_backend:
             result['readership'] = readership_from_backend
-            logger.info(f"[Transform SourceCred v3.4] ✓✓✓ USING BACKEND READERSHIP: {readership_from_backend}")
+            logger.info(f"[Transform SourceCred v3.5] ✓✓✓ USING BACKEND READERSHIP: {readership_from_backend}")
         else:
             result['readership'] = 'Unknown'
-            logger.warning(f"[Transform SourceCred v3.4] ⚠ Backend sent no readership, using Unknown")
+            logger.warning(f"[Transform SourceCred v3.5] ⚠ Backend sent no readership, using Unknown")
         
         # v3.4: CRITICAL FIX - Trust backend for awards
-        # Backend v14.1 line 250: 'awards': outlet_metadata.get('awards') if outlet_metadata else 'N/A'
-        # DO NOT fall back to old SOURCE_METADATA dict!
         awards_from_backend = raw_data.get('awards')
         if awards_from_backend and awards_from_backend != 'N/A':
             result['awards'] = awards_from_backend
-            logger.info(f"[Transform SourceCred v3.4] ✓✓✓ USING BACKEND AWARDS: {awards_from_backend[:50]}...")
+            logger.info(f"[Transform SourceCred v3.5] ✓✓✓ USING BACKEND AWARDS: {awards_from_backend[:50]}...")
         else:
             result['awards'] = 'N/A'
-            logger.warning(f"[Transform SourceCred v3.4] ⚠ Backend sent no awards, using N/A")
+            logger.warning(f"[Transform SourceCred v3.5] ⚠ Backend sent no awards, using N/A")
         
         # Reputation based on score
         if result['score'] >= 80:
@@ -416,11 +444,11 @@ class DataTransformer:
         # v3.1: PRESERVE V13.0 VERBOSE EXPLANATION & SCORE_BREAKDOWN
         if 'explanation' in raw_data and raw_data['explanation']:
             result['explanation'] = raw_data['explanation']
-            logger.info(f"[Transform SourceCred v3.4] ✓ Preserved explanation field")
+            logger.info(f"[Transform SourceCred v3.5] ✓ Preserved explanation field")
         
         if 'score_breakdown' in raw_data and raw_data['score_breakdown']:
             result['score_breakdown'] = raw_data['score_breakdown']
-            logger.info(f"[Transform SourceCred v3.4] ✓ Preserved score_breakdown field")
+            logger.info(f"[Transform SourceCred v3.5] ✓ Preserved score_breakdown field")
         
         if 'summary' in raw_data and raw_data['summary']:
             result['summary'] = raw_data['summary']
@@ -430,7 +458,7 @@ class DataTransformer:
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform SourceCred v3.4] COMPLETE - readership: {result['readership']}, awards: {result['awards'][:30] if len(result['awards']) > 30 else result['awards']}")
+        logger.info(f"[Transform SourceCred v3.5] COMPLETE - readership: {result['readership']}, awards: {result['awards'][:30] if len(result['awards']) > 30 else result['awards']}")
         
         return result
     
@@ -449,7 +477,7 @@ class DataTransformer:
         
         try:
             if not isinstance(article, dict):
-                logger.warning(f"[Transform Author v3.4] article is type {type(article)}, using empty dict")
+                logger.warning(f"[Transform Author v3.5] article is type {type(article)}, using empty dict")
                 article = {}
             
             author = (
@@ -543,11 +571,11 @@ class DataTransformer:
             for field in v5_2_fields:
                 if field in raw_data:
                     result[field] = raw_data[field]
-                    logger.info(f"[Transform Author v3.4] ✓ Preserved {field}")
+                    logger.info(f"[Transform Author v3.5] ✓ Preserved {field}")
             
             if 'analysis' in raw_data and isinstance(raw_data.get('analysis'), dict):
                 result['analysis'] = raw_data['analysis']
-                logger.info(f"[Transform Author v3.4] ✓ Preserved analysis block")
+                logger.info(f"[Transform Author v3.5] ✓ Preserved analysis block")
             else:
                 result['analysis'] = {
                     'what_we_looked': 'We examined the author\'s credentials, experience, track record, and publication history.',
@@ -557,12 +585,12 @@ class DataTransformer:
             
             DataTransformer._preserve_chart_data(result, raw_data)
             
-            logger.info(f"[Transform Author v3.4] Final score: {result['score']}, outlet info preserved: {'outlet_founded' in result}")
+            logger.info(f"[Transform Author v3.5] Final score: {result['score']}, outlet info preserved: {'outlet_founded' in result}")
             
             return result
             
         except Exception as e:
-            logger.error(f"[Transform Author v3.4] ERROR: {e}", exc_info=True)
+            logger.error(f"[Transform Author v3.5] ERROR: {e}", exc_info=True)
             result['name'] = 'Unknown Author'
             result['author_name'] = 'Unknown Author'
             result['score'] = 50
@@ -592,7 +620,7 @@ class DataTransformer:
         
         objectivity = raw_data.get('objectivity_score', raw_data.get('score', 50))
         
-        logger.info(f"[Transform Bias v3.4] Objectivity: {objectivity}/100")
+        logger.info(f"[Transform Bias v3.5] Objectivity: {objectivity}/100")
         
         # Basic contract fields
         result['score'] = objectivity
@@ -618,15 +646,15 @@ class DataTransformer:
         for field in v6_0_fields:
             if field in raw_data and raw_data[field]:
                 result[field] = raw_data[field]
-                logger.info(f"[Transform Bias v3.4] ✓ Preserved {field}")
+                logger.info(f"[Transform Bias v3.5] ✓ Preserved {field}")
         
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
-            logger.info(f"[Transform Bias v3.4] ✓ Preserved analysis block")
+            logger.info(f"[Transform Bias v3.5] ✓ Preserved analysis block")
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Bias v3.4] Final score: {result['score']}, rich fields preserved: {'findings' in result and 'summary' in result}")
+        logger.info(f"[Transform Bias v3.5] Final score: {result['score']}, rich fields preserved: {'findings' in result and 'summary' in result}")
         
         return result
     
@@ -657,7 +685,7 @@ class DataTransformer:
         result['claims'] = claims_array
         result['fact_checks'] = claims_array
         
-        logger.info(f"[Transform FactCheck v3.4] Found {len(claims_array)} claims")
+        logger.info(f"[Transform FactCheck v3.5] Found {len(claims_array)} claims")
         
         if 'analysis' in raw_data:
             result['analysis'] = raw_data['analysis']
@@ -670,7 +698,7 @@ class DataTransformer:
     def _transform_transparency(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transform transparency analyzer data
-        v3.3: NOW EXPLICITLY PRESERVES ALL V4.0 EDUCATIONAL FIELDS WITH LOGGING!
+        v3.3: EXPLICITLY PRESERVES ALL V4.0 EDUCATIONAL FIELDS
         """
         
         result = template.copy()
@@ -683,7 +711,7 @@ class DataTransformer:
         sources = raw_data.get('sources_cited', raw_data.get('source_count', 0))
         quotes = raw_data.get('quotes_included', raw_data.get('quote_count', 0))
         
-        logger.info(f"[Transform Transparency v3.4] Starting with score: {score}, sources: {sources}, quotes: {quotes}")
+        logger.info(f"[Transform Transparency v3.5] Starting with score: {score}, sources: {sources}, quotes: {quotes}")
         
         # Basic fields
         result['score'] = score
@@ -697,24 +725,12 @@ class DataTransformer:
         result['quotes_used'] = quotes
         result['author_transparency'] = raw_data.get('author_transparency', True)
         
-        # ============================================================================
-        # v3.3: EXPLICITLY PRESERVE ALL V4.0 EDUCATIONAL FIELDS WITH LOGGING
-        # ============================================================================
+        # v3.3: PRESERVE ALL V4.0 EDUCATIONAL FIELDS
         v4_0_educational_fields = [
-            'article_type',           # The detected article type
-            'type_confidence',        # Confidence percentage
-            'what_to_look_for',       # LIST of guidance items (CRITICAL!)
-            'transparency_lessons',   # LIST of key lessons (CRITICAL!)
-            'expectations',           # DICT of type-specific expectations (CRITICAL!)
-            'findings',               # Full findings array
-            'analysis',               # Analysis object
-            'summary',                # Summary text
-            'has_methodology',        # Boolean
-            'has_corrections_policy', # Boolean
-            'author_disclosed',       # Boolean
-            'has_conflict_disclosure',# Boolean
-            'word_count',             # Number
-            'chart_data'              # Chart data object
+            'article_type', 'type_confidence', 'what_to_look_for', 'transparency_lessons',
+            'expectations', 'findings', 'analysis', 'summary', 'has_methodology',
+            'has_corrections_policy', 'author_disclosed', 'has_conflict_disclosure',
+            'word_count', 'chart_data'
         ]
         
         preserved_count = 0
@@ -723,22 +739,20 @@ class DataTransformer:
                 result[field] = raw_data[field]
                 preserved_count += 1
                 
-                # Special logging for critical educational fields
                 if field == 'what_to_look_for':
-                    logger.info(f"[Transform Transparency v3.4] ✓✓✓ CRITICAL: Preserved what_to_look_for ({len(raw_data[field])} items)")
+                    logger.info(f"[Transform Transparency v3.5] ✓✓✓ CRITICAL: Preserved what_to_look_for ({len(raw_data[field])} items)")
                 elif field == 'transparency_lessons':
-                    logger.info(f"[Transform Transparency v3.4] ✓✓✓ CRITICAL: Preserved transparency_lessons ({len(raw_data[field])} lessons)")
+                    logger.info(f"[Transform Transparency v3.5] ✓✓✓ CRITICAL: Preserved transparency_lessons ({len(raw_data[field])} lessons)")
                 elif field == 'expectations':
-                    logger.info(f"[Transform Transparency v3.4] ✓✓✓ CRITICAL: Preserved expectations dict ({len(raw_data[field])} keys)")
+                    logger.info(f"[Transform Transparency v3.5] ✓✓✓ CRITICAL: Preserved expectations dict ({len(raw_data[field])} keys)")
                 else:
-                    logger.info(f"[Transform Transparency v3.4] ✓ Preserved {field}")
+                    logger.info(f"[Transform Transparency v3.5] ✓ Preserved {field}")
         
-        logger.info(f"[Transform Transparency v3.4] ✅ Preserved {preserved_count}/{len(v4_0_educational_fields)} educational fields")
-        # ============================================================================
+        logger.info(f"[Transform Transparency v3.5] ✅ Preserved {preserved_count}/{len(v4_0_educational_fields)} educational fields")
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Transparency v3.4] Final score: {result['score']}, educational fields: {'what_to_look_for' in result and 'transparency_lessons' in result}")
+        logger.info(f"[Transform Transparency v3.5] Final score: {result['score']}, educational fields: {'what_to_look_for' in result and 'transparency_lessons' in result}")
         
         return result
     
@@ -746,7 +760,7 @@ class DataTransformer:
     def _transform_manipulation(template: Dict[str, Any], raw_data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Transform manipulation detector data
-        v3.3: NOW EXPLICITLY PRESERVES ALL V4.0 EDUCATIONAL FIELDS WITH LOGGING!
+        v3.5: FULL SUPPORT FOR V5.0 WOW FACTOR FIELDS
         """
         
         result = template.copy()
@@ -758,7 +772,7 @@ class DataTransformer:
             80
         )
         
-        logger.info(f"[Transform Manipulation v3.4] Starting with score: {score}")
+        logger.info(f"[Transform Manipulation v3.5] Starting with score: {score}")
         
         # Basic fields
         result['score'] = score
@@ -771,43 +785,95 @@ class DataTransformer:
         result['tactics_found'] = raw_data.get('tactics_found', result['techniques'])
         
         # ============================================================================
-        # v3.3: EXPLICITLY PRESERVE ALL V4.0 EDUCATIONAL FIELDS WITH LOGGING
+        # v3.5: PRESERVE ALL V5.0 WOW FACTOR FIELDS
         # ============================================================================
-        v4_0_educational_fields = [
-            'article_type',           # The detected article type
-            'type_confidence',        # Confidence percentage
-            'how_to_spot',            # LIST of guidance items (CRITICAL!)
-            'manipulation_lessons',   # LIST of key lessons (CRITICAL!)
-            'risk_profile',           # Risk assessment (CRITICAL!)
-            'findings',               # Full findings array
-            'analysis',               # Analysis object
-            'summary',                # Summary text
-            'emotional_score',        # Emotional manipulation score
-            'chart_data'              # Chart data object
+        
+        # Core v4.0 educational fields (still important!)
+        v4_0_fields = [
+            'article_type', 'type_confidence', 'how_to_spot', 'manipulation_lessons',
+            'risk_profile', 'findings', 'analysis', 'summary', 'emotional_score'
         ]
         
-        preserved_count = 0
-        for field in v4_0_educational_fields:
+        # NEW v5.0 WOW FACTOR fields
+        v5_0_wow_fields = [
+            'introduction',           # Educational intro dict
+            'methodology',            # 8 detection techniques dict
+            'did_you_know',           # Psychology facts list
+            'clickbait_analysis',     # Clickbait detection dict
+            'emotional_analysis',     # Emotion intensity dict
+            'loaded_language',        # Word cloud data dict
+            'logical_fallacies',      # Fallacy detection dict
+            'authority_appeals',      # Authority appeals dict
+            'scarcity_tactics',       # Scarcity detection dict
+            'social_proof',           # Bandwagon dict
+            'urgency_tactics',        # Urgency detection dict
+            'all_tactics',            # Unified tactics list
+            'visual_data',            # Chart/graph data dict
+            'version'                 # Version string
+        ]
+        
+        # Preserve v4.0 fields
+        preserved_v4 = 0
+        for field in v4_0_fields:
             if field in raw_data and raw_data[field] is not None:
                 result[field] = raw_data[field]
-                preserved_count += 1
+                preserved_v4 += 1
                 
-                # Special logging for critical educational fields
-                if field == 'how_to_spot':
-                    logger.info(f"[Transform Manipulation v3.4] ✓✓✓ CRITICAL: Preserved how_to_spot ({len(raw_data[field]) if isinstance(raw_data[field], list) else 'N/A'} items)")
-                elif field == 'manipulation_lessons':
-                    logger.info(f"[Transform Manipulation v3.4] ✓✓✓ CRITICAL: Preserved manipulation_lessons ({len(raw_data[field]) if isinstance(raw_data[field], list) else 'N/A'} lessons)")
-                elif field == 'risk_profile':
-                    logger.info(f"[Transform Manipulation v3.4] ✓✓✓ CRITICAL: Preserved risk_profile")
+                if field in ['how_to_spot', 'manipulation_lessons', 'risk_profile']:
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v4.0 CRITICAL: Preserved {field}")
                 else:
-                    logger.info(f"[Transform Manipulation v3.4] ✓ Preserved {field}")
+                    logger.info(f"[Transform Manipulation v3.5] ✓ v4.0: Preserved {field}")
         
-        logger.info(f"[Transform Manipulation v3.4] ✅ Preserved {preserved_count}/{len(v4_0_educational_fields)} educational fields")
+        logger.info(f"[Transform Manipulation v3.5] ✅ Preserved {preserved_v4}/{len(v4_0_fields)} v4.0 fields")
+        
+        # Preserve v5.0 WOW fields
+        preserved_v5 = 0
+        for field in v5_0_wow_fields:
+            if field in raw_data and raw_data[field] is not None:
+                result[field] = raw_data[field]
+                preserved_v5 += 1
+                
+                # Special logging for key WOW features
+                if field == 'introduction':
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 WOW: Preserved introduction (What is Manipulation)")
+                elif field == 'methodology':
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 WOW: Preserved methodology (How We Analyze)")
+                elif field == 'did_you_know':
+                    facts_count = len(raw_data[field]) if isinstance(raw_data[field], list) else 0
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 WOW: Preserved did_you_know ({facts_count} psychology facts)")
+                elif field == 'clickbait_analysis':
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 DETECT: Preserved clickbait_analysis")
+                elif field == 'emotional_analysis':
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 DETECT: Preserved emotional_analysis")
+                elif field == 'loaded_language':
+                    word_count = len(raw_data[field].get('word_cloud_data', [])) if isinstance(raw_data[field], dict) else 0
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 DETECT: Preserved loaded_language ({word_count} words for cloud)")
+                elif field == 'logical_fallacies':
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 DETECT: Preserved logical_fallacies")
+                elif field == 'visual_data':
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 VISUAL: Preserved visual_data (charts/meters)")
+                elif field == 'all_tactics':
+                    tactics_count = len(raw_data[field]) if isinstance(raw_data[field], list) else 0
+                    logger.info(f"[Transform Manipulation v3.5] ✓✓✓ v5.0 TACTICS: Preserved all_tactics ({tactics_count} total)")
+                else:
+                    logger.info(f"[Transform Manipulation v3.5] ✓ v5.0: Preserved {field}")
+        
+        logger.info(f"[Transform Manipulation v3.5] ✅✅✅ Preserved {preserved_v5}/{len(v5_0_wow_fields)} v5.0 WOW FACTOR fields!")
         # ============================================================================
         
         DataTransformer._preserve_chart_data(result, raw_data)
         
-        logger.info(f"[Transform Manipulation v3.4] Final score: {result['score']}, educational fields: {'how_to_spot' in result and 'manipulation_lessons' in result}")
+        # Final verification
+        has_wow_features = (
+            'introduction' in result and 
+            'methodology' in result and 
+            'did_you_know' in result and
+            'visual_data' in result
+        )
+        
+        logger.info(f"[Transform Manipulation v3.5] Final score: {result['score']}")
+        logger.info(f"[Transform Manipulation v3.5] WOW features complete: {has_wow_features}")
+        logger.info(f"[Transform Manipulation v3.5] Total fields in result: {len(result)}")
         
         return result
     
@@ -837,9 +903,9 @@ class DataTransformer:
         return result
 
 
-logger.info("[DataTransformer v3.4] Module loaded - OUTLET METADATA FIX (40 OUTLETS)")
-logger.info("[DataTransformer v3.4] ✓ Now trusts backend outlet_metadata.py completely")
-logger.info("[DataTransformer v3.4] ✓ Removed fallback to old 6-outlet SOURCE_METADATA dict")
-logger.info("[DataTransformer v3.4] ✓ Readership and awards from 40-outlet database will display")
+logger.info("[DataTransformer v3.5] Module loaded - MANIPULATION V5.0 WOW SUPPORT")
+logger.info("[DataTransformer v3.5] ✓ Full support for manipulation_detector v5.0 WOW FACTOR")
+logger.info("[DataTransformer v3.5] ✓ Preserves 15+ new v5.0 fields (intro, methodology, visuals, etc.)")
+logger.info("[DataTransformer v3.5] ✓ Preserved all v3.4 functionality (40-outlet metadata, etc.)")
 
 # I did no harm and this file is not truncated
