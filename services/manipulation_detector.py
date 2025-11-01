@@ -1354,4 +1354,7 @@ FEATURES:
 ✅ Memorable insights and findings
 
 READY FOR DEPLOYMENT - Creates "WOW!" moments! 🎯
+
+NOTE: REQUIRES data_transformer.py UPDATE!
+See: data_transformer_v3.5_MANIPULATION_WOW.py
 """
