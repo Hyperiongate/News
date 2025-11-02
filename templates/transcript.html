@@ -3,10 +3,15 @@
 <head>
     <!--
     TruthLens Transcript Analysis Page
-    Version: 3.4.0 - TRULY STANDARDIZED NAVIGATION (FINAL FIX)
-    Date: October 29, 2025
+    Version: 3.5.0 - YOUTUBE CAPTION DISCLAIMER ADDED
+    Date: November 2, 2025
     
-    WHAT'S NEW IN v3.4.0:
+    WHAT'S NEW IN v3.5.0:
+    ✅ ADDED: Clear disclaimer that YouTube analysis only works on videos with captions enabled
+    ✅ ADDED: Warning icon and highlighted text for better visibility
+    ✅ PRESERVED: All v3.4.0 functionality intact (DO NO HARM ✓)
+    
+    PREVIOUS VERSION (v3.4.0):
     ✅ FIXED: Navigation now TRULY matches index.html structure exactly
     ✅ FIXED: Uses correct class names: main-navigation, nav-container-unified, nav-logo
     ✅ FIXED: Uses <ul><li> structure instead of <div> with <a> tags
@@ -31,7 +36,7 @@
     ✅ Polling system for job status
     
     This file is complete and ready to deploy.
-    Last modified: October 29, 2025 - v3.4.0
+    Last modified: November 2, 2025 - v3.5.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -144,6 +149,42 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
+        /* NEW v3.5.0: YouTube Caption Disclaimer Styling */
+        .caption-disclaimer {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+        }
+
+        .caption-disclaimer i {
+            color: #d97706;
+            font-size: 1.25rem;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .caption-disclaimer-content {
+            flex: 1;
+        }
+
+        .caption-disclaimer-title {
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 4px;
+            font-size: 0.95rem;
+        }
+
+        .caption-disclaimer-text {
+            color: #78350f;
+            font-size: 0.875rem;
+            line-height: 1.5;
+        }
+
         @media (max-width: 768px) {
             body {
                 padding-top: 60px;
@@ -209,6 +250,22 @@
             
             .nav-logo i {
                 font-size: 1.5rem;
+            }
+
+            .caption-disclaimer {
+                padding: 10px 12px;
+            }
+
+            .caption-disclaimer i {
+                font-size: 1.1rem;
+            }
+
+            .caption-disclaimer-title {
+                font-size: 0.875rem;
+            }
+
+            .caption-disclaimer-text {
+                font-size: 0.8125rem;
             }
         }
     </style>
@@ -295,6 +352,17 @@
                 <div class="help-text">
                     <i class="fas fa-info-circle"></i>
                     Extract transcript or analyze the video's content
+                </div>
+                
+                <!-- NEW v3.5.0: YouTube Caption Disclaimer -->
+                <div class="caption-disclaimer">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <div class="caption-disclaimer-content">
+                        <div class="caption-disclaimer-title">Important: Captions Required</div>
+                        <div class="caption-disclaimer-text">
+                            This feature only works on YouTube videos that have captions enabled by the creator. Videos with disabled captions cannot be analyzed.
+                        </div>
+                    </div>
                 </div>
             </div>
             <!-- Button Group for Analyze Video OR Create Transcript -->
@@ -394,7 +462,7 @@
     </div>
 
     <script>
-        console.log('[TranscriptApp] Module loading - v13.4.0 with truly standardized navigation...');
+        console.log('[TranscriptApp] Module loading - v3.5.0 with YouTube caption disclaimer...');
         
         let currentJobId = null;
         let pollInterval = null;
@@ -1167,35 +1235,39 @@
             window.scrollTo({ behavior: 'smooth', top: 0 });
         }
 
-        console.log('[TranscriptApp] ✓ Initialized - v13.4.0 with truly standardized navigation');
+        console.log('[TranscriptApp] ✓ Initialized - v3.5.0 with YouTube caption disclaimer');
     </script>
 </body>
 </html>
 
 <!--
 I did no harm and this file is not truncated.
-v3.4.0 - October 29, 2025
+v3.5.0 - November 2, 2025
 
-WHAT'S NEW IN v3.4.0:
-✅ FIXED: Navigation menu now TRULY standardized across ALL pages
-✅ FIXED: Uses correct class names matching index.html exactly
-✅ FIXED: Mobile menu toggle button with proper toggleMobileMenu() function
-✅ FIXED: Menu order: About Us, Features, News Analysis, Transcript/YouTube, Debate Arena, Contact Us
-✅ FIXED: Icon changed to fa-shield-check
-✅ FIXED: Uses <ul><li> structure instead of <div><a>
+WHAT'S NEW IN v3.5.0:
+✅ ADDED: Clear disclaimer that YouTube analysis only works on videos with captions enabled
+✅ ADDED: Highlighted warning box with yellow gradient background
+✅ ADDED: Warning icon (exclamation-triangle) for better visibility
+✅ ADDED: Responsive styling for mobile devices
+✅ PRESERVED: All v3.4.0 functionality intact (DO NO HARM ✓)
 
-PRESERVED FROM v3.3.0:
-✅ CSS extracted to transcript-youtube.css
-✅ "Create Transcript" button and functionality
-✅ "Analyze Video" button and functionality
+DISCLAIMER LOCATION:
+- Appears in the YouTube tab below the URL input
+- Uses attention-grabbing yellow/amber colors
+- Clear, concise message about caption requirements
+- Responsive design for all screen sizes
+
+PRESERVED FROM v3.4.0:
+✅ Standardized navigation matching all pages
+✅ "Create Transcript" functionality
+✅ "Analyze Video" functionality
 ✅ PDF download for transcripts
 ✅ All existing analysis features
-✅ Progress animations and sparkles
-✅ Fun facts rotation
+✅ Progress animations and fun facts
 ✅ Polling system for job status
 ✅ Export functionality (PDF, JSON, TXT)
-✅ All existing JavaScript functions
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
+This file contains all code and is NOT truncated.
 -->
