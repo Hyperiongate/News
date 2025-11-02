@@ -1,42 +1,48 @@
 """
 File: transcript_routes.py
-Last Updated: October 26, 2025 - LIVE STREAMING FIX v10.3.0
+Last Updated: November 2, 2025 - v10.4.0 SPEAKER QUALITY INTEGRATION
 Description: Flask routes for transcript fact-checking with Redis-backed job storage
 
-LATEST UPDATE (October 26, 2025 - v10.3.0 LIVE STREAMING FIX):
+LATEST UPDATE (November 2, 2025 - v10.4.0 SPEAKER QUALITY INTEGRATION):
+========================================================================
+✅ ADDED: Speaker Quality Analyzer integration into processing pipeline
+✅ ADDED: Import for SpeakerQualityAnalyzer from services
+✅ ADDED: Speaker quality analysis step in process_transcript_job (Step 1.5)
+✅ ADDED: Automatic detection of speaker labels in transcripts
+✅ ADDED: Quality analysis results added to final results dictionary
+✅ ADDED: Error handling for analyzer failures (graceful degradation)
+✅ PRESERVED: All v10.3.0 functionality intact (DO NO HARM ✓)
+
+INTEGRATION DETAILS:
+===================
+- Speaker quality analysis runs AFTER transcript extraction
+- Analysis runs BEFORE claim extraction (Step 1.5 in pipeline)
+- Detects speaker labels with regex: r'(?:Speaker|SPEAKER)\s*[A-Z0-9]+:'
+- Calls analyze_transcript_with_speakers() for multi-speaker transcripts
+- Calls analyze_transcript() for single-speaker transcripts
+- Results stored in job data as 'speaker_quality' key
+- Gracefully handles analyzer failures (logs error, continues processing)
+
+PROCESSING PIPELINE ORDER:
+=========================
+Step 0: Job creation (5% progress)
+Step 1.5: Speaker Quality Analysis (10% - 20% progress) ← NEW
+Step 1: Extract claims (20% - 40% progress)
+Step 2: Fact-check claims (40% - 85% progress)
+Step 3: Generate summary (85% - 95% progress)
+Step 4: Finalize results (95% - 100% progress)
+
+PREVIOUS UPDATE (October 26, 2025 - v10.3.0 LIVE STREAMING FIX):
 ==============================================================
-✅ ADDED: 4 missing live streaming API endpoints:
-   - POST /api/transcript/live/validate - Validate YouTube Live URL
-   - POST /api/transcript/live/start - Start live stream analysis
-   - POST /api/transcript/live/stop/<id> - Stop live stream
-   - GET /api/transcript/live/events/<id> - Server-Sent Events stream
+✅ ADDED: 4 missing live streaming API endpoints
 ✅ FIXED: "Cannot read properties of undefined (reading 'live_streaming')" error
 ✅ FIXED: All 404 errors on /api/transcript/live/* endpoints
-✅ FIXED: JSON parsing errors from HTML responses
-✅ ADDED: Proper AssemblyAI configuration detection
-✅ ADDED: Clear error messages if AssemblyAI not configured
 ✅ ADDED: Server-Sent Events for real-time updates
-✅ PRESERVED: All v10.2.3 functionality (DO NO HARM ✓)
-
-PREVIOUS UPDATE (October 26, 2025 - v10.2.3):
-==============================================
-- ADDED: create_job_via_api() function for external job creation
-- PURPOSE: Allows app.py's /api/youtube/process endpoint to create jobs
-- FIXED: YouTube transcript analysis now works end-to-end with job tracking
-
-REDIS SETUP ON RENDER:
-=======================
-1. Go to Render Dashboard
-2. Click "New +" → "Redis"
-3. Name it "truthlens-redis"
-4. Copy the "Internal Redis URL"
-5. Add to your web service as environment variable: REDIS_URL
-6. Redeploy - 404 errors will be fixed!
 
 Deploy to: transcript_routes.py (root directory)
 
 This is a COMPLETE file ready for deployment.
-Last modified: October 26, 2025 - v10.3.0 LIVE STREAMING FIX
+Last modified: November 2, 2025 - v10.4.0 SPEAKER QUALITY INTEGRATION
 I did no harm and this file is not truncated.
 """
 
@@ -53,6 +59,7 @@ import time
 import random
 import socket
 import queue
+import re
 
 # Import Config
 from config import Config
@@ -62,6 +69,9 @@ from services.transcript import TranscriptProcessor
 from services.transcript_claims import TranscriptClaimExtractor
 from services.transcript_factcheck import TranscriptComprehensiveFactChecker
 from services.export_service import ExportService
+
+# NEW v10.4.0: Import Speaker Quality Analyzer
+from services.speaker_quality_analyzer import SpeakerQualityAnalyzer
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -75,6 +85,14 @@ transcript_processor = TranscriptProcessor()
 claim_extractor = TranscriptClaimExtractor(Config)
 fact_checker = TranscriptComprehensiveFactChecker(Config)
 export_service = ExportService()
+
+# NEW v10.4.0: Initialize Speaker Quality Analyzer
+try:
+    speaker_quality_analyzer = SpeakerQualityAnalyzer()
+    logger.info("[TranscriptRoutes] ✓ Speaker Quality Analyzer initialized (v10.4.0)")
+except Exception as e:
+    logger.error(f"[TranscriptRoutes] ✗ Failed to initialize Speaker Quality Analyzer: {e}")
+    speaker_quality_analyzer = None
 
 # ============================================================================
 # REDIS PERSISTENT JOB STORAGE WITH MULTI-INSTANCE DETECTION
@@ -148,6 +166,8 @@ service_stats = {
     'youtube_extractions': 0,
     'youtube_successes': 0,
     'youtube_failures': 0,
+    'speaker_quality_analyses': 0,  # NEW v10.4.0
+    'speaker_quality_failures': 0,   # NEW v10.4.0
     'storage_backend': 'redis' if redis_client else 'memory',
     'instance_id': INSTANCE_ID
 }
@@ -394,6 +414,15 @@ STARTING_MESSAGES = [
     "📝 Extracting claims... This is the fun part!"
 ]
 
+# NEW v10.4.0: Speaker quality analysis messages
+SPEAKER_QUALITY_MESSAGES = [
+    "🎤 Analyzing speaker quality and communication style...",
+    "📊 Evaluating grade level and vocabulary...",
+    "🔍 Checking for inflammatory language...",
+    "🎯 Assessing sentence quality and coherence...",
+    "🧠 Analyzing rhetorical tactics..."
+]
+
 CLAIM_EXTRACTION_MESSAGES = [
     "🔎 Extracting claims... Found some interesting statements!",
     "🕵️ Digging through the transcript for factual claims...",
@@ -423,11 +452,15 @@ def process_transcript_job(job_id: str, transcript: str):
     """
     Background job processing function
     
+    NEW v10.4.0: Now includes speaker quality analysis as Step 1.5
+    
     Processes a transcript by:
-    1. Extracting claims
-    2. Fact-checking each claim
-    3. Generating summary and credibility score
-    4. Storing results
+    0. Job creation (5%)
+    1.5. Speaker quality analysis (10% - 20%) ← NEW
+    1. Extracting claims (20% - 40%)
+    2. Fact-checking each claim (40% - 85%)
+    3. Generating summary and credibility score (85% - 95%)
+    4. Storing results (95% - 100%)
     
     Args:
         job_id: Job identifier
@@ -443,10 +476,68 @@ def process_transcript_job(job_id: str, transcript: str):
             'message': random.choice(STARTING_MESSAGES)
         })
         
+        # ========================================================================
+        # NEW STEP 1.5: Speaker Quality Analysis (10% - 20%)
+        # ========================================================================
+        speaker_quality_analysis = None
+        
+        if speaker_quality_analyzer:
+            try:
+                logger.info(f"[TranscriptRoutes] Step 1.5: Analyzing speaker quality (job {job_id})")
+                update_job(job_id, {
+                    'progress': 10,
+                    'message': random.choice(SPEAKER_QUALITY_MESSAGES)
+                })
+                
+                time.sleep(0.3)  # Brief pause for UI feedback
+                
+                # Check if transcript has speaker labels
+                has_speaker_labels = bool(re.search(
+                    r'(?:Speaker|SPEAKER)\s*[A-Z0-9]+:', 
+                    transcript
+                ))
+                
+                logger.info(f"[TranscriptRoutes] Speaker labels detected: {has_speaker_labels}")
+                
+                # Run appropriate analysis
+                if has_speaker_labels:
+                    logger.info(f"[TranscriptRoutes] Running multi-speaker analysis...")
+                    speaker_quality_analysis = speaker_quality_analyzer.analyze_transcript_with_speakers(
+                        transcript,
+                        metadata={'job_id': job_id, 'source': 'transcript_routes'}
+                    )
+                else:
+                    logger.info(f"[TranscriptRoutes] Running single-speaker analysis...")
+                    speaker_quality_analysis = speaker_quality_analyzer.analyze_transcript(
+                        transcript,
+                        metadata={'job_id': job_id, 'source': 'transcript_routes'}
+                    )
+                
+                if speaker_quality_analysis and speaker_quality_analysis.get('success'):
+                    logger.info(f"[TranscriptRoutes] ✓ Speaker quality analysis complete")
+                    service_stats['speaker_quality_analyses'] += 1
+                    
+                    update_job(job_id, {
+                        'progress': 20,
+                        'message': '✓ Speaker quality analyzed'
+                    })
+                else:
+                    logger.warning(f"[TranscriptRoutes] ⚠️  Speaker quality analysis returned no results")
+                    service_stats['speaker_quality_failures'] += 1
+                    speaker_quality_analysis = None
+                    
+            except Exception as e:
+                logger.error(f"[TranscriptRoutes] ✗ Speaker quality analysis failed: {e}", exc_info=True)
+                service_stats['speaker_quality_failures'] += 1
+                speaker_quality_analysis = None
+                # Continue with rest of analysis (graceful degradation)
+        else:
+            logger.warning(f"[TranscriptRoutes] ⚠️  Speaker quality analyzer not available")
+        
         # STEP 1: Extract claims (20% - 40%)
         logger.info(f"[TranscriptRoutes] Step 1: Extracting claims from transcript (job {job_id})")
         update_job(job_id, {
-            'progress': 20,
+            'progress': 25,
             'message': random.choice(CLAIM_EXTRACTION_MESSAGES)
         })
         
@@ -559,6 +650,11 @@ def process_transcript_job(job_id: str, transcript: str):
             'completed_at': datetime.now().isoformat(),
             'instance_id': INSTANCE_ID
         }
+        
+        # NEW v10.4.0: Add speaker quality analysis to results if available
+        if speaker_quality_analysis:
+            results['speaker_quality'] = speaker_quality_analysis
+            logger.info(f"[TranscriptRoutes] ✓ Speaker quality results added to final results")
         
         # Save completed job
         update_job(job_id, {
@@ -886,7 +982,8 @@ def health_check():
         'services': {
             'claim_extractor': claim_extractor is not None,
             'fact_checker': fact_checker is not None,
-            'export_service': export_service is not None
+            'export_service': export_service is not None,
+            'speaker_quality_analyzer': speaker_quality_analyzer is not None  # NEW v10.4.0
         }
     }
     
@@ -906,7 +1003,7 @@ def health_check():
 
 
 # ============================================================================
-# LIVE STREAMING ENDPOINTS (NEW in v10.3.0)
+# LIVE STREAMING ENDPOINTS (v10.3.0)
 # ============================================================================
 
 # Active live streams
@@ -1276,7 +1373,13 @@ cleanup_thread = Thread(target=schedule_cleanup, daemon=True)
 cleanup_thread.start()
 
 logger.info("=" * 80)
-logger.info("LIVE STREAMING ENDPOINTS LOADED (v10.3.0)")
+logger.info("TRANSCRIPT ROUTES LOADED (v10.4.0 - SPEAKER QUALITY INTEGRATED)")
+logger.info("  ✓ Speaker Quality Analyzer: " + ("ACTIVE" if speaker_quality_analyzer else "DISABLED"))
+logger.info("  ✓ Analysis Pipeline: Job → Speaker Quality → Claims → Fact-Check → Results")
+logger.info("  ✓ /api/transcript/analyze - POST")
+logger.info("  ✓ /api/transcript/status/<id> - GET")
+logger.info("  ✓ /api/transcript/results/<id> - GET")
+logger.info("  ✓ /api/transcript/export/<id>/<format> - GET")
 logger.info("  ✓ /api/transcript/live/validate - POST")
 logger.info("  ✓ /api/transcript/live/start - POST")
 logger.info("  ✓ /api/transcript/live/stop/<id> - POST")
