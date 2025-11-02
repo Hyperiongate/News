@@ -3,40 +3,36 @@
 <head>
     <!--
     TruthLens Transcript Analysis Page
-    Version: 3.5.0 - YOUTUBE CAPTION DISCLAIMER ADDED
+    Version: 3.6.0 - SPEAKER QUALITY DISPLAY ADDED
     Date: November 2, 2025
     
-    WHAT'S NEW IN v3.5.0:
-    ✅ ADDED: Clear disclaimer that YouTube analysis only works on videos with captions enabled
-    ✅ ADDED: Warning icon and highlighted text for better visibility
-    ✅ PRESERVED: All v3.4.0 functionality intact (DO NO HARM ✓)
+    WHAT'S NEW IN v3.6.0:
+    ✅ ADDED: Speaker Quality metrics display in results
+    ✅ ADDED: CSS styling for speaker quality cards and metrics
+    ✅ ADDED: JavaScript function buildSpeakerQualityHTML() for rendering quality data
+    ✅ ADDED: Support for both single-speaker and multi-speaker analysis display
+    ✅ ADDED: Grade level, language style, sentence quality, coherence, and vocabulary metrics
+    ✅ ADDED: Visual indicators (progress bars, badges, icons) for quality metrics
+    ✅ PRESERVED: All v3.5.0 functionality intact (DO NO HARM ✓)
     
-    PREVIOUS VERSION (v3.4.0):
-    ✅ FIXED: Navigation now TRULY matches index.html structure exactly
-    ✅ FIXED: Uses correct class names: main-navigation, nav-container-unified, nav-logo
-    ✅ FIXED: Uses <ul><li> structure instead of <div> with <a> tags
-    ✅ FIXED: Mobile menu toggle button added with toggleMobileMenu() function
-    ✅ FIXED: Icon changed to fa-shield-check (matching all pages)
-    ✅ PRESERVED: All v3.3.0 functionality intact (DO NO HARM ✓)
+    SPEAKER QUALITY DISPLAY FEATURES:
+    - Overall quality card with grade level and assessment
+    - Language style indicator (inflammatory percentage)
+    - Sentence completion rate
+    - Coherence score
+    - Vocabulary diversity
+    - Per-speaker breakdown for multi-speaker transcripts
+    - Comparison highlights for debates/interviews
     
-    NAVIGATION NOW MATCHES:
-    - index.html (News Analysis)
-    - features.html
-    - debate-arena.html
-    - contact.html
-    - about.html
-    
-    PRESERVED FROM v3.3.0:
-    ✅ CSS extracted to transcript-youtube.css
-    ✅ "Create Transcript" functionality
-    ✅ "Analyze Video" functionality  
+    PREVIOUS VERSION (v3.5.0):
+    ✅ YouTube caption disclaimer
+    ✅ Standardized navigation
+    ✅ Create Transcript functionality
+    ✅ Analyze Video functionality
     ✅ PDF download for transcripts
-    ✅ All existing analysis features
-    ✅ Progress animations and fun facts
-    ✅ Polling system for job status
     
     This file is complete and ready to deploy.
-    Last modified: November 2, 2025 - v3.5.0
+    Last modified: November 2, 2025 - v3.6.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -149,7 +145,7 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
-        /* NEW v3.5.0: YouTube Caption Disclaimer Styling */
+        /* YouTube Caption Disclaimer Styling (v3.5.0) */
         .caption-disclaimer {
             background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
             border: 2px solid #f59e0b;
@@ -183,6 +179,185 @@
             color: #78350f;
             font-size: 0.875rem;
             line-height: 1.5;
+        }
+
+        /* NEW v3.6.0: Speaker Quality Styling */
+        .speaker-quality-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+        }
+
+        .speaker-quality-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .speaker-quality-header i {
+            font-size: 28px;
+            color: #0ea5e9;
+        }
+
+        .speaker-quality-header h3 {
+            font-size: 22px;
+            font-weight: 800;
+            color: #0c4a6e;
+            margin: 0;
+        }
+
+        .speaker-quality-overall {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border-left: 4px solid #0ea5e9;
+        }
+
+        .speaker-quality-grade {
+            font-size: 32px;
+            font-weight: 900;
+            color: #0ea5e9;
+            margin-bottom: 8px;
+        }
+
+        .speaker-quality-assessment {
+            font-size: 15px;
+            color: #475569;
+            line-height: 1.6;
+        }
+
+        .speaker-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .speaker-metric {
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .speaker-metric-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #64748b;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .speaker-metric-label i {
+            color: #0ea5e9;
+        }
+
+        .speaker-metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin-bottom: 4px;
+        }
+
+        .speaker-metric-description {
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .speaker-metric-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .speaker-metric-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
+            border-radius: 4px;
+            transition: width 0.6s ease;
+        }
+
+        .speaker-individual {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .speaker-individual-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .speaker-individual-header i {
+            font-size: 20px;
+            color: #0ea5e9;
+        }
+
+        .speaker-individual-header h4 {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0c4a6e;
+            margin: 0;
+        }
+
+        .speaker-comparison {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .speaker-comparison-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            color: #92400e;
+            margin-bottom: 12px;
+        }
+
+        .speaker-comparison-title i {
+            color: #d97706;
+        }
+
+        .speaker-comparison-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .speaker-comparison-list li {
+            padding: 6px 0;
+            color: #78350f;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .speaker-comparison-list li:before {
+            content: "→ ";
+            color: #d97706;
+            font-weight: bold;
+            margin-right: 8px;
         }
 
         @media (max-width: 768px) {
@@ -241,16 +416,6 @@
                 background: rgba(255, 255, 255, 0.25);
                 border-left: 4px solid white;
             }
-        }
-
-        @media (max-width: 480px) {
-            .nav-logo {
-                font-size: 1.25rem;
-            }
-            
-            .nav-logo i {
-                font-size: 1.5rem;
-            }
 
             .caption-disclaimer {
                 padding: 10px 12px;
@@ -266,6 +431,24 @@
 
             .caption-disclaimer-text {
                 font-size: 0.8125rem;
+            }
+
+            .speaker-metrics-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .speaker-quality-grade {
+                font-size: 24px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .nav-logo {
+                font-size: 1.25rem;
+            }
+            
+            .nav-logo i {
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -354,7 +537,7 @@
                     Extract transcript or analyze the video's content
                 </div>
                 
-                <!-- NEW v3.5.0: YouTube Caption Disclaimer -->
+                <!-- YouTube Caption Disclaimer (v3.5.0) -->
                 <div class="caption-disclaimer">
                     <i class="fas fa-exclamation-triangle"></i>
                     <div class="caption-disclaimer-content">
@@ -462,7 +645,7 @@
     </div>
 
     <script>
-        console.log('[TranscriptApp] Module loading - v3.5.0 with YouTube caption disclaimer...');
+        console.log('[TranscriptApp] Module loading - v3.6.0 with speaker quality display...');
         
         let currentJobId = null;
         let pollInterval = null;
@@ -953,7 +1136,221 @@
         }
 
         // ============================================================================
-        // DISPLAY RESULTS
+        // NEW v3.6.0: SPEAKER QUALITY DISPLAY
+        // ============================================================================
+        function buildSpeakerQualityHTML(speakerQuality) {
+            if (!speakerQuality || !speakerQuality.success) {
+                return '';
+            }
+
+            console.log('[TranscriptApp] Building speaker quality display');
+            
+            let html = '<div class="speaker-quality-card">';
+            
+            // Header
+            html += `
+                <div class="speaker-quality-header">
+                    <i class="fas fa-user-graduate"></i>
+                    <h3>Speaker Quality Analysis</h3>
+                </div>
+            `;
+            
+            // Check if multi-speaker
+            const isMultiSpeaker = speakerQuality.analysis_type === 'transcript_with_speakers';
+            
+            if (isMultiSpeaker) {
+                // Multi-speaker analysis
+                const speakerCount = speakerQuality.speaker_count || 0;
+                html += `<p style="color: #64748b; margin-bottom: 16px; font-size: 14px;">
+                    <i class="fas fa-users"></i> Analysis of ${speakerCount} speakers
+                </p>`;
+                
+                // Display each speaker
+                const speakers = speakerQuality.speakers || {};
+                for (const [speakerName, analysis] of Object.entries(speakers)) {
+                    html += buildIndividualSpeakerHTML(speakerName, analysis);
+                }
+                
+                // Display comparison if available
+                if (speakerQuality.comparison && speakerQuality.comparison.key_differences) {
+                    html += buildSpeakerComparisonHTML(speakerQuality.comparison);
+                }
+            } else {
+                // Single speaker analysis
+                html += buildOverallQualityHTML(speakerQuality);
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        function buildOverallQualityHTML(analysis) {
+            let html = '';
+            
+            // Overall assessment card
+            if (analysis.overall_assessment || analysis.grade_level) {
+                html += '<div class="speaker-quality-overall">';
+                
+                if (analysis.grade_level && analysis.grade_level.grade_level_label) {
+                    html += `<div class="speaker-quality-grade">
+                        <i class="fas fa-graduation-cap"></i> ${analysis.grade_level.grade_level_label}
+                    </div>`;
+                }
+                
+                if (analysis.overall_assessment) {
+                    html += `<div class="speaker-quality-assessment">${analysis.overall_assessment}</div>`;
+                }
+                
+                html += '</div>';
+            }
+            
+            // Metrics grid
+            html += '<div class="speaker-metrics-grid">';
+            
+            // Grade Level
+            if (analysis.grade_level && analysis.grade_level.flesch_kincaid_grade !== undefined) {
+                const gradeScore = analysis.grade_level.flesch_kincaid_grade;
+                const gradePercent = Math.min((gradeScore / 18) * 100, 100);
+                html += `
+                    <div class="speaker-metric">
+                        <div class="speaker-metric-label">
+                            <i class="fas fa-book"></i> Grade Level
+                        </div>
+                        <div class="speaker-metric-value">${gradeScore.toFixed(1)}</div>
+                        <div class="speaker-metric-description">${analysis.grade_level.interpretation || ''}</div>
+                        <div class="speaker-metric-bar">
+                            <div class="speaker-metric-bar-fill" style="width: ${gradePercent}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Language Style
+            if (analysis.language_style && analysis.language_style.inflammatory_percentage !== undefined) {
+                const infPercent = analysis.language_style.inflammatory_percentage;
+                html += `
+                    <div class="speaker-metric">
+                        <div class="speaker-metric-label">
+                            <i class="fas fa-fire"></i> Inflammatory Language
+                        </div>
+                        <div class="speaker-metric-value">${infPercent.toFixed(1)}%</div>
+                        <div class="speaker-metric-description">${analysis.language_style.style_assessment || ''}</div>
+                        <div class="speaker-metric-bar">
+                            <div class="speaker-metric-bar-fill" style="width: ${infPercent}%; background: ${infPercent > 15 ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(90deg, #10b981 0%, #059669 100%)'}"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Sentence Quality
+            if (analysis.sentence_quality && analysis.sentence_quality.completion_rate !== undefined) {
+                const completionRate = analysis.sentence_quality.completion_rate;
+                html += `
+                    <div class="speaker-metric">
+                        <div class="speaker-metric-label">
+                            <i class="fas fa-check-circle"></i> Sentence Completion
+                        </div>
+                        <div class="speaker-metric-value">${completionRate.toFixed(1)}%</div>
+                        <div class="speaker-metric-description">${analysis.sentence_quality.quality_assessment || ''}</div>
+                        <div class="speaker-metric-bar">
+                            <div class="speaker-metric-bar-fill" style="width: ${completionRate}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Coherence
+            if (analysis.coherence && analysis.coherence.coherence_score !== undefined) {
+                const coherenceScore = analysis.coherence.coherence_score;
+                html += `
+                    <div class="speaker-metric">
+                        <div class="speaker-metric-label">
+                            <i class="fas fa-link"></i> Coherence
+                        </div>
+                        <div class="speaker-metric-value">${coherenceScore.toFixed(1)}%</div>
+                        <div class="speaker-metric-description">${analysis.coherence.logical_flow || ''}</div>
+                        <div class="speaker-metric-bar">
+                            <div class="speaker-metric-bar-fill" style="width: ${coherenceScore}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Vocabulary
+            if (analysis.vocabulary && analysis.vocabulary.vocabulary_diversity !== undefined) {
+                const vocabScore = analysis.vocabulary.vocabulary_diversity;
+                html += `
+                    <div class="speaker-metric">
+                        <div class="speaker-metric-label">
+                            <i class="fas fa-book-open"></i> Vocabulary Diversity
+                        </div>
+                        <div class="speaker-metric-value">${vocabScore.toFixed(1)}%</div>
+                        <div class="speaker-metric-description">${analysis.vocabulary.complexity_level || ''}</div>
+                        <div class="speaker-metric-bar">
+                            <div class="speaker-metric-bar-fill" style="width: ${vocabScore}%"></div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Rhetorical Devices
+            if (analysis.rhetorical_devices && analysis.rhetorical_devices.tactics_used) {
+                const tactics = analysis.rhetorical_devices.tactics_used;
+                html += `
+                    <div class="speaker-metric">
+                        <div class="speaker-metric-label">
+                            <i class="fas fa-comments"></i> Rhetorical Tactics
+                        </div>
+                        <div class="speaker-metric-value">${tactics.length}</div>
+                        <div class="speaker-metric-description">${tactics.join(', ')}</div>
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+            return html;
+        }
+
+        function buildIndividualSpeakerHTML(speakerName, analysis) {
+            let html = '<div class="speaker-individual">';
+            
+            html += `
+                <div class="speaker-individual-header">
+                    <i class="fas fa-user"></i>
+                    <h4>${speakerName}</h4>
+                </div>
+            `;
+            
+            html += buildOverallQualityHTML(analysis);
+            
+            html += '</div>';
+            return html;
+        }
+
+        function buildSpeakerComparisonHTML(comparison) {
+            if (!comparison || !comparison.key_differences || comparison.key_differences.length === 0) {
+                return '';
+            }
+            
+            let html = '<div class="speaker-comparison">';
+            html += `
+                <div class="speaker-comparison-title">
+                    <i class="fas fa-balance-scale"></i>
+                    Key Differences Between Speakers
+                </div>
+                <ul class="speaker-comparison-list">
+            `;
+            
+            for (const diff of comparison.key_differences) {
+                html += `<li>${diff}</li>`;
+            }
+            
+            html += '</ul></div>';
+            return html;
+        }
+
+        // ============================================================================
+        // DISPLAY RESULTS (Updated with Speaker Quality)
         // ============================================================================
         function displayResults(results) {
             console.log('[TranscriptApp] Displaying results');
@@ -986,7 +1383,7 @@
         function buildTranscriptResultsHTML(results) {
             console.log('[TranscriptApp] Building TRANSCRIPT results');
             
-            const factChecks = results.fact_checks || [];
+            const factChecks = results.fact_checks || results.claims || [];
             
             let html = `
                 <div style="text-align: center; margin-bottom: 30px;">
@@ -994,7 +1391,15 @@
                         <i class="fas fa-plus"></i> New Analysis
                     </button>
                 </div>
-                
+            `;
+            
+            // NEW v3.6.0: Add speaker quality display if available
+            if (results.speaker_quality) {
+                console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
+                html += buildSpeakerQualityHTML(results.speaker_quality);
+            }
+            
+            html += `
                 <div style="background: var(--gray-50); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
                     <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">
                         <i class="fas fa-info-circle" style="color: var(--primary-blue);"></i> Summary
@@ -1033,7 +1438,7 @@
                             </div>
                             
                             <p style="font-size: 16px; font-weight: 600; margin-bottom: 12px; line-height: 1.6;">
-                                "${check.claim || 'Unknown claim'}"
+                                "${check.claim || check.text || 'Unknown claim'}"
                             </p>
                             
                             ${check.speaker ? `<p style="font-size: 14px; color: var(--gray-600); margin-bottom: 12px;"><i class="fas fa-user"></i> <strong>Speaker:</strong> ${check.speaker}</p>` : ''}
@@ -1063,7 +1468,15 @@
                         <i class="fas fa-plus"></i> New Analysis
                     </button>
                 </div>
-                
+            `;
+            
+            // NEW v3.6.0: Add speaker quality display if available
+            if (results.speaker_quality) {
+                console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
+                html += buildSpeakerQualityHTML(results.speaker_quality);
+            }
+            
+            html += `
                 <div class="credibility-card">
                     <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; opacity: 0.9;">
                         Overall Credibility Score
@@ -1132,13 +1545,21 @@
             // FALLBACK for unknown format
             console.log('[TranscriptApp] Building GENERIC results');
             
-            return `
+            let html = `
                 <div style="text-align: center; margin-bottom: 30px;">
                     <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer;">
                         <i class="fas fa-plus"></i> New Analysis
                     </button>
                 </div>
-                
+            `;
+            
+            // NEW v3.6.0: Add speaker quality display if available
+            if (results.speaker_quality) {
+                console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
+                html += buildSpeakerQualityHTML(results.speaker_quality);
+            }
+            
+            html += `
                 <div style="background: var(--gray-50); border-radius: 12px; padding: 24px;">
                     <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
                         <i class="fas fa-info-circle"></i> Analysis Results
@@ -1146,6 +1567,8 @@
                     <pre style="white-space: pre-wrap; word-wrap: break-word; background: white; padding: 16px; border-radius: 8px; overflow-x: auto;">${JSON.stringify(results, null, 2)}</pre>
                 </div>
             `;
+            
+            return html;
         }
 
         function getVerdictColor(verdict) {
@@ -1235,37 +1658,34 @@
             window.scrollTo({ behavior: 'smooth', top: 0 });
         }
 
-        console.log('[TranscriptApp] ✓ Initialized - v3.5.0 with YouTube caption disclaimer');
+        console.log('[TranscriptApp] ✓ Initialized - v3.6.0 with speaker quality display');
     </script>
 </body>
 </html>
 
 <!--
 I did no harm and this file is not truncated.
-v3.5.0 - November 2, 2025
+v3.6.0 - November 2, 2025
 
-WHAT'S NEW IN v3.5.0:
-✅ ADDED: Clear disclaimer that YouTube analysis only works on videos with captions enabled
-✅ ADDED: Highlighted warning box with yellow gradient background
-✅ ADDED: Warning icon (exclamation-triangle) for better visibility
-✅ ADDED: Responsive styling for mobile devices
-✅ PRESERVED: All v3.4.0 functionality intact (DO NO HARM ✓)
+WHAT'S NEW IN v3.6.0:
+✅ ADDED: Complete speaker quality metrics display
+✅ ADDED: buildSpeakerQualityHTML() function for rendering quality data
+✅ ADDED: buildOverallQualityHTML() for single-speaker display
+✅ ADDED: buildIndividualSpeakerHTML() for multi-speaker display
+✅ ADDED: buildSpeakerComparisonHTML() for speaker comparisons
+✅ ADDED: CSS styling for quality cards, metrics, progress bars
+✅ ADDED: Visual indicators and icons for all metrics
+✅ PRESERVED: All v3.5.0 functionality (DO NO HARM ✓)
 
-DISCLAIMER LOCATION:
-- Appears in the YouTube tab below the URL input
-- Uses attention-grabbing yellow/amber colors
-- Clear, concise message about caption requirements
-- Responsive design for all screen sizes
-
-PRESERVED FROM v3.4.0:
-✅ Standardized navigation matching all pages
-✅ "Create Transcript" functionality
-✅ "Analyze Video" functionality
-✅ PDF download for transcripts
-✅ All existing analysis features
-✅ Progress animations and fun facts
-✅ Polling system for job status
-✅ Export functionality (PDF, JSON, TXT)
+SPEAKER QUALITY FEATURES:
+✅ Grade level with interpretation
+✅ Inflammatory language percentage
+✅ Sentence completion rate
+✅ Coherence score
+✅ Vocabulary diversity
+✅ Rhetorical tactics count
+✅ Per-speaker breakdown for debates/interviews
+✅ Key differences comparison
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
