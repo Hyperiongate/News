@@ -60,10 +60,10 @@
     };
     
     // ====================================================================
-    // GLOBAL EXPORT FUNCTION
+    // GLOBAL EXPORT FUNCTION (COMPATIBLE WITH EXISTING BUTTONS)
     // ====================================================================
     
-    window.exportPremiumPDF = function() {
+    window.generatePDF = function() {
         console.log('[PDFGenerator v6.0.0] Starting enhanced PDF generation...');
         
         // Check for jsPDF library
@@ -87,6 +87,9 @@
             alert('Error generating PDF: ' + error.message);
         }
     };
+    
+    // Alias for compatibility
+    window.exportPremiumPDF = window.generatePDF;
     
     // ====================================================================
     // ENHANCED PDF GENERATOR CLASS
