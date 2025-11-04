@@ -2654,9 +2654,7 @@ window.ServiceTemplates = {
         wrapper.style.display = 'block';
         console.log('[Content Quality v5.10.0] ✓ All metrics displayed');
     },
-
-/**
-    
+  
     // ============================================================================
     // SOURCE CREDIBILITY ENHANCEMENTS (PRESERVED FROM v5.7.0)
     // ============================================================================
