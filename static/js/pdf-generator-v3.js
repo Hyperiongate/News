@@ -1,47 +1,37 @@
 /**
  * ============================================================================
- * TRUTHLENS PDF GENERATOR v4.0 - COMPLETE ROBUST FIX
+ * TRUTHLENS PDF GENERATOR v5.0 - DIRECT DATA ACCESS FIX
  * ============================================================================
  * Date: November 4, 2025
  * Author: Claude (Anthropic)
  * 
- * CRITICAL FIXES IN v4.0:
- * =======================
- * ✅ FIX #1: REPLACED Unicode bar characters with proper jsPDF rectangles
- *    - OLD: Used ■ and · characters that rendered as %%%
- *    - NEW: Uses doc.rect() to draw actual colored progress bars
+ * CRITICAL FIX IN v5.0:
+ * =====================
+ * ✅ USES EXACT SAME DATA ACCESS as service-templates.js (which works perfectly!)
+ * ✅ NO MORE "extraction" logic - just direct field access
+ * ✅ NO MORE [object Object] errors
+ * ✅ Matches dropdown content exactly
  * 
- * ✅ FIX #2: EXTRACTS verbose explanations from services
- *    - Now reads data.analysis.detailed_analysis[service].explanation
- *    - Shows full multi-paragraph explanations in PDFs
+ * KEY INSIGHT:
+ * The dropdowns work because service-templates.js uses direct field access:
+ *   var score = data.score;
+ *   var explanation = data.explanation;
  * 
- * ✅ FIX #3: DISPLAYS score breakdowns with all components
- *    - Extracts data.analysis.detailed_analysis[service].score_breakdown
- *    - Shows weighted components and calculations
+ * This PDF generator now does THE EXACT SAME THING!
  * 
- * ✅ FIX #4: MATCHES web app display exactly
- *    - Same rich content as website
- *    - Same visual styling
- *    - Professional formatting
+ * DEPLOYMENT:
+ * 1. Save as: static/js/truthlens-pdf-generator-v5.0.js
+ * 2. Update index.html to load this version
+ * 3. Test by downloading a PDF
  * 
- * DEPLOYMENT INSTRUCTIONS:
- * ========================
- * 1. Save this file as: static/js/truthlens-pdf-generator-v4.0.js
- * 2. Update templates/index.html to load this version:
- *    <script src="{{ url_for('static', filename='js/truthlens-pdf-generator-v4.0.js') }}"></script>
- * 3. Remove old version from index.html
- * 4. Deploy to GitHub
- * 5. Test by analyzing an article and clicking "Download PDF"
- * 
- * This is a COMPLETE file ready for deployment.
  * I did no harm and this file is not truncated.
- * Date: November 4, 2025 - v4.0 ROBUST FIX
+ * Date: November 4, 2025 - v5.0 DIRECT DATA ACCESS FIX
  */
 
 (function() {
     'use strict';
     
-    console.log('[TruthLens PDF Generator v4.0] Loading ROBUST FIX...');
+    console.log('[TruthLens PDF Generator v5.0] Loading DIRECT DATA ACCESS FIX...');
     
     // ====================================================================
     // CONFIGURATION
@@ -65,9 +55,7 @@
         danger: [239, 68, 68],
         textDark: [30, 41, 59],
         textLight: [107, 114, 128],
-        border: [229, 231, 235],
-        barFill: [59, 130, 246],
-        barEmpty: [229, 231, 235]
+        border: [229, 231, 235]
     };
     
     // ====================================================================
@@ -75,7 +63,7 @@
     // ====================================================================
     
     window.generatePDF = function() {
-        console.log('[PDF v4.0] Starting PDF generation...');
+        console.log('[PDF v5.0] Starting PDF generation with DIRECT data access...');
         
         if (typeof window.jspdf === 'undefined' && typeof window.jsPDF === 'undefined') {
             alert('PDF library not loaded. Please refresh the page.');
@@ -90,9 +78,9 @@
         try {
             var generator = new TruthLensPDFGenerator(window.lastAnalysisData);
             generator.generate();
-            console.log('[PDF v4.0] ✓ PDF generated successfully!');
+            console.log('[PDF v5.0] ✓ PDF generated successfully!');
         } catch (error) {
-            console.error('[PDF v4.0] Error:', error);
+            console.error('[PDF v5.0] Error:', error);
             alert('Error generating PDF: ' + error.message);
         }
     };
@@ -115,7 +103,7 @@
         this.yPos = PAGE_CONFIG.marginTop;
         this.pageNumber = 1;
         
-        console.log('[PDF v4.0] Initialized with data:', {
+        console.log('[PDF v5.0] Initialized with data:', {
             hasTrustScore: !!data.trust_score,
             hasAnalysis: !!data.analysis,
             hasDetailedAnalysis: !!(data.analysis && data.analysis.detailed_analysis)
@@ -123,79 +111,29 @@
     }
     
     // ====================================================================
-    // ✅ FIX #1: PROPER VISUAL BARS USING jsPDF RECTANGLES
+    // ✅ NEW v5.0: DIRECT DATA ACCESS (SAME AS service-templates.js)
     // ====================================================================
     
-    TruthLensPDFGenerator.prototype.drawProgressBar = function(x, y, width, height, percentage) {
+    TruthLensPDFGenerator.prototype.getServiceData = function(serviceId) {
         /**
-         * Draw a proper progress bar using jsPDF rectangles
-         * NO MORE UNICODE CHARACTERS!
+         * Get service data using DIRECT access (same as service-templates.js)
+         * NO extraction, NO searching - just direct field access
          */
+        var analysis = this.data.analysis || this.data;
+        var detailed = analysis.detailed_analysis || {};
         
-        // Background (empty part)
-        this.doc.setFillColor(COLORS.barEmpty[0], COLORS.barEmpty[1], COLORS.barEmpty[2]);
-        this.doc.rect(x, y, width, height, 'F');
-        
-        // Filled part based on percentage
-        var fillWidth = (percentage / 100) * width;
-        
-        // Color based on score
-        var color = this.getScoreColor(percentage);
-        this.doc.setFillColor(color[0], color[1], color[2]);
-        this.doc.rect(x, y, fillWidth, height, 'F');
-        
-        // Border
-        this.doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
-        this.doc.rect(x, y, width, height, 'S');
+        return detailed[serviceId] || null;
     };
     
-    TruthLensPDFGenerator.prototype.getScoreColor = function(score) {
-        if (score >= 80) return COLORS.success;
-        if (score >= 60) return COLORS.warning;
-        return COLORS.danger;
-    };
-    
-    // ====================================================================
-    // ✅ FIX #2: EXTRACT VERBOSE EXPLANATIONS FROM SERVICES
-    // ====================================================================
-    
-    TruthLensPDFGenerator.prototype.extractVerboseExplanation = function(serviceData) {
+    TruthLensPDFGenerator.prototype.getText = function(value, fallback) {
         /**
-         * Extract the multi-paragraph verbose explanation from service data
-         * This is the NEW feature in v13.0+ that provides rich explanations
+         * Simple text getter - returns string or fallback
+         * MUCH simpler than the old "extraction" logic
          */
-        
-        if (!serviceData) return null;
-        
-        // Try to find explanation field
-        if (serviceData.explanation && typeof serviceData.explanation === 'string') {
-            return serviceData.explanation;
-        }
-        
-        // Try nested in data field
-        if (serviceData.data && serviceData.data.explanation) {
-            return serviceData.data.explanation;
-        }
-        
-        return null;
-    };
-    
-    TruthLensPDFGenerator.prototype.extractScoreBreakdown = function(serviceData) {
-        /**
-         * Extract score breakdown with components
-         */
-        
-        if (!serviceData) return null;
-        
-        if (serviceData.score_breakdown) {
-            return serviceData.score_breakdown;
-        }
-        
-        if (serviceData.data && serviceData.data.score_breakdown) {
-            return serviceData.data.score_breakdown;
-        }
-        
-        return null;
+        if (!value) return fallback || 'Not available';
+        if (typeof value === 'string') return value;
+        if (typeof value === 'number') return String(value);
+        return fallback || 'Not available';
     };
     
     // ====================================================================
@@ -211,14 +149,6 @@
             return true;
         }
         return false;
-    };
-    
-    TruthLensPDFGenerator.prototype.addLine = function() {
-        this.checkPageBreak(3);
-        this.doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
-        this.doc.setLineWidth(0.3);
-        this.doc.line(PAGE_CONFIG.marginLeft, this.yPos, PAGE_CONFIG.marginRight, this.yPos);
-        this.yPos += 5;
     };
     
     TruthLensPDFGenerator.prototype.addSpace = function(amount) {
@@ -281,11 +211,26 @@
         this.doc.text('Page ' + this.pageNumber, PAGE_CONFIG.marginRight, footerY, { align: 'right' });
     };
     
-    TruthLensPDFGenerator.prototype.cleanText = function(text, fallback) {
-        if (!text || text === 'Unknown' || text === 'N/A') {
-            return fallback || 'Unknown';
-        }
-        return String(text);
+    TruthLensPDFGenerator.prototype.getScoreColor = function(score) {
+        if (score >= 80) return COLORS.success;
+        if (score >= 60) return COLORS.warning;
+        return COLORS.danger;
+    };
+    
+    TruthLensPDFGenerator.prototype.drawProgressBar = function(x, y, width, height, percentage) {
+        // Background
+        this.doc.setFillColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
+        this.doc.rect(x, y, width, height, 'F');
+        
+        // Filled part
+        var fillWidth = (percentage / 100) * width;
+        var color = this.getScoreColor(percentage);
+        this.doc.setFillColor(color[0], color[1], color[2]);
+        this.doc.rect(x, y, fillWidth, height, 'F');
+        
+        // Border
+        this.doc.setDrawColor(COLORS.border[0], COLORS.border[1], COLORS.border[2]);
+        this.doc.rect(x, y, width, height, 'S');
     };
     
     // ====================================================================
@@ -301,11 +246,12 @@
         this.yPos = 80;
         this.setText(14, 'normal', COLORS.textLight);
         
-        var source = this.data.source || this.data.analysis?.source || 'Unknown Source';
+        var analysis = this.data.analysis || this.data;
+        var source = analysis.source || 'Unknown Source';
         this.doc.text('Source: ' + source, PAGE_CONFIG.width / 2, this.yPos, { align: 'center' });
         
         this.yPos = 120;
-        var trustScore = Math.round(this.data.trust_score || this.data.analysis?.trust_score || 0);
+        var trustScore = Math.round(analysis.trust_score || 0);
         
         this.setText(48, 'bold', this.getScoreColor(trustScore));
         this.doc.text(trustScore.toString(), PAGE_CONFIG.width / 2, this.yPos, { align: 'center' });
@@ -342,61 +288,33 @@
         this.pageNumber++;
         
         this.addTitle('Executive Summary', 1);
-        this.addLine();
         
         var analysis = this.data.analysis || this.data;
         var trustScore = Math.round(analysis.trust_score || 0);
-        var source = analysis.source || 'Unknown Source';
-        var author = analysis.author || 'Staff Writer';
         
-        var summary = analysis.findings_summary || analysis.article_summary || 
-                     'This article has been analyzed across multiple credibility dimensions.';
-        
+        // Summary text
+        var summary = this.getText(analysis.findings_summary || analysis.article_summary, 
+            'This article has been analyzed across multiple credibility dimensions.');
         this.addText(summary);
         this.addSpace(10);
         
+        // Key metrics
         this.addTitle('Article Information', 2);
-        this.addText('Source: ' + source);
-        this.addText('Author: ' + author);
+        this.addText('Source: ' + this.getText(analysis.source, 'Unknown Source'));
+        this.addText('Author: ' + this.getText(analysis.author, 'Staff Writer'));
         this.addText('Trust Score: ' + trustScore + '/100');
         this.addText('Analysis Date: ' + new Date().toLocaleDateString());
         
         if (analysis.word_count && analysis.word_count > 0) {
             this.addText('Word Count: ' + analysis.word_count.toLocaleString());
         }
-        
-        this.addSpace(10);
-        
-        this.addTitle('Key Services Analyzed', 2);
-        this.addText('This report includes comprehensive analysis from 7 independent services:');
-        this.addSpace(5);
-        
-        var services = [
-            'Source Credibility Analysis',
-            'Bias Detection',
-            'Fact Checking',
-            'Author Analysis',
-            'Transparency Assessment',
-            'Manipulation Detection',
-            'Content Quality Evaluation'
-        ];
-        
-        for (var i = 0; i < services.length; i++) {
-            this.checkPageBreak(6);
-            this.setText(10, 'normal');
-            this.doc.text('• ' + services[i], PAGE_CONFIG.marginLeft + 5, this.yPos);
-            this.yPos += PAGE_CONFIG.lineHeight;
-        }
     };
     
     // ====================================================================
-    // ✅ FIX #3: SERVICE DETAIL PAGES WITH RICH CONTENT
+    // ✅ SERVICE PAGES WITH DIRECT DATA ACCESS
     // ====================================================================
     
     TruthLensPDFGenerator.prototype.addServicePages = function() {
-        var analysis = this.data.analysis || this.data;
-        var detailed = analysis.detailed_analysis || {};
-        
         var serviceMap = [
             { id: 'source_credibility', name: 'Source Credibility Analysis' },
             { id: 'bias_detector', name: 'Bias Detection' },
@@ -409,25 +327,26 @@
         
         for (var i = 0; i < serviceMap.length; i++) {
             var service = serviceMap[i];
-            var serviceData = detailed[service.id];
+            var serviceData = this.getServiceData(service.id);
             
             if (serviceData) {
-                this.addServicePage(service.name, serviceData);
+                this.addServicePage(service.name, serviceData, service.id);
             }
         }
     };
     
-    TruthLensPDFGenerator.prototype.addServicePage = function(serviceName, serviceData) {
+    TruthLensPDFGenerator.prototype.addServicePage = function(serviceName, data, serviceId) {
         this.doc.addPage();
         this.yPos = PAGE_CONFIG.marginTop;
         this.pageNumber++;
         
         this.addTitle(serviceName, 1);
         
-        // Extract score
-        var score = this.extractScore(serviceData);
+        // ✅ DIRECT ACCESS (same as service-templates.js line ~1660)
+        var score = data.score || data.credibility_score || data.objectivity_score || 
+                   data.integrity_score || data.transparency_score || data.quality_score || 0;
         
-        // Score display with visual bar
+        // Score display
         this.setText(12, 'bold', COLORS.textLight);
         this.doc.text('Overall Score', PAGE_CONFIG.marginLeft, this.yPos);
         this.yPos += 8;
@@ -435,37 +354,43 @@
         this.setText(24, 'bold', this.getScoreColor(score));
         this.doc.text(score + '/100', PAGE_CONFIG.marginLeft, this.yPos);
         
-        // Draw progress bar next to score
         this.drawProgressBar(60, this.yPos - 5, 100, 6, score);
         
         this.yPos += 12;
-        this.addLine();
+        this.addSpace(5);
         
-        // ✅ NEW: Extract and display VERBOSE EXPLANATION
-        var explanation = this.extractVerboseExplanation(serviceData);
+        // ✅ DIRECT ACCESS to explanation (same as service-templates.js)
+        var explanation = data.explanation;
         
-        if (explanation) {
+        if (explanation && typeof explanation === 'string' && explanation.length > 50) {
+            console.log('[PDF v5.0] ✓ Found explanation for', serviceName);
             this.addTitle('Detailed Analysis', 2);
             
-            // Split explanation into paragraphs
-            var paragraphs = explanation.split('\n\n');
+            // Remove markdown bold (**text**)
+            explanation = explanation.replace(/\*\*([^*]+)\*\*/g, '$1');
             
+            // Split into paragraphs
+            var paragraphs = explanation.split('\n\n');
             for (var i = 0; i < paragraphs.length; i++) {
                 var para = paragraphs[i].trim();
                 if (para.length > 0) {
-                    // Remove **bold** markdown for PDF
-                    para = para.replace(/\*\*([^*]+)\*\*/g, '$1');
-                    
                     this.addText(para);
                     this.addSpace(5);
                 }
             }
+        } else {
+            // Fallback to summary
+            var summary = this.getText(data.summary || data.analysis, 
+                'Analysis completed for this ' + serviceName.toLowerCase() + '.');
+            this.addTitle('Summary', 2);
+            this.addText(summary);
         }
         
-        // ✅ NEW: Display SCORE BREAKDOWN
-        var breakdown = this.extractScoreBreakdown(serviceData);
+        // ✅ DIRECT ACCESS to score breakdown
+        var breakdown = data.score_breakdown;
         
-        if (breakdown && breakdown.components) {
+        if (breakdown && breakdown.components && Array.isArray(breakdown.components)) {
+            console.log('[PDF v5.0] ✓ Found score breakdown for', serviceName);
             this.addSpace(10);
             this.addTitle('Score Breakdown', 2);
             
@@ -474,93 +399,53 @@
                 
                 this.checkPageBreak(15);
                 
-                // Component name and score
+                // Component name
                 this.setText(10, 'bold');
-                this.doc.text(component.name, PAGE_CONFIG.marginLeft, this.yPos);
+                this.doc.text(component.name || 'Component', PAGE_CONFIG.marginLeft, this.yPos);
                 
                 this.setText(10, 'bold', this.getScoreColor(component.score));
-                this.doc.text(component.score + '/100', PAGE_CONFIG.marginLeft + 120, this.yPos);
+                this.doc.text((component.score || 0) + '/100', PAGE_CONFIG.marginLeft + 120, this.yPos);
                 
                 this.yPos += 6;
                 
                 // Progress bar
-                this.drawProgressBar(PAGE_CONFIG.marginLeft, this.yPos, 100, 4, component.score);
+                this.drawProgressBar(PAGE_CONFIG.marginLeft, this.yPos, 100, 4, component.score || 0);
                 this.yPos += 6;
                 
                 // Explanation
-                this.setText(9, 'normal', COLORS.textLight);
-                var expLines = this.doc.splitTextToSize(component.explanation, 160);
-                for (var j = 0; j < expLines.length; j++) {
-                    this.checkPageBreak(5);
-                    this.doc.text(expLines[j], PAGE_CONFIG.marginLeft, this.yPos);
-                    this.yPos += 4;
+                if (component.explanation) {
+                    this.setText(9, 'normal', COLORS.textLight);
+                    var expLines = this.doc.splitTextToSize(component.explanation, 160);
+                    for (var j = 0; j < expLines.length; j++) {
+                        this.checkPageBreak(5);
+                        this.doc.text(expLines[j], PAGE_CONFIG.marginLeft, this.yPos);
+                        this.yPos += 4;
+                    }
                 }
                 
                 this.addSpace(6);
             }
         }
         
-        // Fallback to legacy fields if no explanation/breakdown
-        if (!explanation && !breakdown) {
-            this.addLegacyServiceContent(serviceData);
-        }
-    };
-    
-    TruthLensPDFGenerator.prototype.extractScore = function(serviceData) {
-        if (!serviceData) return 0;
+        // ✅ DIRECT ACCESS to findings (same as service-templates.js)
+        var findings = data.findings || data.key_findings;
         
-        // Try direct score field
-        if (serviceData.score !== undefined) {
-            return Math.round(serviceData.score);
-        }
-        
-        // Try nested in data
-        if (serviceData.data && serviceData.data.score !== undefined) {
-            return Math.round(serviceData.data.score);
-        }
-        
-        // Try various score field names
-        var scoreFields = [
-            'credibility_score',
-            'objectivity_score',
-            'quality_score',
-            'integrity_score',
-            'transparency_score',
-            'verification_score'
-        ];
-        
-        for (var i = 0; i < scoreFields.length; i++) {
-            if (serviceData[scoreFields[i]] !== undefined) {
-                return Math.round(serviceData[scoreFields[i]]);
-            }
-            if (serviceData.data && serviceData.data[scoreFields[i]] !== undefined) {
-                return Math.round(serviceData.data[scoreFields[i]]);
-            }
-        }
-        
-        return 50; // Default
-    };
-    
-    TruthLensPDFGenerator.prototype.addLegacyServiceContent = function(serviceData) {
-        /**
-         * Fallback for services without verbose explanations
-         */
-        
-        var data = serviceData.data || serviceData;
-        
-        if (data.summary) {
-            this.addTitle('Summary', 3);
-            this.addText(data.summary);
-            this.addSpace(8);
-        }
-        
-        if (data.findings && Array.isArray(data.findings)) {
-            this.addTitle('Key Findings', 3);
-            for (var i = 0; i < Math.min(data.findings.length, 5); i++) {
-                this.checkPageBreak(6);
-                this.setText(10, 'normal');
-                this.doc.text('• ' + data.findings[i], PAGE_CONFIG.marginLeft + 5, this.yPos);
-                this.yPos += PAGE_CONFIG.lineHeight;
+        if (findings && Array.isArray(findings) && findings.length > 0) {
+            console.log('[PDF v5.0] ✓ Found', findings.length, 'findings for', serviceName);
+            this.addSpace(10);
+            this.addTitle('Key Findings', 2);
+            
+            for (var i = 0; i < Math.min(findings.length, 5); i++) {
+                var finding = findings[i];
+                var findingText = typeof finding === 'string' ? finding : 
+                                 (finding.text || finding.description || '');
+                
+                if (findingText) {
+                    this.checkPageBreak(6);
+                    this.setText(10, 'normal');
+                    this.doc.text('• ' + findingText, PAGE_CONFIG.marginLeft + 5, this.yPos);
+                    this.yPos += PAGE_CONFIG.lineHeight;
+                }
             }
         }
     };
@@ -570,13 +455,13 @@
     // ====================================================================
     
     TruthLensPDFGenerator.prototype.generate = function() {
-        console.log('[PDF v4.0] Generating complete PDF...');
+        console.log('[PDF v5.0] Generating PDF with DIRECT data access...');
         
         this.addCoverPage();
         this.addExecutiveSummary();
         this.addServicePages();
         
-        // Add page numbers to all pages
+        // Add page numbers
         var totalPages = this.doc.internal.pages.length - 1;
         for (var i = 1; i <= totalPages; i++) {
             this.doc.setPage(i);
@@ -592,27 +477,25 @@
         
         this.doc.save(filename);
         
-        console.log('[PDF v4.0] ✓ Complete! Saved as:', filename);
+        console.log('[PDF v5.0] ✓ Complete! Saved as:', filename);
     };
     
-    console.log('[TruthLens PDF Generator v4.0] ✓ Loaded successfully!');
-    console.log('[PDF v4.0] Ready to generate PDFs with:');
-    console.log('  ✓ Proper visual bars (rectangles, not characters)');
-    console.log('  ✓ Verbose explanations from services');
-    console.log('  ✓ Score breakdowns with components');
-    console.log('  ✓ Professional formatting matching web app');
+    console.log('[TruthLens PDF Generator v5.0] ✓ Loaded successfully!');
+    console.log('[PDF v5.0] Using DIRECT data access (same as service-templates.js)');
+    console.log('[PDF v5.0] NO MORE extraction logic - just direct field access');
+    console.log('[PDF v5.0] Ready to generate PDFs that match dropdown content!');
     
 })();
 
 /**
  * I did no harm and this file is not truncated.
- * Date: November 4, 2025 - v4.0 ROBUST FIX
+ * Date: November 4, 2025 - v5.0 DIRECT DATA ACCESS FIX
  * 
  * DEPLOYMENT CHECKLIST:
- * ☐ 1. Save as static/js/truthlens-pdf-generator-v4.0.js
- * ☐ 2. Update index.html script tag
- * ☐ 3. Test with an analysis
- * ☐ 4. Verify bars show as colored rectangles
- * ☐ 5. Verify verbose explanations appear
+ * ☐ 1. Save as static/js/truthlens-pdf-generator-v5.0.js
+ * ☐ 2. Update index.html script tag to load this version
+ * ☐ 3. Remove old PDF generator script
+ * ☐ 4. Test with an analysis
+ * ☐ 5. Verify PDFs match dropdown content
  * ☐ 6. Deploy to GitHub/Render
  */
