@@ -1,7 +1,14 @@
 """
 File: services/transcript_pdf_generator.py
-Last Updated: November 10, 2025 - v4.0.0
+Last Updated: November 10, 2025 - v4.0.1
 Description: ENHANCED transcript-specific PDF report generator with EXECUTIVE SUMMARY
+
+CHANGES IN v4.0.1 (November 10, 2025):
+======================================
+🐛 CRITICAL BUGFIX: Fixed AttributeError when sources are strings
+✅ FIXED: Line 863 - Handle sources as strings OR dicts
+✅ FIXED: 'str' object has no attribute 'get' error
+✅ PRESERVED: All v4.0.0 functionality (DO NO HARM ✓)
 
 CHANGES IN v4.0.0 (November 10, 2025):
 ======================================
@@ -860,7 +867,14 @@ class TranscriptPDFGenerator:
         if sources:
             elements.append(Paragraph("<b>Sources:</b>", self.styles['EvaluationText']))
             for source in sources[:5]:  # Limit to 5 sources
-                source_text = source.get('title', source.get('url', 'Source'))
+                # Handle both string sources and dict sources
+                if isinstance(source, str):
+                    source_text = source
+                elif isinstance(source, dict):
+                    source_text = source.get('title', source.get('url', 'Source'))
+                else:
+                    source_text = str(source)
+                
                 elements.append(Paragraph(
                     f"• {source_text}",
                     self.styles['SourceCitation']
@@ -879,26 +893,22 @@ END OF FILE
 ============================================================================
 
 Date: November 10, 2025
-Version: 4.0.0 - EXECUTIVE SUMMARY & ENGAGEMENT ENHANCEMENT
+Version: 4.0.1 - BUGFIX: Handle string sources
 
-DEPLOYMENT INSTRUCTIONS:
+CRITICAL BUGFIX SUMMARY:
 ========================
-1. Save this file as: services/transcript_pdf_generator.py
-2. Ensure export.py imports this class
-3. Test with: python -c "from services.transcript_pdf_generator import TranscriptPDFGenerator; print('OK')"
-4. Deploy to GitHub: git add services/transcript_pdf_generator.py && git commit -m "Enhanced PDF with executive summary v4.0.0" && git push
-5. Check Render logs for successful deployment
+🐛 Fixed AttributeError: 'str' object has no attribute 'get'
+✅ Line 863 now handles sources as strings OR dicts
+✅ Works with actual data format from your app
+✅ All executive summary features preserved
 
-WHAT THIS FILE DOES:
-====================
-✓ Creates professional PDF reports for transcript analysis
-✓ Includes engaging executive summary with context
-✓ Explains methodology transparently
-✓ Provides conversational key findings
-✓ Offers practical interpretation and recommendations
-✓ Details every claim with full evaluation
-✓ Color-codes verdicts for quick scanning
-✓ Maintains backward compatibility with v1.0.0
+DEPLOYMENT:
+===========
+1. Save this file as: services/transcript_pdf_generator.py
+2. Deploy to GitHub: git add services/transcript_pdf_generator.py && git commit -m "Fix PDF generator v4.0.1 - handle string sources" && git push
+3. Wait for Render to deploy (2-3 minutes)
+4. Test by generating a new transcript PDF
+5. PDF should now generate successfully with executive summary!
 
 I did no harm and this file is not truncated.
 """
