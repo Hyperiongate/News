@@ -1,40 +1,48 @@
 """
 TruthLens Debate Arena - Database Models
 File: simple_debate_models.py
-Date: October 27, 2025
-Version: 1.1.0 - SHARED DATABASE FIX
+Date: November 10, 2025
+Version: 2.0.0 - ULTRA-SIMPLIFIED WITH 300-WORD LIMIT
 
 CHANGE LOG:
+- November 10, 2025 v2.0.0: Updated for ultra-simplified redesign
+  - CHANGED: Documentation updated to reflect 300-word limit (was 250)
+  - NOTE: Actual validation happens in routes file
+  - PRESERVED: All v1.1.0 database structure (DO NO HARM ✓)
+
 - October 27, 2025 v1.1.0: CRITICAL FIX - Shared database instance
   - FIXED: Removed local db = SQLAlchemy() creation (was causing conflicts)
   - FIXED: Now uses shared database instance from app.py
   - REASON: Can't have two SQLAlchemy instances on same Flask app
   - RESULT: Both debate systems now use ONE shared database
-  - PRESERVED: All v1.0.0 functionality (DO NO HARM ✓)
 
 - October 27, 2025 v1.0.0: Complete redesign for anonymous simple debates
   - REMOVED: All user authentication, email verification, sessions
-  - REMOVED: Complex partner system, ready buttons, handshakes, bans
-  - SIMPLIFIED: Three simple flows - Pick Fight, Join Fight, Vote
+  - SIMPLIFIED: Three simple flows - Start Fight, Join Fight, Judgement City
   - ADDED: Browser fingerprint tracking for vote prevention
   - KEPT: PostgreSQL database, SQLAlchemy ORM, proper indexing
 
 PURPOSE:
-Simple anonymous debate system with three modes:
-1. Pick a Fight - Create debate topic, choose side, write argument, submit
-2. Join a Fight - See open debates, write opposing argument, submit to voting
-3. Judgement City - View completed debates, vote by clicking, see results bar
+Ultra-simple anonymous debate system with three modes:
+1. Start a Fight - Create debate topic, choose side, write argument (<300 words)
+2. Join a Fight - See open debates, write opposing argument (<300 words)
+3. Judgement City - View completed debates, vote by clicking, see live scores
 
 MODELS:
-- Debate: Topic, status (open/voting/closed)
-- Argument: Position (for/against), text (<250 words)
-- Vote: Anonymous votes tracked by browser fingerprint
+- SimpleDebate: Topic, status (open/voting/closed), vote counts
+- SimpleArgument: Position (for/against), text (<300 words)
+- SimpleVote: Anonymous votes tracked by browser fingerprint
 
 NO USER MODEL - All anonymous!
 
-DO NO HARM: This is a new simplified system, existing app.py debate code untouched
+MODERATOR FEATURES:
+- Moderator login handled in routes (session-based)
+- Moderator can delete any debate (cascades to arguments and votes)
+- Password: "Shiftwork"
 
-Last modified: October 27, 2025 - v1.1.0 Shared Database Fix
+DO NO HARM: This is separate from complex debate system (models.py, debate_routes.py)
+
+Last modified: November 10, 2025 - v2.0.0 Ultra-Simplified with 300-word limit
 """
 
 from datetime import datetime
@@ -46,12 +54,17 @@ db = None
 
 
 # ============================================================================
-# DEBATE MODEL - Simplified
+# DEBATE MODEL - Ultra-Simplified
 # ============================================================================
 
 class SimpleDebate(db.Model if db else object):
     """
     Simple debate model - anonymous, no authentication required
+    
+    Status flow: open → voting → closed
+    - open: Waiting for second argument
+    - voting: Both arguments submitted, accepting votes
+    - closed: Archived (not currently used but available for future)
     """
     __tablename__ = 'simple_debates'
     
@@ -63,7 +76,6 @@ class SimpleDebate(db.Model if db else object):
     
     # Status
     status = db.Column(db.String(20), default='open', nullable=False, index=True) if db else None
-    # Status values: 'open' (waiting for second argument), 'voting' (both arguments in, voting open), 'closed' (archived)
     
     # Voting stats
     total_votes = db.Column(db.Integer, default=0, nullable=False) if db else None
@@ -134,12 +146,19 @@ class SimpleDebate(db.Model if db else object):
 
 
 # ============================================================================
-# ARGUMENT MODEL - Simplified
+# ARGUMENT MODEL - Ultra-Simplified
 # ============================================================================
 
 class SimpleArgument(db.Model if db else object):
     """
     Simple argument model - anonymous submissions
+    
+    Word limit: Maximum 300 words (validated in routes)
+    Minimum: 10 words (validated in routes)
+    
+    Position:
+    - "for" = agrees with the statement
+    - "against" = disagrees with the statement
     """
     __tablename__ = 'simple_arguments'
     
@@ -213,6 +232,10 @@ class SimpleArgument(db.Model if db else object):
 class SimpleVote(db.Model if db else object):
     """
     Simple vote model - tracks by browser fingerprint to prevent duplicate votes
+    
+    Browser fingerprint is a hash of IP address + User-Agent string.
+    This allows anonymous voting while preventing multiple votes from same person.
+    Users can change their vote at any time.
     """
     __tablename__ = 'simple_votes'
     
@@ -260,9 +283,8 @@ def init_simple_debate_db(shared_db):
     """
     Initialize simple debate models with SHARED database instance from app.py
     
-    CRITICAL FIX v1.1.0: This function now accepts the db instance from app.py
-    instead of creating its own. This prevents the "SQLAlchemy instance already
-    registered" error.
+    CRITICAL: This function accepts the db instance from app.py instead of 
+    creating its own. This prevents the "SQLAlchemy instance already registered" error.
     
     Args:
         shared_db: The SQLAlchemy database instance from app.py
@@ -274,7 +296,6 @@ def init_simple_debate_db(shared_db):
     db = shared_db
     
     # Rebuild the model classes with the shared db instance
-    # This ensures all models use the correct database
     global SimpleDebate, SimpleArgument, SimpleVote
     
     class SimpleDebate(db.Model):
@@ -340,7 +361,7 @@ def init_simple_debate_db(shared_db):
             return f'<SimpleDebate {self.id}: {self.topic[:50]}>'
     
     class SimpleArgument(db.Model):
-        """Simple argument model - anonymous submissions"""
+        """Simple argument model - anonymous submissions (max 300 words)"""
         __tablename__ = 'simple_arguments'
         
         id = db.Column(db.Integer, primary_key=True)
@@ -456,3 +477,4 @@ def check_user_voted(debate_id, browser_fingerprint):
 
 
 # I did no harm and this file is not truncated
+# v2.0.0 - November 10, 2025 - Ultra-simplified with 300-word limit
