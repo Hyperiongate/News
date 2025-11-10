@@ -1,7 +1,18 @@
 """
 File: services/transcript_pdf_generator.py
-Last Updated: November 10, 2025 - v4.0.3
+Last Updated: November 10, 2025 - v4.0.4
 Description: ENHANCED transcript-specific PDF report generator with EXECUTIVE SUMMARY
+
+CHANGES IN v4.0.4 (November 10, 2025):
+======================================
+🐛 CRITICAL BUG FIXES - 4 major issues resolved:
+✅ FIX #1: Trust score overlap - Added explicit 0.25" spacer between score and label
+✅ FIX #2: Speaker extraction - Extracts speaker from claim text if embedded (e.g., "Trump (00:00): ...")
+✅ FIX #3: Speaker display - Shows extracted speaker instead of "Unknown"
+✅ FIX #4: Confidence scores - Hides "(Confidence: 0%)", shows only when > 0%
+✅ IMPROVED: Verdict colors now include MOSTLY_TRUE, MOSTLY_FALSE, PARTIALLY_TRUE
+✅ IMPROVED: Cleaned claim text - Removes speaker prefix from displayed quote
+✅ PRESERVED: All v4.0.3 functionality (DO NO HARM ✓)
 
 CHANGES IN v4.0.3 (November 10, 2025):
 ======================================
@@ -395,12 +406,15 @@ class TranscriptPDFGenerator:
         
         # Section header
         elements.append(Paragraph("📊 Overall Trust Score", self.styles['SectionHeader']))
+        elements.append(Spacer(1, 0.15*inch))  # ← ADDED spacer after header
         
         # Create trust score display
         trust_style = self.styles['TrustScore'].clone('TrustScoreColored')
         trust_style.textColor = color
         elements.append(Paragraph(f"{trust_score}%", trust_style))
+        elements.append(Spacer(1, 0.25*inch))  # ← CRITICAL: Explicit spacer between score and label!
         elements.append(Paragraph(label, self.styles['TrustLabel']))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacer after label
         
         # Visual progress bar
         elements.append(self._create_progress_bar(trust_score, color))
@@ -859,15 +873,31 @@ class TranscriptPDFGenerator:
             self.styles['ClaimNumber']
         ))
         
-        # Speaker if available
-        speaker = claim.get('speaker', 'Unknown speaker')
+        # Get claim text
+        claim_text = claim.get('claim_text', claim.get('claim', 'No claim text available'))
+        
+        # Extract speaker from claim text if embedded (e.g., "Donald Trump (00:00): claim")
+        speaker = claim.get('speaker', 'Unknown')
+        import re
+        speaker_pattern = r'^([^(]+)\s*\([^)]+\):\s*(.+)$'
+        match = re.match(speaker_pattern, claim_text)
+        
+        if match and speaker in ['Unknown', 'Unknown speaker', '']:
+            # Extract speaker name from claim text
+            extracted_speaker = match.group(1).strip()
+            # Clean the claim text (remove speaker prefix)
+            claim_text = match.group(2).strip()
+            speaker = extracted_speaker
+        elif speaker in ['Unknown', 'Unknown speaker', '']:
+            speaker = 'Unknown'
+        
+        # Speaker display
         elements.append(Paragraph(
             f"<i>Speaker: {speaker}</i>",
             self.styles['SpeakerInfo']
         ))
         
-        # The actual claim (quoted)
-        claim_text = claim.get('claim_text', claim.get('claim', 'No claim text available'))
+        # The actual claim (quoted) - use the cleaned claim_text
         elements.append(Paragraph(
             f'"{claim_text}"',
             self.styles['ClaimQuote']
@@ -875,21 +905,28 @@ class TranscriptPDFGenerator:
         
         # Verdict with color coding
         verdict = claim.get('verdict', 'Unknown').upper()
-        confidence = claim.get('confidence_score', 0)
+        
+        # Get confidence - try multiple field names and handle 0 as N/A
+        confidence = claim.get('confidence_score', claim.get('confidence', 0))
         
         # Color code the verdict
-        if verdict in ['TRUE', 'ACCURATE', 'VERIFIED']:
+        if verdict in ['TRUE', 'ACCURATE', 'VERIFIED', 'MOSTLY_TRUE']:
             verdict_color = '#10b981'  # Green
-        elif verdict in ['FALSE', 'INACCURATE']:
+        elif verdict in ['FALSE', 'INACCURATE', 'MOSTLY_FALSE']:
             verdict_color = '#ef4444'  # Red
-        elif verdict in ['PARTIALLY ACCURATE', 'PARTIALLY TRUE', 'MIXED']:
+        elif verdict in ['PARTIALLY ACCURATE', 'PARTIALLY TRUE', 'PARTIALLY_TRUE', 'MIXED']:
             verdict_color = '#f59e0b'  # Orange
         else:
             verdict_color = '#6b7280'  # Gray
         
-        verdict_text = f'<font color="{verdict_color}"><b>Verdict: {verdict}</b></font> (Confidence: {confidence}%)'
+        # Format verdict with confidence (show N/A if 0 or missing)
+        if confidence and confidence > 0:
+            verdict_text = f'<font color="{verdict_color}"><b>Verdict: {verdict}</b></font> (Confidence: {confidence}%)'
+        else:
+            verdict_text = f'<font color="{verdict_color}"><b>Verdict: {verdict}</b></font>'
+        
         elements.append(Paragraph(verdict_text, self.styles['VerdictLabel']))
-        elements.append(Spacer(1, 0.08*inch))  # ← ADDED spacer after verdict
+        elements.append(Spacer(1, 0.08*inch))  # ← spacer after verdict
         
         # Evaluation/explanation
         evaluation = claim.get('evaluation', claim.get('explanation', 'No evaluation available'))
@@ -931,17 +968,16 @@ END OF FILE
 ============================================================================
 
 Date: November 10, 2025
-Version: 4.0.3 - CRITICAL OVERLAP FIX: Trust score & claims
+Version: 4.0.4 - CRITICAL BUG FIXES: 4 major issues resolved
 
-OVERLAP FIX SUMMARY:
-====================
-🎨 Fixed trust score "0%" overlapping "LOW CREDIBILITY"
-✅ Fixed claim text overlapping in detailed sections
-✅ TrustScore spaceAfter: 6 → 20 points
-✅ TrustLabel spaceBefore: none → 15 points  
-✅ Claim elements: increased spacing 25-50%
-✅ Added explicit spacers between elements
-✅ Result: Clean, readable, professional layout!
+CRITICAL BUG FIX SUMMARY:
+=========================
+🐛 FIX #1: Trust score overlap - explicit spacer added
+✅ FIX #2: Speaker extraction from embedded text ("Trump (00:00): ...")
+✅ FIX #3: Speaker display shows actual speaker, not "Unknown"
+✅ FIX #4: Confidence 0% hidden, shown only when valid
+✅ Verdict colors expanded (MOSTLY_TRUE, PARTIALLY_TRUE, etc.)
+✅ Claim text cleaned (speaker prefix removed from quotes)
 
 DEPLOYMENT:
 ===========
