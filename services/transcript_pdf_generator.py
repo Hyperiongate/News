@@ -1,7 +1,16 @@
 """
 File: services/transcript_pdf_generator.py
-Last Updated: November 10, 2025 - v4.0.1
+Last Updated: November 10, 2025 - v4.0.2
 Description: ENHANCED transcript-specific PDF report generator with EXECUTIVE SUMMARY
+
+CHANGES IN v4.0.2 (November 10, 2025):
+======================================
+🎨 LAYOUT FIX: Fixed text overlapping issues
+✅ INCREASED: All spacing between sections (0.25-0.35 inches)
+✅ ADDED: Spacing after subsection headers (0.1 inch)
+✅ ADDED: Spacing between bullet points (0.08 inch)
+✅ IMPROVED: Overall readability and visual flow
+✅ PRESERVED: All v4.0.1 functionality (DO NO HARM ✓)
 
 CHANGES IN v4.0.1 (November 10, 2025):
 ======================================
@@ -408,28 +417,30 @@ class TranscriptPDFGenerator:
         elements = []
         
         elements.append(Paragraph("⭐ EXECUTIVE SUMMARY", self.styles['ExecutiveSummaryHeader']))
-        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Spacer(1, 0.35*inch))  # ← INCREASED spacing
         
         # Subsection: What was this speech/video about?
         elements.append(Paragraph(
             "<b>What was this speech/video about?</b>",
             self.styles['HighlightText']
         ))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
         
         # Generate content summary
         summary_text = self._generate_content_summary(results)
         elements.append(Paragraph(summary_text, self.styles['ExecutiveSummaryBody']))
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.25*inch))  # ← INCREASED spacing
         
         # Subsection: Why did we analyze it?
         elements.append(Paragraph(
             "<b>Why did we analyze this content?</b>",
             self.styles['HighlightText']
         ))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
         
         purpose_text = self._generate_purpose_statement(results)
         elements.append(Paragraph(purpose_text, self.styles['ExecutiveSummaryBody']))
-        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Spacer(1, 0.35*inch))  # ← INCREASED spacing
         
         return elements
     
@@ -511,12 +522,13 @@ class TranscriptPDFGenerator:
         elements = []
         
         elements.append(Paragraph("🔍 ANALYSIS METHODOLOGY", self.styles['SectionHeader']))
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.25*inch))  # ← INCREASED spacing
         
         elements.append(Paragraph(
             "<b>What we looked at:</b>",
             self.styles['HighlightText']
         ))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
         
         # Build methodology list
         methodology_items = [
@@ -535,14 +547,16 @@ class TranscriptPDFGenerator:
         
         for item in methodology_items:
             elements.append(Paragraph(item, self.styles['BulletPoint']))
+            elements.append(Spacer(1, 0.08*inch))  # ← ADDED spacing between items
         
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.2*inch))  # ← INCREASED spacing
         
         # Add data sources section
         elements.append(Paragraph(
             "<b>Sources consulted:</b>",
             self.styles['HighlightText']
         ))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
         
         sources_text = (
             "Our fact-checking process consulted authoritative databases, academic research, "
@@ -559,17 +573,18 @@ class TranscriptPDFGenerator:
         elements = []
         
         elements.append(Paragraph("💡 KEY FINDINGS", self.styles['SectionHeader']))
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.25*inch))  # ← INCREASED spacing
         
         elements.append(Paragraph(
             "<b>What we discovered:</b>",
             self.styles['HighlightText']
         ))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
         
         # Generate narrative findings
         findings_text = self._generate_findings_narrative(results)
         elements.append(Paragraph(findings_text, self.styles['ExecutiveSummaryBody']))
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.25*inch))  # ← INCREASED spacing
         
         # Add credibility breakdown if available
         cred_score = results.get('credibility_score', {})
@@ -580,6 +595,7 @@ class TranscriptPDFGenerator:
                 "<b>Credibility Breakdown:</b>",
                 self.styles['HighlightText']
             ))
+            elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
             
             breakdown_items = []
             if breakdown.get('verified_true', 0) > 0:
@@ -604,8 +620,9 @@ class TranscriptPDFGenerator:
             
             for item in breakdown_items:
                 elements.append(Paragraph(item, self.styles['BulletPoint']))
+                elements.append(Spacer(1, 0.08*inch))  # ← ADDED spacing between items
         
-        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Spacer(1, 0.35*inch))  # ← INCREASED spacing
         
         return elements
     
@@ -673,29 +690,32 @@ class TranscriptPDFGenerator:
         elements = []
         
         elements.append(Paragraph("🎯 INTERPRETATION", self.styles['SectionHeader']))
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.25*inch))  # ← INCREASED spacing
         
         elements.append(Paragraph(
             "<b>What this means for you:</b>",
             self.styles['HighlightText']
         ))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
         
         # Generate interpretation
         interpretation_text = self._generate_interpretation(results)
         elements.append(Paragraph(interpretation_text, self.styles['ExecutiveSummaryBody']))
-        elements.append(Spacer(1, 0.15*inch))
+        elements.append(Spacer(1, 0.25*inch))  # ← INCREASED spacing
         
         # Add recommendations
         elements.append(Paragraph(
             "<b>Our recommendations:</b>",
             self.styles['HighlightText']
         ))
+        elements.append(Spacer(1, 0.1*inch))  # ← ADDED spacing
         
         recommendations = self._generate_recommendations(results)
         for rec in recommendations:
             elements.append(Paragraph(f"• {rec}", self.styles['BulletPoint']))
+            elements.append(Spacer(1, 0.08*inch))  # ← ADDED spacing between items
         
-        elements.append(Spacer(1, 0.2*inch))
+        elements.append(Spacer(1, 0.35*inch))  # ← INCREASED spacing
         
         return elements
     
@@ -893,14 +913,16 @@ END OF FILE
 ============================================================================
 
 Date: November 10, 2025
-Version: 4.0.1 - BUGFIX: Handle string sources
+Version: 4.0.2 - LAYOUT FIX: Better spacing, no text overlap
 
-CRITICAL BUGFIX SUMMARY:
-========================
-🐛 Fixed AttributeError: 'str' object has no attribute 'get'
-✅ Line 863 now handles sources as strings OR dicts
-✅ Works with actual data format from your app
-✅ All executive summary features preserved
+LAYOUT FIX SUMMARY:
+===================
+🎨 Fixed all text overlapping issues
+✅ Increased spacing between all sections (0.25-0.35 inches)
+✅ Added spacing after subsection headers (0.1 inch)
+✅ Added spacing between bullet items (0.08 inch)
+✅ Improved overall readability and flow
+✅ All v4.0.1 features preserved
 
 DEPLOYMENT:
 ===========
