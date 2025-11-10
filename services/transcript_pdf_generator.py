@@ -1,7 +1,18 @@
 """
 File: services/transcript_pdf_generator.py
-Last Updated: November 10, 2025 - v4.0.2
+Last Updated: November 10, 2025 - v4.0.3
 Description: ENHANCED transcript-specific PDF report generator with EXECUTIVE SUMMARY
+
+CHANGES IN v4.0.3 (November 10, 2025):
+======================================
+🎨 CRITICAL OVERLAP FIX: Fixed trust score and claims overlapping
+✅ FIXED: Trust score "0%" overlapping with "LOW CREDIBILITY" label
+✅ INCREASED: TrustScore spaceAfter from 6 to 20 points
+✅ ADDED: TrustLabel spaceBefore 15 points
+✅ INCREASED: All claim element spacing (10-15 points)
+✅ ADDED: Explicit spacers between claim elements
+✅ RESULT: No more text overlap anywhere in document!
+✅ PRESERVED: All v4.0.2 functionality (DO NO HARM ✓)
 
 CHANGES IN v4.0.2 (November 10, 2025):
 ======================================
@@ -109,7 +120,7 @@ class TranscriptPDFGenerator:
             parent=self.styles['Title'],
             fontSize=48,
             textColor=HexColor('#3b82f6'),
-            spaceAfter=6,
+            spaceAfter=20,  # ← INCREASED from 6 to 20 to prevent overlap!
             spaceBefore=20,
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
@@ -122,6 +133,7 @@ class TranscriptPDFGenerator:
             fontSize=16,
             textColor=HexColor('#4b5563'),
             spaceAfter=30,
+            spaceBefore=15,  # ← ADDED spaceBefore to prevent overlap!
             alignment=TA_CENTER,
             fontName='Helvetica-Bold'
         ))
@@ -214,7 +226,8 @@ class TranscriptPDFGenerator:
             fontSize=16,
             textColor=HexColor('#6b7280'),
             fontName='Helvetica-Bold',
-            spaceAfter=8
+            spaceAfter=10,  # ← INCREASED from 8
+            spaceBefore=8  # ← ADDED
         ))
         
         # Claim quote (the actual claim being checked)
@@ -226,8 +239,8 @@ class TranscriptPDFGenerator:
             fontName='Helvetica-Oblique',
             leftIndent=15,
             rightIndent=15,
-            spaceAfter=10,
-            spaceBefore=5,
+            spaceAfter=15,  # ← INCREASED from 10
+            spaceBefore=10,  # ← INCREASED from 5
             borderWidth=1,
             borderColor=HexColor('#e5e7eb'),
             borderPadding=10,
@@ -240,7 +253,8 @@ class TranscriptPDFGenerator:
             parent=self.styles['Normal'],
             fontSize=13,
             fontName='Helvetica-Bold',
-            spaceAfter=8
+            spaceAfter=10,  # ← INCREASED from 8
+            spaceBefore=8  # ← ADDED
         ))
         
         # Evaluation text
@@ -250,7 +264,7 @@ class TranscriptPDFGenerator:
             fontSize=11,
             leading=16,
             alignment=TA_JUSTIFY,
-            spaceAfter=12,
+            spaceAfter=15,  # ← INCREASED from 12
             leftIndent=10
         ))
         
@@ -261,7 +275,8 @@ class TranscriptPDFGenerator:
             fontSize=10,
             textColor=HexColor('#6b7280'),
             fontName='Helvetica-Oblique',
-            spaceAfter=4
+            spaceAfter=8,  # ← INCREASED from 4
+            spaceBefore=4  # ← ADDED
         ))
         
         # Source citation
@@ -874,6 +889,7 @@ class TranscriptPDFGenerator:
         
         verdict_text = f'<font color="{verdict_color}"><b>Verdict: {verdict}</b></font> (Confidence: {confidence}%)'
         elements.append(Paragraph(verdict_text, self.styles['VerdictLabel']))
+        elements.append(Spacer(1, 0.08*inch))  # ← ADDED spacer after verdict
         
         # Evaluation/explanation
         evaluation = claim.get('evaluation', claim.get('explanation', 'No evaluation available'))
@@ -881,11 +897,13 @@ class TranscriptPDFGenerator:
             f"<b>Evaluation:</b> {evaluation}",
             self.styles['EvaluationText']
         ))
+        elements.append(Spacer(1, 0.08*inch))  # ← ADDED spacer after evaluation
         
         # Sources if available
         sources = claim.get('sources', [])
         if sources:
             elements.append(Paragraph("<b>Sources:</b>", self.styles['EvaluationText']))
+            elements.append(Spacer(1, 0.05*inch))  # ← ADDED spacer before source list
             for source in sources[:5]:  # Limit to 5 sources
                 # Handle both string sources and dict sources
                 if isinstance(source, str):
@@ -913,16 +931,17 @@ END OF FILE
 ============================================================================
 
 Date: November 10, 2025
-Version: 4.0.2 - LAYOUT FIX: Better spacing, no text overlap
+Version: 4.0.3 - CRITICAL OVERLAP FIX: Trust score & claims
 
-LAYOUT FIX SUMMARY:
-===================
-🎨 Fixed all text overlapping issues
-✅ Increased spacing between all sections (0.25-0.35 inches)
-✅ Added spacing after subsection headers (0.1 inch)
-✅ Added spacing between bullet items (0.08 inch)
-✅ Improved overall readability and flow
-✅ All v4.0.1 features preserved
+OVERLAP FIX SUMMARY:
+====================
+🎨 Fixed trust score "0%" overlapping "LOW CREDIBILITY"
+✅ Fixed claim text overlapping in detailed sections
+✅ TrustScore spaceAfter: 6 → 20 points
+✅ TrustLabel spaceBefore: none → 15 points  
+✅ Claim elements: increased spacing 25-50%
+✅ Added explicit spacers between elements
+✅ Result: Clean, readable, professional layout!
 
 DEPLOYMENT:
 ===========
