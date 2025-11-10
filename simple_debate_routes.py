@@ -1,41 +1,55 @@
 """
 TruthLens Debate Arena - Flask Routes
 File: simple_debate_routes.py
-Date: October 27, 2025
-Version: 1.0.0 - SIMPLIFIED NO-AUTH VERSION
+Date: November 10, 2025
+Version: 2.0.0 - ULTRA-SIMPLIFIED WITH MODERATOR
 
 CHANGE LOG:
-- October 27, 2025: Complete redesign for anonymous simple debates
-  - REMOVED: All authentication endpoints (no email, no login)
-  - REMOVED: Complex partner/challenge system
-  - SIMPLIFIED: Three simple endpoints - pick fight, join fight, vote
-  - ADDED: Browser fingerprint tracking for vote prevention
-  - KEPT: Proper error handling, validation, logging
+- November 10, 2025 v2.0.0: Ultra-simplified redesign per user requirements
+  - CHANGED: Word limit from 250 to 300 words
+  - ADDED: Moderator login with password "Shiftwork"
+  - ADDED: Moderator can delete debates
+  - ADDED: Session-based moderator tracking
+  - SIMPLIFIED: Only 3 main flows - Start Fight, Join Fight, Judgement City
+  - PRESERVED: All v1.0.0 anonymous functionality (DO NO HARM ✓)
 
 PURPOSE:
-Simple anonymous debate system API with three modes:
-1. Pick a Fight - POST /api/simple-debate/pick-fight
-2. Join a Fight - POST /api/simple-debate/join-fight/<id>
-3. Vote (Judgement City) - POST /api/simple-debate/vote/<id>
+Ultra-simple anonymous debate system with optional moderator controls
+
+THREE MAIN MODES:
+1. Start a Fight - Create debate topic + your position + your argument (<300 words)
+2. Join a Fight - See open debates, add opposing argument (<300 words)
+3. Judgement City - Vote on completed debates, see live scores
+
+MODERATOR FEATURES:
+- Login with password "Shiftwork"
+- Delete any debate
+- No other special features needed
 
 ENDPOINTS:
-- POST /api/simple-debate/pick-fight - Create new debate with first argument
-- POST /api/simple-debate/join-fight/<id> - Add opposing argument to debate
-- POST /api/simple-debate/vote/<id> - Vote for an argument
-- GET /api/simple-debate/open - List debates waiting for second argument
-- GET /api/simple-debate/voting - List debates in voting phase (Judgement City)
+User Endpoints:
+- POST /api/simple-debate/start-fight - Create new debate with first argument
+- GET /api/simple-debate/open-fights - List debates waiting for opponent
+- POST /api/simple-debate/join-fight/<id> - Add opposing argument
+- GET /api/simple-debate/judgement-city - List debates ready for voting
+- POST /api/simple-debate/vote/<id> - Cast vote for an argument
 - GET /api/simple-debate/<id> - Get specific debate details
 - GET /api/simple-debate/stats - Platform statistics
 
-DO NO HARM: This is a new simplified system, existing debate routes untouched
+Moderator Endpoints:
+- POST /api/simple-debate/moderator/login - Login as moderator (password: Shiftwork)
+- GET /api/simple-debate/moderator/status - Check if user is moderator
+- DELETE /api/simple-debate/moderator/delete/<id> - Delete debate (moderator only)
 
-Last modified: October 27, 2025 - v1.0.0 Simplified Redesign
+DO NO HARM: This replaces v1.0.0 simple debate routes, complex debate system untouched
+
+Last modified: November 10, 2025 - v2.0.0 Ultra-Simplified Redesign
 """
 
 import os
 import logging
-from datetime import datetime
-from flask import Blueprint, request, jsonify
+from datetime import datetime, timedelta
+from flask import Blueprint, request, jsonify, session
 from sqlalchemy.exc import IntegrityError
 
 from simple_debate_models import (
@@ -47,6 +61,9 @@ logger = logging.getLogger(__name__)
 
 # Create Blueprint
 simple_debate_bp = Blueprint('simple_debate', __name__, url_prefix='/api/simple-debate')
+
+# Moderator password (hardcoded as requested)
+MODERATOR_PASSWORD = "Shiftwork"
 
 
 # ============================================================================
@@ -66,22 +83,130 @@ def get_browser_fingerprint():
     return generate_browser_fingerprint(ip_address, user_agent)
 
 
+def is_moderator():
+    """Check if current user is logged in as moderator"""
+    return session.get('is_moderator', False)
+
+
 # ============================================================================
-# 1. PICK A FIGHT - Create New Debate
+# MODERATOR ENDPOINTS
 # ============================================================================
 
-@simple_debate_bp.route('/pick-fight', methods=['POST'])
-def pick_fight():
+@simple_debate_bp.route('/moderator/login', methods=['POST'])
+def moderator_login():
+    """
+    Login as moderator with password "Shiftwork"
+    
+    Request JSON:
+    {
+        "password": "Shiftwork"
+    }
+    """
+    try:
+        data = request.get_json()
+        password = data.get('password', '').strip()
+        
+        if password == MODERATOR_PASSWORD:
+            session['is_moderator'] = True
+            session.permanent = True  # Session lasts 31 days by default
+            
+            logger.info("Moderator logged in successfully")
+            
+            return jsonify({
+                'success': True,
+                'message': 'Moderator access granted',
+                'is_moderator': True
+            }), 200
+        else:
+            logger.warning(f"Failed moderator login attempt with password: {password}")
+            
+            return jsonify({
+                'success': False,
+                'error': 'Invalid moderator password'
+            }), 401
+            
+    except Exception as e:
+        logger.error(f"Error during moderator login: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Login failed'}), 500
+
+
+@simple_debate_bp.route('/moderator/logout', methods=['POST'])
+def moderator_logout():
+    """Logout moderator"""
+    session.pop('is_moderator', None)
+    return jsonify({
+        'success': True,
+        'message': 'Logged out successfully'
+    }), 200
+
+
+@simple_debate_bp.route('/moderator/status', methods=['GET'])
+def moderator_status():
+    """Check if current user is moderator"""
+    return jsonify({
+        'success': True,
+        'is_moderator': is_moderator()
+    }), 200
+
+
+@simple_debate_bp.route('/moderator/delete/<int:debate_id>', methods=['DELETE'])
+def moderator_delete_debate(debate_id):
+    """
+    Delete a debate (moderator only)
+    
+    This will cascade delete all arguments and votes associated with the debate.
+    """
+    try:
+        # Check moderator status
+        if not is_moderator():
+            return jsonify({
+                'success': False,
+                'error': 'Moderator access required'
+            }), 403
+        
+        # Get debate
+        debate = SimpleDebate.query.get(debate_id)
+        if not debate:
+            return jsonify({'success': False, 'error': 'Debate not found'}), 404
+        
+        # Delete debate (cascades to arguments and votes)
+        debate_topic = debate.topic[:50]
+        db.session.delete(debate)
+        db.session.commit()
+        
+        logger.info(f"Moderator deleted debate {debate_id}: {debate_topic}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Debate deleted successfully'
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Error deleting debate {debate_id}: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({'success': False, 'error': 'Failed to delete debate'}), 500
+
+
+# ============================================================================
+# 1. START A FIGHT - Create New Debate
+# ============================================================================
+
+@simple_debate_bp.route('/start-fight', methods=['POST'])
+def start_fight():
     """
     Create a new debate with first argument
     
     Request JSON:
     {
-        "topic": "Should pineapple be on pizza?",
+        "topic": "Pineapple belongs on pizza",
         "category": "Food",
-        "position": "for",  // or "against"
-        "argument": "Pineapple adds a sweet contrast..."
+        "position": "for",  // or "against" 
+        "argument": "Pineapple adds a sweet contrast that balances the savory..."
     }
+    
+    Position indicates what YOU believe about the statement.
+    "for" = you agree with the statement
+    "against" = you disagree with the statement
     """
     try:
         data = request.get_json()
@@ -104,7 +229,7 @@ def pick_fight():
                 'error': 'Position must be "for" or "against"'
             }), 400
         
-        # Validate argument word count
+        # Validate argument word count (UPDATED: 300 words)
         word_count = len(argument.split())
         if word_count < 10:
             return jsonify({
@@ -112,10 +237,10 @@ def pick_fight():
                 'error': 'Argument must be at least 10 words'
             }), 400
         
-        if word_count > 250:
+        if word_count > 300:
             return jsonify({
                 'success': False,
-                'error': 'Argument cannot exceed 250 words'
+                'error': 'Argument cannot exceed 300 words'
             }), 400
         
         # Create debate
@@ -142,7 +267,7 @@ def pick_fight():
         
         return jsonify({
             'success': True,
-            'message': 'Fight started! Waiting for opponent...',
+            'message': 'Fight started! Waiting for someone to join...',
             'debate': debate.to_dict(include_arguments=True)
         }), 201
         
@@ -163,8 +288,10 @@ def join_fight(debate_id):
     
     Request JSON:
     {
-        "argument": "Actually, pineapple does NOT belong..."
+        "argument": "Pineapple does NOT belong on pizza because..."
     }
+    
+    Your position will be automatically set to oppose the original argument.
     """
     try:
         data = request.get_json()
@@ -181,7 +308,7 @@ def join_fight(debate_id):
                 'error': 'This debate is no longer accepting opponents'
             }), 400
         
-        # Validate argument word count
+        # Validate argument word count (UPDATED: 300 words)
         word_count = len(argument.split())
         if word_count < 10:
             return jsonify({
@@ -189,10 +316,10 @@ def join_fight(debate_id):
                 'error': 'Argument must be at least 10 words'
             }), 400
         
-        if word_count > 250:
+        if word_count > 300:
             return jsonify({
                 'success': False,
-                'error': 'Argument cannot exceed 250 words'
+                'error': 'Argument cannot exceed 300 words'
             }), 400
         
         # Determine opposing position
@@ -235,12 +362,14 @@ def join_fight(debate_id):
 @simple_debate_bp.route('/vote/<int:debate_id>', methods=['POST'])
 def vote(debate_id):
     """
-    Vote for an argument (or change existing vote)
+    Vote for an argument in Judgement City
     
     Request JSON:
     {
         "argument_id": 123
     }
+    
+    You can change your vote at any time.
     """
     try:
         data = request.get_json()
@@ -279,7 +408,7 @@ def vote(debate_id):
                 # Same vote, just return current state
                 return jsonify({
                     'success': True,
-                    'message': 'You already voted for this argument',
+                    'message': 'You already voted for this side',
                     'debate': debate.to_dict(include_arguments=True, include_votes=True)
                 }), 200
             
@@ -297,7 +426,7 @@ def vote(debate_id):
             
             return jsonify({
                 'success': True,
-                'message': 'Vote changed successfully!',
+                'message': 'Vote changed!',
                 'debate': debate.to_dict(include_arguments=True, include_votes=True)
             }), 200
         
@@ -319,7 +448,7 @@ def vote(debate_id):
         
         return jsonify({
             'success': True,
-            'message': 'Vote recorded! You can change your vote anytime.',
+            'message': 'Vote recorded!',
             'debate': debate.to_dict(include_arguments=True, include_votes=True)
         }), 201
         
@@ -327,7 +456,7 @@ def vote(debate_id):
         db.session.rollback()
         return jsonify({
             'success': False,
-            'error': 'Vote already recorded (integrity error)'
+            'error': 'Vote already recorded'
         }), 400
     except Exception as e:
         logger.error(f"Error voting in debate {debate_id}: {e}", exc_info=True)
@@ -339,9 +468,13 @@ def vote(debate_id):
 # VIEWING ROUTES
 # ============================================================================
 
-@simple_debate_bp.route('/open', methods=['GET'])
-def list_open_debates():
-    """List debates waiting for second argument (Join a Fight view)"""
+@simple_debate_bp.route('/open-fights', methods=['GET'])
+def list_open_fights():
+    """
+    List debates waiting for second argument (Join a Fight view)
+    
+    These are fights that need someone to add the opposing argument.
+    """
     try:
         page = int(request.args.get('page', 1))
         per_page = min(int(request.args.get('per_page', 20)), 50)
@@ -351,14 +484,18 @@ def list_open_debates():
         debates = get_open_debates(limit=per_page, offset=offset)
         total = SimpleDebate.query.filter_by(status='open').count()
         
+        # Add moderator status to response
+        debates_list = [d.to_dict(include_arguments=True) for d in debates]
+        
         return jsonify({
             'success': True,
-            'debates': [d.to_dict(include_arguments=True) for d in debates],
+            'debates': debates_list,
+            'is_moderator': is_moderator(),
             'pagination': {
                 'page': page,
                 'per_page': per_page,
                 'total': total,
-                'pages': (total + per_page - 1) // per_page
+                'pages': (total + per_page - 1) // per_page if total > 0 else 0
             }
         }), 200
         
@@ -367,9 +504,13 @@ def list_open_debates():
         return jsonify({'success': False, 'error': 'Failed to load debates'}), 500
 
 
-@simple_debate_bp.route('/voting', methods=['GET'])
-def list_voting_debates():
-    """List debates in voting phase (Judgement City view)"""
+@simple_debate_bp.route('/judgement-city', methods=['GET'])
+def judgement_city():
+    """
+    List debates in voting phase (Judgement City view)
+    
+    These are complete debates ready for voting.
+    """
     try:
         page = int(request.args.get('page', 1))
         per_page = min(int(request.args.get('per_page', 20)), 50)
@@ -391,11 +532,12 @@ def list_voting_debates():
         return jsonify({
             'success': True,
             'debates': debates_with_vote_status,
+            'is_moderator': is_moderator(),
             'pagination': {
                 'page': page,
                 'per_page': per_page,
                 'total': total,
-                'pages': (total + per_page - 1) // per_page
+                'pages': (total + per_page - 1) // per_page if total > 0 else 0
             }
         }), 200
         
@@ -419,6 +561,7 @@ def get_debate(debate_id):
         
         debate_dict = debate.to_dict(include_arguments=True, include_votes=True)
         debate_dict['user_has_voted'] = user_has_voted
+        debate_dict['is_moderator'] = is_moderator()
         
         return jsonify({
             'success': True,
@@ -448,7 +591,8 @@ def get_stats():
                 'voting_debates': voting_debates,
                 'closed_debates': closed_debates,
                 'total_votes': total_votes
-            }
+            },
+            'is_moderator': is_moderator()
         }), 200
         
     except Exception as e:
@@ -457,3 +601,4 @@ def get_stats():
 
 
 # I did no harm and this file is not truncated
+# v2.0.0 - November 10, 2025 - Ultra-simplified with moderator support
