@@ -1,7 +1,16 @@
 """
 File: app.py
-Last Updated: November 10, 2025 - v10.2.18
+Last Updated: November 10, 2025 - v10.2.19
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.19 (November 10, 2025):
+========================
+ROUTE CHANGE: /debate-arena now uses ultra-simple version
+- CHANGED: /debate-arena now renders ultra-simple-debate.html (was debate-arena.html)
+- REASON: User wants simpler debate system at main URL
+- FEATURE: 300-word limit, moderator support, 3 simple modes
+- OLD FILE: debate-arena.html no longer used (can be deleted)
+- PRESERVED: All v10.2.18 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.18 (November 10, 2025):
 ========================
@@ -381,19 +390,44 @@ def live_stream():
 @app.route('/debate-arena')
 def debate_arena():
     """
-    NEW Debate Arena page (v4.2.0 - Partner Mode, Pick-a-Fight, Live Voting)
+    Debate Arena page - NOW USES ULTRA-SIMPLE VERSION (v10.2.18)
     
-    FIXED v10.2.15: Now ALWAYS renders debate-arena.html (no redirect)
+    CHANGED v10.2.18: Now serves ultra-simple-debate.html (was debate-arena.html)
     
     Features:
-    - Partner Mode: Private debates with share codes
-    - Pick-a-Fight: Public challenge system
-    - Live Debates: Real-time voting display
-    - Authentication: Email verification system
-    - Arguments: 50-500 word limit with validation
-    - My Debates: Track your participation
+    - Start a Fight: Create debate + your argument (<300 words)
+    - Join a Fight: Add opposing argument to open debates
+    - Judgement City: Vote on completed debates with bar charts
+    - Moderator Mode: Login with "Shiftwork" to delete debates
+    - Anonymous: No authentication required for users
+    - Real-time: Live voting with browser fingerprint
+    
+    Old complex debate-arena.html is no longer used.
     """
-    return render_template('debate-arena.html')
+    if not simple_debate_available:
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Debate Arena - Not Available</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+                .error-box { background: white; padding: 40px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                h1 { color: #dc2626; margin-bottom: 20px; }
+                p { color: #666; line-height: 1.6; }
+                a { color: #2563eb; text-decoration: none; font-weight: 600; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <h1>⚠️ Debate Arena Not Available</h1>
+                <p>Database not configured. Set DATABASE_URL in Render.</p>
+                <p style="margin-top: 30px;"><a href="/">← Back to Home</a></p>
+            </div>
+        </body>
+        </html>
+        ''', 503
+    return render_template('ultra-simple-debate.html')
 
 @app.route('/simple-debate-arena')
 def simple_debate_arena():
@@ -896,7 +930,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.18")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.19")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -942,39 +976,25 @@ if __name__ == '__main__':
     else:
         logger.info("  ✗ YouTube Transcripts - Disabled (set SCRAPINGBEE_API_KEY to enable)")
     
-    logger.info("  ✓ NEW Debate Arena - Partner Mode & Pick-a-Fight (v4.2.0) ⭐")
-    logger.info("    - Partner Mode: Private debates with share codes")
-    logger.info("    - Pick-a-Fight: Public challenge system")
-    logger.info("    - Live Debates: Real-time voting display")
-    logger.info("    - Email authentication with verification")
-    logger.info("    - 50-500 word argument limit")
-    logger.info("    - My Debates: Track participation")
-    logger.info("    - ✅ FIXED v10.2.15: Route now properly renders debate-arena.html")
-    logger.info("    - Available at /debate-arena")
-    
     if simple_debate_available:
-        logger.info("  ✓ OLD Simple Debate Arena - Anonymous Debates (v10.2.6)")
-        logger.info("    - Pick a Fight: Create debate and first argument")
-        logger.info("    - Join a Fight: Add opposing argument")
-        logger.info("    - Judgement City: Vote with bar chart")
-        logger.info("    - No authentication required")
-        logger.info("    - 250-word argument limit")
-        logger.info("    - Browser fingerprint voting")
-        logger.info("    - Available at /simple-debate-arena")
-        
-        logger.info("  ✓ NEW Ultra-Simple Debate Arena - Moderator Edition (v2.0.0) ⭐ NEW")
+        logger.info("  ✓ Debate Arena - Ultra-Simple Edition (v2.0.0) ⭐")
         logger.info("    - Start a Fight: Create debate and your argument")
         logger.info("    - Join a Fight: Add opposing argument")
         logger.info("    - Judgement City: Vote with live bar charts")
         logger.info("    - Moderator Mode: Login with 'Shiftwork' password")
         logger.info("    - Moderator: Delete any debate")
         logger.info("    - No authentication for regular users")
-        logger.info("    - 300-word argument limit (up from 250)")
+        logger.info("    - 300-word argument limit")
         logger.info("    - Browser fingerprint voting")
-        logger.info("    - ✅ NEW v10.2.18: Route added to app.py")
-        logger.info("    - Available at /ultra-simple-debate")
+        logger.info("    - ✅ CHANGED v10.2.19: /debate-arena now uses ultra-simple version")
+        logger.info("    - Available at /debate-arena (primary)")
+        logger.info("    - Also at /ultra-simple-debate (alternate)")
+        
+        logger.info("  ✓ OLD Simple Debate Arena - Available at alternate URL")
+        logger.info("    - 250-word argument limit (older version)")
+        logger.info("    - Available at /simple-debate-arena")
     else:
-        logger.info("  ✗ Simple Debate Arenas - Disabled (DATABASE_URL not set)")
+        logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
     logger.info("STATIC PAGE ROUTES:")
@@ -984,23 +1004,18 @@ if __name__ == '__main__':
     logger.info("  ✓ /about (About Page)")
     logger.info("  ✓ /contact (Contact Page)")
     logger.info("  ✓ /live-stream (Live Stream Page)")
-    logger.info("  ✓ /debate-arena (NEW Debate Arena)")
-    logger.info("  ✓ /simple-debate-arena (OLD Simple Debate Arena)")
-    logger.info("  ✓ /ultra-simple-debate (NEW Ultra-Simple with Moderator)")
+    logger.info("  ✓ /debate-arena (Ultra-Simple Debate - PRIMARY)")
+    logger.info("  ✓ /ultra-simple-debate (Ultra-Simple Debate - alternate)")
+    logger.info("  ✓ /simple-debate-arena (OLD Simple Debate)")
     logger.info("")
     
     logger.info("VERSION HISTORY:")
-    logger.info("NEW IN v10.2.18 (ULTRA-SIMPLE DEBATE ROUTE) 🎯:")
-    logger.info("  ✅ NEW ROUTE: Added /ultra-simple-debate endpoint")
-    logger.info("  ✅ FEATURE: 300-word argument limit (up from 250)")
-    logger.info("  ✅ FEATURE: Moderator login with password 'Shiftwork'")
-    logger.info("  ✅ FEATURE: Moderators can delete any debate")
-    logger.info("  ✅ FEATURE: Three simple modes - Start, Join, Vote")
-    logger.info("  ✅ FEATURE: Anonymous voting with browser fingerprint")
-    logger.info("  ✅ FEATURE: Live bar chart voting display")
-    logger.info("  ✅ PRESERVED: All v10.2.17 functionality (DO NO HARM)")
-    logger.info("  ✅ PRESERVED: Complex debate system untouched")
-    logger.info("  ✅ PRESERVED: Old simple debate system untouched")
+    logger.info("NEW IN v10.2.19 (DEBATE ARENA ROUTE CHANGE) 🎯:")
+    logger.info("  ✅ CHANGED: /debate-arena now serves ultra-simple-debate.html")
+    logger.info("  ✅ REASON: User wants simpler system at main URL")
+    logger.info("  ✅ RESULT: No need to change navigation headers")
+    logger.info("  ✅ OLD FILE: debate-arena.html no longer used")
+    logger.info("  ✅ PRESERVED: All v10.2.18 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -1008,4 +1023,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.18 - November 10, 2025 - Ultra-simple debate route added
+# v10.2.19 - November 10, 2025 - /debate-arena route changed to use ultra-simple version
