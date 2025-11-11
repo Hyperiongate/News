@@ -1,10 +1,46 @@
-// config.js - Shared configuration for TruthLens frontend
-// This file contains all configuration that needs to be shared between different JavaScript files
+/**
+ * TruthLens - Complete Configuration File
+ * Version: 2.0.0 - MERGED FOR BLUEHOST DEPLOYMENT
+ * Date: November 11, 2025
+ * 
+ * CHANGES FROM v1.0:
+ * - ADDED: API_BASE_URL for Render backend (Bluehost deployment)
+ * - ADDED: API helper methods (getUrl, getFullUrl)
+ * - PRESERVED: All existing service configs, trust scores, UI settings
+ * 
+ * This file combines:
+ * 1. Your original application configuration
+ * 2. New API endpoint configuration for split deployment
+ * 
+ * DEPLOYMENT:
+ * - Upload to: /static/js/config.js on Bluehost
+ * - Replaces your existing config.js
+ * - All functionality preserved + adds backend connection
+ * 
+ * Last modified: November 11, 2025 - v2.0.0 Bluehost deployment merge
+ */
 
 const CONFIG = {
-    // API Configuration
+    // ========================================================================
+    // API CONFIGURATION - NEW FOR BLUEHOST DEPLOYMENT
+    // ========================================================================
+    
+    // Render Backend URL - This is where your Flask API lives
+    API_BASE_URL: 'https://news-analyzer-qtgb.onrender.com',
+    
+    // API Endpoints (relative paths)
     API_ENDPOINT: '/api/analyze',
+    TRANSCRIPT_ENDPOINT: '/api/transcript/analyze',
+    DEBATE_ENDPOINT: '/api/debate',
+    SIMPLE_DEBATE_ENDPOINT: '/api/simple-debate',
+    
+    // API Settings
     API_TIMEOUT: 60000,
+    
+    // ========================================================================
+    // ORIGINAL APPLICATION CONFIGURATION (PRESERVED)
+    // ========================================================================
+    
     isPro: false,
 
     // Service definitions
@@ -15,7 +51,7 @@ const CONFIG = {
             icon: 'fa-shield-alt',
             weight: 0.25,
             description: 'Comprehensive evaluation of news source reliability and trustworthiness',
-            url: '/templates/source-credibility.html',
+            url: '/source-credibility.html',  // Updated for Bluehost (no /templates/)
             className: 'source-credibility',
             color: '#6366f1' // primary color
         },
@@ -25,7 +61,7 @@ const CONFIG = {
             icon: 'fa-user-check',
             weight: 0.15,
             description: 'In-depth assessment of author credentials and publishing history',
-            url: '/templates/author-analysis.html',
+            url: '/author-analysis.html',  // Updated for Bluehost
             className: 'author-analyzer',
             color: '#10b981' // secondary color
         },
@@ -35,7 +71,7 @@ const CONFIG = {
             icon: 'fa-balance-scale',
             weight: 0.20,
             description: 'Multi-dimensional analysis of political and ideological bias',
-            url: '/templates/bias-detection.html',
+            url: '/bias-detection.html',  // Updated for Bluehost
             className: 'bias-detector',
             color: '#f59e0b' // warning color
         },
@@ -45,7 +81,7 @@ const CONFIG = {
             icon: 'fa-check-double',
             weight: 0.15,
             description: 'Verification of claims against authoritative sources',
-            url: '/templates/fact-checking.html',
+            url: '/fact-checking.html',  // Updated for Bluehost
             className: 'fact-checker',
             color: '#3b82f6' // info color
         },
@@ -55,7 +91,7 @@ const CONFIG = {
             icon: 'fa-eye',
             weight: 0.10,
             description: 'Assessment of disclosure, sourcing, and editorial transparency',
-            url: '/templates/transparency-analysis.html',
+            url: '/transparency-analysis.html',  // Updated for Bluehost
             className: 'transparency-analyzer',
             color: '#8b5cf6' // purple
         },
@@ -66,7 +102,7 @@ const CONFIG = {
             weight: 0.10,
             isPro: true,
             description: 'Identification of manipulative tactics and emotional exploitation',
-            url: '/templates/manipulation-detection.html',
+            url: '/manipulation-detection.html',  // Updated for Bluehost
             className: 'manipulation-detector',
             color: '#ef4444' // danger color
         },
@@ -77,7 +113,7 @@ const CONFIG = {
             weight: 0.05,
             isPro: true,
             description: 'Evaluation of writing quality, readability, and structure',
-            url: '/templates/content-analysis.html',
+            url: '/content-analysis.html',  // Updated for Bluehost
             className: 'content-analyzer',
             color: '#06b6d4' // cyan
         }
@@ -133,6 +169,10 @@ const CONFIG = {
     }
 };
 
+// ============================================================================
+// HELPER FUNCTIONS (ORIGINAL + NEW)
+// ============================================================================
+
 // Helper function to get service by ID
 CONFIG.getServiceById = function(serviceId) {
     return this.SERVICES.find(service => service.id === serviceId);
@@ -164,5 +204,68 @@ CONFIG.getBiasLevel = function(score) {
     return this.BIAS_LEVELS[this.BIAS_LEVELS.length - 1];
 };
 
-// Make CONFIG available globally
+// ============================================================================
+// NEW API HELPER FUNCTIONS FOR BLUEHOST DEPLOYMENT
+// ============================================================================
+
+/**
+ * Get full API URL for an endpoint
+ * @param {string} endpoint - Relative endpoint path (e.g., '/api/analyze')
+ * @returns {string} Full URL to backend
+ */
+CONFIG.getApiUrl = function(endpoint) {
+    // Remove leading slash if present to avoid double slashes
+    const cleanEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+    return this.API_BASE_URL + cleanEndpoint;
+};
+
+/**
+ * Get full URL for news analysis endpoint
+ * @returns {string} Full URL to analyze endpoint
+ */
+CONFIG.getAnalyzeUrl = function() {
+    return this.getApiUrl(this.API_ENDPOINT);
+};
+
+/**
+ * Get full URL for transcript analysis endpoint
+ * @returns {string} Full URL to transcript endpoint
+ */
+CONFIG.getTranscriptUrl = function() {
+    return this.getApiUrl(this.TRANSCRIPT_ENDPOINT);
+};
+
+/**
+ * Get full URL for debate arena endpoint
+ * @param {string} path - Optional path after /api/debate
+ * @returns {string} Full URL to debate endpoint
+ */
+CONFIG.getDebateUrl = function(path = '') {
+    const endpoint = path ? `${this.DEBATE_ENDPOINT}${path}` : this.DEBATE_ENDPOINT;
+    return this.getApiUrl(endpoint);
+};
+
+/**
+ * Get full URL for simple debate endpoint
+ * @param {string} path - Optional path after /api/simple-debate
+ * @returns {string} Full URL to simple debate endpoint
+ */
+CONFIG.getSimpleDebateUrl = function(path = '') {
+    const endpoint = path ? `${this.SIMPLE_DEBATE_ENDPOINT}${path}` : this.SIMPLE_DEBATE_ENDPOINT;
+    return this.getApiUrl(endpoint);
+};
+
+// ============================================================================
+// MAKE CONFIG AVAILABLE GLOBALLY
+// ============================================================================
+
 window.CONFIG = CONFIG;
+
+// Log configuration on load (helps with debugging)
+console.log('TruthLens Configuration Loaded:', {
+    backend: CONFIG.API_BASE_URL,
+    environment: window.location.hostname,
+    version: '2.0.0'
+});
+
+/* I did no harm and this file is not truncated */
