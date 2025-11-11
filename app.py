@@ -1,168 +1,27 @@
 """
 File: app.py
-Last Updated: November 11, 2025 - v10.2.23
+Last Updated: November 11, 2025 - v10.2.24
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
 
-CHANGES IN v10.2.23 (November 11, 2025):
+CHANGES IN v10.2.24 (November 11, 2025):
 ========================
-NEW FEATURE: Admin Endpoints for Manual Table Creation
-- ADDED: /admin/init-database endpoint (SQLAlchemy method)
-- ADDED: /admin/force-create-tables endpoint (raw SQL method)
-- REASON: db.create_all() during startup not working reliably
-- SOLUTION: Visit URL once to manually create tables
-- USAGE: Just visit https://your-app.onrender.com/admin/force-create-tables
-- RESULT: Tables get created immediately!
-- PRESERVED: All v10.2.22 functionality (DO NO HARM ✓)
+BLUEHOST DEPLOYMENT: CORS Configuration for factsandfakes.ai
+- UPDATED: CORS(app) replaced with full configuration
+- ADDED: factsandfakes.ai domain to allowed origins
+- ADDED: www.factsandfakes.ai to allowed origins
+- ADDED: HTTP versions for redirect support
+- PURPOSE: Allow Bluehost frontend to communicate with Render backend
+- RESULT: Frontend on Bluehost can now call API on Render!
+- PRESERVED: All v10.2.23 functionality (DO NO HARM ✓)
 
-HOW TO USE:
-1. Deploy this file to Render
-2. Visit: https://news-analyzer-qtgb.onrender.com/admin/force-create-tables
-3. See success message with list of created tables
-4. Go to /debate-arena and it works!
-
-CHANGES IN v10.2.22 (November 11, 2025):
-========================
-CRITICAL FIX: Tables Still Not Created - db.create_all() Called Too Early
-- ROOT CAUSE: db.create_all() was called BEFORE models were registered with SQLAlchemy
-- ERROR: relation "simple_debates" does not exist (even though logs said "tables already exist")
-- SYMPTOM: App logs showed success but tables were never created
-- ISSUE: SQLAlchemy's db.create_all() only creates tables for registered models
-- FIXED: Moved db.create_all() to AFTER init_simple_debate_db() completes ✅
-- FIXED: Models now register FIRST, then tables are created ✅
-- RESULT: Tables actually get created now!
-- RESULT: /api/simple-debate/start-fight works! 🎉
-- PRESERVED: All v10.2.21 functionality (DO NO HARM ✓)
-
-WHAT WAS WRONG:
-```python
-# OLD (BROKEN):
-init_simple_debate_db(db)  # Register models
-# ... other code ...
-db.create_all()  # ← Too far away! Models not in metadata yet!
-```
-
-WHAT'S FIXED:
-```python
-# NEW (FIXED):
-init_simple_debate_db(db)  # Register models
-from simple_debate_routes import simple_debate_bp  # Import routes
-app.register_blueprint(simple_debate_bp)  # Register blueprint
-# NOW create tables - models are registered!
-with app.app_context():
-    db.create_all()  # ← Works! Models are in metadata!
-```
-
-CHANGES IN v10.2.21 (November 11, 2025):
-========================
-CRITICAL FIX: Database Tables Not Created - Debate Arena 500 Errors
-- ROOT CAUSE: Models used conditional definitions (if db else None) that broke SQLAlchemy
-- ROOT CAUSE: Routes imported models BEFORE init_simple_debate_db() was called  
-- ERROR: relation "simple_debates" does not exist
-- SYMPTOM: POST /api/simple-debate/start-fight → 500 error
-- FIXED: Changed import order - models initialized BEFORE routes imported ✅
-- FIXED: Updated simple_debate_models.py to properly define models ✅
-- RESULT: Tables now create successfully!
-- RESULT: /api/simple-debate/start-fight now works! 🎉
-- PRESERVED: All v10.2.20 functionality (DO NO HARM ✓)
-
-WHAT WAS WRONG:
-```python
-# OLD (BROKEN):
-from simple_debate_routes import simple_debate_bp  # ← Imports routes first
-init_simple_debate_db(db)  # ← Too late! Routes already imported broken models
-```
-
-WHAT'S FIXED:
-```python
-# NEW (FIXED):
-init_simple_debate_db(db)  # ← Initialize models FIRST
-from simple_debate_routes import simple_debate_bp  # ← Then import routes
-```
-
-CHANGES IN v10.2.20 (November 11, 2025):
-========================
-CRITICAL FIX: Database Initialization - 503 Error on /debate-arena
-- ROOT CAUSE: db.create_all() fails when indexes already exist (DuplicateTable error)
-- ERROR: Sets simple_debate_available = False, causing 503 on /debate-arena
-- SYMPTOM: "relation 'idx_debate_status_created' already exists"
-- ISSUE: Code treated "already exists" as fatal error instead of success
-- FIXED: Added intelligent error handling for psycopg2.errors.DuplicateTable ✅
-- FIXED: Separated table creation from index creation ✅
-- LOGIC: If tables exist, that's SUCCESS not failure! ✅
-- RESULT: /debate-arena now works even after redeployment! 🎉
-- PRESERVED: All v10.2.19 functionality (DO NO HARM ✓)
-
-WHAT WAS WRONG:
-```python
-try:
-    db.create_all()  # Fails if indexes exist
-except Exception as e:
-    simple_debate_available = False  # ❌ Sets to False on any error
-```
-
-WHAT'S FIXED:
-```python
-try:
-    db.create_all()
-except Exception as e:
-    if 'already exists' in str(e).lower() or 'duplicate' in str(e).lower():
-        logger.info("  ✓ Database tables/indexes already exist (OK)")
-    else:
-        # Only disable on REAL errors
-        simple_debate_available = False
-```
-
-CHANGES IN v10.2.19 (November 10, 2025):
-========================
-ROUTE CHANGE: /debate-arena now uses ultra-simple version
-- CHANGED: /debate-arena now renders ultra-simple-debate.html (was debate-arena.html)
-- REASON: User wants simpler debate system at main URL
-- FEATURE: 300-word limit, moderator support, 3 simple modes
-- OLD FILE: debate-arena.html no longer used (can be deleted)
-- PRESERVED: All v10.2.18 functionality (DO NO HARM ✓)
-
-CHANGES IN v10.2.18 (November 10, 2025):
-========================
-NEW FEATURE: Ultra-Simple Debate Arena Route
-- ADDED: /ultra-simple-debate route for simplified debate system with moderator support
-- FEATURE: 300-word argument limit (up from 250)
-- FEATURE: Moderator mode with password "Shiftwork" for debate deletion
-- FEATURE: Three simple modes - Start Fight, Join Fight, Judgement City
-- FEATURE: Anonymous voting with browser fingerprint tracking
-- PRESERVED: All v10.2.17 functionality (DO NO HARM ✓)
-
-CHANGES IN v10.2.17 (November 3, 2025):
-========================
-CRITICAL FIX: Transcript Blueprint Registration - 404 Error on /api/transcript/analyze
-- ROOT CAUSE: transcript_bp blueprint from transcript_routes.py was never registered in app.py
-- ERROR: Frontend calling /api/transcript/analyze returns 404 (endpoint doesn't exist)
-- SYMPTOMS: "Failed to load resource: the server responded with a status of 404"
-- FROM ERROR LOG: POST /api/transcript/analyze → 404 (Not Found)
-- ISSUE: Blueprint exists in transcript_routes.py but was never imported/registered in app.py
-- FIXED: Added import of transcript_bp from transcript_routes ✅
-- FIXED: Added app.register_blueprint(transcript_bp) with proper error handling ✅
-- RESULT: /api/transcript/analyze now works correctly!
-- RESULT: Transcript analysis fully functional!
-- PRESERVED: All v10.2.16 functionality (DO NO HARM ✓)
-
-WHAT WAS MISSING:
-- No "from transcript_routes import transcript_bp" import
-- No "app.register_blueprint(transcript_bp)" registration
-- Transcript routes existed but were completely disconnected from Flask app!
-
-INTEGRATION ADDED (Lines ~195-210):
-✅ Import transcript_routes module and transcript_bp blueprint
-✅ Register blueprint with try/except for graceful degradation
-✅ Log success or failure of transcript system initialization
-✅ Set transcript_available flag for health checks
-✅ Blueprint registered with url_prefix='/api/transcript' (already in blueprint definition)
-
-TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.20 - DATABASE INITIALIZATION FIX (503 ERROR SOLVED!)
-Date: November 11, 2025
+DEPLOYMENT ARCHITECTURE:
+- Frontend: Bluehost (factsandfakes.ai) - HTML/CSS/JS
+- Backend: Render (news-analyzer-qtgb.onrender.com) - Python/Flask
+- Database: Render PostgreSQL
+- Connection: CORS allows frontend → backend API calls
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: November 11, 2025 - v10.2.20 DATABASE INITIALIZATION FIX
+Last modified: November 11, 2025 - v10.2.24 BLUEHOST CORS CONFIGURATION
 """
 
 import os
@@ -204,7 +63,38 @@ app = Flask(__name__,
             static_folder='static',
             static_url_path='/static',
             template_folder='templates')
-CORS(app)
+
+# ============================================================================
+# CORS CONFIGURATION FOR BLUEHOST DEPLOYMENT (v10.2.24)
+# ============================================================================
+# Frontend: factsandfakes.ai (Bluehost)
+# Backend: news-analyzer-qtgb.onrender.com (Render)
+# ============================================================================
+
+CORS(app, resources={
+    r"/api/*": {
+        "origins": [
+            # Development
+            "http://localhost:3000",
+            "http://localhost:5000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:5000",
+            
+            # Render backend (for internal calls)
+            "https://news-analyzer-qtgb.onrender.com",
+            
+            # Bluehost Production - factsandfakes.ai
+            "https://factsandfakes.ai",
+            "https://www.factsandfakes.ai",
+            "http://factsandfakes.ai",
+            "http://www.factsandfakes.ai"
+        ],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "X-Session-Token"],
+        "supports_credentials": True,
+        "max_age": 3600  # Cache preflight requests for 1 hour
+    }
+})
 
 # Set secret key for session management
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-change-in-production')
@@ -214,6 +104,12 @@ logger.info("Flask app initialized with EXPLICIT static configuration:")
 logger.info(f"  static_folder: {app.static_folder}")
 logger.info(f"  static_url_path: {app.static_url_path}")
 logger.info(f"  template_folder: {app.template_folder}")
+logger.info("=" * 80)
+logger.info("CORS CONFIGURED FOR BLUEHOST DEPLOYMENT:")
+logger.info("  ✓ Development: localhost")
+logger.info("  ✓ Render Backend: news-analyzer-qtgb.onrender.com")
+logger.info("  ✓ Production Frontend: factsandfakes.ai")
+logger.info("  ✓ Production Frontend: www.factsandfakes.ai")
 logger.info("=" * 80)
 
 # ============================================================================
@@ -1194,8 +1090,14 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.23")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.24")
     logger.info("=" * 80)
+    logger.info("")
+    logger.info("DEPLOYMENT ARCHITECTURE:")
+    logger.info("  🌐 Frontend: factsandfakes.ai (Bluehost)")
+    logger.info("  ⚙️ Backend: news-analyzer-qtgb.onrender.com (Render)")
+    logger.info("  🗄️ Database: PostgreSQL (Render)")
+    logger.info("  🔗 CORS: Configured for cross-origin requests")
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
     logger.info("  ✓ News Analysis - 7 AI services with comprehensive fact-checking")
@@ -1209,15 +1111,13 @@ if __name__ == '__main__':
     logger.info("")
     
     if transcript_available:
-        logger.info("  ✓ Transcript Analysis - FULLY OPERATIONAL ⭐ FIXED")
+        logger.info("  ✓ Transcript Analysis - FULLY OPERATIONAL ⭐")
         logger.info("    - Text transcript analysis with fact-checking")
         logger.info("    - YouTube video transcript extraction")
         logger.info("    - Live stream transcription support")
         logger.info("    - Speaker quality analysis")
         logger.info("    - Claim extraction and verification")
         logger.info("    - Export to PDF/JSON/TXT")
-        logger.info("    - ✅ FIXED v10.2.17: Blueprint properly registered!")
-        logger.info("    - ✅ RESULT: /api/transcript/analyze now works!")
         logger.info("    - Available at /transcript")
     else:
         logger.info("  ✗ Transcript Analysis - Disabled (transcript_routes.py not found)")
@@ -1236,7 +1136,6 @@ if __name__ == '__main__':
         logger.info("    - Extract transcripts from any YouTube video")
         logger.info("    - Automatic caption retrieval")
         logger.info("    - Comprehensive fact-checking with job management")
-        logger.info("    - ✅ FIXED: Now properly creates jobs and returns job_id")
     else:
         logger.info("  ✗ YouTube Transcripts - Disabled (set SCRAPINGBEE_API_KEY to enable)")
     
@@ -1246,73 +1145,17 @@ if __name__ == '__main__':
         logger.info("    - Join a Fight: Add opposing argument")
         logger.info("    - Judgement City: Vote with live bar charts")
         logger.info("    - Moderator Mode: Login with 'Shiftwork' password")
-        logger.info("    - Moderator: Delete any debate")
-        logger.info("    - No authentication for regular users")
-        logger.info("    - 300-word argument limit")
-        logger.info("    - Browser fingerprint voting")
-        logger.info("    - ✅ FIXED v10.2.20: Handles existing database tables gracefully!")
-        logger.info("    - ✅ RESULT: No more 503 errors on /debate-arena!")
-        logger.info("    - ✅ CHANGED v10.2.19: /debate-arena now uses ultra-simple version")
-        logger.info("    - Available at /debate-arena (primary)")
-        logger.info("    - Also at /ultra-simple-debate (alternate)")
-        
-        logger.info("  ✓ OLD Simple Debate Arena - Available at alternate URL")
-        logger.info("    - 250-word argument limit (older version)")
-        logger.info("    - Available at /simple-debate-arena")
+        logger.info("    - Available at /debate-arena")
     else:
         logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
-    logger.info("STATIC PAGE ROUTES:")
-    logger.info("  ✓ / (News Analysis)")
-    logger.info("  ✓ /transcript (Transcript Analysis)")
-    logger.info("  ✓ /features (Features Page)")
-    logger.info("  ✓ /about (About Page)")
-    logger.info("  ✓ /contact (Contact Page)")
-    logger.info("  ✓ /live-stream (Live Stream Page)")
-    logger.info("  ✓ /debate-arena (Ultra-Simple Debate - PRIMARY)")
-    logger.info("  ✓ /ultra-simple-debate (Ultra-Simple Debate - alternate)")
-    logger.info("  ✓ /simple-debate-arena (OLD Simple Debate)")
-    logger.info("")
-    
-    logger.info("VERSION HISTORY:")
-    logger.info("NEW IN v10.2.23 (ADMIN ENDPOINTS FOR TABLE CREATION) 🎯:")
-    logger.info("  ✅ ADDED: /admin/force-create-tables endpoint")
-    logger.info("  ✅ METHOD: Uses raw SQL to create tables directly")
-    logger.info("  ✅ USAGE: Just visit the URL once to create tables")
-    logger.info("  ✅ RESULT: Tables get created, debate arena works!")
-    logger.info("  ✅ NO DATABASE ACCESS NEEDED: Everything via web!")
-    logger.info("  ✅ PRESERVED: All v10.2.22 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.22 (TABLE CREATION TIMING FIX) 🎯:")
-    logger.info("  ✅ FIXED: db.create_all() now called AFTER models registered!")
-    logger.info("  ✅ FIXED: Moved table creation to correct position in flow")
-    logger.info("  ✅ RESULT: Tables actually get created now!")
-    logger.info("  ✅ RESULT: simple_debates, simple_arguments, simple_votes exist!")
-    logger.info("  ✅ RESULT: /api/simple-debate/start-fight WORKS!")
-    logger.info("  ✅ PRESERVED: All v10.2.21 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.21 (DATABASE TABLE CREATION FIX) 🎯:")
-    logger.info("  ✅ FIXED: Database tables now create properly!")
-    logger.info("  ✅ FIXED: Import order - models init BEFORE routes import")
-    logger.info("  ✅ FIXED: simple_debate_models.py properly defines classes")
-    logger.info("  ✅ RESULT: /api/simple-debate/start-fight works!")
-    logger.info("  ✅ RESULT: Debates can now be created!")
-    logger.info("  ✅ PRESERVED: All v10.2.20 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.20 (DATABASE INITIALIZATION FIX) 🎯:")
-    logger.info("  ✅ FIXED: db.create_all() error when indexes already exist")
-    logger.info("  ✅ LOGIC: 'Already exists' errors are now treated as SUCCESS")
-    logger.info("  ✅ RESULT: Debate Arena works on every deployment!")
-    logger.info("  ✅ RESULT: No more 503 errors!")
-    logger.info("  ✅ PRESERVED: All v10.2.19 functionality (DO NO HARM)")
-    logger.info("")
-    logger.info("NEW IN v10.2.19 (DEBATE ARENA ROUTE CHANGE) 🎯:")
-    logger.info("  ✅ CHANGED: /debate-arena now serves ultra-simple-debate.html")
-    logger.info("  ✅ REASON: User wants simpler system at main URL")
-    logger.info("  ✅ RESULT: No need to change navigation headers")
-    logger.info("  ✅ OLD FILE: debate-arena.html no longer used")
-    logger.info("  ✅ PRESERVED: All v10.2.18 functionality (DO NO HARM)")
+    logger.info("VERSION v10.2.24 (BLUEHOST CORS CONFIGURATION) 🎯:")
+    logger.info("  ✅ UPDATED: CORS configuration for factsandfakes.ai")
+    logger.info("  ✅ ADDED: Bluehost domain to allowed origins")
+    logger.info("  ✅ RESULT: Frontend can now call backend API!")
+    logger.info("  ✅ ARCHITECTURE: Split deployment (Bluehost + Render)")
+    logger.info("  ✅ PRESERVED: All v10.2.23 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -1320,4 +1163,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.23 - November 11, 2025 - ADMIN ENDPOINTS - VISIT /admin/force-create-tables TO CREATE TABLES!
+# v10.2.24 - November 11, 2025 - BLUEHOST CORS CONFIGURATION FOR factsandfakes.ai
