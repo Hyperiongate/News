@@ -32,7 +32,7 @@
 // CONFIGURATION & INITIALIZATION
 // ============================================================================
 
-const API_BASE_URL = '';
+const API_BASE_URL = 'https://news-analyzer-qtgb.onrender.com';
 const POLL_INTERVAL = 1000; // Poll every second
 
 // State Management
@@ -384,7 +384,7 @@ async function handleAnalyze() {
         console.log('[Core v6.16.0] Sending request:', requestBody);
         
         // Submit for analysis
-        const response = await fetch('/api/analyze', {
+        const response = await fetch(`${API_BASE_URL}/api/analyze`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -444,7 +444,7 @@ function startPolling() {
     
     pollInterval = setInterval(async () => {
         try {
-            const response = await fetch(`/api/job/${currentJobId}`);
+            const response = await fetch(`${API_BASE_URL}/api/job/${currentJobId}`);
             const data = await response.json();
             
             console.log('[Core v6.16.0] Poll response:', data);
@@ -588,7 +588,7 @@ window.exportToPDF = async function() {
     }
     
     try {
-        const response = await fetch('/api/export/pdf', {
+        const response = await fetch(`${API_BASE_URL}/api/export/pdf`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
