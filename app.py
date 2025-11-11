@@ -1,7 +1,17 @@
 """
 File: app.py
-Last Updated: November 3, 2025 - v10.2.17
+Last Updated: November 10, 2025 - v10.2.18
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+
+CHANGES IN v10.2.18 (November 10, 2025):
+========================
+NEW FEATURE: Ultra-Simple Debate Arena Route
+- ADDED: /ultra-simple-debate route for simplified debate system with moderator support
+- FEATURE: 300-word argument limit (up from 250)
+- FEATURE: Moderator mode with password "Shiftwork" for debate deletion
+- FEATURE: Three simple modes - Start Fight, Join Fight, Judgement City
+- FEATURE: Anonymous voting with browser fingerprint tracking
+- PRESERVED: All v10.2.17 functionality (DO NO HARM ✓)
 
 CHANGES IN v10.2.17 (November 3, 2025):
 ========================
@@ -30,11 +40,11 @@ INTEGRATION ADDED (Lines ~195-210):
 ✅ Blueprint registered with url_prefix='/api/transcript' (already in blueprint definition)
 
 TruthLens News Analyzer - Complete with Debate Arena & Live Streaming
-Version: 10.2.17 - TRANSCRIPT BLUEPRINT FIX
-Date: November 3, 2025
+Version: 10.2.18 - ULTRA-SIMPLE DEBATE ROUTE ADDED
+Date: November 10, 2025
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: November 3, 2025 - v10.2.17 TRANSCRIPT BLUEPRINT REGISTRATION FIX
+Last modified: November 10, 2025 - v10.2.18 ULTRA-SIMPLE DEBATE ROUTE ADDED
 """
 
 import os
@@ -433,6 +443,59 @@ def simple_debate_arena():
         </html>
         ''', 503
     return render_template('simple-debate-arena.html')
+
+@app.route('/ultra-simple-debate')
+def ultra_simple_debate():
+    """
+    NEW Ultra-Simple Debate Arena (v2.0.0 - 300-word limit, moderator support)
+    
+    Version: 2.0.0 - Ultra-simplified with moderator features
+    Date: November 10, 2025
+    
+    Features:
+    - Start a Fight: Create debate topic + your argument (<300 words)
+    - Join a Fight: See open debates, add opposing argument
+    - Judgement City: Vote on completed debates with live bar charts
+    - Moderator Mode: Login with password "Shiftwork" to delete debates
+    - Anonymous: No authentication required for regular users
+    - Real-time: Live vote tracking with browser fingerprint
+    
+    This is the simplified version with only 3 modes and moderator support.
+    For the complex debate arena with authentication, use /debate-arena
+    For the old simple debate arena (250-word limit), use /simple-debate-arena
+    """
+    if not simple_debate_available:
+        # Return simple HTML error instead of requiring error.html template
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Ultra-Simple Debate Arena - Not Available</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+                .error-box { background: white; padding: 40px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                h1 { color: #dc2626; margin-bottom: 20px; }
+                p { color: #666; line-height: 1.6; margin-bottom: 15px; }
+                .code { background: #f3f4f6; padding: 3px 8px; border-radius: 4px; font-family: monospace; }
+                a { color: #2563eb; text-decoration: none; font-weight: 600; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <h1>⚠️ Ultra-Simple Debate Arena Not Available</h1>
+                <p>The Ultra-Simple Debate Arena feature is not currently enabled on this server.</p>
+                <p><strong>Required:</strong></p>
+                <ul style="text-align: left; display: inline-block;">
+                    <li>Set <span class="code">DATABASE_URL</span> environment variable in Render</li>
+                    <li>Upload <span class="code">simple_debate_models.py</span> to project root</li>
+                    <li>Upload <span class="code">simple_debate_routes.py</span> to project root</li>
+                </ul>
+                <p style="margin-top: 30px;"><a href="/">← Back to Home</a></p>
+            </div>
+        </body>
+        </html>
+        ''', 503
+    return render_template('ultra-simple-debate.html')
 
 # ============================================================================
 # API ROUTES - NEWS ANALYSIS
@@ -833,7 +896,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.17")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.18")
     logger.info("=" * 80)
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
@@ -898,8 +961,20 @@ if __name__ == '__main__':
         logger.info("    - 250-word argument limit")
         logger.info("    - Browser fingerprint voting")
         logger.info("    - Available at /simple-debate-arena")
+        
+        logger.info("  ✓ NEW Ultra-Simple Debate Arena - Moderator Edition (v2.0.0) ⭐ NEW")
+        logger.info("    - Start a Fight: Create debate and your argument")
+        logger.info("    - Join a Fight: Add opposing argument")
+        logger.info("    - Judgement City: Vote with live bar charts")
+        logger.info("    - Moderator Mode: Login with 'Shiftwork' password")
+        logger.info("    - Moderator: Delete any debate")
+        logger.info("    - No authentication for regular users")
+        logger.info("    - 300-word argument limit (up from 250)")
+        logger.info("    - Browser fingerprint voting")
+        logger.info("    - ✅ NEW v10.2.18: Route added to app.py")
+        logger.info("    - Available at /ultra-simple-debate")
     else:
-        logger.info("  ✗ OLD Simple Debate Arena - Disabled (DATABASE_URL not set)")
+        logger.info("  ✗ Simple Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
     logger.info("STATIC PAGE ROUTES:")
@@ -911,20 +986,21 @@ if __name__ == '__main__':
     logger.info("  ✓ /live-stream (Live Stream Page)")
     logger.info("  ✓ /debate-arena (NEW Debate Arena)")
     logger.info("  ✓ /simple-debate-arena (OLD Simple Debate Arena)")
+    logger.info("  ✓ /ultra-simple-debate (NEW Ultra-Simple with Moderator)")
     logger.info("")
     
     logger.info("VERSION HISTORY:")
-    logger.info("NEW IN v10.2.17 (TRANSCRIPT BLUEPRINT FIX) 🎯:")
-    logger.info("  ✅ CRITICAL FIX: Registered transcript_bp blueprint in app.py")
-    logger.info("  ✅ FIXED: /api/transcript/analyze endpoint now exists and works!")
-    logger.info("  ✅ FIXED: All transcript routes now properly connected to Flask")
-    logger.info("  ✅ ROOT CAUSE: Blueprint was defined but never imported/registered")
-    logger.info("  ✅ ADDED: Import statement for transcript_routes and transcript_bp")
-    logger.info("  ✅ ADDED: app.register_blueprint(transcript_bp) registration")
-    logger.info("  ✅ ADDED: Proper error handling and logging for transcript system")
-    logger.info("  ✅ RESULT: Transcript analysis fully functional!")
-    logger.info("  ✅ RESULT: No more 404 errors on transcript endpoints!")
-    logger.info("  ✅ PRESERVED: All v10.2.16 functionality (DO NO HARM)")
+    logger.info("NEW IN v10.2.18 (ULTRA-SIMPLE DEBATE ROUTE) 🎯:")
+    logger.info("  ✅ NEW ROUTE: Added /ultra-simple-debate endpoint")
+    logger.info("  ✅ FEATURE: 300-word argument limit (up from 250)")
+    logger.info("  ✅ FEATURE: Moderator login with password 'Shiftwork'")
+    logger.info("  ✅ FEATURE: Moderators can delete any debate")
+    logger.info("  ✅ FEATURE: Three simple modes - Start, Join, Vote")
+    logger.info("  ✅ FEATURE: Anonymous voting with browser fingerprint")
+    logger.info("  ✅ FEATURE: Live bar chart voting display")
+    logger.info("  ✅ PRESERVED: All v10.2.17 functionality (DO NO HARM)")
+    logger.info("  ✅ PRESERVED: Complex debate system untouched")
+    logger.info("  ✅ PRESERVED: Old simple debate system untouched")
     logger.info("")
     logger.info("=" * 80)
     
@@ -932,4 +1008,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.17 - November 3, 2025 - Transcript blueprint registration fix
+# v10.2.18 - November 10, 2025 - Ultra-simple debate route added
