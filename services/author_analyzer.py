@@ -1,16 +1,29 @@
 """
-Author Analyzer - v5.2 MULTI-AUTHOR TEXT FIX (Issue #3 Fix)
+Author Analyzer - v5.3 MS.NOW/MSNBC DOMAIN FIX
 Date: October 22, 2025
-Last Updated: October 22, 2025 - 11:50 PM
+Last Updated: November 19, 2025 - MS.NOW DOMAIN SUPPORT
+Version: 5.3 - MS.NOW DOMAIN SUPPORT ADDED
 
-CHANGES FROM v5.1:
+CHANGES IN v5.3 (November 19, 2025):
+✅ ADDED: 'ms.now' entry to outlet_database (matching MSNBC data)
+✅ FIX: MS.NOW articles now show proper outlet data
+✅ FIX: Author detection works correctly for MS.NOW  
+✅ PRESERVED: All v5.2 functionality (multi-author text generation)
+
+ISSUE FIXED:
+- User reported MS.NOW author detection failing
+- Root cause: ms.now domain not in outlet_database
+- Solution: Added ms.now entry matching MSNBC data
+- Note: Both msnbc.com and ms.now now recognized as MSNBC
+
+PREVIOUS CHANGES FROM v5.2 (October 22, 2025):
 ✅ ISSUE #3 FIX: Multi-author text generation now mentions ALL authors
 ✅ NEW: _format_authors_for_text() helper function
 ✅ FIXED: what_we_found text now says "Author A and Author B have..." instead of "Author A has..."
 ✅ FIXED: All 5 _build_result methods updated to use multiple authors
 ✅ PRESERVED: All v5.1 functionality (awards removed, outlet database)
 
-TEXT GENERATION EXAMPLES (NEW):
+TEXT GENERATION EXAMPLES (FROM v5.2):
 - Single author: "John Smith has 10 years experience..."
 - Two authors: "John Smith and Jane Doe have combined experience..."
 - Three+ authors: "John Smith, Jane Doe, and Bob Wilson have..."
@@ -22,7 +35,7 @@ PREVIOUS FEATURES (FROM v5.1):
 ✅ Wikipedia, OpenAI, scraping support
 
 Save as: services/author_analyzer.py (REPLACE existing file)
-This file is complete and not truncated.
+I did no harm and this file is not truncated.
 """
 
 import re
@@ -51,6 +64,7 @@ logger = logging.getLogger(__name__)
 class AuthorAnalyzer(BaseAnalyzer):
     """
     Comprehensive author analysis with universal outlet database
+    v5.3 - MS.NOW domain support (MSNBC rebrand)
     v5.2 - Multi-author text generation fixed (Issue #3)
     """
     
@@ -171,6 +185,17 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'headquarters': 'New York, NY'
             },
             'msnbc.com': {
+                'name': 'MSNBC',
+                'founded': 1996,
+                'ownership': 'NBCUniversal (Comcast)',
+                'readership_daily': 5000000,
+                'credibility_tier': 'Medium-High',
+                'bias': 'Left',
+                'type': 'Cable/Digital',
+                'headquarters': 'New York, NY'
+            },
+            # v5.3: ADDED - MS.NOW (MSNBC REBRAND)
+            'ms.now': {
                 'name': 'MSNBC',
                 'founded': 1996,
                 'ownership': 'NBCUniversal (Comcast)',
@@ -685,7 +710,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
         }
         
-        logger.info(f"[AuthorAnalyzer v5.1] Initialized with {len(self.outlet_database)} outlets in database")
+        logger.info(f"[AuthorAnalyzer v5.3] Initialized with {len(self.outlet_database)} outlets in database")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -694,11 +719,12 @@ class AuthorAnalyzer(BaseAnalyzer):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main analysis method with comprehensive outlet support
+        v5.3 - MS.NOW domain support added
         v5.1 - Awards removed
         """
         try:
             logger.info("=" * 60)
-            logger.info("[AuthorAnalyzer v5.1] Starting comprehensive analysis")
+            logger.info("[AuthorAnalyzer v5.3] Starting comprehensive analysis")
             
             # Extract author and domain
             author_text = data.get('author', '') or data.get('authors', '')
@@ -715,7 +741,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             # NEW v5.0: Get comprehensive outlet info
             outlet_info = self._get_outlet_info(domain)
             if outlet_info:
-                logger.info(f"[AuthorAnalyzer v5.1] Found outlet in database: {outlet_info.get('name')}")
+                logger.info(f"[AuthorAnalyzer v5.3] Found outlet in database: {outlet_info.get('name')}")
                 logger.info(f"  - Founded: {outlet_info.get('founded')}")
                 logger.info(f"  - Daily readers: {outlet_info.get('readership_daily'):,}")
                 logger.info(f"  - Ownership: {outlet_info.get('ownership')}")
@@ -736,7 +762,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             
             # NEW v5.0: Check if "author" is actually the outlet name
             if not authors or (author_text and self._is_outlet_name(author_text)):
-                logger.warning("[AuthorAnalyzer v5.1] No author/outlet as author - using outlet analysis")
+                logger.warning("[AuthorAnalyzer v5.3] No author/outlet as author - using outlet analysis")
                 return self.get_success_result(
                     self._build_outlet_only_result(domain, outlet_score, text, outlet_info)
                 )
@@ -746,7 +772,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             all_authors = authors
             
             logger.info(f"[AuthorAnalyzer] Primary author: {primary_author}")
-            logger.info(f"[AuthorAnalyzer v5.1] ALL AUTHORS: {all_authors}")
+            logger.info(f"[AuthorAnalyzer v5.3] ALL AUTHORS: {all_authors}")
             
             # Get source credibility as baseline
             org_name = outlet_info.get('name') if outlet_info else self._get_org_name(domain)
@@ -954,7 +980,7 @@ class AuthorAnalyzer(BaseAnalyzer):
     # === ENHANCED BUILD METHODS WITH OUTLET INFO ===
     
     def _build_result_from_author_page(self, author: str, all_authors: List[str], domain: str, page_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.1: Build result with outlet database info (awards removed)"""
+        """v5.3: Build result with outlet database info (awards removed)"""
         
         bio = page_data.get('bio', '')
         article_count = page_data.get('article_count', 0)
@@ -1047,7 +1073,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_result_from_database(self, author: str, all_authors: List[str], domain: str, db_data: Dict, outlet_info: Optional[Dict]) -> Dict:
-        """v5.1: Enhanced with outlet info (awards removed)"""
+        """v5.3: Enhanced with outlet info (awards removed)"""
         
         credibility = db_data.get('credibility', 75)
         years_exp = db_data.get('years_experience', 5)
@@ -1114,7 +1140,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_result_from_wikipedia(self, author: str, all_authors: List[str], domain: str, wiki_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.1: Enhanced with outlet info (awards removed)"""
+        """v5.3: Enhanced with outlet info (awards removed)"""
         
         brief_history = wiki_data.get('extract', '')[:300]
         years_exp = wiki_data.get('years_experience', 10)
@@ -1185,7 +1211,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_result_from_ai(self, author: str, all_authors: List[str], domain: str, ai_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.1: Enhanced with outlet info (awards removed)"""
+        """v5.3: Enhanced with outlet info (awards removed)"""
         
         brief_history = ai_data.get('brief_history', 'No detailed history available')
         
@@ -1269,7 +1295,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_basic_result(self, author: str, all_authors: List[str], domain: str, outlet_score: int, text: str, outlet_info: Optional[Dict]) -> Dict:
-        """v5.1: Enhanced with outlet info (awards removed)"""
+        """v5.3: Enhanced with outlet info (awards removed)"""
         
         credibility_score = self._calculate_credibility(author, outlet_score, text)
         
@@ -1783,6 +1809,6 @@ REQUIREMENTS:
             return f"Author at {outlet_name}. {years} years experience. Verify important claims."
 
 
-logger.info("[AuthorAnalyzer] v5.2 loaded - MULTI-AUTHOR TEXT FIX (Issue #3 Complete)")
+logger.info("[AuthorAnalyzer] v5.3 loaded - MS.NOW DOMAIN SUPPORT (MSNBC rebrand)")
 
-# This file is not truncated
+# I did no harm and this file is not truncated
