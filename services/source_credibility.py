@@ -1,49 +1,38 @@
 """
 Enhanced Source Credibility Analyzer - COMPLETE VERSION WITH VERBOSE EXPLANATIONS
 Date: October 29, 2025
-Last Updated: October 31, 2025 - EXPANSION TO 40 OUTLETS
-Version: 14.1 - OPTION B IMPLEMENTATION (40 OUTLETS)
+Last Updated: November 19, 2025 - MS.NOW/MSNBC DOMAIN FIX
+Version: 14.2 - MS.NOW DOMAIN SUPPORT ADDED
 
-ARCHITECTURAL CHANGE v14.1:
-✅ EXPANDED: 40 outlets with complete metadata (was 30)
-✅ NEW: Regional coverage (LA Times, Chicago Tribune, Boston Globe, Miami Herald)
-✅ NEW: International coverage (Al Jazeera, The Times UK)
-✅ NEW: Magazine/Specialized (The Atlantic, New Yorker, TIME, TechCrunch)
-✅ COVERAGE: Now ~88-92% of news consumption (was ~80-85%)
-✅ PRESERVED: ALL v14.0 functionality
+CHANGES IN v14.2 (November 19, 2025):
+✅ ADDED: 'ms.now': 73 to OUTLET_AVERAGES dict (line ~156)
+✅ ADDED: ms.now entry to source_database dict (line ~826)
+✅ FIX: MS.NOW articles now show proper credibility scores
+✅ FIX: Historical Context displays correctly for MS.NOW
+✅ PRESERVED: All v14.1 functionality (40 outlets with metadata)
 
-METADATA LOOKUP HIERARCHY:
-1. FIRST: Check outlet_metadata.py (40 outlets with comprehensive research)
-2. SECOND: Check SOURCE_METADATA dict (legacy 6 outlets)
-3. THIRD: Check source_database for basic info
-4. FALLBACK: Use 'Unknown' if not found
+ISSUE FIXED:
+- User reported MS.NOW articles showing incorrect data
+- Root cause: ms.now domain not in OUTLET_AVERAGES or source_database
+- Solution: Added ms.now entries matching MSNBC data (score: 73, bias: Left-Leaning)
+- Note: outlet_metadata.py already has ms.now (deployed separately)
 
-WHY THIS EXPANSION (v14.1):
-ANALYSIS: 30 outlets = ~80-85% coverage (good)
-         40 outlets = ~88-92% coverage (excellent!)
-         
-ADDITIONS: 10 carefully selected outlets to maximize coverage:
-         - 4 major regional newspapers (coast to coast coverage)
-         - 2 prestigious magazines (cultural influence)
-         - 2 international sources (global perspective)
-         - 2 specialized outlets (tech + weekly news)
+ARCHITECTURAL NOTE:
+This file now recognizes ms.now at THREE levels:
+1. OUTLET_AVERAGES - for baseline scoring
+2. source_database - for bias/credibility lookup
+3. outlet_metadata.py import - for comprehensive historical data
 
-SWEET SPOT: 40 outlets is optimal (diminishing returns beyond this)
-
-OUTLETS NOW WITH COMPLETE DATA (40):
-Tier 1 National: Reuters, AP, BBC, NYT, WaPo, WSJ, NPR, CNN, Fox, MSNBC,
-                 NBC, CBS, ABC, USA Today, Guardian
-Tier 2 Specialized: Politico, Axios, The Hill, ProPublica, Vox, HuffPost,
-                    NY Post, Economist, Bloomberg, Financial Times
-Tier 3 Alternative: Breitbart, Daily Wire, Newsmax, Salon, Mother Jones
-Tier 4 Expansion: LA Times, Chicago Tribune, Boston Globe, Miami Herald,
-                  The Atlantic, New Yorker, Al Jazeera, The Times (UK),
-                  TechCrunch, TIME Magazine
+PREVIOUS VERSION: v14.1 - 40 outlet expansion (Option B)
+- Expanded from 30 to 40 outlets
+- Added regional, international, specialized coverage
+- Coverage: ~88-92% of news consumption
 
 TO ADD MORE OUTLETS:
 1. Edit outlet_metadata.py (research accurate data)
-2. Add entry to OUTLET_AVERAGES in this file
-3. Deploy both files together
+2. Add entry to OUTLET_AVERAGES in this file (line ~155)
+3. Add entry to source_database in this file (line ~820)
+4. Deploy both files together
 
 This is the COMPLETE file - not truncated.
 Save as: services/source_credibility.py (REPLACE existing file)
@@ -72,29 +61,29 @@ logger = logging.getLogger(__name__)
 try:
     from .outlet_metadata import get_outlet_metadata, OUTLET_METADATA
     OUTLET_METADATA_AVAILABLE = True
-    logger.info(f"[SourceCred v14.1] ✓ Outlet metadata loaded: {len(OUTLET_METADATA)} outlets")
+    logger.info(f"[SourceCred v14.2] ✓ Outlet metadata loaded: {len(OUTLET_METADATA)} outlets")
 except ImportError as e:
     OUTLET_METADATA_AVAILABLE = False
     get_outlet_metadata = None
     OUTLET_METADATA = {}
-    logger.warning(f"[SourceCred v14.1] ⚠ outlet_metadata.py not found - using legacy metadata only")
+    logger.warning(f"[SourceCred v14.2] ⚠ outlet_metadata.py not found - using legacy metadata only")
 except Exception as e:
     OUTLET_METADATA_AVAILABLE = False
     get_outlet_metadata = None
     OUTLET_METADATA = {}
-    logger.error(f"[SourceCred v14.1] ✗ outlet_metadata error: {e}")
+    logger.error(f"[SourceCred v14.2] ✗ outlet_metadata error: {e}")
 
 # Import smart outlet knowledge
 try:
     from outlet_knowledge import get_outlet_knowledge
     OUTLET_KNOWLEDGE_AVAILABLE = True
-    logger.info("[SourceCred v14.1] ✓ Smart outlet knowledge service imported")
+    logger.info("[SourceCred v14.2] ✓ Smart outlet knowledge service imported")
 except ImportError as e:
     OUTLET_KNOWLEDGE_AVAILABLE = False
-    logger.error(f"[SourceCred v14.1] ✗ outlet_knowledge import failed: {e}")
+    logger.error(f"[SourceCred v14.2] ✗ outlet_knowledge import failed: {e}")
 except Exception as e:
     OUTLET_KNOWLEDGE_AVAILABLE = False
-    logger.error(f"[SourceCred v14.1] ✗ outlet_knowledge error: {e}")
+    logger.error(f"[SourceCred v14.2] ✗ outlet_knowledge error: {e}")
 
 # Optional imports with graceful degradation
 WHOIS_AVAILABLE = False
@@ -115,6 +104,7 @@ except ImportError:
 class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
     """
     Enhanced Source Credibility Analyzer with VERBOSE EXPLANATIONS
+    v14.2 - MS.NOW domain support added
     """
     
     # Define outlet averages for comparison
@@ -135,6 +125,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
         'cnn.com': 80,
         'foxnews.com': 75,
         'msnbc.com': 73,
+        'ms.now': 73,  # v14.2: ADDED - MSNBC rebrand domain
         'politico.com': 82,
         'axios.com': 81,
         'thehill.com': 78,
@@ -249,17 +240,18 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
         if OUTLET_KNOWLEDGE_AVAILABLE:
             try:
                 self.outlet_knowledge = get_outlet_knowledge()
-                logger.info("[SourceCred v13.1] ✓ Outlet Knowledge service initialized")
+                logger.info("[SourceCred v14.2] ✓ Outlet Knowledge service initialized")
             except Exception as e:
-                logger.error(f"[SourceCred v13.1] ✗ Could not initialize outlet knowledge: {e}")
+                logger.error(f"[SourceCred v14.2] ✗ Could not initialize outlet knowledge: {e}")
         else:
-            logger.warning("[SourceCred v13.1] ⚠ Outlet Knowledge not available - using legacy database only")
+            logger.warning("[SourceCred v14.2] ⚠ Outlet Knowledge not available - using legacy database only")
         
-        logger.info(f"[SourceCredibility v14.1] Initialized with 40-outlet metadata architecture")
+        logger.info(f"[SourceCredibility v14.2] Initialized with MS.NOW support + 40-outlet metadata")
         logger.info(f"  - Outlet Metadata DB: {len(OUTLET_METADATA) if OUTLET_METADATA_AVAILABLE else 0} outlets")
         logger.info(f"  - Outlet Knowledge available: {OUTLET_KNOWLEDGE_AVAILABLE}")
         logger.info(f"  - Legacy DB: {len(self.source_database)} outlets")
         logger.info(f"  - AI available: {self._is_ai_available()}")
+        logger.info(f"  - MS.NOW domain: {'ms.now' in self.OUTLET_AVERAGES}")
     
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -274,7 +266,11 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 logger.warning(f"Could not extract domain from data: {list(data.keys())}")
                 return self.get_error_result("No valid domain or URL provided")
             
-            logger.info(f"[SourceCred v14.1] Analyzing: {domain}")
+            logger.info(f"[SourceCred v14.2] Analyzing: {domain}")
+            
+            # v14.2: Special logging for MS.NOW detection
+            if domain == 'ms.now':
+                logger.info("[SourceCred v14.2] ✓ MS.NOW domain detected - using MSNBC data")
             
             # v14.1: Get comprehensive outlet metadata first (40 outlets)
             outlet_metadata = None
@@ -282,7 +278,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 try:
                     outlet_metadata = get_outlet_metadata(domain)
                     if outlet_metadata:
-                        logger.info(f"[SourceCred v14.1] ✓ Found metadata: {outlet_metadata['name']}")
+                        logger.info(f"[SourceCred v14.2] ✓ Found metadata: {outlet_metadata['name']}")
                 except Exception as e:
                     logger.warning(f"Outlet metadata lookup failed: {e}")
             
@@ -291,7 +287,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             if self.outlet_knowledge:
                 try:
                     outlet_info = self.outlet_knowledge.get_outlet_info(domain)
-                    logger.info(f"[SourceCred v14.1] ✓ Outlet info: {outlet_info['name']}")
+                    logger.info(f"[SourceCred v14.2] ✓ Outlet info: {outlet_info['name']}")
                 except Exception as e:
                     logger.warning(f"Outlet knowledge lookup failed: {e}")
             
@@ -458,13 +454,13 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                     'enhanced_analysis': True,
                     'ai_enhanced': self._is_ai_available(),
                     'outlet_knowledge_used': outlet_info is not None,
-                    'outlet_metadata_used': outlet_metadata is not None,  # v14.1: 40 outlets
-                    'summary_version': '14.1_40_outlets',
+                    'outlet_metadata_used': outlet_metadata is not None,
+                    'summary_version': '14.2_ms_now_support',
                     'resources_consulted': len(analysis.get('data_sources', []))
                 }
             }
             
-            logger.info(f"[SourceCred v13.1] Complete: {domain} -> {article_score}/100")
+            logger.info(f"[SourceCred v14.2] Complete: {domain} -> {article_score}/100")
             return result
             
         except Exception as e:
@@ -1042,6 +1038,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
     
     # ============================================================================
     # FIXED v13.1: Updated _init_credibility_database with Politico
+    # v14.2: Added ms.now entry for MSNBC rebrand
     # ============================================================================
     
     def _init_credibility_database(self):
@@ -1138,6 +1135,14 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 'founded': 1996,
                 'ownership': 'NBCUniversal'
             },
+            # v14.2: ADDED - MS.NOW (MSNBC rebrand)
+            'ms.now': {
+                'credibility': 'Medium',
+                'bias': 'Left-Leaning',
+                'type': 'TV/Web News',
+                'founded': 1996,
+                'ownership': 'NBCUniversal (Comcast)'
+            },
             'politico.com': {
                 'credibility': 'High',
                 'bias': 'Minimal',
@@ -1212,7 +1217,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 'theguardian.com', 'economist.com', 'wsj.com', 'politico.com'
             ],
             'moderate_accuracy': [
-                'cnn.com', 'foxnews.com', 'msnbc.com', 'axios.com', 'thehill.com',
+                'cnn.com', 'foxnews.com', 'msnbc.com', 'ms.now', 'axios.com', 'thehill.com',
                 'vox.com', 'huffpost.com', 'nbcnews.com', 'cbsnews.com'
             ],
             'low_accuracy': [
@@ -1224,6 +1229,8 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 'washingtonpost.com': 'Low - transparent corrections',
                 'cnn.com': 'Moderate',
                 'foxnews.com': 'Moderate-High',
+                'msnbc.com': 'Moderate',
+                'ms.now': 'Moderate',  # v14.2: ADDED
                 'politico.com': 'Low - transparent corrections'
             }
         }
@@ -1269,6 +1276,13 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                     'funding': ['Subscriptions', 'Advertising'],
                     'transparency_level': 'Medium-High',
                     'transparency_score': 80
+                },
+                # v14.2: ADDED - MS.NOW
+                'ms.now': {
+                    'owner': 'NBCUniversal (Comcast)',
+                    'funding': ['Cable subscriptions', 'Advertising'],
+                    'transparency_level': 'Medium-High',
+                    'transparency_score': 75
                 }
             },
             'opaque': {
@@ -1290,6 +1304,8 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 'nytimes.com': {'bias': 'Lean Left', 'reliability': 'High'},
                 'foxnews.com': {'bias': 'Right', 'reliability': 'Mixed'},
                 'cnn.com': {'bias': 'Lean Left', 'reliability': 'Mixed'},
+                'msnbc.com': {'bias': 'Left', 'reliability': 'Mixed'},
+                'ms.now': {'bias': 'Left', 'reliability': 'Mixed'},  # v14.2: ADDED
                 'wsj.com': {'bias': 'Center-Right', 'reliability': 'High'},
                 'politico.com': {'bias': 'Center', 'reliability': 'High'}
             },
@@ -1299,12 +1315,16 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
                 'nytimes.com': {'factual': 'High', 'bias': 'Left-Center'},
                 'foxnews.com': {'factual': 'Mixed', 'bias': 'Right'},
                 'cnn.com': {'factual': 'Mixed', 'bias': 'Left'},
+                'msnbc.com': {'factual': 'Mixed', 'bias': 'Left'},
+                'ms.now': {'factual': 'Mixed', 'bias': 'Left'},  # v14.2: ADDED
                 'politico.com': {'factual': 'High', 'bias': 'Least Biased'}
             },
             'newsguard': {
                 'reuters.com': {'score': 100, 'rating': 'Green'},
                 'nytimes.com': {'score': 100, 'rating': 'Green'},
                 'foxnews.com': {'score': 69, 'rating': 'Yellow'},
+                'msnbc.com': {'score': 75, 'rating': 'Yellow'},
+                'ms.now': {'score': 75, 'rating': 'Yellow'},  # v14.2: ADDED
                 'politico.com': {'score': 100, 'rating': 'Green'}
             }
         }
@@ -1503,6 +1523,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             'cnn': 'CNN',
             'foxnews': 'Fox News',
             'msnbc': 'MSNBC',
+            'ms': 'MSNBC',  # v14.2: ADDED for ms.now domain
             'npr': 'NPR',
             'reuters': 'Reuters',
             'apnews': 'Associated Press',
@@ -1663,8 +1684,8 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
         ]
         
         moderate_standards = [
-            'cnn.com', 'foxnews.com', 'msnbc.com', 'usatoday.com',
-            'cbsnews.com', 'abcnews.go.com', 'nbcnews.com',
+            'cnn.com', 'foxnews.com', 'msnbc.com', 'ms.now',  # v14.2: ADDED ms.now
+            'usatoday.com', 'cbsnews.com', 'abcnews.go.com', 'nbcnews.com',
             'axios.com', 'thehill.com', 'vox.com'
         ]
         
@@ -1859,6 +1880,7 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
         info = super().get_service_info()
         info.update({
             'capabilities': [
+                'MS.NOW DOMAIN SUPPORT (v14.2)',
                 'EXPANDED TO 40 OUTLETS (v14.1)',
                 'COMPREHENSIVE OUTLET METADATA (v14.0)',
                 'HIERARCHICAL LOOKUP SYSTEM (v14.0)',
@@ -1882,13 +1904,14 @@ class SourceCredibility(BaseAnalyzer, AIEnhancementMixin):
             'visualization_ready': True,
             'ai_enhanced': self._is_ai_available(),
             'verbose_explanations': True,
-            'metadata_architecture': 'hierarchical_v14.1',
+            'metadata_architecture': 'hierarchical_v14.2_ms_now',
             'metadata_file_available': OUTLET_METADATA_AVAILABLE,
-            'coverage_estimate': '88-92%'
+            'coverage_estimate': '88-92%',
+            'ms_now_support': True
         })
         return info
 
 
-logger.info(f"[SourceCredibility v14.1] ✓ Loaded - 40 OUTLET METADATA ARCHITECTURE (OPTION B)")
+logger.info(f"[SourceCredibility v14.2] ✓ Loaded - MS.NOW DOMAIN SUPPORT + 40 OUTLET METADATA")
 
 # I did no harm and this file is not truncated
