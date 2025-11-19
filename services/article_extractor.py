@@ -1,9 +1,20 @@
 """
-Article Extractor - v24.0 SCRAPINGBEE MIGRATION + YOUTUBE SUPPORT
+Article Extractor - v24.1 MS.NOW DOMAIN SUPPORT
 Date: October 26, 2025
-Last Updated: October 26, 2025
+Last Updated: November 19, 2025
 
-MAJOR UPDATE IN v24.0:
+CHANGES IN v24.1 (November 19, 2025):
+✅ ADDED: 'msnbc.com': 'MSNBC' and 'ms.now': 'MSNBC' to source name mapping
+✅ FIX: MS.NOW articles now display source name correctly
+✅ PRESERVED: All v24.0 functionality (ScrapingBee + YouTube)
+
+ISSUE FIXED:
+- User reported MS.NOW articles showing domain instead of "MSNBC"
+- Root cause: ms.now domain not in _get_source_from_url mapping
+- Solution: Added ms.now entry that maps to 'MSNBC'
+- Note: MS.NOW is MSNBC's newer domain/branding
+
+PREVIOUS UPDATE v24.0 (October 26, 2025):
 ✅ MIGRATED: ScraperAPI → ScrapingBee (better YouTube support)
 ✅ ADDED: Native YouTube video scraping support  
 ✅ ENHANCED: Better JavaScript rendering with premium proxies
@@ -27,7 +38,8 @@ PREVIOUS VERSION: v23.1
 TEST CASES:
 ✓ BBC: https://www.bbc.com/news/articles/czjpe0193geo (Paul Kirby, John Sudworth)
 ✓ ABC: https://abcnews.go.com/... (Selina Wang and Michelle Stoddart)  
-✓ YouTube: https://www.youtube.com/watch?v=... (NEW: video content extraction)
+✓ YouTube: https://www.youtube.com/watch?v=... (video content extraction)
+✓ MS.NOW: https://ms.now/... (MSNBC articles) - NEW in v24.1
 ✗ REJECTED: "The Earth", "The World", "The Times", etc.
 
 DEPLOYMENT:
@@ -107,12 +119,15 @@ JS_REQUIRED_SITES = {
     'bbc.co.uk',
     'youtube.com',
     'youtu.be',
+    'msnbc.com',
+    'ms.now',
 }
 
 
 class ArticleExtractor:
     """
     Article extractor with JavaScript rendering support
+    v24.1 - MS.NOW domain support added
     v23.1 - ENHANCED NAME VALIDATION: Rejects false positives
     """
     
@@ -133,7 +148,7 @@ class ArticleExtractor:
         self.service_name = 'article_extractor'
         self.available = True
         
-        logger.info(f"[ArticleExtractor v24.0 SCRAPINGBEE] Ready - OpenAI: {openai_available}, ScrapingBee: {bool(self.scrapingbee_api_key)}")
+        logger.info(f"[ArticleExtractor v24.1 MS.NOW] Ready - OpenAI: {openai_available}, ScrapingBee: {bool(self.scrapingbee_api_key)}")
     
     def _needs_js_rendering(self, url: str) -> bool:
         """Determine if a site needs JavaScript rendering"""
@@ -151,9 +166,9 @@ class ArticleExtractor:
                         break
         
         if needs_js:
-            logger.info(f"[JSDetect v23.1] ✓ {domain} requires JavaScript rendering")
+            logger.info(f"[JSDetect v24.1] ✓ {domain} requires JavaScript rendering")
         else:
-            logger.info(f"[JSDetect v23.1] ○ {domain} uses static HTML")
+            logger.info(f"[JSDetect v24.1] ○ {domain} uses static HTML")
         
         return needs_js
     
@@ -208,7 +223,7 @@ class ArticleExtractor:
     def extract(self, url: str) -> Dict[str, Any]:
         """Main extraction method - ALWAYS returns valid Dict"""
         
-        logger.info(f"[ArticleExtractor v23.1] Extracting: {url}")
+        logger.info(f"[ArticleExtractor v24.1] Extracting: {url}")
         
         extraction_errors = []
         
@@ -417,7 +432,7 @@ Return as JSON with keys: title, author, content, source"""
             parsed_url = urlparse(url)
             domain = parsed_url.netloc.replace('www.', '')
             
-            logger.info(f"[Parse v23.1] Parsing {domain}...")
+            logger.info(f"[Parse v24.1] Parsing {domain}...")
             
             # Extract components
             title = self._extract_title(soup)
@@ -444,15 +459,15 @@ Return as JSON with keys: title, author, content, source"""
             
             # Log result
             if result['extraction_successful']:
-                logger.info(f"[Parse v23.1] ✓ SUCCESS: Title={len(title or '')} chars, "
+                logger.info(f"[Parse v24.1] ✓ SUCCESS: Title={len(title or '')} chars, "
                           f"Author={authors}, Text={len(text)} chars")
             else:
-                logger.warning(f"[Parse v23.1] ⚠ PARTIAL: Missing title or text")
+                logger.warning(f"[Parse v24.1] ⚠ PARTIAL: Missing title or text")
             
             return result
             
         except Exception as e:
-            logger.error(f"[Parse v23.1] ✗ Exception: {e}", exc_info=True)
+            logger.error(f"[Parse v24.1] ✗ Exception: {e}", exc_info=True)
             return self._get_fallback_result(url, f"Parse exception: {e}")
     
     def _extract_title(self, soup: BeautifulSoup) -> Optional[str]:
@@ -499,7 +514,7 @@ Return as JSON with keys: title, author, content, source"""
                         author_page_urls.append(profile_url)
                 
                 author_string = ' and '.join(authors)
-                logger.info(f"[Authors v23.1] BBC: {author_string}")
+                logger.info(f"[Authors v24.1] BBC: {author_string}")
                 return author_string, author_page_urls
         
         elif 'abcnews.go.com' in domain:
@@ -512,7 +527,7 @@ Return as JSON with keys: title, author, content, source"""
                         author_page_urls.append(profile_url)
                 
                 author_string = ' and '.join(authors)
-                logger.info(f"[Authors v23.1] ABC: {author_string}")
+                logger.info(f"[Authors v24.1] ABC: {author_string}")
                 return author_string, author_page_urls
         
         # Universal extraction
@@ -525,10 +540,10 @@ Return as JSON with keys: title, author, content, source"""
                     author_page_urls.append(profile_url)
             
             author_string = ' and '.join(authors)
-            logger.info(f"[Authors v23.1] Universal: {author_string}")
+            logger.info(f"[Authors v24.1] Universal: {author_string}")
             return author_string, author_page_urls
         
-        logger.warning("[Authors v23.1] ⚠ No authors found - returning Unknown")
+        logger.warning("[Authors v24.1] ⚠ No authors found - returning Unknown")
         return 'Unknown', []
     
     def _extract_bbc_authors(self, soup: BeautifulSoup, html: str) -> List[str]:
@@ -538,7 +553,7 @@ Return as JSON with keys: title, author, content, source"""
         """
         
         # ===== NEW STRATEGY 7: BBC New Article Format - "Name, Title and Name, Location" =====
-        logger.info("[BBC v23.1] Strategy 7 (NEW): Checking new article format with comma-separated authors...")
+        logger.info("[BBC v24.1] Strategy 7 (NEW): Checking new article format with comma-separated authors...")
         try:
             # Look for patterns like:
             # "Paul Kirby, Europe digital editor and John Sudworth, Kyiv"
@@ -558,11 +573,11 @@ Return as JSON with keys: title, author, content, source"""
                     
                     # Validate the name
                     if self._is_valid_author_name(name):
-                        logger.info(f"[BBC v23.1 Strategy 7] ✓ Found author: {name} ({role})")
+                        logger.info(f"[BBC v24.1 Strategy 7] ✓ Found author: {name} ({role})")
                         names.append(name)
                 
                 if names:
-                    logger.info(f"[BBC v23.1 Strategy 7] ✓✓ SUCCESS: Found {len(names)} author(s)")
+                    logger.info(f"[BBC v24.1 Strategy 7] ✓✓ SUCCESS: Found {len(names)} author(s)")
                     return names
             
             # Also try searching for visible text in specific elements
@@ -572,7 +587,7 @@ Return as JSON with keys: title, author, content, source"""
                 
                 # Look for the pattern in element text
                 if re.search(r'[A-Z][a-z]+\s+[A-Z][a-z]+,\s+[A-Za-z\s]+\s+and\s+[A-Z][a-z]+\s+[A-Z][a-z]+', text):
-                    logger.info(f"[BBC v23.1 Strategy 7] Found potential match in element: {text[:100]}")
+                    logger.info(f"[BBC v24.1 Strategy 7] Found potential match in element: {text[:100]}")
                     
                     # Extract names from this text
                     pattern = r'([A-Z][a-z]+\s+[A-Z][a-z]+),'
@@ -582,21 +597,21 @@ Return as JSON with keys: title, author, content, source"""
                         valid_names = []
                         for name in found_names:
                             if self._is_valid_author_name(name):
-                                logger.info(f"[BBC v23.1 Strategy 7] ✓ Validated: {name}")
+                                logger.info(f"[BBC v24.1 Strategy 7] ✓ Validated: {name}")
                                 valid_names.append(name)
                         
                         if valid_names:
-                            logger.info(f"[BBC v23.1 Strategy 7] ✓✓ SUCCESS via element text")
+                            logger.info(f"[BBC v24.1 Strategy 7] ✓✓ SUCCESS via element text")
                             return valid_names
         
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 7 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 7 error: {e}")
         
         
-        logger.info("[BBC v23.1] Starting BBC News dedicated extraction")
+        logger.info("[BBC v24.1] Starting BBC News dedicated extraction")
         
         # STRATEGY 1: Look for data-component="byline-block" or similar BBC structures
-        logger.info("[BBC v23.1] Strategy 1: Checking BBC byline blocks...")
+        logger.info("[BBC v24.1] Strategy 1: Checking BBC byline blocks...")
         try:
             byline_blocks = soup.find_all(attrs={'data-component': re.compile(r'byline', re.I)})
             for block in byline_blocks:
@@ -607,15 +622,15 @@ Return as JSON with keys: title, author, content, source"""
                     for elem in author_elements:
                         name = elem.get_text().strip()
                         if self._is_valid_author_name(name):
-                            logger.info(f"[BBC v23.1] ✓ Found in byline block: {name}")
+                            logger.info(f"[BBC v24.1] ✓ Found in byline block: {name}")
                             names.append(name)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 1 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 1 error: {e}")
         
         # STRATEGY 2: Look for BBC-specific meta tags
-        logger.info("[BBC v23.1] Strategy 2: Checking BBC meta tags...")
+        logger.info("[BBC v24.1] Strategy 2: Checking BBC meta tags...")
         try:
             bbc_meta_patterns = [
                 {'name': 'author'},
@@ -628,15 +643,15 @@ Return as JSON with keys: title, author, content, source"""
                 meta = soup.find('meta', attrs=pattern)
                 if meta and meta.get('content'):
                     content = meta['content'].strip()
-                    logger.info(f"[BBC v23.1] ✓ Found in meta {pattern}: {content}")
+                    logger.info(f"[BBC v24.1] ✓ Found in meta {pattern}: {content}")
                     names = self._parse_multiple_authors_from_text(content)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 2 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 2 error: {e}")
         
         # STRATEGY 3: Look for role="author" attribute
-        logger.info("[BBC v23.1] Strategy 3: Checking role='author'...")
+        logger.info("[BBC v24.1] Strategy 3: Checking role='author'...")
         try:
             role_authors = soup.find_all(attrs={'role': 'author'})
             if role_authors:
@@ -646,15 +661,15 @@ Return as JSON with keys: title, author, content, source"""
                     # Clean up BBC specific prefixes
                     text = re.sub(r'^(By|Reporter:|Correspondent:)\s*', '', text, flags=re.I)
                     if self._is_valid_author_name(text):
-                        logger.info(f"[BBC v23.1] ✓ Found via role='author': {text}")
+                        logger.info(f"[BBC v24.1] ✓ Found via role='author': {text}")
                         names.append(text)
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 3 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 3 error: {e}")
         
         # STRATEGY 4: Search for BBC correspondent links
-        logger.info("[BBC v23.1] Strategy 4: Checking BBC correspondent links...")
+        logger.info("[BBC v24.1] Strategy 4: Checking BBC correspondent links...")
         try:
             # BBC often uses /news/correspondents/ URLs
             correspondent_links = soup.find_all('a', href=re.compile(r'/news/correspondents/', re.I))
@@ -663,15 +678,15 @@ Return as JSON with keys: title, author, content, source"""
                 for link in correspondent_links:
                     name = link.get_text().strip()
                     if self._is_valid_author_name(name):
-                        logger.info(f"[BBC v23.1] ✓ Found correspondent: {name}")
+                        logger.info(f"[BBC v24.1] ✓ Found correspondent: {name}")
                         names.append(name)
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 4 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 4 error: {e}")
         
         # STRATEGY 5: Raw HTML search for "By [Name]" pattern near article start
-        logger.info("[BBC v23.1] Strategy 5: Searching raw HTML for byline patterns...")
+        logger.info("[BBC v24.1] Strategy 5: Searching raw HTML for byline patterns...")
         try:
             # Look for "By [Name]" in the first 5000 chars of HTML (near article start)
             html_start = html[:5000]
@@ -687,15 +702,15 @@ Return as JSON with keys: title, author, content, source"""
                     names = []
                     for match in matches:
                         if self._is_valid_author_name(match):
-                            logger.info(f"[BBC v23.1] ✓ Found in HTML: {match}")
+                            logger.info(f"[BBC v24.1] ✓ Found in HTML: {match}")
                             names.append(match)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 5 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 5 error: {e}")
         
         # STRATEGY 6: Look for BBC-specific class patterns
-        logger.info("[BBC v23.1] Strategy 6: Checking BBC-specific classes...")
+        logger.info("[BBC v24.1] Strategy 6: Checking BBC-specific classes...")
         try:
             bbc_class_patterns = [
                 'ssrcss-',  # BBC uses ssrcss- prefix for styles
@@ -711,24 +726,24 @@ Return as JSON with keys: title, author, content, source"""
                     # Must look like a name
                     if re.match(r'^[A-Z][a-z]+\s+[A-Z][a-z]+$', text):
                         if self._is_valid_author_name(text):
-                            logger.info(f"[BBC v23.1] ✓ Found via class '{pattern}': {text}")
+                            logger.info(f"[BBC v24.1] ✓ Found via class '{pattern}': {text}")
                             return [text]
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 6 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 6 error: {e}")
         
         
         # STRATEGY 8: NUCLEAR OPTION - Brute force search for ANY two capitalized names
-        logger.info("[BBC v23.1] Strategy 8 (NUCLEAR): Brute force name extraction...")
+        logger.info("[BBC v24.1] Strategy 8 (NUCLEAR): Brute force name extraction...")
         try:
             # Get ALL text content from the page
             all_text = soup.get_text()
             
-            logger.info(f"[BBC v23.1 Strategy 8] Total text length: {len(all_text)} chars")
+            logger.info(f"[BBC v24.1 Strategy 8] Total text length: {len(all_text)} chars")
             
             # Find ALL occurrences of capitalized two-word names
             all_potential_names = re.findall(r'\b([A-Z][a-z]{2,15}\s+[A-Z][a-z]{2,15})\b', all_text)
             
-            logger.info(f"[BBC v23.1 Strategy 8] Found {len(all_potential_names)} potential names total")
+            logger.info(f"[BBC v24.1 Strategy 8] Found {len(all_potential_names)} potential names total")
             
             # Validate and deduplicate
             valid_names = []
@@ -739,27 +754,27 @@ Return as JSON with keys: title, author, content, source"""
                     seen.add(name)
                     if self._is_valid_author_name(name):
                         valid_names.append(name)
-                        logger.info(f"[BBC v23.1 Strategy 8] Valid name: {name}")
+                        logger.info(f"[BBC v24.1 Strategy 8] Valid name: {name}")
                         
                         if len(valid_names) >= 2:
                             name1_pos = all_text.find(valid_names[0])
                             name2_pos = all_text.find(valid_names[1])
                             distance = abs(name1_pos - name2_pos)
-                            logger.info(f"[BBC v23.1 Strategy 8] Distance between names: {distance} chars")
+                            logger.info(f"[BBC v24.1 Strategy 8] Distance between names: {distance} chars")
                             
                             if distance < 500:
-                                logger.info(f"[BBC v23.1 Strategy 8] ✓✓ NUCLEAR SUCCESS: {valid_names[:2]}")
+                                logger.info(f"[BBC v24.1 Strategy 8] ✓✓ NUCLEAR SUCCESS: {valid_names[:2]}")
                                 return valid_names[:2]
             
             if valid_names:
-                logger.info(f"[BBC v23.1 Strategy 8] ✓ Found {len(valid_names)} name(s)")
+                logger.info(f"[BBC v24.1 Strategy 8] ✓ Found {len(valid_names)} name(s)")
                 return valid_names[:2]
                 
         except Exception as e:
-            logger.error(f"[BBC v23.1] Strategy 8 error: {e}")
+            logger.error(f"[BBC v24.1] Strategy 8 error: {e}")
         
 
-        logger.warning("[BBC v23.1] ❌ All 8 BBC News strategies failed!")
+        logger.warning("[BBC v24.1] ❌ All 8 BBC News strategies failed!")
         return []
     
     def _extract_abc_news_authors(self, soup: BeautifulSoup, html: str) -> List[str]:
@@ -768,10 +783,10 @@ Return as JSON with keys: title, author, content, source"""
         Tries 5 different ABC News specific patterns
         """
         
-        logger.info("[ABC v23.1] Starting ABC News dedicated extraction")
+        logger.info("[ABC v24.1] Starting ABC News dedicated extraction")
         
         # STRATEGY 1: Look for "By" links with /author/ in href
-        logger.info("[ABC v23.1] Strategy 1: Looking for author links...")
+        logger.info("[ABC v24.1] Strategy 1: Looking for author links...")
         try:
             author_links = soup.find_all('a', href=re.compile(r'/author/', re.I))
             if author_links:
@@ -779,29 +794,29 @@ Return as JSON with keys: title, author, content, source"""
                 for link in author_links:
                     name = link.get_text().strip()
                     if self._is_valid_author_name(name):
-                        logger.info(f"[ABC v23.1] ✓ Found author link: {name}")
+                        logger.info(f"[ABC v24.1] ✓ Found author link: {name}")
                         names.append(name)
                 
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[ABC v23.1] Strategy 1 error: {e}")
+            logger.error(f"[ABC v24.1] Strategy 1 error: {e}")
         
         # STRATEGY 2: Look for meta tag "parsely-author"
-        logger.info("[ABC v23.1] Strategy 2: Checking parsely-author meta...")
+        logger.info("[ABC v24.1] Strategy 2: Checking parsely-author meta...")
         try:
             parsely = soup.find('meta', attrs={'name': 'parsely-author'})
             if parsely and parsely.get('content'):
                 content = parsely['content'].strip()
-                logger.info(f"[ABC v23.1] ✓ Found parsely-author: {content}")
+                logger.info(f"[ABC v24.1] ✓ Found parsely-author: {content}")
                 names = self._parse_multiple_authors_from_text(content)
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[ABC v23.1] Strategy 2 error: {e}")
+            logger.error(f"[ABC v24.1] Strategy 2 error: {e}")
         
         # STRATEGY 3: Look for specific ABC News byline classes
-        logger.info("[ABC v23.1] Strategy 3: Checking ABC News byline classes...")
+        logger.info("[ABC v24.1] Strategy 3: Checking ABC News byline classes...")
         try:
             byline_elements = soup.find_all(class_=re.compile(r'byline|author', re.I))
             for elem in byline_elements:
@@ -813,13 +828,13 @@ Return as JSON with keys: title, author, content, source"""
                 if re.match(r'^[A-Z][a-z]+\s+[A-Z][a-z]+', text):
                     names = self._parse_multiple_authors_from_text(text)
                     if names:
-                        logger.info(f"[ABC v23.1] ✓ Found in byline: {names}")
+                        logger.info(f"[ABC v24.1] ✓ Found in byline: {names}")
                         return names
         except Exception as e:
-            logger.error(f"[ABC v23.1] Strategy 3 error: {e}")
+            logger.error(f"[ABC v24.1] Strategy 3 error: {e}")
         
         # STRATEGY 4: Search raw HTML for ABC News specific patterns
-        logger.info("[ABC v23.1] Strategy 4: Searching raw HTML...")
+        logger.info("[ABC v24.1] Strategy 4: Searching raw HTML...")
         try:
             html_start = html[:5000]
             # ABC News often has "By FirstName LastName and FirstName LastName"
@@ -831,16 +846,16 @@ Return as JSON with keys: title, author, content, source"""
                 for match in matches:
                     for name in match:
                         if name and self._is_valid_author_name(name):
-                            logger.info(f"[ABC v23.1] ✓ Found in HTML: {name}")
+                            logger.info(f"[ABC v24.1] ✓ Found in HTML: {name}")
                             names.append(name)
                 
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[ABC v23.1] Strategy 4 error: {e}")
+            logger.error(f"[ABC v24.1] Strategy 4 error: {e}")
         
         # STRATEGY 5: Look for JSON-LD structured data
-        logger.info("[ABC v23.1] Strategy 5: Checking JSON-LD...")
+        logger.info("[ABC v24.1] Strategy 5: Checking JSON-LD...")
         try:
             scripts = soup.find_all('script', type='application/ld+json')
             for script in scripts:
@@ -858,7 +873,7 @@ Return as JSON with keys: title, author, content, source"""
                                 if isinstance(author, dict) and 'name' in author:
                                     name = author['name']
                                     if self._is_valid_author_name(name):
-                                        logger.info(f"[ABC v23.1] ✓ Found in JSON-LD: {name}")
+                                        logger.info(f"[ABC v24.1] ✓ Found in JSON-LD: {name}")
                                         names.append(name)
                             if names:
                                 return names
@@ -867,22 +882,22 @@ Return as JSON with keys: title, author, content, source"""
                         elif isinstance(author_data, dict) and 'name' in author_data:
                             name = author_data['name']
                             if self._is_valid_author_name(name):
-                                logger.info(f"[ABC v23.1] ✓ Found in JSON-LD: {name}")
+                                logger.info(f"[ABC v24.1] ✓ Found in JSON-LD: {name}")
                                 return [name]
                         
                         # Handle string
                         elif isinstance(author_data, str):
                             names = self._parse_multiple_authors_from_text(author_data)
                             if names:
-                                logger.info(f"[ABC v23.1] ✓ Found in JSON-LD: {names}")
+                                logger.info(f"[ABC v24.1] ✓ Found in JSON-LD: {names}")
                                 return names
                 
                 except (json.JSONDecodeError, KeyError):
                     continue
         except Exception as e:
-            logger.error(f"[ABC v23.1] Strategy 5 error: {e}")
+            logger.error(f"[ABC v24.1] Strategy 5 error: {e}")
         
-        logger.warning("[ABC v23.1] ❌ All ABC News strategies failed!")
+        logger.warning("[ABC v24.1] ❌ All ABC News strategies failed!")
         return []
     
     def _extract_universal_authors(self, soup: BeautifulSoup, html: str) -> List[str]:
@@ -890,10 +905,10 @@ Return as JSON with keys: title, author, content, source"""
         UNIVERSAL author extraction - works for most sites
         """
         
-        logger.info("[Universal v23.1] Starting universal author extraction")
+        logger.info("[Universal v24.1] Starting universal author extraction")
         
         # STRATEGY 1: Author meta tags
-        logger.info("[Universal v23.1] Strategy 1: Checking meta tags...")
+        logger.info("[Universal v24.1] Strategy 1: Checking meta tags...")
         try:
             meta_patterns = [
                 {'name': 'author'},
@@ -908,15 +923,15 @@ Return as JSON with keys: title, author, content, source"""
                 meta = soup.find('meta', attrs=pattern)
                 if meta and meta.get('content'):
                     content = meta['content'].strip()
-                    logger.info(f"[Universal v23.1] ✓ Found meta {pattern}: {content}")
+                    logger.info(f"[Universal v24.1] ✓ Found meta {pattern}: {content}")
                     names = self._parse_multiple_authors_from_text(content)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[Universal v23.1] Strategy 1 error: {e}")
+            logger.error(f"[Universal v24.1] Strategy 1 error: {e}")
         
         # STRATEGY 2: Look for author-related classes
-        logger.info("[Universal v23.1] Strategy 2: Checking author classes...")
+        logger.info("[Universal v24.1] Strategy 2: Checking author classes...")
         try:
             author_classes = ['author', 'byline', 'by-author', 'article-author', 'contributor']
             
@@ -931,13 +946,13 @@ Return as JSON with keys: title, author, content, source"""
                     if re.match(r'^[A-Z][a-z]+\s+[A-Z][a-z]+', text):
                         names = self._parse_multiple_authors_from_text(text)
                         if names:
-                            logger.info(f"[Universal v23.1] ✓ Found in class '{class_name}': {names}")
+                            logger.info(f"[Universal v24.1] ✓ Found in class '{class_name}': {names}")
                             return names
         except Exception as e:
-            logger.error(f"[Universal v23.1] Strategy 2 error: {e}")
+            logger.error(f"[Universal v24.1] Strategy 2 error: {e}")
         
         # STRATEGY 3: Look for rel="author" links
-        logger.info("[Universal v23.1] Strategy 3: Checking rel='author' links...")
+        logger.info("[Universal v24.1] Strategy 3: Checking rel='author' links...")
         try:
             author_links = soup.find_all('a', rel='author')
             if author_links:
@@ -945,15 +960,15 @@ Return as JSON with keys: title, author, content, source"""
                 for link in author_links:
                     name = link.get_text().strip()
                     if self._is_valid_author_name(name):
-                        logger.info(f"[Universal v23.1] ✓ Found rel='author': {name}")
+                        logger.info(f"[Universal v24.1] ✓ Found rel='author': {name}")
                         names.append(name)
                 if names:
                     return names
         except Exception as e:
-            logger.error(f"[Universal v23.1] Strategy 3 error: {e}")
+            logger.error(f"[Universal v24.1] Strategy 3 error: {e}")
         
         # STRATEGY 4: JSON-LD structured data
-        logger.info("[Universal v23.1] Strategy 4: Checking JSON-LD...")
+        logger.info("[Universal v24.1] Strategy 4: Checking JSON-LD...")
         try:
             scripts = soup.find_all('script', type='application/ld+json')
             for script in scripts:
@@ -975,10 +990,10 @@ Return as JSON with keys: title, author, content, source"""
                 except (json.JSONDecodeError, KeyError):
                     continue
         except Exception as e:
-            logger.error(f"[Universal v23.1] Strategy 4 error: {e}")
+            logger.error(f"[Universal v24.1] Strategy 4 error: {e}")
         
         # STRATEGY 5: Search raw HTML for common byline patterns
-        logger.info("[Universal v23.1] Strategy 5: Searching raw HTML for bylines...")
+        logger.info("[Universal v24.1] Strategy 5: Searching raw HTML for bylines...")
         try:
             html_start = html[:5000]
             byline_patterns = [
@@ -993,14 +1008,14 @@ Return as JSON with keys: title, author, content, source"""
                     names = []
                     for match in matches:
                         if self._is_valid_author_name(match):
-                            logger.info(f"[Universal v23.1] ✓ Found in HTML: {match}")
+                            logger.info(f"[Universal v24.1] ✓ Found in HTML: {match}")
                             names.append(match)
                     if names:
                         return names
         except Exception as e:
-            logger.error(f"[Universal v23.1] Strategy 5 error: {e}")
+            logger.error(f"[Universal v24.1] Strategy 5 error: {e}")
         
-        logger.warning("[Universal v23.1] ⚠ No authors found via universal extraction")
+        logger.warning("[Universal v24.1] ⚠ No authors found via universal extraction")
         return []
     
     def _extract_authors_from_jsonld(self, data: dict) -> List[str]:
@@ -1031,7 +1046,7 @@ Return as JSON with keys: title, author, content, source"""
             names = self._parse_multiple_authors_from_text(author_data)
         
         if names:
-            logger.info(f"[JSON-LD v23.1] ✓ Extracted: {names}")
+            logger.info(f"[JSON-LD v24.1] ✓ Extracted: {names}")
         
         return names
     
@@ -1145,6 +1160,8 @@ Return as JSON with keys: title, author, content, source"""
             return f"{base_url}/author/{slug}"
         elif 'usatoday.com' in domain:
             return f"{base_url}/staff/{slug}"
+        elif 'msnbc.com' in domain or 'ms.now' in domain:
+            return f"{base_url}/author/{slug}"
         else:
             # Generic fallback
             return f"{base_url}/author/{slug}"
@@ -1198,37 +1215,37 @@ Return as JSON with keys: title, author, content, source"""
         
         # Check exclusion list (politicians, celebrities, etc.)
         if name in NON_JOURNALIST_NAMES:
-            logger.warning(f"[Validation v23.1] ❌ '{name}' in exclusion list")
+            logger.warning(f"[Validation v24.1] ❌ '{name}' in exclusion list")
             return False
         
         # NEW IN v23.1: Check each word against common non-name words
         for word in words:
             if word in COMMON_NON_NAME_WORDS:
-                logger.warning(f"[Validation v23.1] ❌ '{name}' contains non-name word '{word}'")
+                logger.warning(f"[Validation v24.1] ❌ '{name}' contains non-name word '{word}'")
                 return False
         
         # Generic terms check (staff, editor, etc.)
         generic_terms = ['staff', 'editor', 'reporter', 'correspondent', 'bureau', 'desk', 'team', 'wire']
         if any(term in name.lower() for term in generic_terms):
-            logger.warning(f"[Validation v23.1] ❌ '{name}' contains generic term")
+            logger.warning(f"[Validation v24.1] ❌ '{name}' contains generic term")
             return False
         
         # Too many words (probably a sentence)
         if len(words) > 5:
-            logger.warning(f"[Validation v23.1] ❌ '{name}' has too many words ({len(words)})")
+            logger.warning(f"[Validation v24.1] ❌ '{name}' has too many words ({len(words)})")
             return False
         
         # Validate first 3 words contain only letters, hyphens, apostrophes
         for word in words[:3]:
             if not re.match(r'^[A-Za-zÀ-ÿ\'-]+$', word):
-                logger.warning(f"[Validation v23.1] ❌ '{name}' contains invalid characters in '{word}'")
+                logger.warning(f"[Validation v24.1] ❌ '{name}' contains invalid characters in '{word}'")
                 return False
         
-        logger.info(f"[Validation v23.1] ✓ '{name}' is valid")
+        logger.info(f"[Validation v24.1] ✓ '{name}' is valid")
         return True
     
     def _get_source_from_url(self, url: str) -> str:
-        """Get source name from URL - ENHANCED v23.1"""
+        """Get source name from URL - ENHANCED v24.1 (MS.NOW support)"""
         
         domain = urlparse(url).netloc.replace('www.', '')
         
@@ -1239,6 +1256,8 @@ Return as JSON with keys: title, author, content, source"""
             'bbc.co.uk': 'BBC',
             'cnn.com': 'CNN',
             'foxnews.com': 'Fox News',
+            'msnbc.com': 'MSNBC',        # v24.1: ADDED
+            'ms.now': 'MSNBC',           # v24.1: ADDED - MSNBC rebrand domain
             'reuters.com': 'Reuters',
             'apnews.com': 'Associated Press',
             'theguardian.com': 'The Guardian',
@@ -1329,6 +1348,6 @@ Return as JSON with keys: title, author, content, source"""
         return True
 
 
-logger.info("[ArticleExtractor v24.0] ✓ SCRAPINGBEE MIGRATION COMPLETE + YOUTUBE SUPPORT!")
+logger.info("[ArticleExtractor v24.1] ✓ MS.NOW DOMAIN SUPPORT + SCRAPINGBEE + YOUTUBE!")
 
 # I did no harm and this file is not truncated.
