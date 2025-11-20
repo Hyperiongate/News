@@ -5,8 +5,8 @@ Last Updated: November 20, 2025
 
 CHANGES IN v24.2 (November 20, 2025):
 ✅ CRITICAL FIX: Added OUTLET_NAMES set to reject outlet names as authors
-✅ FIX: "MSNBC" and other network names now rejected as invalid author names
-✅ ADDED: 50+ outlet names/acronyms to rejection list
+✅ FIX: "MSNBC", "MS NOW", "MS.NOW" and other network names now rejected as invalid author names
+✅ ADDED: 50+ outlet names/acronyms to rejection list including MS NOW variations
 ✅ ENHANCED: _is_valid_author_name() now checks against OUTLET_NAMES
 ✅ PRESERVED: All v24.1 functionality (MS.NOW domain support)
 
@@ -69,6 +69,8 @@ OUTLET_NAMES = {
     "MSNBC", "CNN", "BBC", "NBC", "CBS", "ABC", "Fox", "PBS", "NPR",
     "Fox News", "NBC News", "CBS News", "ABC News", "BBC News",
     "CNBC", "C-SPAN", "Al Jazeera", "Sky News", "Bloomberg",
+    # MS NOW / MSNBC variations (v24.2 fix)
+    "MS NOW", "MS.NOW", "MSNOW", "Ms Now", "Ms.Now", "ms now", "ms.now",
     
     # Major Newspapers
     "Reuters", "Associated Press", "AP", "AFP", "UPI",
