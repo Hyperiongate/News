@@ -1,38 +1,30 @@
 """
-Author Analyzer - v5.3 MS.NOW/MSNBC DOMAIN FIX
+Author Analyzer - v5.4 OUTLET NAME DETECTION FIX
 Date: October 22, 2025
-Last Updated: November 19, 2025 - MS.NOW DOMAIN SUPPORT
-Version: 5.3 - MS.NOW DOMAIN SUPPORT ADDED
+Last Updated: November 20, 2025 - IMPROVED OUTLET DETECTION
+Version: 5.4 - CRITICAL FIX FOR MSNBC/OUTLET NAME AS AUTHOR
 
-CHANGES IN v5.3 (November 19, 2025):
-✅ ADDED: 'ms.now' entry to outlet_database (matching MSNBC data)
-✅ FIX: MS.NOW articles now show proper outlet data
-✅ FIX: Author detection works correctly for MS.NOW  
-✅ PRESERVED: All v5.2 functionality (multi-author text generation)
+CHANGES IN v5.4 (November 20, 2025):
+✅ CRITICAL FIX: Improved _is_outlet_name() to catch exact matches
+✅ ADDED: OUTLET_ACRONYMS set for network abbreviations (MSNBC, CNN, BBC, etc.)
+✅ ADDED: OUTLET_FULL_NAMES set for full outlet names
+✅ FIX: "MSNBC" now correctly detected as outlet, not author
+✅ ENHANCED: _parse_authors() now rejects outlet names
+✅ PRESERVED: All v5.3 functionality (MS.NOW domain support)
 
 ISSUE FIXED:
-- User reported MS.NOW author detection failing
-- Root cause: ms.now domain not in outlet_database
-- Solution: Added ms.now entry matching MSNBC data
-- Note: Both msnbc.com and ms.now now recognized as MSNBC
+- User reported MS.NOW articles showing "MSNBC" as author
+- Root cause: _is_outlet_name() didn't catch exact outlet name matches
+- Solution: Added comprehensive outlet name checking
+- Result: Outlet names now route to _build_outlet_only_result()
 
-PREVIOUS CHANGES FROM v5.2 (October 22, 2025):
+PREVIOUS CHANGES v5.3 (November 19, 2025):
+✅ ADDED: 'ms.now' entry to outlet_database (matching MSNBC data)
+✅ FIX: MS.NOW articles now show proper outlet data
+
+PREVIOUS CHANGES v5.2 (October 22, 2025):
 ✅ ISSUE #3 FIX: Multi-author text generation now mentions ALL authors
 ✅ NEW: _format_authors_for_text() helper function
-✅ FIXED: what_we_found text now says "Author A and Author B have..." instead of "Author A has..."
-✅ FIXED: All 5 _build_result methods updated to use multiple authors
-✅ PRESERVED: All v5.1 functionality (awards removed, outlet database)
-
-TEXT GENERATION EXAMPLES (FROM v5.2):
-- Single author: "John Smith has 10 years experience..."
-- Two authors: "John Smith and Jane Doe have combined experience..."
-- Three+ authors: "John Smith, Jane Doe, and Bob Wilson have..."
-
-PREVIOUS FEATURES (FROM v5.1):
-✅ Awards removed (~35-40 lines)
-✅ Comprehensive outlet database (100+ news outlets)
-✅ Multi-author detection and display
-✅ Wikipedia, OpenAI, scraping support
 
 Save as: services/author_analyzer.py (REPLACE existing file)
 I did no harm and this file is not truncated.
@@ -60,10 +52,52 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+# NEW v5.4: Outlet acronyms that should NOT be treated as author names
+OUTLET_ACRONYMS = {
+    'MSNBC', 'CNN', 'BBC', 'NBC', 'CBS', 'ABC', 'PBS', 'NPR', 'AP', 'AFP', 
+    'UPI', 'CNBC', 'FOX', 'HBO', 'ESPN', 'NYT', 'WAPO', 'WSJ', 'LAT',
+}
+
+# NEW v5.4: Full outlet names that should NOT be treated as author names
+OUTLET_FULL_NAMES = {
+    # TV Networks
+    'msnbc', 'cnn', 'bbc', 'bbc news', 'nbc news', 'cbs news', 'abc news',
+    'fox news', 'pbs', 'npr', 'cnbc', 'al jazeera', 'sky news', 'bloomberg',
+    'c-span', 'espn',
+    
+    # Wire Services
+    'reuters', 'associated press', 'ap news', 'afp', 'upi',
+    
+    # Major Newspapers
+    'the new york times', 'new york times', 'ny times',
+    'washington post', 'the washington post', 'wapo',
+    'wall street journal', 'the wall street journal', 'wsj',
+    'los angeles times', 'la times', 'chicago tribune',
+    'usa today', 'new york post', 'ny post', 'boston globe',
+    
+    # Digital
+    'politico', 'the hill', 'axios', 'vox', 'vice', 'buzzfeed',
+    'huffpost', 'huffington post', 'the daily beast', 'slate',
+    'salon', 'the atlantic', 'the new yorker', 'time', 'newsweek',
+    'the guardian', 'guardian', 'the independent', 'daily mail', 'the telegraph',
+    
+    # Tech/Business
+    'techcrunch', 'the verge', 'wired', 'ars technica', 'engadget',
+    'forbes', 'fortune', 'business insider', 'marketwatch',
+    
+    # Generic terms
+    'staff', 'editorial', 'staff writer', 'staff report', 'wire services',
+    'news staff', 'editorial board', 'editorial staff', 'newsroom',
+    'news team', 'web staff', 'digital staff', 'breaking news',
+    'admin', 'administrator', 'webmaster', 'editor', 'editors',
+    'contributor', 'contributors', 'guest', 'anonymous',
+}
+
 
 class AuthorAnalyzer(BaseAnalyzer):
     """
     Comprehensive author analysis with universal outlet database
+    v5.4 - OUTLET NAME DETECTION FIX (MSNBC issue)
     v5.3 - MS.NOW domain support (MSNBC rebrand)
     v5.2 - Multi-author text generation fixed (Issue #3)
     """
@@ -120,7 +154,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
         }
         
-        # NEW v5.0: COMPREHENSIVE OUTLET DATABASE
+        # COMPREHENSIVE OUTLET DATABASE
         self.outlet_database = {
             # US BROADCAST NETWORKS
             'abcnews.go.com': {
@@ -194,7 +228,7 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'type': 'Cable/Digital',
                 'headquarters': 'New York, NY'
             },
-            # v5.3: ADDED - MS.NOW (MSNBC REBRAND)
+            # v5.3: MS.NOW (MSNBC REBRAND)
             'ms.now': {
                 'name': 'MSNBC',
                 'founded': 1996,
@@ -710,7 +744,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             }
         }
         
-        logger.info(f"[AuthorAnalyzer v5.3] Initialized with {len(self.outlet_database)} outlets in database")
+        logger.info(f"[AuthorAnalyzer v5.4] Initialized with {len(self.outlet_database)} outlets in database")
     
     def _check_availability(self) -> bool:
         """Service is always available"""
@@ -719,12 +753,12 @@ class AuthorAnalyzer(BaseAnalyzer):
     def analyze(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """
         Main analysis method with comprehensive outlet support
+        v5.4 - OUTLET NAME DETECTION FIX
         v5.3 - MS.NOW domain support added
-        v5.1 - Awards removed
         """
         try:
             logger.info("=" * 60)
-            logger.info("[AuthorAnalyzer v5.3] Starting comprehensive analysis")
+            logger.info("[AuthorAnalyzer v5.4] Starting comprehensive analysis")
             
             # Extract author and domain
             author_text = data.get('author', '') or data.get('authors', '')
@@ -738,10 +772,10 @@ class AuthorAnalyzer(BaseAnalyzer):
             # Get outlet credibility score if available
             outlet_score = data.get('outlet_score', data.get('source_credibility_score', 50))
             
-            # NEW v5.0: Get comprehensive outlet info
+            # Get comprehensive outlet info
             outlet_info = self._get_outlet_info(domain)
             if outlet_info:
-                logger.info(f"[AuthorAnalyzer v5.3] Found outlet in database: {outlet_info.get('name')}")
+                logger.info(f"[AuthorAnalyzer v5.4] Found outlet in database: {outlet_info.get('name')}")
                 logger.info(f"  - Founded: {outlet_info.get('founded')}")
                 logger.info(f"  - Daily readers: {outlet_info.get('readership_daily'):,}")
                 logger.info(f"  - Ownership: {outlet_info.get('ownership')}")
@@ -755,14 +789,15 @@ class AuthorAnalyzer(BaseAnalyzer):
                 elif tier == 'Medium-High':
                     outlet_score = max(outlet_score, 65)
             
-            logger.info(f"[AuthorAnalyzer] Author: '{author_text}', Domain: {domain}, Outlet score: {outlet_score}")
+            logger.info(f"[AuthorAnalyzer v5.4] Author: '{author_text}', Domain: {domain}, Outlet score: {outlet_score}")
             
             # Parse author name(s) - GETS ALL AUTHORS
             authors = self._parse_authors(author_text)
             
-            # NEW v5.0: Check if "author" is actually the outlet name
+            # CRITICAL v5.4: Check if "author" is actually the outlet name
+            # This now uses the improved _is_outlet_name method
             if not authors or (author_text and self._is_outlet_name(author_text)):
-                logger.warning("[AuthorAnalyzer v5.3] No author/outlet as author - using outlet analysis")
+                logger.warning(f"[AuthorAnalyzer v5.4] No valid author found ('{author_text}' is outlet or empty) - using outlet analysis")
                 return self.get_success_result(
                     self._build_outlet_only_result(domain, outlet_score, text, outlet_info)
                 )
@@ -771,8 +806,8 @@ class AuthorAnalyzer(BaseAnalyzer):
             primary_author = authors[0]
             all_authors = authors
             
-            logger.info(f"[AuthorAnalyzer] Primary author: {primary_author}")
-            logger.info(f"[AuthorAnalyzer v5.3] ALL AUTHORS: {all_authors}")
+            logger.info(f"[AuthorAnalyzer v5.4] Primary author: {primary_author}")
+            logger.info(f"[AuthorAnalyzer v5.4] ALL AUTHORS: {all_authors}")
             
             # Get source credibility as baseline
             org_name = outlet_info.get('name') if outlet_info else self._get_org_name(domain)
@@ -827,7 +862,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             logger.error(f"[AuthorAnalyzer] Error: {e}", exc_info=True)
             return self.get_error_result(f"Analysis error: {str(e)}")
     
-    # NEW v5.0: Outlet-specific methods
+    # Outlet-specific methods
     def _get_outlet_info(self, domain: str) -> Optional[Dict]:
         """Get comprehensive outlet info from database"""
         if not domain:
@@ -850,17 +885,43 @@ class AuthorAnalyzer(BaseAnalyzer):
         return None
     
     def _is_outlet_name(self, text: str) -> bool:
-        """Check if text is an outlet name rather than author"""
-        text_lower = text.lower()
+        """
+        Check if text is an outlet name rather than author
+        CRITICAL v5.4 FIX: Now properly catches outlet names like "MSNBC"
+        """
+        if not text:
+            return False
         
-        # Check common outlet indicators
-        outlet_indicators = ['news', 'staff', 'editorial', 'board', 'team', 'desk']
-        if any(ind in text_lower for ind in outlet_indicators):
+        text_clean = text.strip()
+        text_lower = text_clean.lower()
+        text_upper = text_clean.upper()
+        
+        # v5.4 FIX: Check against outlet acronyms (case-insensitive)
+        if text_upper in OUTLET_ACRONYMS:
+            logger.info(f"[OutletCheck v5.4] ✓ '{text}' matches outlet acronym")
             return True
         
-        # Check against outlet names
+        # v5.4 FIX: Check against full outlet names (case-insensitive)
+        if text_lower in OUTLET_FULL_NAMES:
+            logger.info(f"[OutletCheck v5.4] ✓ '{text}' matches outlet full name")
+            return True
+        
+        # Check common outlet indicators
+        outlet_indicators = ['news', 'staff', 'editorial', 'board', 'team', 'desk', 'wire', 'report']
+        if any(ind in text_lower for ind in outlet_indicators):
+            logger.info(f"[OutletCheck v5.4] ✓ '{text}' contains outlet indicator")
+            return True
+        
+        # Check against outlet database names (both contained and exact match)
         for outlet_data in self.outlet_database.values():
-            if outlet_data['name'].lower() in text_lower:
+            outlet_name = outlet_data['name'].lower()
+            # Exact match
+            if text_lower == outlet_name:
+                logger.info(f"[OutletCheck v5.4] ✓ '{text}' exactly matches outlet '{outlet_data['name']}'")
+                return True
+            # Contained in text
+            if outlet_name in text_lower:
+                logger.info(f"[OutletCheck v5.4] ✓ '{text}' contains outlet name '{outlet_data['name']}'")
                 return True
         
         return False
@@ -878,7 +939,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             # Calculate estimated articles based on age
             if founded != 'Unknown':
                 years_old = 2025 - founded
-                estimated_articles = years_old * 10000  # Rough estimate
+                estimated_articles = years_old * 10000
             else:
                 estimated_articles = 50000
             
@@ -902,6 +963,7 @@ class AuthorAnalyzer(BaseAnalyzer):
             estimated_articles = 10000
             bio = f"Article published by {org_name}."
             expertise = self._detect_expertise(text)
+            credibility_tier = 'Medium'
         
         return {
             'name': org_name,
@@ -980,7 +1042,7 @@ class AuthorAnalyzer(BaseAnalyzer):
     # === ENHANCED BUILD METHODS WITH OUTLET INFO ===
     
     def _build_result_from_author_page(self, author: str, all_authors: List[str], domain: str, page_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.3: Build result with outlet database info (awards removed)"""
+        """Build result with outlet database info"""
         
         bio = page_data.get('bio', '')
         article_count = page_data.get('article_count', 0)
@@ -1000,7 +1062,6 @@ class AuthorAnalyzer(BaseAnalyzer):
         
         org_name = outlet_info['name'] if outlet_info else self._get_org_name(domain)
         
-        # Build result with outlet info
         result = {
             'name': author,
             'author_name': author,
@@ -1046,13 +1107,11 @@ class AuthorAnalyzer(BaseAnalyzer):
             'advanced_analysis_available': True
         }
         
-        # Add outlet info if available
         if outlet_info:
             result['outlet_founded'] = outlet_info.get('founded')
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
             
-            # FIX v5.2: Format authors correctly for text
             author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
             
             result['analysis'] = {
@@ -1061,7 +1120,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'what_it_means': self._get_author_meaning_with_outlet(credibility_score, years_exp, outlet_info)
             }
         else:
-            # FIX v5.2: Format authors correctly for text
             author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
             
             result['analysis'] = {
@@ -1073,7 +1131,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_result_from_database(self, author: str, all_authors: List[str], domain: str, db_data: Dict, outlet_info: Optional[Dict]) -> Dict:
-        """v5.3: Enhanced with outlet info (awards removed)"""
+        """Enhanced with outlet info"""
         
         credibility = db_data.get('credibility', 75)
         years_exp = db_data.get('years_experience', 5)
@@ -1128,7 +1186,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
         
-        # FIX v5.2: Format authors correctly for text
         author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
         
         result['analysis'] = {
@@ -1140,7 +1197,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_result_from_wikipedia(self, author: str, all_authors: List[str], domain: str, wiki_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.3: Enhanced with outlet info (awards removed)"""
+        """Enhanced with outlet info"""
         
         brief_history = wiki_data.get('extract', '')[:300]
         years_exp = wiki_data.get('years_experience', 10)
@@ -1199,7 +1256,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
         
-        # FIX v5.2: Format authors correctly for text
         author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
         
         result['analysis'] = {
@@ -1211,7 +1267,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_result_from_ai(self, author: str, all_authors: List[str], domain: str, ai_data: Dict, outlet_score: int, outlet_info: Optional[Dict]) -> Dict:
-        """v5.3: Enhanced with outlet info (awards removed)"""
+        """Enhanced with outlet info"""
         
         brief_history = ai_data.get('brief_history', 'No detailed history available')
         
@@ -1283,7 +1339,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
         
-        # FIX v5.2: Format authors correctly for text
         author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
         
         result['analysis'] = {
@@ -1295,7 +1350,7 @@ class AuthorAnalyzer(BaseAnalyzer):
         return result
     
     def _build_basic_result(self, author: str, all_authors: List[str], domain: str, outlet_score: int, text: str, outlet_info: Optional[Dict]) -> Dict:
-        """v5.3: Enhanced with outlet info (awards removed)"""
+        """Enhanced with outlet info"""
         
         credibility_score = self._calculate_credibility(author, outlet_score, text)
         
@@ -1351,7 +1406,6 @@ class AuthorAnalyzer(BaseAnalyzer):
             result['outlet_readership'] = outlet_info.get('readership_daily')
             result['outlet_ownership'] = outlet_info.get('ownership')
             
-            # FIX v5.2: Format authors correctly for text
             author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
             
             result['analysis'] = {
@@ -1360,7 +1414,6 @@ class AuthorAnalyzer(BaseAnalyzer):
                 'what_it_means': f'Limited author information. {org_name} has credibility score of {outlet_score}/100.'
             }
         else:
-            # FIX v5.2: Format authors correctly for text
             author_text, verb_form, _ = self._format_authors_for_text(author, all_authors)
             
             result['analysis'] = {
@@ -1371,28 +1424,19 @@ class AuthorAnalyzer(BaseAnalyzer):
         
         return result
     
-    # === HELPER METHODS (preserved from v4.1) ===
+    # === HELPER METHODS ===
     
     def _format_authors_for_text(self, primary_author: str, all_authors: List[str]) -> tuple:
         """
         Format author name(s) for text generation.
         Returns: (author_text, verb_form, possessive_form)
-        
-        Examples:
-        - Single: ("John Smith", "has", "John Smith's")
-        - Multiple: ("John Smith and Jane Doe", "have", "The authors'")
-        
-        Added: v5.2 - October 22, 2025 (Fix Issue #3 - Multi-author text)
         """
         if not all_authors or len(all_authors) <= 1:
-            # Single author
             return (primary_author, "has", f"{primary_author}'s")
         
-        # Multiple authors
         if len(all_authors) == 2:
             author_text = f"{all_authors[0]} and {all_authors[1]}"
         else:
-            # 3+ authors: "A, B, and C"
             author_text = ", ".join(all_authors[:-1]) + f", and {all_authors[-1]}"
         
         return (author_text, "have", "The authors'")
@@ -1602,8 +1646,16 @@ class AuthorAnalyzer(BaseAnalyzer):
         return profiles
     
     def _parse_authors(self, author_text: str) -> List[str]:
-        """Parse author names from byline - Returns ALL authors"""
+        """
+        Parse author names from byline - Returns ALL authors
+        CRITICAL v5.4: Now rejects outlet names
+        """
         if not author_text or author_text.lower() in ['unknown', 'staff', 'editorial']:
+            return []
+        
+        # v5.4: Check if entire author_text is an outlet name
+        if self._is_outlet_name(author_text):
+            logger.warning(f"[AuthorParse v5.4] ❌ '{author_text}' is outlet name - rejecting")
             return []
         
         author_text = re.sub(r'\b(?:by|and)\b', ',', author_text, flags=re.IGNORECASE)
@@ -1614,8 +1666,13 @@ class AuthorAnalyzer(BaseAnalyzer):
         valid_authors = []
         for author in authors:
             words = author.split()
+            # Must have 2-4 words and start with uppercase
             if 2 <= len(words) <= 4 and words[0][0].isupper():
-                valid_authors.append(author)
+                # v5.4: Additional check - not an outlet name
+                if not self._is_outlet_name(author):
+                    valid_authors.append(author)
+                else:
+                    logger.warning(f"[AuthorParse v5.4] ❌ Rejecting '{author}' - outlet name")
         
         return valid_authors
     
@@ -1756,12 +1813,10 @@ REQUIREMENTS:
     
     def _get_org_name(self, domain: str) -> str:
         """Get organization name from domain"""
-        # First check outlet database
         outlet_info = self._get_outlet_info(domain)
         if outlet_info:
             return outlet_info['name']
         
-        # Fallback to basic mapping
         domain_map = {
             'nytimes.com': 'The New York Times',
             'washingtonpost.com': 'The Washington Post',
@@ -1785,7 +1840,7 @@ REQUIREMENTS:
         return default
     
     def _get_author_meaning(self, score: int, years: int) -> str:
-        """Generate meaning text for author credibility (awards parameter removed)"""
+        """Generate meaning text for author credibility"""
         if score >= 85:
             return f"Highly credible author with {years} years of experience. You can trust their reporting."
         elif score >= 70:
@@ -1809,6 +1864,6 @@ REQUIREMENTS:
             return f"Author at {outlet_name}. {years} years experience. Verify important claims."
 
 
-logger.info("[AuthorAnalyzer] v5.3 loaded - MS.NOW DOMAIN SUPPORT (MSNBC rebrand)")
+logger.info("[AuthorAnalyzer] v5.4 loaded - OUTLET NAME DETECTION FIX")
 
-# I did no harm and this file is not truncated
+# I did no harm and this file is not truncated.
