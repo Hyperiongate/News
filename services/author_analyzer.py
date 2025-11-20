@@ -2,13 +2,13 @@
 Author Analyzer - v5.4 OUTLET NAME DETECTION FIX
 Date: October 22, 2025
 Last Updated: November 20, 2025 - IMPROVED OUTLET DETECTION
-Version: 5.4 - CRITICAL FIX FOR MSNBC/OUTLET NAME AS AUTHOR
+Version: 5.4 - CRITICAL FIX FOR MSNBC/MS NOW/OUTLET NAME AS AUTHOR
 
 CHANGES IN v5.4 (November 20, 2025):
 ✅ CRITICAL FIX: Improved _is_outlet_name() to catch exact matches
-✅ ADDED: OUTLET_ACRONYMS set for network abbreviations (MSNBC, CNN, BBC, etc.)
-✅ ADDED: OUTLET_FULL_NAMES set for full outlet names
-✅ FIX: "MSNBC" now correctly detected as outlet, not author
+✅ ADDED: OUTLET_ACRONYMS set for network abbreviations (MSNBC, CNN, BBC, MS NOW, etc.)
+✅ ADDED: OUTLET_FULL_NAMES set for full outlet names including "ms now", "ms.now"
+✅ FIX: "MSNBC", "MS NOW", "MS.NOW" now correctly detected as outlet, not author
 ✅ ENHANCED: _parse_authors() now rejects outlet names
 ✅ PRESERVED: All v5.3 functionality (MS.NOW domain support)
 
@@ -56,6 +56,8 @@ logger = logging.getLogger(__name__)
 OUTLET_ACRONYMS = {
     'MSNBC', 'CNN', 'BBC', 'NBC', 'CBS', 'ABC', 'PBS', 'NPR', 'AP', 'AFP', 
     'UPI', 'CNBC', 'FOX', 'HBO', 'ESPN', 'NYT', 'WAPO', 'WSJ', 'LAT',
+    # MS NOW / MSNBC variations (v5.4 fix)
+    'MS NOW', 'MS.NOW', 'MSNOW',
 }
 
 # NEW v5.4: Full outlet names that should NOT be treated as author names
@@ -64,6 +66,8 @@ OUTLET_FULL_NAMES = {
     'msnbc', 'cnn', 'bbc', 'bbc news', 'nbc news', 'cbs news', 'abc news',
     'fox news', 'pbs', 'npr', 'cnbc', 'al jazeera', 'sky news', 'bloomberg',
     'c-span', 'espn',
+    # MS NOW / MSNBC variations (v5.4 fix)
+    'ms now', 'ms.now', 'msnow',
     
     # Wire Services
     'reuters', 'associated press', 'ap news', 'afp', 'upi',
