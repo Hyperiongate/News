@@ -3,21 +3,21 @@
 <head>
     <!--
     TruthLens Ultra-Simple Debate Arena
-    Version: 2.0.2 - MODERATOR STATUS FIX
-    Date: November 11, 2025
+    Version: 2.1.0 - NAVIGATION HEADER ADDED
+    Date: November 25, 2025
     
-    CHANGES IN v2.0.2:
-    - FIXED: Moderator status check now handles 404 gracefully
-    - FIXED: No more console errors if moderator endpoint doesn't exist
-    - IMPROVED: Better JSON content-type checking
-    - PRESERVED: All v2.0.1 functionality (DO NO HARM ✓)
+    CHANGES IN v2.1.0:
+    - ADDED: Standard navigation header matching all other pages
+    - ADDED: Link to navigation.css for consistent styling
+    - ADDED: Mobile menu toggle functionality
+    - ADDED: Body padding adjusted for fixed navigation (90px top)
+    - ADDED: Debate Arena marked as active in nav menu
+    - PRESERVED: All v2.0.2 functionality (DO NO HARM ✓)
     
-    CHANGES IN v2.0.1:
-    - FIXED: Form submission now checks if position is selected
-    - FIXED: Clear error messages for missing fields
-    - FIXED: Better validation before API call
-    - ADDED: Visual feedback during submission
-    - PRESERVED: All v2.0.0 functionality (DO NO HARM ✓)
+    PREVIOUS CHANGES:
+    v2.0.2: Moderator status check handles 404 gracefully
+    v2.0.1: Form submission validation fixes
+    v2.0.0: Ultra-simple redesign with moderator support
     
     WHAT THIS IS:
     - Ultra-simple debate system
@@ -27,12 +27,20 @@
     - 300-word argument limit
     - Anonymous voting via browser fingerprint
     
+    NAVIGATION NOW MATCHES:
+    - index.html (News Analysis)
+    - features.html
+    - transcript.html
+    - contact.html
+    - about.html
+    - live-stream.html
+    
     This file is complete and ready to deploy.
-    Last modified: November 11, 2025 - v2.0.2 Moderator Status Fix
+    Last modified: November 25, 2025 - v2.1.0 Navigation Header Added
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens Debate Arena - Simple Edition</title>
+    <title>TruthLens Debate Arena</title>
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,6 +49,9 @@
     
     <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- STANDARDIZED NAVIGATION CSS - v2.1.0 -->
+    <link rel="stylesheet" href="/static/css/navigation.css">
     
     <style>
         * {
@@ -69,7 +80,7 @@
             color: var(--text);
             line-height: 1.6;
             min-height: 100vh;
-            padding: 20px;
+            padding: 90px 20px 20px; /* UPDATED v2.1.0: Added top padding for fixed nav */
         }
 
         .container {
@@ -576,10 +587,10 @@
             margin-bottom: 20px;
         }
 
-        /* Responsive */
+        /* Responsive - UPDATED v2.1.0 for navigation */
         @media (max-width: 768px) {
             body {
-                padding: 10px;
+                padding: 80px 10px 10px; /* Adjusted for mobile nav height */
             }
 
             .card {
@@ -606,10 +617,44 @@
                 flex-direction: column;
                 gap: 5px;
             }
+            
+            .moderator-section {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+            }
+            
+            .mod-login-form {
+                width: 100%;
+                justify-content: center;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- STANDARDIZED NAVIGATION HEADER - v2.1.0 - Matches ALL pages -->
+    <nav class="main-navigation">
+        <div class="nav-container-unified">
+            <a href="/" class="nav-logo">
+                <i class="fas fa-shield-check"></i>
+                <span>TruthLens</span>
+            </a>
+            
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                <i class="fas fa-bars"></i>
+            </button>
+            
+            <ul class="nav-menu" id="navMenu">
+                <li><a href="/about" class="nav-link">About Us</a></li>
+                <li><a href="/features" class="nav-link">Features</a></li>
+                <li><a href="/" class="nav-link">News Analysis</a></li>
+                <li><a href="/transcript" class="nav-link">Transcript/YouTube Analysis</a></li>
+                <li><a href="/debate-arena" class="nav-link active">Debate Arena</a></li>
+                <li><a href="/contact" class="nav-link">Contact Us</a></li>
+            </ul>
+        </div>
+    </nav>
+
     <div class="container">
         <!-- Header -->
         <div class="header">
@@ -786,6 +831,17 @@
         document.addEventListener('DOMContentLoaded', () => {
             checkModeratorStatus();
         });
+
+        // ====================================================================
+        // MOBILE MENU TOGGLE - v2.1.0
+        // ====================================================================
+        
+        function toggleMobileMenu() {
+            const navMenu = document.getElementById('navMenu');
+            if (navMenu) {
+                navMenu.classList.toggle('active');
+            }
+        }
 
         // ====================================================================
         // NAVIGATION
@@ -1344,21 +1400,43 @@
 
 <!--
 I did no harm and this file is not truncated.
-v2.0.2 - November 11, 2025
+v2.1.0 - November 25, 2025
 
-WHAT'S NEW IN v2.0.2:
-✅ FIXED: Moderator status check handles 404 gracefully
-✅ FIXED: No console errors when moderator endpoint missing
-✅ IMPROVED: JSON content-type validation before parsing
+WHAT'S NEW IN v2.1.0:
+✅ ADDED: Standard navigation header matching ALL other pages
+✅ ADDED: Link to /static/css/navigation.css
+✅ ADDED: Mobile menu toggle function (toggleMobileMenu)
+✅ ADDED: Debate Arena marked as active in nav menu
+✅ FIXED: Body padding adjusted for fixed navigation (90px top, 80px mobile)
+✅ PRESERVED: All v2.0.2 functionality (DO NO HARM)
 
-WHAT'S NEW IN v2.0.1:
-✅ FIXED: Position selection validation before submit
-✅ FIXED: Clear error messages for missing fields
-✅ FIXED: Word count validation before API call
-✅ ADDED: Submit button disabled during request
-✅ ADDED: Loading spinner on submit button
-✅ PRESERVED: All v2.0.0 functionality (DO NO HARM)
+NAVIGATION NOW MATCHES:
+- index.html (News Analysis)
+- features.html
+- transcript.html
+- contact.html
+- about.html
+- live-stream.html
 
-DEPLOYMENT READY FOR GITHUB/RENDER
+PRESERVED FROM v2.0.2:
+✅ Moderator status check handles 404 gracefully
+✅ No console errors when moderator endpoint missing
+✅ JSON content-type validation before parsing
+
+PRESERVED FROM v2.0.1:
+✅ Position selection validation before submit
+✅ Clear error messages for missing fields
+✅ Word count validation before API call
+✅ Submit button disabled during request
+✅ Loading spinner on submit button
+
+PRESERVED FROM v2.0.0:
+✅ Ultra-simple debate system
+✅ Three modes: Start Fight, Join Fight, Judgement City
+✅ 300-word argument limit
+✅ Moderator mode (password: Shiftwork)
+✅ Anonymous voting via browser fingerprint
+
+DEPLOYMENT READY FOR GITHUB
 Complete file ready for production deployment.
 -->
