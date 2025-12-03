@@ -3,33 +3,38 @@
 <head>
     <!--
     TruthLens Features Page
-    Version: 3.2.0 - TRULY STANDARDIZED NAVIGATION (FINAL FIX)
-    Date: October 29, 2025
+    Version: 3.3.0 - ADDED DEBATE ARENA FEATURE
+    Date: December 3, 2025
     
-    WHAT'S NEW IN v3.2.0:
-    ✅ FIXED: Navigation now TRULY matches index.html structure exactly
-    ✅ FIXED: Uses correct class names: main-navigation, nav-container-unified, nav-logo
-    ✅ FIXED: Uses <ul><li> structure instead of plain <div><a> tags
-    ✅ FIXED: Mobile menu toggle button added
-    ✅ FIXED: Icon changed to fa-shield-check (matching all pages)
-    ✅ PRESERVED: All v3.1.0 functionality intact (DO NO HARM ✓)
+    WHAT'S NEW IN v3.3.0:
+    ✅ ADDED: Debate Arena feature card in the features grid
+    ✅ ADDED: New .feature-icon.debate styling (red/orange gradient)
+    ✅ UPDATED: Now shows 8 features instead of 7
+    ✅ PRESERVED: All v3.2.0 functionality intact (DO NO HARM ✓)
     
-    NAVIGATION NOW MATCHES:
+    CHANGES FROM v3.2.0:
+    - Added Debate Arena feature card with fa-gavel icon
+    - Added .feature-icon.debate CSS class
+    - Features grid now has 8 cards total
+    
+    NAVIGATION MATCHES:
     - index.html (News Analysis)
     - transcript.html
     - debate-arena.html
     - contact.html
     - about.html
     
-    PRESERVED FROM v3.1.0:
-    ✅ All features content and styling
+    PRESERVED FROM v3.2.0:
+    ✅ All existing features content and styling
     ✅ Beta banner
     ✅ Coming soon section
     ✅ Sources section
     ✅ CTA section
+    ✅ Standardized navigation
+    ✅ Mobile responsive design
     
     This file is complete and ready to deploy.
-    Last modified: October 29, 2025 - v3.2.0
+    Last modified: December 3, 2025 - v3.3.0
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -250,6 +255,8 @@
         .feature-icon.transparency { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
         .feature-icon.content { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
         .feature-icon.transcript { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+        /* v3.3.0: NEW - Debate Arena icon styling */
+        .feature-icon.debate { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
 
         .feature-card h3 {
             font-size: 1.5rem;
@@ -634,6 +641,16 @@
                 <p>Specialized fact-checking for speeches, interviews, and YouTube videos. Paste transcript text OR provide YouTube URL for automatic extraction and analysis.</p>
                 <span class="feature-badge">Free Forever</span>
             </div>
+
+            <!-- v3.3.0: NEW - Debate Arena Feature Card -->
+            <div class="feature-card">
+                <div class="feature-icon debate">
+                    <i class="fas fa-gavel"></i>
+                </div>
+                <h3>Debate Arena</h3>
+                <p>Start debates on news topics and let the community decide. Create arguments, challenge opposing views, and vote on who made the stronger case. Anonymous participation with live voting results.</p>
+                <span class="feature-badge">Free Forever</span>
+            </div>
         </div>
 
         <!-- COMING SOON SECTION -->
@@ -848,24 +865,29 @@
 
 <!--
 I did no harm and this file is not truncated.
-v3.2.0 - October 29, 2025
+v3.3.0 - December 3, 2025
 
-WHAT'S NEW IN v3.2.0:
-✅ FIXED: Navigation menu now TRULY standardized across ALL pages
-✅ FIXED: Uses correct class names matching index.html exactly
-✅ FIXED: Mobile menu toggle button with proper JavaScript function
-✅ FIXED: Menu order: About Us, Features, News Analysis, Transcript/YouTube, Debate Arena, Contact Us
-✅ FIXED: Icon changed to fa-shield-check
+WHAT'S NEW IN v3.3.0:
+✅ ADDED: Debate Arena feature card in the features grid
+✅ ADDED: .feature-icon.debate CSS styling (orange gradient)
+✅ ADDED: fa-gavel icon for Debate Arena
+✅ UPDATED: Features grid now shows 8 features total
 
-PRESERVED FROM v3.1.0:
-✅ All features content and descriptions
+PRESERVED FROM v3.2.0:
+✅ All existing features content and descriptions
 ✅ Beta banner with free messaging
 ✅ Coming soon section with 3 future features
 ✅ Sources section with 500+ outlets
 ✅ CTA section
-✅ All styling and visual design
+✅ Standardized navigation matching all pages
 ✅ Mobile responsive design
+✅ All styling and visual design
 
-DEPLOYMENT READY FOR GITHUB/RENDER
+DEBATE ARENA DESCRIPTION:
+"Start debates on news topics and let the community decide. Create arguments, 
+challenge opposing views, and vote on who made the stronger case. Anonymous 
+participation with live voting results."
+
+DEPLOYMENT READY FOR GITHUB
 Complete file ready for production deployment.
 -->
