@@ -387,9 +387,14 @@ def validate_url(url: str) -> bool:
 # STATIC PAGE ROUTES
 # ============================================================================
 
-@app.route('/')
-def index():
-    """Main page - News Analysis"""
+@@app.route('/')
+def landing_page():
+    """Main landing page showing all four apps"""
+    return render_template('landing.html')
+
+@app.route('/analyze')
+def analyze_page():
+    """News Analysis Tool (formerly at /)"""
     return render_template('index.html')
 
 @app.route('/transcript')
