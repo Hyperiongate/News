@@ -387,7 +387,7 @@ def validate_url(url: str) -> bool:
 # STATIC PAGE ROUTES
 # ============================================================================
 
-@@app.route('/')
+@app.route('/')
 def landing_page():
     """Main landing page showing all four apps"""
     return render_template('landing.html')
