@@ -1,27 +1,29 @@
 """
 File: app.py
-Last Updated: November 11, 2025 - v10.2.24
+Last Updated: December 26, 2024 - v10.2.25
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
 
-CHANGES IN v10.2.24 (November 11, 2025):
+CHANGES IN v10.2.25 (December 26, 2024):
 ========================
-BLUEHOST DEPLOYMENT: CORS Configuration for factsandfakes.ai
-- UPDATED: CORS(app) replaced with full configuration
-- ADDED: factsandfakes.ai domain to allowed origins
-- ADDED: www.factsandfakes.ai to allowed origins
-- ADDED: HTTP versions for redirect support
-- PURPOSE: Allow Bluehost frontend to communicate with Render backend
-- RESULT: Frontend on Bluehost can now call API on Render!
-- PRESERVED: All v10.2.23 functionality (DO NO HARM ✓)
+CLAIM TRACKER INTEGRATION: New truth-seeking database for verified claims
+- ADDED: Claim Tracker initialization (follows simple_debate pattern)
+- ADDED: Claim tracker models (claims, claim_sources, claim_evidence tables)
+- ADDED: Claim tracker routes at /api/claims/*
+- ADDED: /claim-tracker page route
+- ADDED: claim_tracker_available flag in health check
+- PURPOSE: Permanent database of verified claims from analyses
+- RESULT: Users can search, track, and verify claims across sources
+- PRESERVED: All v10.2.24 functionality (DO NO HARM ✓)
 
-DEPLOYMENT ARCHITECTURE:
-- Frontend: Bluehost (factsandfakes.ai) - HTML/CSS/JS
-- Backend: Render (news-analyzer-qtgb.onrender.com) - Python/Flask
-- Database: Render PostgreSQL
-- Connection: CORS allows frontend → backend API calls
+CLAIM TRACKER FEATURES:
+- Search claims by text, category, status
+- Track claim appearances across multiple sources
+- Link to fact-check evidence (Snopes, PolitiFact, etc.)
+- Verification status: True, False, Mixed, Pending, Unverifiable
+- Database statistics and recent claims feed
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: November 11, 2025 - v10.2.24 BLUEHOST CORS CONFIGURATION
+Last modified: December 26, 2024 - v10.2.25 CLAIM TRACKER INTEGRATION
 """
 
 import os
@@ -135,7 +137,7 @@ if database_url:
     
     logger.info("=" * 80)
     logger.info("DATABASE CONFIGURATION:")
-    logger.info("  ✓ PostgreSQL configured for Debate Arenas")
+    logger.info("  ✓ PostgreSQL configured for Debate Arenas & Claim Tracker")
     logger.info("  ✓ Connection pooling enabled")
     logger.info("  ✓ Auto-reconnect on failure")
     logger.info("=" * 80)
@@ -182,13 +184,69 @@ if database_url:
         simple_debate_available = False
     
     # ========================================================================
+    # CLAIM TRACKER SYSTEM (v1.0.0 - December 26, 2024)
+    # ========================================================================
+    # Stores and tracks verified claims from news/transcript analysis
+    # Users can search claims, track appearances, and see verification status
+    # ========================================================================
+    
+    claim_tracker_available = False
+    
+    logger.info("=" * 80)
+    logger.info("CLAIM TRACKER INITIALIZATION:")
+    
+    try:
+        # Step 1: Import the init function
+        from claim_tracker_models import init_claim_tracker_db
+        
+        # Step 2: Initialize models with shared db (THIS MUST HAPPEN FIRST!)
+        init_claim_tracker_db(db)
+        logger.info("  ✓ Claim tracker models initialized with shared db")
+        
+        # Step 3: NOW import routes (after models are properly initialized)
+        from claim_tracker_routes import claim_tracker_bp, init_routes
+        from claim_tracker_models import Claim, ClaimSource, ClaimEvidence
+        
+        # Step 4: Initialize routes with database and models
+        init_routes(db, {
+            'Claim': Claim,
+            'ClaimSource': ClaimSource,
+            'ClaimEvidence': ClaimEvidence
+        })
+        logger.info("  ✓ Claim tracker routes initialized")
+        
+        # Step 5: Register the blueprint
+        app.register_blueprint(claim_tracker_bp)
+        logger.info("  ✓ Claim tracker routes registered at /api/claims/*")
+        logger.info("  ✓ Available endpoints:")
+        logger.info("    - POST   /api/claims/save")
+        logger.info("    - GET    /api/claims/search")
+        logger.info("    - GET    /api/claims/recent")
+        logger.info("    - GET    /api/claims/<id>")
+        logger.info("    - POST   /api/claims/<id>/evidence")
+        logger.info("    - GET    /api/claims/stats")
+        logger.info("  ✓ Claim tracker: FULLY OPERATIONAL")
+        
+        claim_tracker_available = True
+        
+    except ImportError as e:
+        logger.warning(f"  ⚠ Claim tracker system not available: {e}")
+        claim_tracker_available = False
+    except Exception as e:
+        logger.error(f"  ✗ Claim tracker initialization error: {e}")
+        logger.error(f"  ✗ Traceback: {traceback.format_exc()}")
+        claim_tracker_available = False
+    
+    logger.info("=" * 80)
+    
+    # ========================================================================
     # CRITICAL v10.2.22 FIX: Create Tables AFTER Models Are Initialized
     # ========================================================================
     # PROBLEM: db.create_all() was called before models were registered
-    # SOLUTION: Call it again AFTER init_simple_debate_db() registers models
+    # SOLUTION: Call it again AFTER all models are initialized
     # ========================================================================
     
-    if old_debate_available or simple_debate_available:
+    if old_debate_available or simple_debate_available or claim_tracker_available:
         with app.app_context():
             try:
                 # NOW create the tables - models are properly registered!
@@ -198,6 +256,8 @@ if database_url:
                     logger.info("    - Old debate tables: users, debates, arguments, votes")
                 if simple_debate_available:
                     logger.info("    - Simple debate tables: simple_debates, simple_arguments, simple_votes")
+                if claim_tracker_available:
+                    logger.info("    - Claim tracker tables: claims, claim_sources, claim_evidence")
                     
             except Exception as e:
                 error_msg = str(e).lower()
@@ -206,8 +266,8 @@ if database_url:
                 if 'already exists' in error_msg or 'duplicate' in error_msg:
                     logger.info("  ✓ Database tables/indexes already exist (this is OK!)")
                     logger.info("    - Tables were created in previous deployment")
-                    logger.info("    - All debate features remain ACTIVE")
-                    # DON'T set simple_debate_available = False here!
+                    logger.info("    - All features remain ACTIVE")
+                    # DON'T set availability flags to False here!
                     
                 else:
                     # Only disable on REAL errors (connection issues, permission problems, etc.)
@@ -215,15 +275,17 @@ if database_url:
                     logger.error("    - This is a REAL error (not 'already exists')")
                     old_debate_available = False
                     simple_debate_available = False
+                    claim_tracker_available = False
     else:
-        logger.warning("  ⚠ No debate models available - debate features disabled")
+        logger.warning("  ⚠ No database features available - all disabled")
         db = None
 else:
     db = None
     old_debate_available = False
     simple_debate_available = False
+    claim_tracker_available = False
     logger.info("=" * 80)
-    logger.info("DATABASE: Not configured (All Debate Arenas disabled)")
+    logger.info("DATABASE: Not configured (All database features disabled)")
     logger.info("=" * 80)
 
 # ============================================================================
@@ -401,6 +463,39 @@ def analyze_page():
 def transcript():
     """Transcript analysis page"""
     return render_template('transcript.html')
+
+@app.route('/claim-tracker')
+def claim_tracker_page():
+    """
+    Claim tracker page - NEW v10.2.25
+    
+    Searchable database of verified claims from news/transcript analysis.
+    Users can search, browse, and track claims across multiple sources.
+    """
+    if not claim_tracker_available:
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Claim Tracker - Not Available</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+                .error-box { background: white; padding: 40px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                h1 { color: #dc2626; margin-bottom: 20px; }
+                p { color: #666; line-height: 1.6; }
+                a { color: #2563eb; text-decoration: none; font-weight: 600; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <h1>⚠️ Claim Tracker Not Available</h1>
+                <p>Database not configured. Set DATABASE_URL in Render.</p>
+                <p style="margin-top: 30px;"><a href="/">← Back to Home</a></p>
+            </div>
+        </body>
+        </html>
+        ''', 503
+    return render_template('claim-tracker.html')
 
 @app.route('/features')
 def features():
@@ -1021,11 +1116,15 @@ def init_database():
         tables = inspector.get_table_names()
         
         simple_tables = [t for t in tables if 'simple_' in t]
+        claim_tables = [t for t in tables if 'claim' in t]
         
         return jsonify({
             'success': True,
             'message': 'Database tables created!',
-            'tables_created': simple_tables,
+            'tables_created': {
+                'simple_debate': simple_tables,
+                'claim_tracker': claim_tables
+            },
             'all_tables': tables
         })
         
@@ -1047,7 +1146,8 @@ def health():
             'news_analyzer': 'active',
             'transcript_analyzer': 'active' if transcript_available else 'disabled',
             'old_debate_arena': 'active' if old_debate_available else 'disabled',
-            'simple_debate_arena': 'active' if simple_debate_available else 'disabled'
+            'simple_debate_arena': 'active' if simple_debate_available else 'disabled',
+            'claim_tracker': 'active' if claim_tracker_available else 'disabled'
         }
     })
 
@@ -1095,7 +1195,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.24")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.25")
     logger.info("=" * 80)
     logger.info("")
     logger.info("DEPLOYMENT ARCHITECTURE:")
@@ -1127,6 +1227,17 @@ if __name__ == '__main__':
     else:
         logger.info("  ✗ Transcript Analysis - Disabled (transcript_routes.py not found)")
     
+    if claim_tracker_available:
+        logger.info("  ✓ Claim Tracker - FULLY OPERATIONAL ⭐ NEW!")
+        logger.info("    - Searchable claim verification database")
+        logger.info("    - Track claims across multiple sources")
+        logger.info("    - Link to fact-check evidence")
+        logger.info("    - Verification status tracking")
+        logger.info("    - Recent claims feed and statistics")
+        logger.info("    - Available at /claim-tracker")
+    else:
+        logger.info("  ✗ Claim Tracker - Disabled (DATABASE_URL not set or models missing)")
+    
     if os.getenv('ASSEMBLYAI_API_KEY'):
         logger.info("  ✓ Live Stream Analysis - YouTube Live with real-time transcription")
         logger.info("    - Real-time audio transcription (AssemblyAI)")
@@ -1155,12 +1266,12 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
-    logger.info("VERSION v10.2.24 (BLUEHOST CORS CONFIGURATION) 🎯:")
-    logger.info("  ✅ UPDATED: CORS configuration for factsandfakes.ai")
-    logger.info("  ✅ ADDED: Bluehost domain to allowed origins")
-    logger.info("  ✅ RESULT: Frontend can now call backend API!")
-    logger.info("  ✅ ARCHITECTURE: Split deployment (Bluehost + Render)")
-    logger.info("  ✅ PRESERVED: All v10.2.23 functionality (DO NO HARM)")
+    logger.info("VERSION v10.2.25 (CLAIM TRACKER INTEGRATION) 🎯:")
+    logger.info("  ✅ NEW: Claim Tracker - Searchable verification database")
+    logger.info("  ✅ ADDED: 3 new database tables (claims, claim_sources, claim_evidence)")
+    logger.info("  ✅ ADDED: 6 new API endpoints at /api/claims/*")
+    logger.info("  ✅ RESULT: Permanent claim tracking across all analyses!")
+    logger.info("  ✅ PRESERVED: All v10.2.24 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -1168,4 +1279,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.24 - November 11, 2025 - BLUEHOST CORS CONFIGURATION FOR factsandfakes.ai
+# v10.2.25 - December 26, 2024 - CLAIM TRACKER INTEGRATION
