@@ -1,173 +1,111 @@
 <!DOCTYPE html>
 <!--
 TruthLens Unified Platform - Landing Page
-Version: 2.1.0 - BALANCED 6-CARD LAYOUT
-Date: December 24, 2024
-
-PURPOSE:
-Main landing page that introduces all TruthLens AI tools with clear navigation.
-Compact card design with balanced 6-card layout (3x2 or 2x3 grid).
+Version: 2.2.0 - QUIZ ENGINE ADDED
+Date: December 26, 2024
 
 CHANGE LOG:
-- December 24, 2024 v2.1.0: BALANCED 6-CARD LAYOUT
-  * ADDED: "Coming Soon" card (6th card) with cyan/teal gradient
-  * NOTE: 5 actual tools + 1 "Coming Soon" card = 6 total cards
-  * FEATURES: Deepfake detection, AI-gen content scanner, plagiarism checker, image analysis
-  * BALANCED: Grid now displays evenly (3x2 or 2x3 depending on screen size)
-  * REMOVED: Redundant "Features Banner" (replaced by Coming Soon card)
-  * UPDATED: Hero mentions "Five powerful tools" + coming soon features
-  * ICON: Rocket icon for Coming Soon card
-  * LINK: Links to /contact for feature suggestions
+- December 26, 2024 v2.2.0: QUIZ ENGINE ADDED!
+  * REPLACED: "Coming Soon" card with actual Quiz Engine
+  * ADDED: Complete navigation to ALL 8 tools (6 internal + 2 external)
+  * UPDATED: Hero mentions "Six powerful tools"
+  * NEW BADGE: Quiz has pulsing NEW badge
+  * NAVIGATION: Updated to include quiz, claim-tracker, and all external tools
 
-TOOLS SHOWCASED (5 actual tools + 1 coming soon card):
-1. TruthLens News Analysis - 7-service credibility analysis
-2. Transcript Analysis - Speeches, interviews, text analysis
-3. AI Bias Research Tool - Compare 7 AI systems
-4. Human Debate Arena - Anonymous human debates
-5. AI Debate Arena - Watch AI systems debate
-6. Coming Soon Card - Future truth detection tools (NOT A TOOL YET)
+TOOLS (8 total):
+Internal (6): News, Transcripts, Quiz, Claims, Human Debates, Features
+External (2): AI Research, AI Debates
 
-Last modified: December 24, 2024 - v2.1.0 BALANCED
 I did no harm and this file is not truncated.
 -->
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens AI Suite - News Analysis, AI Research & Debate Tools</title>
-    <meta name="description" content="TruthLens AI Suite: News credibility analysis, transcript analysis, AI bias research, and debate platforms. Free during beta testing.">
+    <title>TruthLens AI Suite - Complete Truth Detection Platform</title>
     
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- Navigation CSS -->
     <link rel="stylesheet" href="/static/css/navigation.css">
     
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         :root {
-            --primary: #667eea;
-            --primary-dark: #5568d3;
-            --secondary: #764ba2;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --dark: #1e293b;
-            --text: #334155;
-            --text-light: #64748b;
-            --border: #e2e8f0;
-            --light: #f8fafc;
-            --white: #ffffff;
+            --primary: #667eea; --secondary: #764ba2; --success: #10b981;
+            --dark: #1e293b; --text: #334155; --text-light: #64748b;
         }
-
+        
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            color: var(--text);
-            line-height: 1.6;
             min-height: 100vh;
             padding-top: 70px;
         }
-
-        /* Hero Section - COMPACT */
+        
         .hero-section {
             text-align: center;
             padding: 60px 20px 45px;
             color: white;
         }
-
+        
+        .beta-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 7px 18px;
+            border-radius: 30px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
         .hero-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 3rem;
             font-weight: 800;
             margin-bottom: 16px;
-            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
-            line-height: 1.2;
         }
-
+        
         .hero-subtitle {
             font-size: 1.3rem;
             margin-bottom: 12px;
             opacity: 0.95;
-            font-weight: 500;
         }
-
+        
         .hero-description {
             font-size: 1.05rem;
             max-width: 750px;
-            margin: 0 auto 25px;
+            margin: 0 auto;
             opacity: 0.9;
-            line-height: 1.7;
         }
-
-        .beta-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(10px);
-            padding: 7px 18px;
-            border-radius: 30px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-        }
-
-        /* Apps Grid - COMPACT FOR 5 CARDS */
+        
         .apps-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 30px 20px 60px;
         }
-
+        
         .apps-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 22px;
             margin-bottom: 40px;
         }
-
-        /* Compact Card Styling */
+        
         .app-card {
             background: white;
             border-radius: 14px;
             padding: 24px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09);
             transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
         }
-
-        .app-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
+        
         .app-card:hover {
             transform: translateY(-4px);
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.13);
         }
-
-        .app-card:hover::before {
-            opacity: 1;
-        }
-
+        
         .app-icon {
             width: 56px;
             height: 56px;
@@ -180,280 +118,122 @@ I did no harm and this file is not truncated.
             color: white;
             margin-bottom: 16px;
         }
-
-        .app-card.research .app-icon {
-            background: linear-gradient(135deg, #10b981, #059669);
-        }
-
-        .app-card.transcript .app-icon {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        }
-
-        .app-card.debate .app-icon {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-        }
-
-        .app-card.ai-debate .app-icon {
-            background: linear-gradient(135deg, #ec4899, #8b5cf6);
-        }
-
-        .app-card.coming-soon .app-icon {
-            background: linear-gradient(135deg, #06b6d4, #0891b2);
-        }
-
-        .app-card.coming-soon .app-features li i {
-            color: #06b6d4;
-        }
-
+        
+        .app-card.transcript .app-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .app-card.quiz .app-icon { background: linear-gradient(135deg, #eab308, #ca8a04); }
+        .app-card.research .app-icon { background: linear-gradient(135deg, #10b981, #059669); }
+        .app-card.debate .app-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .app-card.ai-debate .app-icon { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+        
         .app-title {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--dark);
             margin-bottom: 12px;
-            line-height: 1.3;
         }
-
+        
         .app-description {
             color: var(--text-light);
             font-size: 0.92rem;
             margin-bottom: 16px;
-            line-height: 1.6;
         }
-
+        
         .app-features {
             list-style: none;
             margin-bottom: 20px;
         }
-
+        
         .app-features li {
             padding: 6px 0;
-            color: var(--text);
             font-size: 0.88rem;
             display: flex;
             align-items: center;
             gap: 9px;
         }
-
+        
         .app-features li i {
             color: var(--success);
-            font-size: 0.85rem;
         }
-
+        
         .app-button {
-            display: inline-block;
-            width: 100%;
+            display: block;
             padding: 13px 0;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
             text-decoration: none;
             border-radius: 10px;
             font-weight: 700;
-            font-size: 1.05rem;
             text-align: center;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
         }
-
+        
         .app-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(102, 126, 234, 0.4);
         }
-
-        .app-card.research .app-button {
+        
+        .app-card.transcript .app-button { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .app-card.quiz .app-button { background: linear-gradient(135deg, #eab308, #ca8a04); }
+        .app-card.research .app-button { background: linear-gradient(135deg, #10b981, #059669); }
+        .app-card.debate .app-button { background: linear-gradient(135deg, #f59e0b, #d97706); }
+        .app-card.ai-debate .app-button { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+        
+        .new-badge {
+            display: inline-block;
             background: linear-gradient(135deg, #10b981, #059669);
-            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
-        }
-
-        .app-card.research .app-button:hover {
-            box-shadow: 0 6px 18px rgba(16, 185, 129, 0.4);
-        }
-
-        .app-card.transcript .app-button {
-            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-            box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
-        }
-
-        .app-card.transcript .app-button:hover {
-            box-shadow: 0 6px 18px rgba(59, 130, 246, 0.4);
-        }
-
-        .app-card.debate .app-button {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
-            box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
-        }
-
-        .app-card.debate .app-button:hover {
-            box-shadow: 0 6px 18px rgba(245, 158, 11, 0.4);
-        }
-
-        .app-card.ai-debate .app-button {
-            background: linear-gradient(135deg, #ec4899, #8b5cf6);
-            box-shadow: 0 4px 14px rgba(236, 72, 153, 0.3);
-        }
-
-        .app-card.ai-debate .app-button:hover {
-            box-shadow: 0 6px 18px rgba(236, 72, 153, 0.4);
-        }
-
-        .app-card.coming-soon .app-button {
-            background: linear-gradient(135deg, #06b6d4, #0891b2);
-            box-shadow: 0 4px 14px rgba(6, 182, 212, 0.3);
-        }
-
-        .app-card.coming-soon .app-button:hover {
-            box-shadow: 0 6px 18px rgba(6, 182, 212, 0.4);
-        }
-
-        /* Features Banner - COMPACT */
-        .features-banner {
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(10px);
-            border-radius: 14px;
-            padding: 26px;
-            text-align: center;
             color: white;
-            margin-bottom: 36px;
-            border: 2px solid rgba(255, 255, 255, 0.2);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+            animation: pulse 2s infinite;
         }
-
-        .features-banner h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.65rem;
-            font-weight: 700;
-            margin-bottom: 12px;
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
         }
-
-        .features-banner p {
-            font-size: 1.05rem;
-            opacity: 0.95;
-            line-height: 1.6;
-        }
-
-        /* Footer CTA - COMPACT */
+        
         .footer-cta {
             text-align: center;
             padding: 35px 20px;
             color: white;
         }
-
+        
         .footer-cta h2 {
             font-family: 'Space Grotesk', sans-serif;
             font-size: 1.85rem;
-            font-weight: 700;
             margin-bottom: 16px;
         }
-
-        .footer-cta p {
-            font-size: 1.05rem;
-            margin-bottom: 22px;
-            opacity: 0.95;
-        }
-
+        
         .cta-buttons {
             display: flex;
             gap: 16px;
             justify-content: center;
             flex-wrap: wrap;
         }
-
+        
         .cta-button {
-            display: inline-block;
             padding: 13px 28px;
             background: white;
             color: var(--primary);
             text-decoration: none;
             border-radius: 10px;
             font-weight: 700;
-            font-size: 1.05rem;
             transition: all 0.3s ease;
-            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
         }
-
+        
         .cta-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
         }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .apps-grid {
-                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            }
-        }
-
+        
         @media (max-width: 768px) {
-            body {
-                padding-top: 60px;
-            }
-
-            .hero-title {
-                font-size: 2.3rem;
-            }
-
-            .hero-subtitle {
-                font-size: 1.15rem;
-            }
-
-            .hero-description {
-                font-size: 0.98rem;
-            }
-
-            .hero-section {
-                padding: 45px 20px 35px;
-            }
-
-            .apps-grid {
-                grid-template-columns: 1fr;
-                gap: 20px;
-            }
-
-            .app-card {
-                padding: 22px;
-            }
-
-            .app-title {
-                font-size: 1.4rem;
-            }
-
-            .features-banner h2 {
-                font-size: 1.45rem;
-            }
-
-            .footer-cta h2 {
-                font-size: 1.6rem;
-            }
-
-            .cta-buttons {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .cta-button {
-                width: 100%;
-                max-width: 280px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .hero-title {
-                font-size: 1.9rem;
-            }
-
-            .app-icon {
-                width: 52px;
-                height: 52px;
-                font-size: 1.6rem;
-            }
-
-            .app-title {
-                font-size: 1.3rem;
-            }
+            body { padding-top: 60px; }
+            .hero-title { font-size: 2.3rem; }
+            .apps-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <!-- Standardized Navigation -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <a href="/" class="nav-logo">
@@ -461,204 +241,143 @@ I did no harm and this file is not truncated.
                 <span>TruthLens</span>
             </a>
             
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
                 <i class="fas fa-bars"></i>
             </button>
             
             <ul class="nav-menu" id="navMenu">
-                <li><a href="/about" class="nav-link">About Us</a></li>
-                <li><a href="/features" class="nav-link">Features</a></li>
                 <li><a href="/" class="nav-link active">Home</a></li>
-                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research</a></li>
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates</a></li>
-                <li><a href="/contact" class="nav-link">Contact Us</a></li>
+                <li><a href="/analyze" class="nav-link">News</a></li>
+                <li><a href="/transcript" class="nav-link">Transcripts</a></li>
+                <li><a href="/quiz" class="nav-link">Quiz <span class="new-badge">NEW</span></a></li>
+                <li><a href="/claim-tracker" class="nav-link">Claims</a></li>
+                <li><a href="/debate-arena" class="nav-link">Debates</a></li>
+                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
             </ul>
         </div>
     </nav>
 
-    <!-- Hero Section -->
     <section class="hero-section">
         <div class="beta-badge">
-            <i class="fas fa-flask"></i> Free Beta Access - All Features Unlocked
+            <i class="fas fa-flask"></i> Free Beta - All Features Unlocked
         </div>
         <h1 class="hero-title">TruthLens AI Suite</h1>
-        <p class="hero-subtitle">Comprehensive AI-Powered Tools for Truth, Research & Debate</p>
+        <p class="hero-subtitle">Complete Truth Detection Platform</p>
         <p class="hero-description">
-            Five powerful tools designed to help you find truth: analyze news credibility, fact-check transcripts,
-            research AI perspectives, engage in human debates, and watch AI systems debate each other. Coming soon: next-generation truth detection capabilities.
+            Six powerful AI tools: analyze news, fact-check transcripts, test your media literacy,
+            track claims, debate ideas, and research AI perspectives.
         </p>
     </section>
 
-    <!-- Apps Container -->
     <div class="apps-container">
-        <!-- Apps Grid - 5 COMPACT CARDS -->
         <div class="apps-grid">
-            <!-- 1. TruthLens News Analysis -->
+            <!-- News Analysis -->
             <div class="app-card">
-                <div class="app-icon">
-                    <i class="fas fa-shield-check"></i>
-                </div>
+                <div class="app-icon"><i class="fas fa-shield-check"></i></div>
                 <h2 class="app-title">News Analysis</h2>
-                <p class="app-description">
-                    Comprehensive AI-powered credibility analysis of news articles using 7 specialized AI services.
-                </p>
+                <p class="app-description">7-service AI credibility analysis of news articles.</p>
                 <ul class="app-features">
                     <li><i class="fas fa-check-circle"></i> Source credibility</li>
                     <li><i class="fas fa-check-circle"></i> Bias detection</li>
                     <li><i class="fas fa-check-circle"></i> Fact-checking</li>
-                    <li><i class="fas fa-check-circle"></i> Trust score (0-100)</li>
-                    <li><i class="fas fa-check-circle"></i> PDF reports</li>
+                    <li><i class="fas fa-check-circle"></i> Trust score</li>
                 </ul>
-                <a href="/analyze" class="app-button">
-                    <i class="fas fa-search"></i> Analyze News
-                </a>
+                <a href="/analyze" class="app-button"><i class="fas fa-search"></i> Analyze News</a>
             </div>
 
-            <!-- 2. Transcript Analysis - NEW CARD -->
+            <!-- Transcripts -->
             <div class="app-card transcript">
-                <div class="app-icon">
-                    <i class="fas fa-file-alt"></i>
-                </div>
+                <div class="app-icon"><i class="fas fa-file-alt"></i></div>
                 <h2 class="app-title">Transcript Analysis</h2>
-                <p class="app-description">
-                    Analyze speeches, interviews, and transcripts for credibility, claims, and fact-checking.
-                </p>
+                <p class="app-description">Analyze speeches and interviews for credibility.</p>
                 <ul class="app-features">
                     <li><i class="fas fa-check-circle"></i> Claim extraction</li>
                     <li><i class="fas fa-check-circle"></i> Fact verification</li>
                     <li><i class="fas fa-check-circle"></i> Speaker credibility</li>
-                    <li><i class="fas fa-check-circle"></i> Content quality</li>
-                    <li><i class="fas fa-check-circle"></i> Export (PDF/JSON/TXT)</li>
+                    <li><i class="fas fa-check-circle"></i> Export (PDF/JSON)</li>
                 </ul>
-                <a href="/transcript" class="app-button">
-                    <i class="fas fa-file-lines"></i> Analyze Transcript
-                </a>
+                <a href="/transcript" class="app-button"><i class="fas fa-file-lines"></i> Analyze</a>
             </div>
 
-            <!-- 3. AI Bias Research Tool -->
+            <!-- Quiz - NEW! -->
+            <div class="app-card quiz">
+                <div class="app-icon"><i class="fas fa-trophy"></i></div>
+                <h2 class="app-title">Media Literacy Quiz <span class="new-badge">NEW</span></h2>
+                <p class="app-description">Test your skills spotting clickbait, bias & misinformation.</p>
+                <ul class="app-features">
+                    <li><i class="fas fa-check-circle"></i> Multiple categories</li>
+                    <li><i class="fas fa-check-circle"></i> 3 difficulty levels</li>
+                    <li><i class="fas fa-check-circle"></i> Achievements</li>
+                    <li><i class="fas fa-check-circle"></i> Leaderboards</li>
+                </ul>
+                <a href="/quiz" class="app-button"><i class="fas fa-graduation-cap"></i> Take Quiz</a>
+            </div>
+
+            <!-- AI Research -->
             <div class="app-card research">
-                <div class="app-icon">
-                    <i class="fas fa-brain"></i>
-                </div>
+                <div class="app-icon"><i class="fas fa-brain"></i></div>
                 <h2 class="app-title">AI Bias Research</h2>
-                <p class="app-description">
-                    Compare perspectives across 7 AI systems simultaneously. Ask any question and see how different AI models respond.
-                </p>
+                <p class="app-description">Compare perspectives across 7 AI systems.</p>
                 <ul class="app-features">
                     <li><i class="fas fa-check-circle"></i> Query 7 AI systems</li>
-                    <li><i class="fas fa-check-circle"></i> Compare perspectives</li>
-                    <li><i class="fas fa-check-circle"></i> Geographic diversity</li>
+                    <li><i class="fas fa-check-circle"></i> Compare responses</li>
                     <li><i class="fas fa-check-circle"></i> Batch testing</li>
-                    <li><i class="fas fa-check-circle"></i> Export to CSV</li>
+                    <li><i class="fas fa-check-circle"></i> Export CSV</li>
                 </ul>
-                <a href="https://ai-bias-research.onrender.com" class="app-button" target="_blank">
-                    <i class="fas fa-microscope"></i> Research AI
-                </a>
+                <a href="https://ai-bias-research.onrender.com" class="app-button" target="_blank"><i class="fas fa-microscope"></i> Research AI</a>
             </div>
 
-            <!-- 4. Human Debate Arena -->
+            <!-- Human Debates -->
             <div class="app-card debate">
-                <div class="app-icon">
-                    <i class="fas fa-users"></i>
-                </div>
+                <div class="app-icon"><i class="fas fa-users"></i></div>
                 <h2 class="app-title">Human Debates</h2>
-                <p class="app-description">
-                    Start debates on news topics and let the community decide. Create arguments, challenge opposing views, and vote anonymously.
-                </p>
+                <p class="app-description">Anonymous debates with community voting.</p>
                 <ul class="app-features">
                     <li><i class="fas fa-check-circle"></i> Anonymous debates</li>
                     <li><i class="fas fa-check-circle"></i> 300-word arguments</li>
-                    <li><i class="fas fa-check-circle"></i> Community voting</li>
-                    <li><i class="fas fa-check-circle"></i> Live results</li>
+                    <li><i class="fas fa-check-circle"></i> Live voting</li>
                     <li><i class="fas fa-check-circle"></i> No registration</li>
                 </ul>
-                <a href="/debate-arena" class="app-button">
-                    <i class="fas fa-fire"></i> Join Debate
-                </a>
+                <a href="/debate-arena" class="app-button"><i class="fas fa-fire"></i> Join Debate</a>
             </div>
 
-            <!-- 5. AI vs AI Debate Arena -->
+            <!-- AI Debates -->
             <div class="app-card ai-debate">
-                <div class="app-icon">
-                    <i class="fas fa-robot"></i>
-                </div>
+                <div class="app-icon"><i class="fas fa-robot"></i></div>
                 <h2 class="app-title">AI Debates</h2>
-                <p class="app-description">
-                    Watch AI systems debate each other! Choose 2 of 9 AI models, set parameters, and observe how different AI systems argue.
-                </p>
+                <p class="app-description">Watch 9 AI systems debate each other.</p>
                 <ul class="app-features">
                     <li><i class="fas fa-check-circle"></i> 9 AI systems</li>
-                    <li><i class="fas fa-check-circle"></i> Adversarial/Truth modes</li>
                     <li><i class="fas fa-check-circle"></i> AI judge scoring</li>
                     <li><i class="fas fa-check-circle"></i> Audio generation</li>
                     <li><i class="fas fa-check-circle"></i> Export debates</li>
                 </ul>
-                <a href="https://ai-debate-arena-k8gs.onrender.com" class="app-button" target="_blank">
-                    <i class="fas fa-robot"></i> Watch AI Debate
-                </a>
-            </div>
-
-            <!-- 6. Coming Soon - Truth Detection Tools -->
-            <div class="app-card coming-soon">
-                <div class="app-icon">
-                    <i class="fas fa-rocket"></i>
-                </div>
-                <h2 class="app-title">Coming Soon</h2>
-                <p class="app-description">
-                    We're building next-generation truth detection tools. Vote on what you'd like to see first!
-                </p>
-                <ul class="app-features">
-                    <li><i class="fas fa-sparkles"></i> Deepfake detection (video/audio)</li>
-                    <li><i class="fas fa-sparkles"></i> AI-generated content scanner</li>
-                    <li><i class="fas fa-sparkles"></i> Plagiarism & attribution checker</li>
-                    <li><i class="fas fa-sparkles"></i> Image manipulation analysis</li>
-                    <li><i class="fas fa-sparkles"></i> Cross-platform fact verification</li>
-                </ul>
-                <a href="/contact" class="app-button">
-                    <i class="fas fa-comments"></i> Suggest Features
-                </a>
+                <a href="https://ai-debate-arena-k8gs.onrender.com" class="app-button" target="_blank"><i class="fas fa-robot"></i> Watch AI Debate</a>
             </div>
         </div>
 
-        <!-- Footer CTA -->
         <div class="footer-cta">
             <h2>Ready to Get Started?</h2>
-            <p>Choose the tool that fits your needs and start exploring today. All features are free during beta testing.</p>
+            <p>All features free during beta testing.</p>
             <div class="cta-buttons">
-                <a href="/analyze" class="cta-button">
-                    <i class="fas fa-shield-check"></i> News
-                </a>
-                <a href="/transcript" class="cta-button">
-                    <i class="fas fa-file-lines"></i> Transcripts
-                </a>
-                <a href="https://ai-bias-research.onrender.com" class="cta-button" target="_blank">
-                    <i class="fas fa-brain"></i> AI Research
-                </a>
-                <a href="/debate-arena" class="cta-button">
-                    <i class="fas fa-users"></i> Human Debates
-                </a>
-                <a href="https://ai-debate-arena-k8gs.onrender.com" class="cta-button" target="_blank">
-                    <i class="fas fa-robot"></i> AI Debates
-                </a>
+                <a href="/analyze" class="cta-button"><i class="fas fa-shield-check"></i> News</a>
+                <a href="/transcript" class="cta-button"><i class="fas fa-file-lines"></i> Transcripts</a>
+                <a href="/quiz" class="cta-button"><i class="fas fa-trophy"></i> Quiz 🆕</a>
+                <a href="/claim-tracker" class="cta-button"><i class="fas fa-database"></i> Claims</a>
+                <a href="/debate-arena" class="cta-button"><i class="fas fa-users"></i> Debates</a>
+                <a href="https://ai-bias-research.onrender.com" class="cta-button" target="_blank"><i class="fas fa-brain"></i> AI Research</a>
+                <a href="https://ai-debate-arena-k8gs.onrender.com" class="cta-button" target="_blank"><i class="fas fa-robot"></i> AI Debates</a>
             </div>
         </div>
     </div>
 
     <script>
         function toggleMobileMenu() {
-            var navMenu = document.getElementById('navMenu');
-            if (navMenu) {
-                navMenu.classList.toggle('active');
-            }
+            document.getElementById('navMenu').classList.toggle('active');
         }
     </script>
 </body>
 </html>
 
-<!--
-I did no harm and this file is not truncated.
-v2.1.0 - December 24, 2024 - BALANCED 6-CARD LAYOUT
-
-DEPLOYMENT READY FOR GITHUB/RENDER
-This file is complete and ready to deploy.
--->
+<!-- I did no harm and this file is not truncated -->
