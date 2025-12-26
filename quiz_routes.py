@@ -2,9 +2,15 @@
 TruthLens Media Literacy Quiz Engine - Flask Routes
 File: quiz_routes.py
 Date: December 26, 2024
-Version: 1.0.0 - INITIAL RELEASE
+Version: 1.1.0 - AI QUIZ AUTO-GENERATOR
 
 CHANGE LOG:
+- December 26, 2024 v1.1.0: AI Quiz Auto-Generator
+  - ADDED: POST /api/quiz/admin/generate-from-url
+  - ADDED: POST /api/quiz/admin/generate-from-text
+  - FEATURES: Auto-generate quizzes from news articles using AI
+  - PRESERVED: All v1.0.0 functionality (DO NO HARM ✓)
+  
 - December 26, 2024 v1.0.0: Initial creation
   - CREATED: Complete quiz API endpoints
   - PATTERN: Follows simple_debate_routes.py pattern exactly
@@ -31,11 +37,11 @@ User Stats:
 - GET  /api/quiz/achievements - Get user achievements
 - GET  /api/quiz/leaderboard/<quiz_id> - Get quiz leaderboard
 
-Admin (Future):
-- POST /api/quiz/admin/create - Create new quiz
-- PUT  /api/quiz/admin/<id>/edit - Edit quiz
+Admin (AI Generation - NEW v1.1.0):
+- POST /api/quiz/admin/generate-from-url - Generate quiz from article URL
+- POST /api/quiz/admin/generate-from-text - Generate quiz from article text
 
-Last modified: December 26, 2024 - v1.0.0 Initial Creation
+Last modified: December 26, 2024 - v1.1.0 AI Quiz Auto-Generator
 """
 
 import os
@@ -58,20 +64,27 @@ quiz_bp = Blueprint('quiz', __name__, url_prefix='/api/quiz')
 # Will be set by init_routes()
 _db = None
 _models = None
+_quiz_generator = None  # NEW v1.1.0 - AI quiz generator service
 
 
-def init_routes(database, models):
+def init_routes(database, models, quiz_generator=None):
     """
-    Initialize routes with database and models
+    Initialize routes with database, models, and quiz generator
     
     Args:
         database: SQLAlchemy database instance
         models: Dictionary of model classes
+        quiz_generator: QuizGenerator service instance (optional)
     """
-    global _db, _models
+    global _db, _models, _quiz_generator
     _db = database
     _models = models
-    logger.info("Quiz routes initialized with database and models")
+    _quiz_generator = quiz_generator
+    
+    if quiz_generator:
+        logger.info("Quiz routes initialized with AI quiz generator")
+    else:
+        logger.info("Quiz routes initialized without AI quiz generator")
 
 
 # ============================================================================
@@ -646,5 +659,280 @@ def get_platform_stats():
         return jsonify({'success': False, 'error': 'Failed to load statistics'}), 500
 
 
+# ============================================================================
+# ADMIN - AI QUIZ AUTO-GENERATOR (NEW v1.1.0)
+# ============================================================================
+
+@quiz_bp.route('/admin/generate-from-url', methods=['POST'])
+def admin_generate_from_url():
+    """
+    ADMIN ENDPOINT: Generate quiz from news article URL using AI
+    
+    NEW v1.1.0 - AI Quiz Auto-Generator
+    
+    Request JSON:
+    {
+        "url": "https://news-article.com/story",
+        "category": "Bias",  // optional, default "Bias"
+        "difficulty": 2      // optional, 1-3, default 2
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "message": "Quiz created successfully!",
+        "quiz_id": 123,
+        "questions_generated": 5
+    }
+    """
+    try:
+        # Check if quiz generator is available
+        if not _quiz_generator:
+            return jsonify({
+                'success': False,
+                'error': 'Quiz generator not initialized'
+            }), 503
+        
+        if not _quiz_generator.is_available():
+            return jsonify({
+                'success': False,
+                'error': 'AI quiz generation not available (check OPENAI_API_KEY)'
+            }), 503
+        
+        # Get request data
+        data = request.get_json()
+        
+        if not data or 'url' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'URL is required'
+            }), 400
+        
+        url = data.get('url')
+        category = data.get('category', 'Bias')
+        difficulty = data.get('difficulty', 2)
+        
+        # Validate difficulty
+        if difficulty not in [1, 2, 3]:
+            return jsonify({
+                'success': False,
+                'error': 'Difficulty must be 1 (Beginner), 2 (Intermediate), or 3 (Expert)'
+            }), 400
+        
+        logger.info(f"[Admin] Generating quiz from URL: {url}")
+        
+        # Generate quiz using AI
+        result = _quiz_generator.generate_quiz_from_url(
+            url=url,
+            category=category,
+            difficulty=difficulty
+        )
+        
+        if not result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Quiz generation failed')
+            }), 500
+        
+        # Save quiz to database
+        quiz_data = result.get('quiz', {})
+        questions_data = result.get('questions', [])
+        
+        # Create quiz
+        quiz = Quiz(
+            title=quiz_data.get('title'),
+            description=quiz_data.get('description'),
+            category=quiz_data.get('category'),
+            difficulty=quiz_data.get('difficulty'),
+            passing_score=quiz_data.get('passing_score', 70),
+            is_active=True
+        )
+        db.session.add(quiz)
+        db.session.flush()  # Get quiz ID
+        
+        # Create questions and options
+        for q_data in questions_data:
+            question = Question(
+                quiz_id=quiz.id,
+                question_text=q_data.get('question_text'),
+                question_type='multiple_choice',
+                explanation=q_data.get('explanation'),
+                order_index=q_data.get('order_index', 0),
+                difficulty_level=q_data.get('difficulty_level', difficulty),
+                points_value=q_data.get('points_value', 10)
+            )
+            db.session.add(question)
+            db.session.flush()  # Get question ID
+            
+            # Create options
+            for opt_idx, opt_data in enumerate(q_data.get('options', [])):
+                option = QuestionOption(
+                    question_id=question.id,
+                    option_text=opt_data.get('text'),
+                    is_correct=opt_data.get('is_correct', False),
+                    order_index=opt_idx
+                )
+                db.session.add(option)
+        
+        db.session.commit()
+        
+        logger.info(f"[Admin] ✓ Quiz created! ID={quiz.id}, Questions={len(questions_data)}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Quiz "{quiz.title}" created successfully!',
+            'quiz_id': quiz.id,
+            'questions_generated': len(questions_data),
+            'category': category,
+            'difficulty': difficulty,
+            'metadata': result.get('metadata', {})
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"[Admin] Error generating quiz from URL: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Quiz generation failed: {str(e)}'
+        }), 500
+
+
+@quiz_bp.route('/admin/generate-from-text', methods=['POST'])
+def admin_generate_from_text():
+    """
+    ADMIN ENDPOINT: Generate quiz from article text using AI
+    
+    NEW v1.1.0 - AI Quiz Auto-Generator
+    
+    Request JSON:
+    {
+        "article_text": "Full article text here...",
+        "title": "Article Title",  // optional
+        "category": "Clickbait",    // optional, default "Bias"
+        "difficulty": 1             // optional, 1-3, default 2
+    }
+    
+    Returns:
+    {
+        "success": true,
+        "message": "Quiz created successfully!",
+        "quiz_id": 123,
+        "questions_generated": 5
+    }
+    """
+    try:
+        # Check if quiz generator is available
+        if not _quiz_generator:
+            return jsonify({
+                'success': False,
+                'error': 'Quiz generator not initialized'
+            }), 503
+        
+        if not _quiz_generator.is_available():
+            return jsonify({
+                'success': False,
+                'error': 'AI quiz generation not available (check OPENAI_API_KEY)'
+            }), 503
+        
+        # Get request data
+        data = request.get_json()
+        
+        if not data or 'article_text' not in data:
+            return jsonify({
+                'success': False,
+                'error': 'article_text is required'
+            }), 400
+        
+        article_text = data.get('article_text')
+        title = data.get('title')
+        category = data.get('category', 'Bias')
+        difficulty = data.get('difficulty', 2)
+        
+        # Validate difficulty
+        if difficulty not in [1, 2, 3]:
+            return jsonify({
+                'success': False,
+                'error': 'Difficulty must be 1 (Beginner), 2 (Intermediate), or 3 (Expert)'
+            }), 400
+        
+        logger.info(f"[Admin] Generating quiz from text (length: {len(article_text)})")
+        
+        # Generate quiz using AI
+        result = _quiz_generator.generate_quiz_from_text(
+            article_text=article_text,
+            title=title,
+            category=category,
+            difficulty=difficulty
+        )
+        
+        if not result.get('success'):
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Quiz generation failed')
+            }), 500
+        
+        # Save quiz to database
+        quiz_data = result.get('quiz', {})
+        questions_data = result.get('questions', [])
+        
+        # Create quiz
+        quiz = Quiz(
+            title=quiz_data.get('title'),
+            description=quiz_data.get('description'),
+            category=quiz_data.get('category'),
+            difficulty=quiz_data.get('difficulty'),
+            passing_score=quiz_data.get('passing_score', 70),
+            is_active=True
+        )
+        db.session.add(quiz)
+        db.session.flush()  # Get quiz ID
+        
+        # Create questions and options
+        for q_data in questions_data:
+            question = Question(
+                quiz_id=quiz.id,
+                question_text=q_data.get('question_text'),
+                question_type='multiple_choice',
+                explanation=q_data.get('explanation'),
+                order_index=q_data.get('order_index', 0),
+                difficulty_level=q_data.get('difficulty_level', difficulty),
+                points_value=q_data.get('points_value', 10)
+            )
+            db.session.add(question)
+            db.session.flush()  # Get question ID
+            
+            # Create options
+            for opt_idx, opt_data in enumerate(q_data.get('options', [])):
+                option = QuestionOption(
+                    question_id=question.id,
+                    option_text=opt_data.get('text'),
+                    is_correct=opt_data.get('is_correct', False),
+                    order_index=opt_idx
+                )
+                db.session.add(option)
+        
+        db.session.commit()
+        
+        logger.info(f"[Admin] ✓ Quiz created! ID={quiz.id}, Questions={len(questions_data)}")
+        
+        return jsonify({
+            'success': True,
+            'message': f'Quiz "{quiz.title}" created successfully!',
+            'quiz_id': quiz.id,
+            'questions_generated': len(questions_data),
+            'category': category,
+            'difficulty': difficulty,
+            'metadata': result.get('metadata', {})
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"[Admin] Error generating quiz from text: {e}", exc_info=True)
+        db.session.rollback()
+        return jsonify({
+            'success': False,
+            'error': f'Quiz generation failed: {str(e)}'
+        }), 500
+
+
 # I did no harm and this file is not truncated
-# v1.0.0 - December 26, 2024 - Initial Media Literacy Quiz Engine Routes
+# v1.1.0 - December 26, 2024 - AI Quiz Auto-Generator Routes
