@@ -2,7 +2,14 @@
 TruthLens Claim Tracker - Flask Routes
 File: claim_tracker_routes.py
 Date: December 26, 2024
-Version: 1.0.0
+Version: 1.1.0 - AUTOMATIC CLAIM EXTRACTION
+
+CHANGES IN v1.1.0:
+- ADDED: auto_save_claims_from_analysis() helper function
+- ADDED: extract_claims_from_text() using Claude AI
+- PURPOSE: Automatically save claims during news/transcript analysis
+- RESULT: No user action needed - claims saved automatically!
+- PRESERVED: All v1.0.0 manual save functionality (DO NO HARM ✓)
 
 PURPOSE:
 API endpoints for claim verification database
@@ -15,12 +22,17 @@ ENDPOINTS:
 - POST /api/claims/<id>/evidence - Add evidence to a claim
 - GET /api/claims/stats - Get database statistics
 
+HELPER FUNCTIONS (for internal use):
+- auto_save_claims_from_analysis() - Called by news/transcript analyzer
+- extract_claims_from_text() - Uses Claude to extract verifiable claims
+
 DO NO HARM: This is a NEW blueprint - doesn't interfere with existing routes.
 
-Last modified: December 26, 2024 - v1.0.0 Initial Release
+Last modified: December 26, 2024 - v1.1.0 Automatic Claim Extraction
 """
 
 import logging
+import os
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify
 from sqlalchemy.exc import IntegrityError
@@ -51,6 +63,222 @@ def init_routes(database, models):
     Claim = models['Claim']
     ClaimSource = models['ClaimSource']
     ClaimEvidence = models['ClaimEvidence']
+
+
+# ============================================================================
+# AUTOMATIC CLAIM EXTRACTION (v1.1.0)
+# ============================================================================
+
+def extract_claims_from_text(text, max_claims=5):
+    """
+    Extract verifiable claims from text using Claude AI
+    
+    Args:
+        text: Article or transcript text
+        max_claims: Maximum number of claims to extract (default 5)
+        
+    Returns:
+        List of claim dictionaries: [{'text': '...', 'category': '...'}]
+    """
+    try:
+        import anthropic
+        
+        api_key = os.getenv('ANTHROPIC_API_KEY')
+        if not api_key:
+            logger.warning("ANTHROPIC_API_KEY not set - cannot extract claims automatically")
+            return []
+        
+        client = anthropic.Anthropic(api_key=api_key)
+        
+        # Truncate text if too long (Claude has token limits)
+        max_text_length = 10000
+        if len(text) > max_text_length:
+            text = text[:max_text_length] + "..."
+        
+        prompt = f"""Extract the {max_claims} most important verifiable factual claims from this text.
+
+Focus on:
+- Specific factual statements that can be verified
+- Statistical claims with numbers
+- Claims about events, policies, or actions
+- Scientific or medical claims
+
+Do NOT include:
+- Opinions or subjective statements
+- Questions
+- Vague statements without specifics
+- Predictions about the future
+
+For each claim, categorize it as: Political, Health, Science, Economics, Environment, Technology, or Social.
+
+Text to analyze:
+{text}
+
+Return ONLY a JSON array of claims in this exact format:
+[
+  {{"text": "Arctic ice decreased by 13% per decade since 1979", "category": "Environment"}},
+  {{"text": "Unemployment rate fell to 3.5% in December", "category": "Economics"}}
+]
+
+Return ONLY the JSON array, no other text."""
+
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            messages=[{
+                "role": "user",
+                "content": prompt
+            }]
+        )
+        
+        # Extract JSON from response
+        response_text = message.content[0].text.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith('```'):
+            lines = response_text.split('\n')
+            response_text = '\n'.join(lines[1:-1])  # Remove first and last lines
+        
+        # Parse JSON
+        import json
+        claims = json.loads(response_text)
+        
+        logger.info(f"✓ Extracted {len(claims)} claims from text")
+        return claims
+        
+    except Exception as e:
+        logger.error(f"Error extracting claims: {e}", exc_info=True)
+        return []
+
+
+def auto_save_claims_from_analysis(analysis_result):
+    """
+    Automatically extract and save claims from news/transcript analysis
+    
+    This function is called by your news_analyzer and transcript_analyzer
+    after analysis is complete. It extracts claims using Claude AI and
+    saves them to the database.
+    
+    Args:
+        analysis_result: Dictionary containing analysis data with keys:
+            - 'content' or 'text': The analyzed text
+            - 'url': Source URL (optional)
+            - 'title': Article/video title (optional)
+            - 'outlet' or 'source': Source outlet (optional)
+            - 'type': 'news_article' or 'youtube_video' or 'transcript'
+            
+    Returns:
+        Dictionary with:
+            - 'success': Boolean
+            - 'claims_saved': Number of claims saved
+            - 'claims': List of saved claim objects
+    """
+    try:
+        if not db or not Claim:
+            logger.warning("Claim tracker not initialized - skipping auto-save")
+            return {'success': False, 'error': 'Claim tracker not available'}
+        
+        # Extract text from analysis result
+        text = (analysis_result.get('content') or 
+                analysis_result.get('text') or 
+                analysis_result.get('article_text') or
+                analysis_result.get('transcript'))
+        
+        if not text:
+            logger.warning("No text found in analysis result - skipping claim extraction")
+            return {'success': False, 'error': 'No text to analyze'}
+        
+        # Extract claims using Claude
+        extracted_claims = extract_claims_from_text(text, max_claims=5)
+        
+        if not extracted_claims:
+            logger.info("No claims extracted from text")
+            return {'success': True, 'claims_saved': 0, 'claims': []}
+        
+        # Prepare source information
+        source_type = analysis_result.get('type', 'unknown')
+        source_url = analysis_result.get('url', '')
+        source_title = analysis_result.get('title', 'Unknown')
+        source_outlet = (analysis_result.get('outlet') or 
+                        analysis_result.get('source') or 
+                        analysis_result.get('channel') or
+                        'Unknown')
+        
+        # Save each claim
+        saved_claims = []
+        from claim_tracker_models import normalize_claim_text
+        
+        for claim_data in extracted_claims:
+            try:
+                claim_text = claim_data.get('text', '').strip()
+                if not claim_text:
+                    continue
+                
+                category = claim_data.get('category', 'Uncategorized')
+                text_normalized = normalize_claim_text(claim_text)
+                
+                # Check if claim already exists
+                existing_claim = Claim.query.filter_by(
+                    text_normalized=text_normalized
+                ).first()
+                
+                if existing_claim:
+                    # Update appearance count
+                    existing_claim.last_seen = datetime.utcnow()
+                    existing_claim.appearance_count += 1
+                    
+                    # Add new source
+                    new_source = ClaimSource(
+                        claim_id=existing_claim.id,
+                        source_type=source_type,
+                        source_url=source_url,
+                        source_title=source_title,
+                        source_outlet=source_outlet
+                    )
+                    db.session.add(new_source)
+                    saved_claims.append(existing_claim)
+                    
+                else:
+                    # Create new claim
+                    new_claim = Claim(
+                        text=claim_text,
+                        text_normalized=text_normalized,
+                        category=category,
+                        status='pending'
+                    )
+                    db.session.add(new_claim)
+                    db.session.flush()  # Get the ID
+                    
+                    # Add source
+                    new_source = ClaimSource(
+                        claim_id=new_claim.id,
+                        source_type=source_type,
+                        source_url=source_url,
+                        source_title=source_title,
+                        source_outlet=source_outlet
+                    )
+                    db.session.add(new_source)
+                    saved_claims.append(new_claim)
+                
+            except Exception as e:
+                logger.error(f"Error saving individual claim: {e}")
+                continue
+        
+        # Commit all changes
+        db.session.commit()
+        
+        logger.info(f"✓ Auto-saved {len(saved_claims)} claims from analysis")
+        
+        return {
+            'success': True,
+            'claims_saved': len(saved_claims),
+            'claims': [claim.to_dict() for claim in saved_claims]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error in auto_save_claims_from_analysis: {e}", exc_info=True)
+        db.session.rollback()
+        return {'success': False, 'error': str(e)}
 
 
 # ============================================================================
