@@ -1,21 +1,26 @@
 """
 File: app.py
-Last Updated: December 26, 2024 - v10.2.25
+Last Updated: December 26, 2024 - v10.2.26
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
 
-CHANGES IN v10.2.25 (December 26, 2024):
+CHANGES IN v10.2.26 (December 26, 2024):
 ========================
-CLAIM TRACKER INTEGRATION: New truth-seeking database for verified claims
-- ADDED: Claim Tracker initialization (follows simple_debate pattern)
-- ADDED: Claim tracker models (claims, claim_sources, claim_evidence tables)
-- ADDED: Claim tracker routes at /api/claims/*
-- ADDED: /claim-tracker page route
-- ADDED: claim_tracker_available flag in health check
-- PURPOSE: Permanent database of verified claims from analyses
-- RESULT: Users can search, track, and verify claims across sources
-- PRESERVED: All v10.2.24 functionality (DO NO HARM ✓)
+AUTOMATIC CLAIM EXTRACTION: Claims now saved automatically from every analysis!
+- ADDED: Automatic claim extraction after news analysis
+- ADDED: Claude AI extracts 5 verifiable claims per article
+- ADDED: Claims auto-saved to database with source tracking
+- PURPOSE: Build claim database automatically - no user action needed
+- RESULT: Every analyzed article contributes to truth-seeking database
+- PRESERVED: All v10.2.25 functionality (DO NO HARM ✓)
 
-CLAIM TRACKER FEATURES:
+AUTOMATIC CLAIM FEATURES:
+- Extracts statistical claims, events, policies, scientific facts
+- Skips opinions, questions, vague statements
+- Auto-categorizes (Political, Health, Science, Economics, etc.)
+- Tracks claim appearances across multiple sources
+- Fail-safe: Analysis never fails if claim extraction fails
+
+CLAIM TRACKER FEATURES (v10.2.25):
 - Search claims by text, category, status
 - Track claim appearances across multiple sources
 - Link to fact-check evidence (Snopes, PolitiFact, etc.)
@@ -23,7 +28,7 @@ CLAIM TRACKER FEATURES:
 - Database statistics and recent claims feed
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: December 26, 2024 - v10.2.25 CLAIM TRACKER INTEGRATION
+Last modified: December 26, 2024 - v10.2.26 AUTOMATIC CLAIM EXTRACTION
 """
 
 import os
@@ -732,6 +737,40 @@ def analyze_news():
         )
         
         logger.info("Data transformation complete")
+        
+        # ========================================================================
+        # AUTOMATIC CLAIM EXTRACTION & SAVING (v10.2.25)
+        # ========================================================================
+        # Extract verifiable claims from analysis and save to database
+        # This happens automatically - no user action required!
+        # ========================================================================
+        
+        if claim_tracker_available:
+            try:
+                from claim_tracker_routes import auto_save_claims_from_analysis
+                
+                # Extract article text for claim extraction
+                content_for_claims = article_text or raw_results.get('article_text', '')
+                
+                # Get metadata for source tracking
+                metadata = final_results.get('metadata', {})
+                source_info = final_results.get('source', {})
+                
+                auto_save_result = auto_save_claims_from_analysis({
+                    'content': content_for_claims,
+                    'url': url,
+                    'title': metadata.get('title', 'Unknown'),
+                    'outlet': source_info.get('name', 'Unknown'),
+                    'type': 'news_article'
+                })
+                
+                if auto_save_result.get('success'):
+                    logger.info(f"  ✓ Auto-saved {auto_save_result.get('claims_saved', 0)} claims to tracker")
+                
+            except Exception as e:
+                # Don't fail the entire request if claim saving fails
+                logger.warning(f"  ⚠ Failed to auto-save claims: {e}")
+        
         logger.info("=" * 80)
         
         # CRITICAL FIX v10.2.16: Changed 'data' to 'analysis'
@@ -1195,7 +1234,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.25")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.26")
     logger.info("=" * 80)
     logger.info("")
     logger.info("DEPLOYMENT ARCHITECTURE:")
@@ -1230,6 +1269,8 @@ if __name__ == '__main__':
     if claim_tracker_available:
         logger.info("  ✓ Claim Tracker - FULLY OPERATIONAL ⭐ NEW!")
         logger.info("    - Searchable claim verification database")
+        logger.info("    - AUTOMATIC: Claims extracted from every analysis")
+        logger.info("    - Claude AI identifies 5 verifiable claims per article")
         logger.info("    - Track claims across multiple sources")
         logger.info("    - Link to fact-check evidence")
         logger.info("    - Verification status tracking")
@@ -1266,12 +1307,12 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
-    logger.info("VERSION v10.2.25 (CLAIM TRACKER INTEGRATION) 🎯:")
-    logger.info("  ✅ NEW: Claim Tracker - Searchable verification database")
-    logger.info("  ✅ ADDED: 3 new database tables (claims, claim_sources, claim_evidence)")
-    logger.info("  ✅ ADDED: 6 new API endpoints at /api/claims/*")
-    logger.info("  ✅ RESULT: Permanent claim tracking across all analyses!")
-    logger.info("  ✅ PRESERVED: All v10.2.24 functionality (DO NO HARM)")
+    logger.info("VERSION v10.2.26 (AUTOMATIC CLAIM EXTRACTION) 🎯:")
+    logger.info("  ✅ NEW: Automatic claim extraction from every analysis")
+    logger.info("  ✅ ADDED: Claude AI identifies 5 verifiable claims per article")
+    logger.info("  ✅ ADDED: Claims auto-saved with source tracking")
+    logger.info("  ✅ RESULT: Database grows automatically with every analysis!")
+    logger.info("  ✅ PRESERVED: All v10.2.25 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -1279,4 +1320,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.25 - December 26, 2024 - CLAIM TRACKER INTEGRATION
+# v10.2.26 - December 26, 2024 - AUTOMATIC CLAIM EXTRACTION
