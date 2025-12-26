@@ -1,30 +1,32 @@
 """
 File: app.py
-Last Updated: December 26, 2024 - v10.2.27
-Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
+Last Updated: December 26, 2024 - v10.2.28
+Description: Main Flask application with AI Quiz Auto-Generator
 
-CHANGES IN v10.2.27 (December 26, 2024):
+CHANGES IN v10.2.28 (December 26, 2024):
 ========================
-MEDIA LITERACY QUIZ ENGINE: New educational quiz system!
-- ADDED: Complete quiz system with database models and routes
-- ADDED: Anonymous quiz taking with browser fingerprint tracking
-- ADDED: Gamification: points, badges, achievements, leaderboards
-- ADDED: Multiple quiz categories (Clickbait, Bias, Fact vs Opinion, etc.)
-- ADDED: Three difficulty levels with score multipliers
-- PURPOSE: Teach users media literacy through interactive quizzes
-- RESULT: Users learn to spot misinformation while having fun!
-- PRESERVED: All v10.2.26 functionality (DO NO HARM ✓)
+AI QUIZ AUTO-GENERATOR: Automatically create quizzes from news articles!
+- ADDED: QuizGenerator service (OpenAI + Claude)
+- ADDED: Admin endpoints for quiz generation
+- FEATURES: Generate quizzes from URLs or text
+- COST: ~$0.005 per quiz (very cheap!)
+- PATTERN: Follows existing AI enhancement patterns
+- PRESERVED: All v10.2.27 functionality (DO NO HARM ✓)
 
-QUIZ ENGINE FEATURES:
-- Take quizzes on media literacy topics
-- Earn points and unlock achievements
-- Compete on leaderboards (anonymous)
-- Track personal statistics and progress
-- Multiple question types and difficulties
-- Instant feedback with explanations
+QUIZ GENERATOR FEATURES:
+- Generate 5 quiz questions from any news article
+- Uses OpenAI GPT-3.5-turbo for generation
+- Uses Claude for quality verification (optional)
+- Auto-saves to database
+- Categories: Clickbait, Bias, Fact vs Opinion, etc.
+- Difficulty levels: Beginner, Intermediate, Expert
+
+PREVIOUS VERSION (v10.2.27):
+- Media Literacy Quiz Engine with manual quiz creation
+- All features preserved and enhanced!
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: December 26, 2024 - v10.2.27 MEDIA LITERACY QUIZ ENGINE
+Last modified: December 26, 2024 - v10.2.28 AI QUIZ AUTO-GENERATOR
 """
 
 import os
@@ -241,13 +243,14 @@ if database_url:
     logger.info("=" * 80)
     
     # ========================================================================
-    # MEDIA LITERACY QUIZ ENGINE (v1.0.0 - December 26, 2024)
+    # MEDIA LITERACY QUIZ ENGINE (v1.1.0 - December 26, 2024)
     # ========================================================================
-    # Educational quiz system to teach media literacy skills
-    # Features: Quizzes, scoring, achievements, leaderboards (all anonymous)
+    # Educational quiz system with AI AUTO-GENERATION
+    # Features: Manual + AI quiz creation, scoring, achievements, leaderboards
     # ========================================================================
     
     quiz_available = False
+    quiz_generator = None  # NEW v10.2.28 - AI quiz generator service
     
     logger.info("=" * 80)
     logger.info("MEDIA LITERACY QUIZ ENGINE INITIALIZATION:")
@@ -260,11 +263,35 @@ if database_url:
         init_quiz_db(db)
         logger.info("  ✓ Quiz models initialized with shared db")
         
-        # Step 3: NOW import routes (after models are properly initialized)
+        # Step 3: Import routes and models
         from quiz_routes import quiz_bp, init_routes
         from quiz_models import Quiz, Question, QuestionOption, QuizAttempt, Achievement, UserAchievement, LeaderboardEntry
         
-        # Step 4: Initialize routes with database and models
+        # ====================================================================
+        # NEW v10.2.28: Initialize AI Quiz Generator
+        # ====================================================================
+        try:
+            from services.quiz_generator import QuizGenerator
+            quiz_generator = QuizGenerator()
+            
+            if quiz_generator.is_available():
+                logger.info("  ✓ AI Quiz Generator initialized (OpenAI available)")
+                if quiz_generator._anthropic_available:
+                    logger.info("  ✓ Claude verification enabled")
+                else:
+                    logger.info("  ℹ Claude verification disabled (optional)")
+            else:
+                logger.warning("  ⚠ AI Quiz Generator unavailable (check OPENAI_API_KEY)")
+                quiz_generator = None
+                
+        except ImportError as e:
+            logger.warning(f"  ⚠ Quiz generator not found: {e}")
+            quiz_generator = None
+        except Exception as e:
+            logger.error(f"  ✗ Quiz generator init failed: {e}")
+            quiz_generator = None
+        
+        # Step 4: Initialize routes with database, models, AND quiz generator
         init_routes(db, {
             'Quiz': Quiz,
             'Question': Question,
@@ -273,7 +300,8 @@ if database_url:
             'Achievement': Achievement,
             'UserAchievement': UserAchievement,
             'LeaderboardEntry': LeaderboardEntry
-        })
+        }, quiz_generator=quiz_generator)  # Pass quiz generator to routes!
+        
         logger.info("  ✓ Quiz routes initialized")
         
         # Step 5: Register the blueprint
@@ -290,6 +318,13 @@ if database_url:
         logger.info("    - GET    /api/quiz/achievements")
         logger.info("    - GET    /api/quiz/leaderboard/<quiz_id>")
         logger.info("    - GET    /api/quiz/platform-stats")
+        
+        # NEW v10.2.28: AI Generation endpoints
+        if quiz_generator:
+            logger.info("  ✓ AI QUIZ GENERATION ENDPOINTS (NEW v10.2.28):")
+            logger.info("    - POST   /api/quiz/admin/generate-from-url")
+            logger.info("    - POST   /api/quiz/admin/generate-from-text")
+        
         logger.info("  ✓ Media Literacy Quiz Engine: FULLY OPERATIONAL")
         
         quiz_available = True
@@ -569,10 +604,11 @@ def claim_tracker_page():
 @app.route('/quiz')
 def quiz_page():
     """
-    Media Literacy Quiz Engine - NEW v10.2.27
+    Media Literacy Quiz Engine - v10.2.28 WITH AI AUTO-GENERATOR
     
-    Educational quiz system to teach media literacy skills through interactive quizzes.
+    Educational quiz system with AI-powered quiz generation.
     Features: Multiple categories, difficulty levels, achievements, leaderboards.
+    NEW: Generate quizzes from news articles automatically!
     """
     if not quiz_available:
         return '''
@@ -1282,7 +1318,8 @@ def seed_quizzes():
     Visit this URL once to populate the quiz database with sample quizzes.
     This adds 2 quizzes, 5 questions, and 4 achievements.
     
-    NEW v10.2.27: One-click quiz seeding for easy setup
+    v10.2.27: One-click quiz seeding for easy setup
+    v10.2.28: Works with AI-generated quizzes too!
     """
     try:
         if not db or not quiz_available:
@@ -1334,7 +1371,8 @@ def health():
             'old_debate_arena': 'active' if old_debate_available else 'disabled',
             'simple_debate_arena': 'active' if simple_debate_available else 'disabled',
             'claim_tracker': 'active' if claim_tracker_available else 'disabled',
-            'quiz_engine': 'active' if quiz_available else 'disabled'
+            'quiz_engine': 'active' if quiz_available else 'disabled',
+            'quiz_ai_generator': 'active' if quiz_generator and quiz_generator.is_available() else 'disabled'
         }
     })
 
@@ -1382,7 +1420,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.27")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.28")
     logger.info("=" * 80)
     logger.info("")
     logger.info("DEPLOYMENT ARCHITECTURE:")
@@ -1428,7 +1466,7 @@ if __name__ == '__main__':
         logger.info("  ✗ Claim Tracker - Disabled (DATABASE_URL not set or models missing)")
     
     if quiz_available:
-        logger.info("  ✓ Media Literacy Quiz Engine - FULLY OPERATIONAL ⭐ NEW!")
+        logger.info("  ✓ Media Literacy Quiz Engine - FULLY OPERATIONAL ⭐")
         logger.info("    - Educational quizzes on media literacy topics")
         logger.info("    - Categories: Clickbait, Bias, Fact vs Opinion, Source Credibility")
         logger.info("    - Three difficulty levels (Beginner, Intermediate, Expert)")
@@ -1437,6 +1475,19 @@ if __name__ == '__main__':
         logger.info("    - Personal statistics tracking")
         logger.info("    - Instant feedback with explanations")
         logger.info("    - Available at /quiz")
+        
+        if quiz_generator and quiz_generator.is_available():
+            logger.info("    ⭐ AI QUIZ AUTO-GENERATOR - NEW v10.2.28! ⭐")
+            logger.info("    - Generate quizzes from any news article URL")
+            logger.info("    - Generate quizzes from article text")
+            logger.info("    - OpenAI GPT-3.5-turbo for generation")
+            if quiz_generator._anthropic_available:
+                logger.info("    - Claude verification for quality assurance")
+            logger.info("    - Cost: ~$0.005 per quiz (very cheap!)")
+            logger.info("    - Auto-saves to database")
+            logger.info("    - Admin endpoints at /api/quiz/admin/generate-*")
+        else:
+            logger.info("    ⚠ AI Quiz Generator - Disabled (check OPENAI_API_KEY)")
     else:
         logger.info("  ✗ Quiz Engine - Disabled (DATABASE_URL not set or models missing)")
     
@@ -1468,12 +1519,14 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
-    logger.info("VERSION v10.2.27 (MEDIA LITERACY QUIZ ENGINE) 🎓:")
-    logger.info("  ✅ NEW: Complete quiz system with gamification")
-    logger.info("  ✅ ADDED: Multiple categories and difficulty levels")
-    logger.info("  ✅ ADDED: Points, badges, achievements, leaderboards")
-    logger.info("  ✅ RESULT: Users learn media literacy through fun quizzes!")
-    logger.info("  ✅ PRESERVED: All v10.2.26 functionality (DO NO HARM)")
+    logger.info("VERSION v10.2.28 (AI QUIZ AUTO-GENERATOR) 🤖:")
+    logger.info("  ✅ NEW: AI-powered quiz generation service")
+    logger.info("  ✅ ADDED: OpenAI GPT-3.5-turbo integration")
+    logger.info("  ✅ ADDED: Claude quality verification (optional)")
+    logger.info("  ✅ FEATURES: Generate quizzes from URLs or text")
+    logger.info("  ✅ COST: ~$0.005 per quiz (very cheap!)")
+    logger.info("  ✅ RESULT: Unlimited fresh quiz content automatically!")
+    logger.info("  ✅ PRESERVED: All v10.2.27 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -1481,4 +1534,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.27 - December 26, 2024 - MEDIA LITERACY QUIZ ENGINE
+# v10.2.28 - December 26, 2024 - AI QUIZ AUTO-GENERATOR
