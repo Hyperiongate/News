@@ -1274,6 +1274,54 @@ def init_database():
             'traceback': traceback.format_exc()
         }), 500
 
+@app.route('/admin/seed-quizzes', methods=['GET', 'POST'])
+def seed_quizzes():
+    """
+    ADMIN ENDPOINT: Seed quiz database with sample content
+    
+    Visit this URL once to populate the quiz database with sample quizzes.
+    This adds 2 quizzes, 5 questions, and 4 achievements.
+    
+    NEW v10.2.27: One-click quiz seeding for easy setup
+    """
+    try:
+        if not db or not quiz_available:
+            return jsonify({
+                'success': False,
+                'error': 'Quiz system not available. Make sure DATABASE_URL is set and quiz models are loaded.'
+            }), 500
+        
+        # Import seeder and models
+        from seed_quizzes import seed_quiz_data
+        from quiz_models import Quiz, Question, QuestionOption, Achievement
+        
+        # Run seeder
+        result = seed_quiz_data(db, Quiz, Question, QuestionOption, Achievement)
+        
+        if result['success']:
+            logger.info("✅ Quiz database seeded successfully!")
+            logger.info(f"   Added: {result['results']['quizzes_added']} quizzes")
+            logger.info(f"   Added: {result['results']['questions_added']} questions")
+            logger.info(f"   Added: {result['results']['options_added']} options")
+            logger.info(f"   Added: {result['results']['achievements_added']} achievements")
+            return jsonify(result), 200
+        else:
+            return jsonify(result), 400
+        
+    except ImportError as e:
+        logger.error(f"Error importing seeder: {e}")
+        return jsonify({
+            'success': False,
+            'error': 'Seeder file not found. Make sure seed_quizzes.py is in the project root.'
+        }), 500
+    except Exception as e:
+        logger.error(f"Error seeding quizzes: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
 @app.route('/health')
 def health():
     """Health check endpoint"""
