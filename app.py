@@ -1,34 +1,30 @@
 """
 File: app.py
-Last Updated: December 26, 2024 - v10.2.26
+Last Updated: December 26, 2024 - v10.2.27
 Description: Main Flask application with complete news analysis, transcript checking, and YouTube features
 
-CHANGES IN v10.2.26 (December 26, 2024):
+CHANGES IN v10.2.27 (December 26, 2024):
 ========================
-AUTOMATIC CLAIM EXTRACTION: Claims now saved automatically from every analysis!
-- ADDED: Automatic claim extraction after news analysis
-- ADDED: Claude AI extracts 5 verifiable claims per article
-- ADDED: Claims auto-saved to database with source tracking
-- PURPOSE: Build claim database automatically - no user action needed
-- RESULT: Every analyzed article contributes to truth-seeking database
-- PRESERVED: All v10.2.25 functionality (DO NO HARM ✓)
+MEDIA LITERACY QUIZ ENGINE: New educational quiz system!
+- ADDED: Complete quiz system with database models and routes
+- ADDED: Anonymous quiz taking with browser fingerprint tracking
+- ADDED: Gamification: points, badges, achievements, leaderboards
+- ADDED: Multiple quiz categories (Clickbait, Bias, Fact vs Opinion, etc.)
+- ADDED: Three difficulty levels with score multipliers
+- PURPOSE: Teach users media literacy through interactive quizzes
+- RESULT: Users learn to spot misinformation while having fun!
+- PRESERVED: All v10.2.26 functionality (DO NO HARM ✓)
 
-AUTOMATIC CLAIM FEATURES:
-- Extracts statistical claims, events, policies, scientific facts
-- Skips opinions, questions, vague statements
-- Auto-categorizes (Political, Health, Science, Economics, etc.)
-- Tracks claim appearances across multiple sources
-- Fail-safe: Analysis never fails if claim extraction fails
-
-CLAIM TRACKER FEATURES (v10.2.25):
-- Search claims by text, category, status
-- Track claim appearances across multiple sources
-- Link to fact-check evidence (Snopes, PolitiFact, etc.)
-- Verification status: True, False, Mixed, Pending, Unverifiable
-- Database statistics and recent claims feed
+QUIZ ENGINE FEATURES:
+- Take quizzes on media literacy topics
+- Earn points and unlock achievements
+- Compete on leaderboards (anonymous)
+- Track personal statistics and progress
+- Multiple question types and difficulties
+- Instant feedback with explanations
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: December 26, 2024 - v10.2.26 AUTOMATIC CLAIM EXTRACTION
+Last modified: December 26, 2024 - v10.2.27 MEDIA LITERACY QUIZ ENGINE
 """
 
 import os
@@ -142,7 +138,7 @@ if database_url:
     
     logger.info("=" * 80)
     logger.info("DATABASE CONFIGURATION:")
-    logger.info("  ✓ PostgreSQL configured for Debate Arenas & Claim Tracker")
+    logger.info("  ✓ PostgreSQL configured for Debate Arenas, Claim Tracker & Quiz Engine")
     logger.info("  ✓ Connection pooling enabled")
     logger.info("  ✓ Auto-reconnect on failure")
     logger.info("=" * 80)
@@ -245,13 +241,77 @@ if database_url:
     logger.info("=" * 80)
     
     # ========================================================================
+    # MEDIA LITERACY QUIZ ENGINE (v1.0.0 - December 26, 2024)
+    # ========================================================================
+    # Educational quiz system to teach media literacy skills
+    # Features: Quizzes, scoring, achievements, leaderboards (all anonymous)
+    # ========================================================================
+    
+    quiz_available = False
+    
+    logger.info("=" * 80)
+    logger.info("MEDIA LITERACY QUIZ ENGINE INITIALIZATION:")
+    
+    try:
+        # Step 1: Import the init function
+        from quiz_models import init_quiz_db
+        
+        # Step 2: Initialize models with shared db (THIS MUST HAPPEN FIRST!)
+        init_quiz_db(db)
+        logger.info("  ✓ Quiz models initialized with shared db")
+        
+        # Step 3: NOW import routes (after models are properly initialized)
+        from quiz_routes import quiz_bp, init_routes
+        from quiz_models import Quiz, Question, QuestionOption, QuizAttempt, Achievement, UserAchievement, LeaderboardEntry
+        
+        # Step 4: Initialize routes with database and models
+        init_routes(db, {
+            'Quiz': Quiz,
+            'Question': Question,
+            'QuestionOption': QuestionOption,
+            'QuizAttempt': QuizAttempt,
+            'Achievement': Achievement,
+            'UserAchievement': UserAchievement,
+            'LeaderboardEntry': LeaderboardEntry
+        })
+        logger.info("  ✓ Quiz routes initialized")
+        
+        # Step 5: Register the blueprint
+        app.register_blueprint(quiz_bp)
+        logger.info("  ✓ Quiz routes registered at /api/quiz/*")
+        logger.info("  ✓ Available endpoints:")
+        logger.info("    - GET    /api/quiz/list")
+        logger.info("    - GET    /api/quiz/categories")
+        logger.info("    - GET    /api/quiz/<id>")
+        logger.info("    - POST   /api/quiz/<id>/start")
+        logger.info("    - POST   /api/quiz/<id>/submit")
+        logger.info("    - GET    /api/quiz/attempt/<id>")
+        logger.info("    - GET    /api/quiz/stats")
+        logger.info("    - GET    /api/quiz/achievements")
+        logger.info("    - GET    /api/quiz/leaderboard/<quiz_id>")
+        logger.info("    - GET    /api/quiz/platform-stats")
+        logger.info("  ✓ Media Literacy Quiz Engine: FULLY OPERATIONAL")
+        
+        quiz_available = True
+        
+    except ImportError as e:
+        logger.warning(f"  ⚠ Quiz system not available: {e}")
+        quiz_available = False
+    except Exception as e:
+        logger.error(f"  ✗ Quiz initialization error: {e}")
+        logger.error(f"  ✗ Traceback: {traceback.format_exc()}")
+        quiz_available = False
+    
+    logger.info("=" * 80)
+    
+    # ========================================================================
     # CRITICAL v10.2.22 FIX: Create Tables AFTER Models Are Initialized
     # ========================================================================
     # PROBLEM: db.create_all() was called before models were registered
     # SOLUTION: Call it again AFTER all models are initialized
     # ========================================================================
     
-    if old_debate_available or simple_debate_available or claim_tracker_available:
+    if old_debate_available or simple_debate_available or claim_tracker_available or quiz_available:
         with app.app_context():
             try:
                 # NOW create the tables - models are properly registered!
@@ -263,6 +323,8 @@ if database_url:
                     logger.info("    - Simple debate tables: simple_debates, simple_arguments, simple_votes")
                 if claim_tracker_available:
                     logger.info("    - Claim tracker tables: claims, claim_sources, claim_evidence")
+                if quiz_available:
+                    logger.info("    - Quiz tables: quizzes, questions, question_options, quiz_attempts, achievements, user_achievements, leaderboard_entries")
                     
             except Exception as e:
                 error_msg = str(e).lower()
@@ -281,6 +343,7 @@ if database_url:
                     old_debate_available = False
                     simple_debate_available = False
                     claim_tracker_available = False
+                    quiz_available = False
     else:
         logger.warning("  ⚠ No database features available - all disabled")
         db = None
@@ -289,6 +352,7 @@ else:
     old_debate_available = False
     simple_debate_available = False
     claim_tracker_available = False
+    quiz_available = False
     logger.info("=" * 80)
     logger.info("DATABASE: Not configured (All database features disabled)")
     logger.info("=" * 80)
@@ -501,6 +565,39 @@ def claim_tracker_page():
         </html>
         ''', 503
     return render_template('claim-tracker.html')
+
+@app.route('/quiz')
+def quiz_page():
+    """
+    Media Literacy Quiz Engine - NEW v10.2.27
+    
+    Educational quiz system to teach media literacy skills through interactive quizzes.
+    Features: Multiple categories, difficulty levels, achievements, leaderboards.
+    """
+    if not quiz_available:
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Quiz Engine - Not Available</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+                .error-box { background: white; padding: 40px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                h1 { color: #dc2626; margin-bottom: 20px; }
+                p { color: #666; line-height: 1.6; }
+                a { color: #2563eb; text-decoration: none; font-weight: 600; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <h1>⚠️ Quiz Engine Not Available</h1>
+                <p>Database not configured. Set DATABASE_URL in Render.</p>
+                <p style="margin-top: 30px;"><a href="/">← Back to Home</a></p>
+            </div>
+        </body>
+        </html>
+        ''', 503
+    return render_template('quiz.html')
 
 @app.route('/features')
 def features():
@@ -1156,13 +1253,15 @@ def init_database():
         
         simple_tables = [t for t in tables if 'simple_' in t]
         claim_tables = [t for t in tables if 'claim' in t]
+        quiz_tables = [t for t in tables if 'quiz' in t or 'question' in t or 'achievement' in t or 'leaderboard' in t]
         
         return jsonify({
             'success': True,
             'message': 'Database tables created!',
             'tables_created': {
                 'simple_debate': simple_tables,
-                'claim_tracker': claim_tables
+                'claim_tracker': claim_tables,
+                'quiz_engine': quiz_tables
             },
             'all_tables': tables
         })
@@ -1186,7 +1285,8 @@ def health():
             'transcript_analyzer': 'active' if transcript_available else 'disabled',
             'old_debate_arena': 'active' if old_debate_available else 'disabled',
             'simple_debate_arena': 'active' if simple_debate_available else 'disabled',
-            'claim_tracker': 'active' if claim_tracker_available else 'disabled'
+            'claim_tracker': 'active' if claim_tracker_available else 'disabled',
+            'quiz_engine': 'active' if quiz_available else 'disabled'
         }
     })
 
@@ -1234,7 +1334,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.26")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.27")
     logger.info("=" * 80)
     logger.info("")
     logger.info("DEPLOYMENT ARCHITECTURE:")
@@ -1267,7 +1367,7 @@ if __name__ == '__main__':
         logger.info("  ✗ Transcript Analysis - Disabled (transcript_routes.py not found)")
     
     if claim_tracker_available:
-        logger.info("  ✓ Claim Tracker - FULLY OPERATIONAL ⭐ NEW!")
+        logger.info("  ✓ Claim Tracker - FULLY OPERATIONAL ⭐")
         logger.info("    - Searchable claim verification database")
         logger.info("    - AUTOMATIC: Claims extracted from every analysis")
         logger.info("    - Claude AI identifies 5 verifiable claims per article")
@@ -1278,6 +1378,19 @@ if __name__ == '__main__':
         logger.info("    - Available at /claim-tracker")
     else:
         logger.info("  ✗ Claim Tracker - Disabled (DATABASE_URL not set or models missing)")
+    
+    if quiz_available:
+        logger.info("  ✓ Media Literacy Quiz Engine - FULLY OPERATIONAL ⭐ NEW!")
+        logger.info("    - Educational quizzes on media literacy topics")
+        logger.info("    - Categories: Clickbait, Bias, Fact vs Opinion, Source Credibility")
+        logger.info("    - Three difficulty levels (Beginner, Intermediate, Expert)")
+        logger.info("    - Gamification: Points, badges, achievements")
+        logger.info("    - Anonymous leaderboards")
+        logger.info("    - Personal statistics tracking")
+        logger.info("    - Instant feedback with explanations")
+        logger.info("    - Available at /quiz")
+    else:
+        logger.info("  ✗ Quiz Engine - Disabled (DATABASE_URL not set or models missing)")
     
     if os.getenv('ASSEMBLYAI_API_KEY'):
         logger.info("  ✓ Live Stream Analysis - YouTube Live with real-time transcription")
@@ -1307,12 +1420,12 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
-    logger.info("VERSION v10.2.26 (AUTOMATIC CLAIM EXTRACTION) 🎯:")
-    logger.info("  ✅ NEW: Automatic claim extraction from every analysis")
-    logger.info("  ✅ ADDED: Claude AI identifies 5 verifiable claims per article")
-    logger.info("  ✅ ADDED: Claims auto-saved with source tracking")
-    logger.info("  ✅ RESULT: Database grows automatically with every analysis!")
-    logger.info("  ✅ PRESERVED: All v10.2.25 functionality (DO NO HARM)")
+    logger.info("VERSION v10.2.27 (MEDIA LITERACY QUIZ ENGINE) 🎓:")
+    logger.info("  ✅ NEW: Complete quiz system with gamification")
+    logger.info("  ✅ ADDED: Multiple categories and difficulty levels")
+    logger.info("  ✅ ADDED: Points, badges, achievements, leaderboards")
+    logger.info("  ✅ RESULT: Users learn media literacy through fun quizzes!")
+    logger.info("  ✅ PRESERVED: All v10.2.26 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -1320,4 +1433,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.26 - December 26, 2024 - AUTOMATIC CLAIM EXTRACTION
+# v10.2.27 - December 26, 2024 - MEDIA LITERACY QUIZ ENGINE
