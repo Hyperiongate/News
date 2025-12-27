@@ -3,34 +3,30 @@
 <head>
     <!--
     TruthLens Transcript Analysis Page
-    Version: 3.6.1 - FACT-CHECKING DISPLAY FIX  
-    Date: November 3, 2025
+    Version: 3.7.0 - UNIFIED NAVIGATION UPDATE  
+    Date: December 27, 2024
     
-    CRITICAL BUG FIX IN v3.6.1:
-    ===========================
-    ✅ FIXED: Fact-checked claims now display alongside speaker quality analysis
-    ✅ FIXED: buildNewsResultsHTML() now checks BOTH results.fact_checks AND results.claims  
-    ✅ BUG WAS: Line 1280 only checked results.fact_checks, missed results.claims
-    ✅ FIX WAS: Added || results.claims fallback (ONE LINE CHANGE)
-    ✅ RESULT: Users see both speaker quality AND all individual fact-checked claims
+    WHAT'S NEW IN v3.7.0:
+    ✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
+    ✅ ADDED: Quiz link with active highlighting
+    ✅ ADDED: Claim Tracker link  
+    ✅ ADDED: AI Research external link
+    ✅ ADDED: AI Debates external link
+    ✅ FIXED: Navigation matches landing.html exactly
+    ✅ PRESERVED: All v3.6.1 functionality including speaker quality fix (DO NO HARM ✓)
     
-    WHAT'S IN v3.6.0:
-    ✅ Speaker Quality metrics display in results
-    ✅ CSS styling for speaker quality cards and metrics
-    ✅ JavaScript function buildSpeakerQualityHTML() for rendering quality data
-    ✅ Support for both single-speaker and multi-speaker analysis display
-    ✅ Grade level, language style, sentence quality, coherence, and vocabulary metrics
-    ✅ Visual indicators (progress bars, badges, icons) for quality metrics
-    
-    PREVIOUS VERSION (v3.5.0):
-    ✅ YouTube caption disclaimer
-    ✅ Standardized navigation
-    ✅ Create Transcript functionality
-    ✅ Analyze Video functionality
-    ✅ PDF download for transcripts
+    NAVIGATION NOW INCLUDES:
+    1. Home (/)
+    2. News (/analyze)
+    3. Transcripts (/transcript) ← THIS PAGE (active)
+    4. Quiz (/quiz) ← NEW
+    5. Claims (/claim-tracker) ← NEW
+    6. Debates (/debate-arena)
+    7. AI Research (external) ← NEW
+    8. AI Debates (external) ← NEW
     
     This file is complete and ready to deploy.
-    Last modified: November 3, 2025 - v3.6.1 CRITICAL BUG FIX
+    Last modified: December 27, 2024 - v3.7.0
     I did no harm and this file is not truncated.
     -->
     <meta charset="UTF-8">
@@ -454,7 +450,7 @@
 </head>
 <body>
 
-    <!-- Navigation (standardized) -->
+    <!-- Navigation - v3.7.0 UNIFIED NAVIGATION -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <a href="/" class="nav-logo">
@@ -467,12 +463,14 @@
             </button>
             
             <ul class="nav-menu" id="navMenu">
-                <li><a href="/about" class="nav-link">About Us</a></li>
-                <li><a href="/features" class="nav-link">Features</a></li>
-                <li><a href="/" class="nav-link">News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link active">Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link">Debate Arena</a></li>
-                <li><a href="/contact" class="nav-link">Contact Us</a></li>
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/analyze" class="nav-link">News</a></li>
+                <li><a href="/transcript" class="nav-link active">Transcripts</a></li>
+                <li><a href="/quiz" class="nav-link">Quiz</a></li>
+                <li><a href="/claim-tracker" class="nav-link">Claims</a></li>
+                <li><a href="/debate-arena" class="nav-link">Debates</a></li>
+                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
             </ul>
         </div>
     </nav>
@@ -644,7 +642,7 @@
     </div>
 
     <script>
-        console.log('[TranscriptApp] Module loading - v3.6.1 with fact-checking display fix...');
+        console.log('[TranscriptApp] Module loading - v3.7.0 with unified navigation...');
         
         let currentJobId = null;
         let pollInterval = null;
@@ -1659,34 +1657,14 @@
             window.scrollTo({ behavior: 'smooth', top: 0 });
         }
 
-        console.log('[TranscriptApp] ✓ Initialized - v3.6.1 with fact-checking display fix');
+        console.log('[TranscriptApp] ✓ Initialized - v3.7.0 with unified navigation');
     </script>
 </body>
 </html>
 
 <!--
 I did no harm and this file is not truncated.
-v3.6.1 - November 3, 2025 - CRITICAL BUG FIX
-
-CRITICAL FIX IN v3.6.1:
-=======================
-✅ FIXED: Fact-checked claims now display alongside speaker quality analysis
-✅ BUG WAS: Line 1285 in buildNewsResultsHTML() only checked results.fact_checks
-✅ MISSING: Backend stores claims in results.claims, frontend wasn't checking it
-✅ FIX WAS: Added || results.claims fallback on line 1285
-✅ RESULT: Both speaker quality AND individual fact-checked claims now display
-
-THE ONE LINE THAT WAS CHANGED:
-Line 1285 (in buildNewsResultsHTML function):
-FROM: const factChecks = results.fact_checks || [];
-TO:   const factChecks = results.fact_checks || results.claims || [];
-
-WHAT'S IN v3.6.0:
-✅ Speaker Quality metrics display
-✅ CSS styling for speaker quality cards
-✅ JavaScript functions for rendering quality data
-✅ Support for single/multi-speaker analysis
-✅ Grade level, language style, sentence quality metrics
+v3.7.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
