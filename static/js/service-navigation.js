@@ -1,697 +1,565 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!--
-    TruthLens Features Page
-    Version: 3.4.0 - UNIFIED NAVIGATION UPDATE
-    Date: December 27, 2024
-    
-    WHAT'S NEW IN v3.4.0:
-    ✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
-    ✅ ADDED: Quiz link with active highlighting
-    ✅ ADDED: Claim Tracker link  
-    ✅ ADDED: AI Research external link
-    ✅ ADDED: AI Debates external link
-    ✅ FIXED: Navigation matches landing.html exactly
-    ✅ PRESERVED: All v3.3.0 content including Debate Arena feature (DO NO HARM ✓)
-    
-    NAVIGATION NOW INCLUDES:
-    1. Home (/)
-    2. News (/analyze)
-    3. Transcripts (/transcript)
-    4. Quiz (/quiz) ← NEW
-    5. Claims (/claim-tracker) ← NEW
-    6. Debates (/debate-arena)
-    7. AI Research (external) ← NEW
-    8. AI Debates (external) ← NEW
-    
-    This file is complete and ready to deploy.
-    Last modified: December 27, 2024 - v3.4.0
-    I did no harm and this file is not truncated.
-    -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Features - TruthLens AI Analysis</title>
-    <meta name="description" content="Comprehensive AI-powered news and transcript analysis features. Free during beta testing.">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- Navigation CSS -->
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+// service-navigation.js - COMPLETELY FIXED VERSION
+// Handles navigation between main page and service pages with seamless data flow
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            color: #1e293b;
-            line-height: 1.6;
-            padding-top: 90px;
-        }
+(function() {
+    'use strict';
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 3rem 2rem;
-        }
+    const ServiceNavigation = {
+        DEBUG: true,
+        
+        /**
+         * Save analysis data to multiple storage locations for maximum reliability
+         */
+        saveAnalysisData: function(data) {
+            if (this.DEBUG) {
+                console.log('=== SAVING ANALYSIS DATA ===');
+                console.log('Data keys:', Object.keys(data));
+                console.log('Has detailed_analysis:', !!data.detailed_analysis);
+                console.log('Detailed analysis keys:', data.detailed_analysis ? Object.keys(data.detailed_analysis) : 'none');
+            }
+            
+            try {
+                // CRITICAL: Save the complete response data structure
+                const dataToSave = {
+                    success: data.success || true,
+                    trust_score: data.trust_score || 0,
+                    article_summary: data.article_summary || '',
+                    source: data.source || 'Unknown',
+                    author: data.author || 'Unknown',
+                    findings_summary: data.findings_summary || '',
+                    
+                    // FIXED: Preserve complete article data
+                    article: {
+                        title: data.title || data.article?.title || 'Untitled Article',
+                        text: data.text || data.article?.text || '',
+                        url: data.url || data.article?.url || '',
+                        author: data.author || data.article?.author || 'Unknown',
+                        source: data.source || data.article?.source || 'Unknown',
+                        domain: data.domain || data.article?.domain || '',
+                        word_count: data.article?.word_count || 0
+                    },
+                    
+                    // FIXED: Preserve complete analysis results  
+                    analysis: {
+                        trust_score: data.trust_score || 0,
+                        trust_level: this.getTrustLevel(data.trust_score || 0),
+                        summary: data.findings_summary || data.article_summary || '',
+                        timestamp: new Date().toISOString()
+                    },
+                    
+                    // CRITICAL: Preserve detailed service analysis - this is what service pages need
+                    detailed_analysis: data.detailed_analysis || {},
+                    
+                    // Metadata
+                    metadata: {
+                        processing_time: data.processing_time || 0,
+                        timestamp: data.timestamp || new Date().toISOString(),
+                        services_used: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
+                        analysis_complete: true
+                    }
+                };
+                
+                // Save to sessionStorage (primary)
+                sessionStorage.setItem('currentAnalysis', JSON.stringify(dataToSave));
+                
+                // Save to localStorage (backup)
+                localStorage.setItem('lastAnalysis', JSON.stringify(dataToSave));
+                
+                // Save to window (immediate access)
+                window.currentAnalysisData = dataToSave;
+                
+                if (this.DEBUG) {
+                    console.log('✓ Analysis data saved successfully');
+                    console.log('Services available in detailed_analysis:', Object.keys(dataToSave.detailed_analysis));
+                }
+                
+            } catch (error) {
+                console.error('Error saving analysis data:', error);
+            }
+        },
 
-        .beta-banner {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            text-align: center;
-            padding: 1.5rem 2rem;
-            margin: -3rem -2rem 3rem;
-            border-radius: 0 0 16px 16px;
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
-        }
+        /**
+         * Get analysis data with multiple fallback strategies
+         */
+        getAnalysisData: function() {
+            try {
+                // Strategy 1: From window (fastest)
+                if (window.currentAnalysisData && typeof window.currentAnalysisData === 'object') {
+                    if (this.DEBUG) {
+                        console.log('✓ Found data in window.currentAnalysisData');
+                    }
+                    return window.currentAnalysisData;
+                }
+                
+                // Strategy 2: From sessionStorage (most reliable)
+                const sessionData = sessionStorage.getItem('currentAnalysis');
+                if (sessionData) {
+                    const parsedData = JSON.parse(sessionData);
+                    // Restore to window for faster access
+                    window.currentAnalysisData = parsedData;
+                    if (this.DEBUG) {
+                        console.log('✓ Found data in sessionStorage');
+                    }
+                    return parsedData;
+                }
+                
+                // Strategy 3: From localStorage (backup)
+                const localData = localStorage.getItem('lastAnalysis');
+                if (localData) {
+                    const parsedData = JSON.parse(localData);
+                    // Restore to other locations
+                    window.currentAnalysisData = parsedData;
+                    sessionStorage.setItem('currentAnalysis', JSON.stringify(parsedData));
+                    if (this.DEBUG) {
+                        console.log('✓ Found data in localStorage as fallback');
+                    }
+                    return parsedData;
+                }
+                
+                if (this.DEBUG) {
+                    console.log('✗ No analysis data found');
+                }
+                return null;
+                
+            } catch (error) {
+                console.error('Error retrieving analysis data:', error);
+                return null;
+            }
+        },
 
-        .beta-banner h2 {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
+        /**
+         * Get trust level from score
+         */
+        getTrustLevel: function(score) {
+            if (score >= 80) return 'Very High';
+            if (score >= 60) return 'High';
+            if (score >= 40) return 'Medium';
+            if (score >= 20) return 'Low';
+            return 'Very Low';
+        },
 
-        .beta-banner p {
-            font-size: 1.125rem;
-            opacity: 0.95;
-        }
+        /**
+         * Navigate to service page with data
+         */
+        navigateToService: function(serviceConfig) {
+            if (this.DEBUG) {
+                console.log('=== NAVIGATING TO SERVICE ===');
+                console.log('Service:', serviceConfig);
+            }
+            
+            // Ensure we have analysis data
+            const analysisData = this.getAnalysisData();
+            if (!analysisData) {
+                console.error('No analysis data available for navigation');
+                this.showServiceError('No analysis data found. Please return to the main page and run a new analysis.');
+                return;
+            }
+            
+            // Save the current service config for the destination page
+            sessionStorage.setItem('currentService', JSON.stringify(serviceConfig));
+            
+            // Navigate to service page
+            const serviceUrl = CONFIG.SERVICES.find(s => s.id === serviceConfig.id)?.url || serviceConfig.url;
+            if (serviceUrl) {
+                window.location.href = serviceUrl;
+            } else {
+                console.error('Service URL not found for:', serviceConfig.id);
+            }
+        },
 
-        .page-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+        /**
+         * Show service error message
+         */
+        showServiceError: function(message) {
+            const errorElement = document.getElementById('errorState');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            if (errorElement && errorMessage) {
+                errorMessage.textContent = message;
+                errorElement.style.display = 'block';
+                
+                // Hide loading state
+                const loadingElement = document.getElementById('loadingState');
+                if (loadingElement) {
+                    loadingElement.style.display = 'none';
+                }
+            }
+        },
 
-        .page-subtitle {
-            text-align: center;
-            font-size: 1.25rem;
-            color: #64748b;
-            margin-bottom: 3rem;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
+        /**
+         * Debug helper - shows current analysis data structure
+         */
+        debugAnalysisData: function() {
+            console.log('=== ANALYSIS DATA DEBUG ===');
+            
+            // Check all storage locations
+            console.log('Window data:', window.currentAnalysisData ? 'Present' : 'Missing');
+            console.log('SessionStorage:', sessionStorage.getItem('currentAnalysis') ? 'Present' : 'Missing');
+            console.log('LocalStorage:', localStorage.getItem('lastAnalysis') ? 'Present' : 'Missing');
+            
+            // Parse and show structure
+            const data = this.getAnalysisData();
+            if (data) {
+                console.log('Parsed data structure:', {
+                    article: !!data.article,
+                    analysis: !!data.analysis,
+                    detailed_analysis: data.detailed_analysis ? Object.keys(data.detailed_analysis) : [],
+                    trust_score: data.analysis?.trust_score
+                });
+            } else {
+                console.log('No valid data found');
+            }
+            
+            console.log('==========================');
+        },
 
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-        }
+        /**
+         * Initialize main page functionality
+         * Sets up event listeners for service card clicks
+         */
+        initMainPage: function() {
+            if (this.DEBUG) {
+                console.log('Initializing main page service navigation');
+            }
+            
+            // Service card click handlers will be set up by the display module
+            // This ensures data is saved when results are displayed
+            
+            // Add debug helper to window
+            window.debugAnalysisData = this.debugAnalysisData.bind(this);
+        },
 
-        .feature-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-            border-color: #667eea;
-        }
-
-        .feature-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: white;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .feature-icon.source { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
-        .feature-icon.bias { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
-        .feature-icon.facts { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-        .feature-icon.author { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
-        .feature-icon.transparency { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
-        .feature-icon.content { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
-        .feature-icon.transcript { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .feature-icon.debate { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-
-        .feature-card h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-        }
-
-        .feature-card p {
-            color: #64748b;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-        }
-
-        .feature-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .coming-soon-section {
-            margin-top: 4rem;
-            margin-bottom: 4rem;
-        }
-
-        .coming-soon-section h2 {
-            font-size: 2rem;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 1rem;
-            color: #1e293b;
-        }
-
-        .coming-soon-section > p {
-            text-align: center;
-            color: #64748b;
-            margin-bottom: 3rem;
-        }
-
-        .coming-soon-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .coming-soon-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            border: 2px dashed #d1d5db;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .coming-soon-card:hover {
-            border-color: #667eea;
-            background: #f9fafb;
-        }
-
-        .coming-soon-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: white;
-            margin: 0 auto 1.5rem;
-        }
-
-        .coming-soon-icon.ai { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
-        .coming-soon-icon.deepfake { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
-        .coming-soon-icon.plagiarism { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
-
-        .coming-soon-card h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-        }
-
-        .coming-soon-card p {
-            color: #64748b;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-        }
-
-        .coming-soon-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            background: #e5e7eb;
-            color: #6b7280;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .sources-section {
-            background: white;
-            border-radius: 20px;
-            padding: 3rem 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 4rem;
-        }
-
-        .sources-section h2 {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 2rem;
-            color: #1e293b;
-        }
-
-        .sources-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .source-item {
-            background: #f8fafc;
-            padding: 1.5rem;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .source-item:hover {
-            background: #eff6ff;
-            transform: translateY(-2px);
-        }
-
-        .source-name {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .source-name i {
-            color: #667eea;
-        }
-
-        .source-type {
-            font-size: 0.875rem;
-            color: #667eea;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .source-founded {
-            font-size: 0.875rem;
-            color: #64748b;
-        }
-
-        .cta-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-align: center;
-            padding: 4rem 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
-        }
-
-        .cta-section h2 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-        }
-
-        .cta-section p {
-            font-size: 1.25rem;
-            margin-bottom: 2rem;
-            opacity: 0.95;
-        }
-
-        .cta-button {
-            display: inline-block;
-            padding: 1.25rem 3rem;
-            background: white;
-            color: #667eea;
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 1.125rem;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding-top: 80px;
+        /**
+         * Initialize service page functionality
+         * This is called by individual service pages
+         */
+        initServicePage: function(serviceConfig) {
+            if (this.DEBUG) {
+                console.log('=== INITIALIZING SERVICE PAGE ===');
+                console.log('Service config:', serviceConfig);
             }
 
-            .page-title {
-                font-size: 2rem;
+            const init = () => {
+                try {
+                    // Get analysis data
+                    const analysisData = this.getAnalysisData();
+                    
+                    if (!analysisData) {
+                        this.showServiceError('No analysis data found. Please return to the main page and run a new analysis.');
+                        return;
+                    }
+
+                    // Check if we have detailed analysis
+                    if (!analysisData.detailed_analysis) {
+                        this.showServiceError('Analysis data is incomplete. Please return to the main page and run a new analysis.');
+                        return;
+                    }
+
+                    // Get service-specific data
+                    const serviceId = serviceConfig.id;
+                    const serviceData = analysisData.detailed_analysis[serviceId];
+
+                    if (this.DEBUG) {
+                        console.log('Service ID:', serviceId);
+                        console.log('Available services:', Object.keys(analysisData.detailed_analysis));
+                        console.log('Service data found:', !!serviceData);
+                        if (serviceData) {
+                            console.log('Service data keys:', Object.keys(serviceData));
+                            console.log('Service data structure:', serviceData);
+                        }
+                    }
+
+                    // CRITICAL: Extract the actual data from service result
+                    let actualServiceData = null;
+                    if (serviceData) {
+                        // Check if data is nested in a 'data' field (common pattern)
+                        if (serviceData.data && typeof serviceData.data === 'object') {
+                            actualServiceData = serviceData.data;
+                        } else if (serviceData.success && Object.keys(serviceData).length > 3) {
+                            // If it has success flag and multiple fields, use the whole object
+                            actualServiceData = serviceData;
+                        } else {
+                            actualServiceData = serviceData;
+                        }
+                    }
+
+                    if (this.DEBUG) {
+                        console.log('Actual service data:', actualServiceData);
+                    }
+
+                    // Hide loading state
+                    const loadingElement = document.getElementById('loadingState');
+                    if (loadingElement) {
+                        loadingElement.style.display = 'none';
+                    }
+
+                    if (!actualServiceData || (typeof actualServiceData === 'object' && Object.keys(actualServiceData).length === 0)) {
+                        this.showServiceError(`${serviceConfig.name} analysis was not performed for this article.`);
+                        return;
+                    }
+
+                    // FIXED: Populate summary section with full context
+                    this.populateServiceSummary(analysisData, actualServiceData, serviceConfig);
+
+                    // FIXED: Display service-specific analysis
+                    this.displayServiceAnalysis(actualServiceData, serviceConfig);
+
+                } catch (error) {
+                    console.error('Error initializing service page:', error);
+                    this.showServiceError('Error loading analysis data. Please try again.');
+                }
+            };
+
+            // Initialize immediately if DOM is ready, otherwise wait
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
             }
+        },
 
-            .cta-section h2 {
-                font-size: 2rem;
+        /**
+         * Populate the service summary section
+         */
+        populateServiceSummary: function(fullData, serviceData, serviceConfig) {
+            try {
+                // Article information
+                const article = fullData.article || {};
+                const articleInfo = `"${article.title || 'Untitled Article'}" from ${article.source || article.domain || 'Unknown Source'}`;
+                
+                const analyzedContentEl = document.getElementById('analyzedContent');
+                if (analyzedContentEl) {
+                    analyzedContentEl.textContent = articleInfo;
+                }
+
+                // Service-specific score
+                const scoreInfo = this.getServiceScoreInfo(serviceData, serviceConfig);
+                const summaryScoreEl = document.getElementById('summaryScore');
+                if (summaryScoreEl) {
+                    summaryScoreEl.textContent = scoreInfo.score;
+                }
+
+                // Key findings
+                const keyFindings = this.getServiceKeyFindings(serviceData, serviceConfig);
+                const keyFindingsEl = document.getElementById('keyFindings');
+                if (keyFindingsEl) {
+                    keyFindingsEl.textContent = keyFindings;
+                }
+
+                // Interpretation
+                const interpretation = this.getServiceInterpretation(serviceData, serviceConfig);
+                const interpretationEl = document.getElementById('interpretation');
+                if (interpretationEl) {
+                    interpretationEl.textContent = interpretation;
+                }
+
+                if (this.DEBUG) {
+                    console.log('✓ Summary populated successfully');
+                }
+
+            } catch (error) {
+                console.error('Error populating service summary:', error);
             }
+        },
+
+        /**
+         * Get service-specific score information
+         */
+        getServiceScoreInfo: function(serviceData, serviceConfig) {
+            const serviceId = serviceConfig.id;
+            
+            // Service-specific score extraction
+            let score = 0;
+            let label = 'Score';
+            
+            switch (serviceId) {
+                case 'source_credibility':
+                    score = serviceData.credibility_score || serviceData.score || 0;
+                    label = 'Credibility Score';
+                    break;
+                case 'author_analyzer':
+                    score = serviceData.author_score || serviceData.credibility_score || serviceData.score || 0;
+                    label = 'Author Score';
+                    break;
+                case 'bias_detector':
+                    score = serviceData.bias_score || serviceData.score || 0;
+                    label = 'Bias Score';
+                    break;
+                case 'fact_checker':
+                    score = serviceData.fact_score || serviceData.credibility_score || serviceData.score || 0;
+                    label = 'Fact Check Score';
+                    break;
+                case 'transparency_analyzer':
+                    score = serviceData.transparency_score || serviceData.score || 0;
+                    label = 'Transparency Score';
+                    break;
+                case 'manipulation_detector':
+                    score = serviceData.manipulation_score || serviceData.score || 0;
+                    label = 'Manipulation Score';
+                    break;
+                case 'content_analyzer':
+                    score = serviceData.quality_score || serviceData.score || 0;
+                    label = 'Quality Score';
+                    break;
+                case 'plagiarism_detector':
+                    score = serviceData.originality_score || serviceData.score || 0;
+                    label = 'Originality Score';
+                    break;
+                default:
+                    score = serviceData.score || 0;
+            }
+            
+            return { score: Math.round(score), label: label };
+        },
+
+        /**
+         * Get service-specific key findings
+         */
+        getServiceKeyFindings: function(serviceData, serviceConfig) {
+            const serviceId = serviceConfig.id;
+            const scoreInfo = this.getServiceScoreInfo(serviceData, serviceConfig);
+            
+            // Try to get service-specific findings
+            if (serviceData.findings && Array.isArray(serviceData.findings)) {
+                return serviceData.findings.slice(0, 2).join('. ') + '.';
+            }
+            
+            if (serviceData.summary) {
+                return serviceData.summary;
+            }
+            
+            // Generate basic findings based on service and score
+            switch (serviceId) {
+                case 'source_credibility':
+                    const level = serviceData.credibility_level || serviceData.level || 'Unknown';
+                    return `Source credibility: ${level}. Score: ${scoreInfo.score}/100.`;
+                    
+                case 'author_analyzer':
+                    const authorName = serviceData.author_name || 'Unknown';
+                    return `Author: ${authorName}. Credibility score: ${scoreInfo.score}/100.`;
+                    
+                case 'bias_detector':
+                    const bias = serviceData.overall_bias || serviceData.bias || 'Unknown';
+                    return `Detected bias: ${bias}. Bias score: ${scoreInfo.score}/100.`;
+                    
+                default:
+                    return `Analysis completed. ${scoreInfo.label}: ${scoreInfo.score}/100.`;
+            }
+        },
+
+        /**
+         * Get service-specific interpretation
+         */
+        getServiceInterpretation: function(serviceData, serviceConfig) {
+            const scoreInfo = this.getServiceScoreInfo(serviceData, serviceConfig);
+            const score = scoreInfo.score;
+            const serviceName = serviceConfig.name;
+            
+            // Return service-specific interpretation based on score
+            if (score >= 80) {
+                return `${serviceName} analysis indicates excellent results. This content demonstrates high quality and reliability in this dimension.`;
+            } else if (score >= 60) {
+                return `${serviceName} analysis shows good results. The content meets most quality standards in this area.`;
+            } else if (score >= 40) {
+                return `${serviceName} analysis reveals moderate concerns. Some issues were identified that may affect reliability.`;
+            } else if (score >= 20) {
+                return `${serviceName} analysis found significant issues. Multiple concerns were identified that impact credibility.`;
+            } else {
+                return `${serviceName} analysis indicates serious problems. The content fails to meet basic standards in this area.`;
+            }
+        },
+
+        /**
+         * Display service-specific analysis content
+         */
+        displayServiceAnalysis: function(serviceData, serviceConfig) {
+            try {
+                const contentElement = document.getElementById('analysisContent');
+                if (!contentElement) {
+                    console.error('analysisContent element not found');
+                    return;
+                }
+
+                // Show the content area
+                contentElement.style.display = 'block';
+
+                // Check if there's a page-specific display function
+                if (typeof window.displayServiceAnalysis === 'function') {
+                    window.displayServiceAnalysis(serviceData);
+                    return;
+                }
+
+                // Check if TruthLensServices is available for rendering
+                if (window.truthLensApp && window.truthLensApp.services) {
+                    const content = window.truthLensApp.services.renderService(serviceConfig.id, serviceData);
+                    contentElement.innerHTML = content;
+                    return;
+                }
+
+                // Fallback: create basic display
+                this.createFallbackDisplay(serviceData, serviceConfig, contentElement);
+
+            } catch (error) {
+                console.error('Error displaying service analysis:', error);
+                this.showServiceError('Error displaying analysis results.');
+            }
+        },
+
+        /**
+         * Create fallback display when specialized renderers aren't available
+         */
+        createFallbackDisplay: function(serviceData, serviceConfig, container) {
+            const scoreInfo = this.getServiceScoreInfo(serviceData, serviceConfig);
+            
+            let html = `
+                <div class="service-analysis-fallback">
+                    <div class="analysis-header">
+                        <h2><i class="fas ${serviceConfig.icon || 'fa-chart-bar'}"></i> ${serviceConfig.name}</h2>
+                        <div class="score-display">
+                            <span class="score-value">${scoreInfo.score}</span>
+                            <span class="score-label">${scoreInfo.label}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-content">
+                        <h3>Analysis Results</h3>
+            `;
+            
+            // Display key data points
+            const importantFields = ['summary', 'findings', 'level', 'credibility_level', 'bias', 'author_name'];
+            for (const field of importantFields) {
+                if (serviceData[field] && serviceData[field] !== 'Unknown') {
+                    const value = Array.isArray(serviceData[field]) ? serviceData[field].join(', ') : serviceData[field];
+                    html += `<p><strong>${field.replace('_', ' ').toUpperCase()}:</strong> ${value}</p>`;
+                }
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            container.innerHTML = html;
         }
-    </style>
-</head>
-<body>
-    <!-- Navigation Header - v3.4.0 UNIFIED NAVIGATION -->
-    <nav class="main-navigation">
-        <div class="nav-container-unified">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
-            
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
-            
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/analyze" class="nav-link">News</a></li>
-                <li><a href="/transcript" class="nav-link">Transcripts</a></li>
-                <li><a href="/quiz" class="nav-link">Quiz</a></li>
-                <li><a href="/claim-tracker" class="nav-link">Claims</a></li>
-                <li><a href="/debate-arena" class="nav-link">Debates</a></li>
-                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-            </ul>
-        </div>
-    </nav>
+    };
 
-    <div class="container">
-        <div class="beta-banner">
-            <h2>🎉 FREE Beta Access</h2>
-            <p>All features completely free during beta testing • No credit card required</p>
-        </div>
-
-        <h1 class="page-title">Comprehensive Analysis Features</h1>
-        <p class="page-subtitle">
-            Advanced AI-powered tools to analyze news, transcripts, and live streams with professional-grade accuracy
-        </p>
-
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon source">
-                    <i class="fas fa-shield-alt"></i>
-                </div>
-                <h3>Source Credibility</h3>
-                <p>Evaluates news outlet reliability based on founding history, awards, bias ratings, and track record. Database of 500+ sources with detailed metadata.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon bias">
-                    <i class="fas fa-balance-scale"></i>
-                </div>
-                <h3>Bias Detection</h3>
-                <p>Identifies political lean, sensationalism, loaded language, and editorial slant. Provides visual bias meter and specific examples.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon facts">
-                    <i class="fas fa-check-double"></i>
-                </div>
-                <h3>Fact-Checking</h3>
-                <p>Verifies factual claims against trusted databases and sources. Cross-references statistics, quotes, and statements for accuracy.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon author">
-                    <i class="fas fa-user-edit"></i>
-                </div>
-                <h3>Author Analysis</h3>
-                <p>Assesses journalist credentials, expertise, publication history, and professional background. Links to social profiles when available.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon transparency">
-                    <i class="fas fa-eye"></i>
-                </div>
-                <h3>Transparency Scoring</h3>
-                <p>Measures source citations, attribution quality, and journalistic standards. Identifies unsourced claims and anonymous sources.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon content">
-                    <i class="fas fa-star-half-alt"></i>
-                </div>
-                <h3>Content Quality</h3>
-                <p>Evaluates depth, comprehensiveness, and completeness of coverage. Assesses whether key context is provided.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon transcript">
-                    <i class="fas fa-file-video"></i>
-                </div>
-                <h3>Transcript Analysis</h3>
-                <p>Specialized fact-checking for speeches, interviews, and YouTube videos. Paste transcript text OR provide YouTube URL for automatic extraction and analysis.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-
-            <div class="feature-card">
-                <div class="feature-icon debate">
-                    <i class="fas fa-gavel"></i>
-                </div>
-                <h3>Debate Arena</h3>
-                <p>Start debates on news topics and let the community decide. Create arguments, challenge opposing views, and vote on who made the stronger case. Anonymous participation with live voting results.</p>
-                <span class="feature-badge">Free Forever</span>
-            </div>
-        </div>
-
-        <!-- COMING SOON SECTION -->
-        <div class="coming-soon-section">
-            <h2>🚀 Coming Soon</h2>
-            <p>We're constantly innovating to bring you cutting-edge analysis tools. Here's what's next:</p>
-            
-            <div class="coming-soon-grid">
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon ai">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <h3>AI-Generated Content Detection</h3>
-                    <p>Advanced detection to identify text written by AI tools like ChatGPT, helping you distinguish between human and machine-generated content.</p>
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </div>
-
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon deepfake">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <h3>Deepfake Detection</h3>
-                    <p>Cutting-edge technology to analyze videos and images for signs of manipulation, helping you identify synthetic media and altered content.</p>
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </div>
-
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon plagiarism">
-                        <i class="fas fa-copy"></i>
-                    </div>
-                    <h3>Plagiarism Detection</h3>
-                    <p>Comprehensive scanning to detect copied content, verify originality, and identify sources. Ensures content authenticity and proper attribution.</p>
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="sources-section">
-            <h2><i class="fas fa-database"></i> Our Comprehensive Data Sources</h2>
-            <p style="text-align: center; color: #64748b; margin-bottom: 2rem;">
-                We analyze news from hundreds of trusted outlets and cross-reference against authoritative sources
-            </p>
-
-            <div class="sources-grid">
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Reuters
-                    </div>
-                    <div class="source-type">Wire Service</div>
-                    <div class="source-founded">Founded 1851 | 95/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Associated Press
-                    </div>
-                    <div class="source-type">Wire Service</div>
-                    <div class="source-founded">Founded 1846 | 94/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-broadcast-tower"></i>
-                        BBC
-                    </div>
-                    <div class="source-type">Public Broadcaster</div>
-                    <div class="source-founded">Founded 1922 | 92/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The New York Times
-                    </div>
-                    <div class="source-type">Newspaper</div>
-                    <div class="source-founded">Founded 1851 | 90/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The Washington Post
-                    </div>
-                    <div class="source-type">Newspaper</div>
-                    <div class="source-founded">Founded 1877 | 88/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-radio"></i>
-                        NPR
-                    </div>
-                    <div class="source-type">Public Radio</div>
-                    <div class="source-founded">Founded 1970 | 88/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The Wall Street Journal
-                    </div>
-                    <div class="source-type">Newspaper</div>
-                    <div class="source-founded">Founded 1889 | 87/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-tv"></i>
-                        ABC News
-                    </div>
-                    <div class="source-type">Television Network</div>
-                    <div class="source-founded">Founded 1943 | 85/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-tv"></i>
-                        CBS News
-                    </div>
-                    <div class="source-type">Television Network</div>
-                    <div class="source-founded">Founded 1927 | 84/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-tv"></i>
-                        NBC News
-                    </div>
-                    <div class="source-type">Television Network</div>
-                    <div class="source-founded">Founded 1940 | 83/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Politico
-                    </div>
-                    <div class="source-type">Digital/Print</div>
-                    <div class="source-founded">Founded 2007 | 82/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Axios
-                    </div>
-                    <div class="source-type">Digital Media</div>
-                    <div class="source-founded">Founded 2016 | 81/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-satellite-dish"></i>
-                        CNN
-                    </div>
-                    <div class="source-type">Cable News</div>
-                    <div class="source-founded">Founded 1980 | 80/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The Hill
-                    </div>
-                    <div class="source-type">Digital/Print</div>
-                    <div class="source-founded">Founded 1994 | 78/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-satellite-dish"></i>
-                        Fox News
-                    </div>
-                    <div class="source-type">Cable News</div>
-                    <div class="source-founded">Founded 1996 | 75/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-plus"></i>
-                        500+ More Sources
-                    </div>
-                    <div class="source-type">Comprehensive Database</div>
-                    <div class="source-founded">Continuously updated</div>
-                </div>
-            </div>
-
-            <p style="text-align: center; color: #64748b; margin-top: 2rem; font-size: 0.95rem;">
-                <i class="fas fa-info-circle"></i> We maintain detailed metadata on over 500 news outlets including founding dates, ownership, political lean, credibility scores, and awards.
-            </p>
-        </div>
-
-        <div class="cta-section">
-            <h2>Ready to Start Analyzing?</h2>
-            <p>Everything is free during our beta testing phase. Try it now!</p>
-            <a href="/" class="cta-button">
-                <i class="fas fa-arrow-right"></i> Start Free Analysis
-            </a>
-        </div>
-    </div>
-
-    <script>
-        function toggleMobileMenu() {
-            const navMenu = document.getElementById('navMenu');
-            navMenu.classList.toggle('active');
+    // Auto-initialize based on page type
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            // Detect page type and initialize accordingly
+            if (document.getElementById('servicesGrid')) {
+                // This is the main page
+                ServiceNavigation.initMainPage();
+            } else if (window.SERVICE_CONFIG && typeof window.SERVICE_CONFIG === 'object') {
+                // This is a service page with SERVICE_CONFIG defined
+                ServiceNavigation.initServicePage(window.SERVICE_CONFIG);
+            }
+        } catch (error) {
+            console.error('Error during ServiceNavigation initialization:', error);
         }
-    </script>
-</body>
-</html>
+    });
 
-<!--
-I did no harm and this file is not truncated.
-v3.4.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
+    // Export to global scope
+    window.ServiceNavigation = ServiceNavigation;
 
-DEPLOYMENT READY FOR GITHUB
-Complete file ready for production deployment.
--->
+})();
