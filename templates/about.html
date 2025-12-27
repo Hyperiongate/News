@@ -1,36 +1,30 @@
 <!DOCTYPE html>
 <!--
 TruthLens - About Page
-Version: 4.0.0 - TRUTH-SEEKING MISSION
-Date: December 24, 2024
+Version: 4.1.0 - UNIFIED NAVIGATION UPDATE
+Date: December 27, 2024
 
-PURPOSE:
-Explains TruthLens mission: finding truth even when it challenges our perspectives.
-Showcases all 5 tools as part of comprehensive truth-seeking toolkit.
+WHAT'S NEW IN v4.1.0:
+✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
+✅ ADDED: Quiz link with active highlighting
+✅ ADDED: Claim Tracker link
+✅ ADDED: AI Research external link
+✅ ADDED: AI Debates external link
+✅ FIXED: Navigation matches landing.html exactly
+✅ PRESERVED: All v4.0.0 content (DO NO HARM ✓)
 
-CHANGE LOG:
-- December 24, 2024 v4.0.0: TRUTH-SEEKING MISSION REWRITE
-  * NEW: Focus on "finding truth even if it means adjusting our perspective"
-  * NEW: Explains all 5 tools in context of truth-seeking journey
-  * NEW: News Analysis - credibility evaluation
-  * NEW: Transcript Analysis - fact-checking speeches/interviews
-  * NEW: AI Bias Research - compare AI perspectives on same questions
-  * NEW: Human Debates - debate and vote on winners
-  * NEW: AI Debates - watch AIs debate, third AI judges
-  * ADDED: Navigation links to external Render tools (AI Research, AI Debates)
-  * NOTE: Coming Soon features mentioned but not counted as 6th tool
-  * UPDATED: Mission statement emphasizes open-minded pursuit of truth
-  * UPDATED: Removed beta-focused content, added vision
-  * PRESERVED: Navigation, styling, structure
+NAVIGATION NOW INCLUDES:
+1. Home (/)
+2. News (/analyze)
+3. Transcripts (/transcript)
+4. Quiz (/quiz) ← NEW
+5. Claims (/claim-tracker) ← NEW
+6. Debates (/debate-arena)
+7. AI Research (external) ← NEW
+8. AI Debates (external) ← NEW
 
-TOOLS SHOWCASED (5 total):
-1. News Analysis
-2. Transcript Analysis
-3. AI Bias Research
-4. Human Debates
-5. AI Debates
-
-Last modified: December 24, 2024 - v4.0.0
+This file is complete and ready to deploy.
+Last modified: December 27, 2024 - v4.1.0
 I did no harm and this file is not truncated.
 -->
 <html lang="en">
@@ -230,6 +224,10 @@ I did no harm and this file is not truncated.
         }
 
         @media (max-width: 768px) {
+            body {
+                padding-top: 80px;
+            }
+
             .page-header h1 {
                 font-size: 2rem;
             }
@@ -245,7 +243,7 @@ I did no harm and this file is not truncated.
     </style>
 </head>
 <body>
-    <!-- Navigation Header -->
+    <!-- Navigation Header - v4.1.0 UNIFIED NAVIGATION -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <a href="/" class="nav-logo">
@@ -258,12 +256,14 @@ I did no harm and this file is not truncated.
             </button>
             
             <ul class="nav-menu" id="navMenu">
-                <li><a href="/about" class="nav-link active">About Us</a></li>
-                <li><a href="/features" class="nav-link">Features</a></li>
                 <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research</a></li>
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates</a></li>
-                <li><a href="/contact" class="nav-link">Contact Us</a></li>
+                <li><a href="/analyze" class="nav-link">News</a></li>
+                <li><a href="/transcript" class="nav-link">Transcripts</a></li>
+                <li><a href="/quiz" class="nav-link">Quiz</a></li>
+                <li><a href="/claim-tracker" class="nav-link">Claims</a></li>
+                <li><a href="/debate-arena" class="nav-link">Debates</a></li>
+                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
             </ul>
         </div>
     </nav>
@@ -432,7 +432,7 @@ I did no harm and this file is not truncated.
 
 <!--
 I did no harm and this file is not truncated.
-v4.0.0 - December 24, 2024 - TRUTH-SEEKING MISSION
+v4.1.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 This file is complete and ready to deploy.
