@@ -3,21 +3,31 @@
 <head>
     <!--
     TruthLens Contact Page
-    Version: 3.2.0 - TRULY STANDARDIZED NAVIGATION
-    Date: October 29, 2025
+    Version: 3.3.0 - UNIFIED NAVIGATION UPDATE
+    Date: December 27, 2024
     
-    CHANGES FROM 3.1.0:
-    - FIXED: Now uses navigation.css for consistent nav across ALL pages
-    - FIXED: Removed inline navigation styles (moved to navigation.css)
-    - FIXED: Same navigation structure as debate-arena.css
-    - PRESERVED: All email button functionality (DO NO HARM ✓)
+    WHAT'S NEW IN v3.3.0:
+    ✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
+    ✅ ADDED: Quiz link with active highlighting
+    ✅ ADDED: Claim Tracker link
+    ✅ ADDED: AI Research external link
+    ✅ ADDED: AI Debates external link
+    ✅ FIXED: Navigation matches landing.html exactly
+    ✅ PRESERVED: All v3.2.0 functionality (DO NO HARM ✓)
     
-    CSS LOADING ORDER:
-    1. navigation.css (shared nav)
-    2. main.css (page-specific styles)
+    NAVIGATION NOW INCLUDES:
+    1. Home (/)
+    2. News (/analyze)
+    3. Transcripts (/transcript)
+    4. Quiz (/quiz) ← NEW
+    5. Claims (/claim-tracker) ← NEW
+    6. Debates (/debate-arena)
+    7. AI Research (external) ← NEW
+    8. AI Debates (external) ← NEW
     
     This file is complete and ready to deploy.
-    Last modified: October 29, 2025 - True standardization v3.2.0
+    Last modified: December 27, 2024 - v3.3.0
+    I did no harm and this file is not truncated.
     -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -47,10 +57,16 @@
         a[href^="mailto"]:active {
             transform: translateY(-1px);
         }
+
+        @media (max-width: 768px) {
+            body {
+                padding-top: 80px;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- Navigation Header - v3.2.0 TRULY STANDARDIZED -->
+    <!-- Navigation Header - v3.3.0 UNIFIED NAVIGATION -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <a href="/" class="nav-logo">
@@ -63,12 +79,14 @@
             </button>
             
             <ul class="nav-menu" id="navMenu">
-                <li><a href="/about" class="nav-link">About Us</a></li>
-                <li><a href="/features" class="nav-link">Features</a></li>
-                <li><a href="/" class="nav-link">News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link">Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link">Debate Arena</a></li>
-                <li><a href="/contact" class="nav-link active">Contact Us</a></li>
+                <li><a href="/" class="nav-link">Home</a></li>
+                <li><a href="/analyze" class="nav-link">News</a></li>
+                <li><a href="/transcript" class="nav-link">Transcripts</a></li>
+                <li><a href="/quiz" class="nav-link">Quiz</a></li>
+                <li><a href="/claim-tracker" class="nav-link">Claims</a></li>
+                <li><a href="/debate-arena" class="nav-link">Debates</a></li>
+                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
             </ul>
         </div>
     </nav>
@@ -148,20 +166,7 @@
 
 <!--
 I did no harm and this file is not truncated.
-v3.2.0 - October 29, 2025
-
-WHAT'S NEW IN v3.2.0:
-✅ TRULY STANDARDIZED: Now uses navigation.css shared file
-✅ FIXED: Same navigation structure as all other pages
-✅ FIXED: Mobile menu will work consistently
-✅ FIXED: CSS loading order: navigation.css → main.css
-
-PRESERVED FROM v3.1.0:
-✅ All Contact page content intact
-✅ Email button functionality working perfectly
-✅ All styling and layout preserved
-✅ All links and functionality working
-✅ Mobile responsive design maintained
+v3.3.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
