@@ -981,7 +981,7 @@ I did no harm and this file is not truncated.
                 <div class="options-list">
                     ${question.options.map((option, index) => `
                         <div class="option" onclick="selectOption(${index})">
-                            ${option}
+                            ${option.option_text}
                         </div>
                     `).join('')}
                 </div>
@@ -998,42 +998,23 @@ I did no harm and this file is not truncated.
             
             // Remove previous selections
             options.forEach(opt => {
-                opt.classList.remove('selected', 'correct', 'incorrect');
+                opt.classList.remove('selected');
                 opt.style.pointerEvents = 'auto';
             });
 
             // Mark selected option
             options[optionIndex].classList.add('selected');
-            
-            // Check if correct
-            const isCorrect = optionIndex === question.correct_option;
-            if (isCorrect) {
-                options[optionIndex].classList.add('correct');
-                score++;
-            } else {
-                options[optionIndex].classList.add('incorrect');
-                options[question.correct_option].classList.add('correct');
-            }
 
-            // Disable further selections
+            // Disable further selections for this question
             options.forEach(opt => opt.style.pointerEvents = 'none');
-
-            // Show explanation
-            const explanationDiv = document.getElementById('explanation');
-            explanationDiv.innerHTML = `
-                <h4><i class="fas fa-lightbulb"></i> Explanation</h4>
-                <p>${question.explanation || 'No explanation available.'}</p>
-            `;
-            explanationDiv.classList.add('show');
 
             // Enable next button
             document.getElementById('next-btn').disabled = false;
 
-            // Record answer
+            // Record answer (backend will validate)
             answers.push({
                 question_id: question.id,
-                selected_option: optionIndex,
-                is_correct: isCorrect
+                selected_option: optionIndex
             });
         }
 
