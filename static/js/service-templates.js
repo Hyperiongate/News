@@ -649,7 +649,7 @@ window.ServiceTemplates = {
     // 1. SOURCE CREDIBILITY
     // ----------------------------------------------------------------
     displaySourceCredibility: function(data) {
-        console.log('[ServiceTemplates v5.11.0] Displaying Source Credibility');
+        console.log('[ServiceTemplates v5.12.0] Displaying Source Credibility with comparison bars');
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('source-score', score);
@@ -668,6 +668,78 @@ window.ServiceTemplates = {
                 explanationContent.innerHTML = this.convertMarkdownToHtml(data.explanation);
                 explanationBox.style.display = 'block';
             }
+        }
+        
+        // === COMPARISON BARS - Show how this source ranks ===
+        var comparisonContainer = document.getElementById('source-comparison-container');
+        var comparisonBars = document.getElementById('source-comparison-bars');
+        
+        if (comparisonContainer && comparisonBars) {
+            // Define major news outlets with credibility scores
+            var outlets = [
+                { name: 'Reuters', score: 95, type: 'Wire Service' },
+                { name: 'Associated Press', score: 94, type: 'Wire Service' },
+                { name: 'BBC', score: 92, type: 'Public Broadcaster' },
+                { name: 'NPR', score: 88, type: 'Public Radio' },
+                { name: 'The New York Times', score: 90, type: 'Newspaper' },
+                { name: 'The Washington Post', score: 88, type: 'Newspaper' },
+                { name: 'The Wall Street Journal', score: 87, type: 'Newspaper' },
+                { name: 'CNN', score: 78, type: 'Television Network' },
+                { name: 'Fox News', score: 65, type: 'Television Network' },
+                { name: 'MSNBC', score: 72, type: 'Television Network' },
+                { name: sourceName, score: score, type: 'This Source', isCurrent: true }
+            ];
+            
+            // Sort by score descending
+            outlets.sort(function(a, b) { return b.score - a.score; });
+            
+            // Remove duplicates if source name matches an existing outlet
+            var uniqueOutlets = [];
+            var seenNames = {};
+            outlets.forEach(function(outlet) {
+                var normalizedName = outlet.name.toLowerCase().trim();
+                if (!seenNames[normalizedName]) {
+                    seenNames[normalizedName] = true;
+                    uniqueOutlets.push(outlet);
+                }
+            });
+            
+            // Build comparison bars HTML
+            comparisonBars.innerHTML = '';
+            
+            uniqueOutlets.forEach(function(outlet) {
+                var barDiv = document.createElement('div');
+                barDiv.className = 'comparison-bar-item';
+                barDiv.style.cssText = 'margin-bottom: 1.25rem;';
+                
+                var isCurrent = outlet.isCurrent || false;
+                var barColor = isCurrent ? '#3b82f6' : '#cbd5e1';
+                var barHeight = isCurrent ? '12px' : '8px';
+                var fontWeight = isCurrent ? '700' : '500';
+                var textColor = isCurrent ? '#1e293b' : '#64748b';
+                
+                barDiv.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem;">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <span style="font-size: ${isCurrent ? '1rem' : '0.95rem'}; font-weight: ${fontWeight}; color: ${textColor};">
+                                ${outlet.name}
+                                ${isCurrent ? ' <span style="background: #3b82f6; color: white; padding: 0.125rem 0.5rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.5rem;">YOU ARE HERE</span>' : ''}
+                            </span>
+                            ${!isCurrent ? '<span style="font-size: 0.8rem; color: #94a3b8;">(' + outlet.type + ')</span>' : ''}
+                        </div>
+                        <span style="font-weight: ${fontWeight}; color: ${textColor}; font-size: ${isCurrent ? '1.1rem' : '0.95rem'};">
+                            ${outlet.score}/100
+                        </span>
+                    </div>
+                    <div style="width: 100%; height: ${barHeight}; background: #e2e8f0; border-radius: 4px; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);">
+                        <div style="width: ${outlet.score}%; height: 100%; background: ${isCurrent ? 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)' : barColor}; border-radius: 4px; transition: width 0.6s ease;${isCurrent ? ' box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);' : ''}"></div>
+                    </div>
+                `;
+                
+                comparisonBars.appendChild(barDiv);
+            });
+            
+            comparisonContainer.style.display = 'block';
         }
         
         // Summary
