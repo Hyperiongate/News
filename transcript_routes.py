@@ -1,39 +1,36 @@
 """
 File: transcript_routes.py
-Last Updated: December 28, 2025 - v10.6.0 ENHANCED FACT-CHECKER INTEGRATION
-Description: Flask routes for transcript fact-checking with FRED API economic verification
+Last Updated: December 28, 2025 - v10.7.0 TRANSCRIPT DATE PARAMETER
+Description: Flask routes for transcript fact-checking with optional transcript date
 
-LATEST UPDATE (December 28, 2025 - v10.6.0 ENHANCED FACT-CHECKER):
+LATEST UPDATE (December 28, 2025 - v10.7.0 TRANSCRIPT DATE):
 ====================================================================
-✅ SWITCHED: Now uses EnhancedFactChecker with FRED API for economic data
-✅ FIXED: Economic claims (inflation, unemployment) verified with real government data
-✅ FIXED: Temporal claims ("when I took office") parsed correctly
-✅ FIXED: Multi-AI cross-verification for all claims
-✅ FIXED: Strict verdict criteria (no more "mostly true" for false claims)
-✅ PRESERVED: All v10.5.0 functionality (DO NO HARM)
-✅ PRESERVED: Backward compatibility - same API interface
-
-WHAT CHANGED:
-=============
-Line 28: Changed from TranscriptComprehensiveFactChecker → EnhancedFactChecker
-Line 47: Changed initialization (no Config parameter needed)
-Line 268: Changed method call from check_claim_with_verdict() → check_claim()
+✅ ADDED: Optional 'transcript_date' parameter to /analyze endpoint
+✅ FIXED: Disambiguation of "when I took office" claims with context date
+✅ ENHANCED: Context now includes transcript_date for fact-checking
+✅ DEFAULT: Uses today's date if transcript_date not provided
+✅ PRESERVED: All v10.6.0 functionality (DO NO HARM)
 
 WHY THIS MATTERS:
 =================
-The Trump inflation claim that was marked "Mostly True" (WRONG) will now be
-correctly marked as "False" because the enhanced fact-checker:
-1. Parses "when I took office" → January 20, 2025
-2. Queries FRED API for actual inflation data
-3. Compares real data (3%) vs claim ("worst in 48 years")
-4. Returns verdict: FALSE
+When Trump says "when I took office, inflation was the worst in 48 years":
+- If transcript_date = "2017-03-15" → checks Jan 2017 data (first term)
+- If transcript_date = "2025-02-10" → checks Jan 2025 data (second term)
+- If no transcript_date → defaults to today (safest assumption)
 
-FRED API REQUIRED:
-==================
-Set FRED_API_KEY in Render environment variables (you already have this)
+This eliminates ambiguity for temporal claims!
+
+NEW PARAMETER:
+==============
+POST /api/transcript/analyze
+{
+    "transcript": "...",
+    "source_type": "text",
+    "transcript_date": "2025-02-15"  // NEW: Optional (YYYY-MM-DD format)
+}
 
 This is a COMPLETE file ready for deployment.
-Last modified: December 28, 2025 - v10.6.0 ENHANCED FACT-CHECKER INTEGRATION
+Last modified: December 28, 2025 - v10.7.0 TRANSCRIPT DATE PARAMETER
 I did no harm and this file is not truncated.
 """
 
@@ -79,7 +76,7 @@ claim_extractor = TranscriptClaimExtractor(Config)
 fact_checker = EnhancedFactChecker()
 export_service = ExportService()
 
-logger.info("[TranscriptRoutes v10.6.0] ✓ Enhanced Fact-Checker initialized (FRED API enabled)")
+logger.info("[TranscriptRoutes v10.7.0] ✓ Enhanced Fact-Checker initialized (FRED API + Date Context)")
 
 # v10.4.0: Initialize Speaker Quality Analyzer
 try:
@@ -165,7 +162,7 @@ service_stats = {
     'speaker_quality_failures': 0,   # v10.4.0
     'storage_backend': 'redis' if redis_client else 'memory',
     'instance_id': INSTANCE_ID,
-    'fact_checker_version': 'enhanced_v1.0_fred_api'  # v10.6.0
+    'fact_checker_version': 'enhanced_v1.0_fred_api_with_date'  # v10.7.0
 }
 
 # ============================================================================
@@ -268,13 +265,14 @@ def delete_job(job_id: str) -> None:
         logger.error(f"[TranscriptRoutes] ✗ Error deleting job {job_id}: {e}")
 
 
-def create_job(transcript: str, source_type: str = 'text') -> str:
+def create_job(transcript: str, source_type: str = 'text', transcript_date: Optional[str] = None) -> str:
     """
     Create a new analysis job
     
     Args:
         transcript: Transcript text
         source_type: Source type (text, youtube, audio, etc.)
+        transcript_date: Optional transcript date (YYYY-MM-DD) for temporal context
         
     Returns:
         Job ID (UUID string)
@@ -289,6 +287,7 @@ def create_job(transcript: str, source_type: str = 'text') -> str:
         'created_at': datetime.now().isoformat(),
         'transcript_length': len(transcript),
         'source_type': source_type,
+        'transcript_date': transcript_date or datetime.now().strftime('%Y-%m-%d'),  # v10.7.0: Default to today
         'instance_id': INSTANCE_ID
     }
     
@@ -299,7 +298,7 @@ def create_job(transcript: str, source_type: str = 'text') -> str:
     if source_type == 'youtube':
         service_stats['youtube_extractions'] += 1
     
-    logger.info(f"[TranscriptRoutes] ✓ Created job {job_id} - Type: {source_type}, Length: {len(transcript)} chars")
+    logger.info(f"[TranscriptRoutes v10.7.0] ✓ Created job {job_id} - Type: {source_type}, Date: {job_data['transcript_date']}, Length: {len(transcript)} chars")
     
     return job_id
 
@@ -362,8 +361,13 @@ def create_job_via_api(transcript: str, source_type: str = 'text', metadata: Opt
                 'error': 'Transcript too long (maximum 50,000 characters)'
             }
         
+        # Extract transcript_date from metadata if available
+        transcript_date = None
+        if metadata and 'upload_date' in metadata:
+            transcript_date = metadata['upload_date']
+        
         # Create job
-        job_id = create_job(transcript, source_type)
+        job_id = create_job(transcript, source_type, transcript_date)
         
         # Add metadata if provided (e.g., YouTube video info)
         if metadata:
@@ -597,12 +601,13 @@ def process_transcript_job(job_id: str, transcript: str):
     v10.4.0: Includes speaker quality analysis as Step 1.5
     v10.5.0: Adds comprehensive data for PDF generation
     v10.6.0: Uses EnhancedFactChecker with FRED API
+    v10.7.0: Passes transcript_date to fact-checker for temporal context
     
     Processes a transcript by:
     0. Job creation (5%)
     1.5. Speaker quality analysis (10% - 20%)
     1. Extracting claims (20% - 40%)
-    2. Fact-checking each claim with ENHANCED checker (40% - 85%)
+    2. Fact-checking each claim with ENHANCED checker + DATE CONTEXT (40% - 85%)
     3. Generating summary and credibility score (85% - 95%)
     4. Calculating transcript quality metrics (NEW v10.5.0)
     5. Storing results with ALL fields needed for PDF (95% - 100%)
@@ -612,8 +617,12 @@ def process_transcript_job(job_id: str, transcript: str):
         transcript: Transcript text to process
     """
     try:
-        logger.info(f"[TranscriptRoutes v10.6.0] 🚀 Starting job {job_id} processing (Instance: {INSTANCE_ID})")
-        logger.info(f"[TranscriptRoutes v10.6.0] Using EnhancedFactChecker with FRED API")
+        # Get job to retrieve transcript_date
+        job = get_job(job_id)
+        transcript_date = job.get('transcript_date') if job else datetime.now().strftime('%Y-%m-%d')
+        
+        logger.info(f"[TranscriptRoutes v10.7.0] 🚀 Starting job {job_id} processing (Instance: {INSTANCE_ID})")
+        logger.info(f"[TranscriptRoutes v10.7.0] Using EnhancedFactChecker with FRED API + Date Context: {transcript_date}")
         
         # Update status to processing
         update_job(job_id, {
@@ -703,8 +712,8 @@ def process_transcript_job(job_id: str, transcript: str):
             'message': f"✓ Found {len(claims)} claims to fact-check"
         })
         
-        # STEP 2: Fact-check claims with ENHANCED checker (40% - 85%)
-        logger.info(f"[TranscriptRoutes v10.6.0] Step 2: Fact-checking {len(claims)} claims with EnhancedFactChecker (job {job_id})")
+        # STEP 2: Fact-check claims with ENHANCED checker + DATE CONTEXT (40% - 85%)
+        logger.info(f"[TranscriptRoutes v10.7.0] Step 2: Fact-checking {len(claims)} claims with EnhancedFactChecker + Date Context (job {job_id})")
         update_job(job_id, {
             'progress': 45,
             'message': random.choice(FACT_CHECKING_MESSAGES)
@@ -722,14 +731,16 @@ def process_transcript_job(job_id: str, transcript: str):
                     logger.warning(f"[TranscriptRoutes] Skipping invalid claim: {claim}")
                     continue
                 
-                # Build context for fact-checking
+                # v10.7.0: Build context with transcript_date for temporal disambiguation
                 context = {
                     'transcript': transcript[:1000],  # First 1000 chars for context
                     'speaker': claim.get('speaker', 'Unknown'),
-                    'topics': topics
+                    'topics': topics,
+                    'transcript_date': transcript_date  # NEW v10.7.0: Helps resolve "when I took office"
                 }
                 
-                logger.info(f"[TranscriptRoutes v10.6.0] Fact-checking claim {i+1}/{len(claims)}: {claim_text[:50]}...")
+                logger.info(f"[TranscriptRoutes v10.7.0] Fact-checking claim {i+1}/{len(claims)}: {claim_text[:50]}...")
+                logger.info(f"[TranscriptRoutes v10.7.0] Using transcript date context: {transcript_date}")
                 
                 # v10.6.0: CHANGED - Use EnhancedFactChecker's check_claim method
                 verdict_result = fact_checker.check_claim(claim_text, context)
@@ -743,7 +754,8 @@ def process_transcript_job(job_id: str, transcript: str):
                     'explanation': verdict_result.get('explanation', 'No explanation available'),
                     'sources': verdict_result.get('sources', []),
                     'evidence': verdict_result.get('evidence', ''),  # NEW: Enhanced checker provides evidence
-                    'fact_check_method': 'enhanced_fred_api'  # v10.6.0
+                    'fact_check_method': 'enhanced_fred_api_with_date',  # v10.7.0
+                    'context_date': transcript_date  # v10.7.0: Record what date was used
                 }
                 
                 fact_checked_claims.append(fact_checked_claim)
@@ -768,7 +780,7 @@ def process_transcript_job(job_id: str, transcript: str):
                     'error': str(e)
                 })
         
-        logger.info(f"[TranscriptRoutes v10.6.0] ✓ Fact-checked {len(fact_checked_claims)} claims with EnhancedFactChecker")
+        logger.info(f"[TranscriptRoutes v10.7.0] ✓ Fact-checked {len(fact_checked_claims)} claims with EnhancedFactChecker + Date Context")
         
         # STEP 3: Generate summary and credibility score (85% - 95%)
         logger.info(f"[TranscriptRoutes] Step 3: Generating summary (job {job_id})")
@@ -817,8 +829,9 @@ def process_transcript_job(job_id: str, transcript: str):
             'fact_checks': fact_checked_claims,  # ✅ PDF expects this key (alias for 'claims')
             'transcript_quality': transcript_quality,  # Readability metrics for PDF
             
-            # NEW FIELD v10.6.0
-            'fact_checker_version': 'enhanced_v1.0_fred_api'  # Indicates enhanced checker used
+            # NEW FIELDS v10.7.0
+            'transcript_date': transcript_date,  # Date context used for fact-checking
+            'fact_checker_version': 'enhanced_v1.0_fred_api_with_date'  # Indicates enhanced checker + date context
         }
         
         # v10.4.0: Add speaker quality analysis to results if available
@@ -840,11 +853,11 @@ def process_transcript_job(job_id: str, transcript: str):
         if job and job.get('source_type') == 'youtube':
             service_stats['youtube_successes'] += 1
         
-        logger.info(f"[TranscriptRoutes v10.6.0] ✅ Job {job_id} completed successfully")
-        logger.info(f"[TranscriptRoutes v10.6.0] Results include {len(fact_checked_claims)} fact-checked claims")
-        logger.info(f"[TranscriptRoutes v10.6.0] Credibility score: {credibility_score['score']}/100")
-        logger.info(f"[TranscriptRoutes v10.6.0] Transcript quality: Grade level {transcript_quality['grade_level']}")
-        logger.info(f"[TranscriptRoutes v10.6.0] Fact-checker: EnhancedFactChecker with FRED API")
+        logger.info(f"[TranscriptRoutes v10.7.0] ✅ Job {job_id} completed successfully")
+        logger.info(f"[TranscriptRoutes v10.7.0] Results include {len(fact_checked_claims)} fact-checked claims")
+        logger.info(f"[TranscriptRoutes v10.7.0] Credibility score: {credibility_score['score']}/100")
+        logger.info(f"[TranscriptRoutes v10.7.0] Transcript quality: Grade level {transcript_quality['grade_level']}")
+        logger.info(f"[TranscriptRoutes v10.7.0] Fact-checker: EnhancedFactChecker with FRED API + Date Context ({transcript_date})")
         
     except Exception as e:
         logger.error(f"[TranscriptRoutes] ✗ Job {job_id} failed: {e}", exc_info=True)
@@ -961,7 +974,18 @@ def generate_summary(claims: List[Dict], credibility_score: Dict) -> str:
 
 @transcript_bp.route('/analyze', methods=['POST'])
 def analyze_transcript():
-    """Main endpoint to analyze a transcript"""
+    """
+    Main endpoint to analyze a transcript
+    
+    v10.7.0: Now accepts optional transcript_date parameter
+    
+    POST /api/transcript/analyze
+    {
+        "transcript": "...",
+        "source_type": "text",
+        "transcript_date": "2025-02-15"  // Optional (YYYY-MM-DD format)
+    }
+    """
     try:
         data = request.get_json()
         
@@ -970,6 +994,7 @@ def analyze_transcript():
         
         transcript = data.get('transcript', '').strip()
         source_type = data.get('source_type', 'text')
+        transcript_date = data.get('transcript_date')  # v10.7.0: Optional date parameter
         
         if not transcript:
             return jsonify({'error': 'No transcript provided'}), 400
@@ -980,22 +1005,32 @@ def analyze_transcript():
         if len(transcript) > 50000:
             return jsonify({'error': 'Transcript too long (max 50,000 characters)'}), 400
         
-        # Create job
-        job_id = create_job(transcript, source_type)
+        # v10.7.0: Validate transcript_date format if provided
+        if transcript_date:
+            try:
+                datetime.strptime(transcript_date, '%Y-%m-%d')
+            except ValueError:
+                return jsonify({'error': 'Invalid transcript_date format. Use YYYY-MM-DD (e.g., 2025-02-15)'}), 400
+        
+        # Create job with optional transcript_date
+        job_id = create_job(transcript, source_type, transcript_date)
         
         # Start background processing
         thread = Thread(target=process_transcript_job, args=(job_id, transcript))
         thread.daemon = True
         thread.start()
         
-        logger.info(f"[TranscriptRoutes v10.6.0] ✓ Analysis started for job {job_id} (Instance: {INSTANCE_ID})")
+        logger.info(f"[TranscriptRoutes v10.7.0] ✓ Analysis started for job {job_id} (Instance: {INSTANCE_ID})")
+        if transcript_date:
+            logger.info(f"[TranscriptRoutes v10.7.0] ✓ Using transcript date: {transcript_date}")
         
         return jsonify({
             'success': True,
             'job_id': job_id,
             'message': 'Analysis started',
             'status_url': f'/api/transcript/status/{job_id}',
-            'instance_id': INSTANCE_ID
+            'instance_id': INSTANCE_ID,
+            'transcript_date': transcript_date or datetime.now().strftime('%Y-%m-%d')  # v10.7.0
         })
         
     except Exception as e:
@@ -1147,7 +1182,7 @@ def health_check():
         'redis_connected': False,
         'instance_id': INSTANCE_ID,
         'multi_instance_support': redis_client is not None,
-        'fact_checker_version': 'enhanced_v1.0_fred_api',  # v10.6.0
+        'fact_checker_version': 'enhanced_v1.0_fred_api_with_date',  # v10.7.0
         'services': {
             'claim_extractor': claim_extractor is not None,
             'fact_checker': fact_checker is not None,
@@ -1542,16 +1577,17 @@ cleanup_thread = Thread(target=schedule_cleanup, daemon=True)
 cleanup_thread.start()
 
 logger.info("=" * 80)
-logger.info("TRANSCRIPT ROUTES LOADED (v10.6.0 - ENHANCED FACT-CHECKER)")
-logger.info("  ✓ Fact-Checker: EnhancedFactChecker v1.0 with FRED API")
+logger.info("TRANSCRIPT ROUTES LOADED (v10.7.0 - TRANSCRIPT DATE PARAMETER)")
+logger.info("  ✓ Fact-Checker: EnhancedFactChecker v1.0 with FRED API + Date Context")
 logger.info("  ✓ Economic Data: Real inflation/unemployment from Federal Reserve")
 logger.info("  ✓ Temporal Parsing: Accurately extracts dates from claims")
+logger.info("  ✓ Date Context: Optional transcript_date parameter disambiguates 'when I took office'")
 logger.info("  ✓ Multi-AI Verification: Cross-checks with OpenAI + Anthropic")
 logger.info("  ✓ Speaker Quality Analyzer: " + ("ACTIVE" if speaker_quality_analyzer else "DISABLED"))
 logger.info("  ✓ Transcript Quality Metrics: ACTIVE (readability, grade level, complexity)")
 logger.info("  ✓ Comprehensive PDF Data: ALL FIELDS PROVIDED")
-logger.info("  ✓ Analysis Pipeline: Job → Speaker Quality → Claims → ENHANCED Fact-Check → Quality Metrics → Results")
-logger.info("  ✓ /api/transcript/analyze - POST")
+logger.info("  ✓ Analysis Pipeline: Job → Speaker Quality → Claims → ENHANCED Fact-Check + Date → Quality Metrics → Results")
+logger.info("  ✓ /api/transcript/analyze - POST (now accepts optional 'transcript_date')")
 logger.info("  ✓ /api/transcript/status/<id> - GET")
 logger.info("  ✓ /api/transcript/results/<id> - GET")
 logger.info("  ✓ /api/transcript/export/<id>/<format> - GET")
@@ -1563,4 +1599,4 @@ logger.info("=" * 80)
 
 
 # I did no harm and this file is not truncated
-# v10.6.0 - December 28, 2025 - ENHANCED FACT-CHECKER INTEGRATION
+# v10.7.0 - December 28, 2025 - TRANSCRIPT DATE PARAMETER FOR TEMPORAL DISAMBIGUATION
