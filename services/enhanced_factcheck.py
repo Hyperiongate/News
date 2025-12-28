@@ -1,7 +1,7 @@
 """
 File: services/enhanced_factcheck.py
 Created: December 28, 2025 - v1.0.0
-Last Updated: December 28, 2025 - v1.0.0
+Last Updated: December 28, 2025 - v1.1.0 (transcript_date context support)
 Description: Enhanced fact-checking with real economic data and strict temporal verification
 
 PURPOSE:
@@ -20,21 +20,30 @@ NEW CAPABILITIES:
 4. **Strict Verdict Criteria** - No credit for getting timeline wrong
 5. **Political Figure Database** - Knows when presidents/leaders took office
 6. **Economic Data Cache** - Fast lookups for common queries
+7. **Transcript Date Context** (v1.1.0) - Uses transcript_date to disambiguate terms
 
 FIXES THE TRUMP INFLATION CLAIM:
 ================================
 Claim: "When I took office, inflation was the worst in 48 years"
-OLD VERDICT: "Mostly True" ❌ WRONG
-NEW VERDICT: "False" ✓ CORRECT
 
-Why:
-- Parses "when I took office" → January 2025
-- Queries FRED API for inflation in January 2025 → ~3%
+WITHOUT DATE CONTEXT (v1.0.0):
+- Ambiguous: Which term? 2017 or 2025?
+- Defaults to latest term (2025)
+
+WITH DATE CONTEXT (v1.1.0):
+- transcript_date = "2019-07-10" → Checks 2017 data (first term)
+- transcript_date = "2025-02-15" → Checks 2025 data (second term)
+- OLD VERDICT: "Mostly True" ❌ WRONG
+- NEW VERDICT: "False" ✓ CORRECT
+
+Why it works now:
+- Parses "when I took office" → Checks which term was active on transcript_date
+- Queries FRED API for inflation on that specific date
 - Queries FRED API for historical inflation → 9.1% peak was June 2022
 - Verdict: FALSE - inflation was NOT worst in 48 years when he took office
 
 This is the COMPLETE file ready for deployment.
-Last modified: December 28, 2025 - v1.0.0 ENHANCED FACT-CHECKER
+Last modified: December 28, 2025 - v1.1.0 TRANSCRIPT DATE CONTEXT
 I did no harm and this file is not truncated.
 """
 
@@ -165,8 +174,11 @@ class EnhancedFactChecker:
         """
         Extract temporal information from claim
         
+        v10.7.0: Now uses transcript_date from context to disambiguate "when I took office"
+        
         Examples:
-        - "When I took office" → January 2025 (if Trump speaking)
+        - "When I took office" + transcript_date=2025-02-15 → January 2025 (Trump 2nd term)
+        - "When I took office" + transcript_date=2019-07-10 → January 2017 (Trump 1st term)
         - "In June 2022" → June 2022
         - "Last year" → 2024
         """
@@ -179,6 +191,16 @@ class EnhancedFactChecker:
         
         claim_lower = claim.lower()
         
+        # v10.7.0: Get transcript_date from context for temporal disambiguation
+        transcript_date_str = context.get('transcript_date') if context else None
+        transcript_date = None
+        if transcript_date_str:
+            try:
+                transcript_date = datetime.strptime(transcript_date_str, '%Y-%m-%d')
+                logger.info(f"[EnhancedFactCheck v10.7.0] Using transcript date context: {transcript_date_str}")
+            except:
+                logger.warning(f"[EnhancedFactCheck v10.7.0] Invalid transcript_date format: {transcript_date_str}")
+        
         # Check for "when I/he/she took office"
         if re.search(r'when (i|he|she|they) took office', claim_lower):
             temporal['has_temporal'] = True
@@ -189,11 +211,39 @@ class EnhancedFactChecker:
             
             for figure, terms in self.POLITICAL_FIGURES.items():
                 if figure in speaker or figure in claim_lower:
-                    # Get most recent term
-                    latest_term = terms[-1]
-                    temporal['reference_date'] = latest_term['start']
+                    # v10.7.0: Use transcript_date to determine which term they're referring to
+                    selected_term = None
+                    
+                    if transcript_date:
+                        # Find the term that was active when the transcript was recorded
+                        for term in terms:
+                            term_start = datetime.strptime(term['start'], '%Y-%m-%d')
+                            term_end = datetime.strptime(term['end'], '%Y-%m-%d')
+                            
+                            # Check if transcript_date falls within this term
+                            if term_start <= transcript_date <= term_end:
+                                selected_term = term
+                                logger.info(f"[EnhancedFactCheck v10.7.0] '{figure}' was in office on {transcript_date_str} (term {term.get('term', 'unknown')})")
+                                break
+                        
+                        # If not found in any term, find the most recent term before transcript_date
+                        if not selected_term:
+                            for term in reversed(terms):
+                                term_start = datetime.strptime(term['start'], '%Y-%m-%d')
+                                if term_start <= transcript_date:
+                                    selected_term = term
+                                    logger.info(f"[EnhancedFactCheck v10.7.0] Using most recent term before {transcript_date_str}: term {term.get('term', 'unknown')}")
+                                    break
+                    
+                    # Fallback to latest term if no transcript_date or term not found
+                    if not selected_term:
+                        selected_term = terms[-1]
+                        logger.info(f"[EnhancedFactCheck v10.7.0] No date context - defaulting to latest term for '{figure}'")
+                    
+                    temporal['reference_date'] = selected_term['start']
                     temporal['figure'] = figure
-                    logger.info(f"[EnhancedFactCheck] Parsed '{figure}' took office: {temporal['reference_date']}")
+                    temporal['term_number'] = selected_term.get('term', 'unknown')
+                    logger.info(f"[EnhancedFactCheck v10.7.0] Parsed '{figure}' took office: {temporal['reference_date']} (term {temporal['term_number']})")
                     break
         
         # Check for specific dates
