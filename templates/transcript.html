@@ -3,30 +3,22 @@
 <head>
     <!--
     TruthLens Transcript Analysis Page
-    Version: 3.7.0 - UNIFIED NAVIGATION UPDATE  
-    Date: December 27, 2024
+    Version: 3.8.0 - TRANSCRIPT DATE INPUT
+    Date: December 28, 2025
     
-    WHAT'S NEW IN v3.7.0:
-    ✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
-    ✅ ADDED: Quiz link with active highlighting
-    ✅ ADDED: Claim Tracker link  
-    ✅ ADDED: AI Research external link
-    ✅ ADDED: AI Debates external link
-    ✅ FIXED: Navigation matches landing.html exactly
-    ✅ PRESERVED: All v3.6.1 functionality including speaker quality fix (DO NO HARM ✓)
+    WHAT'S NEW IN v3.8.0:
+    ✅ ADDED: Optional "Transcript Date" input field in text tab
+    ✅ ADDED: Date is passed to API as transcript_date parameter
+    ✅ ENHANCED: Better temporal claim accuracy for "when I took office" etc.
+    ✅ PRESERVED: All v3.7.0 functionality (DO NO HARM ✓)
     
-    NAVIGATION NOW INCLUDES:
-    1. Home (/)
-    2. News (/analyze)
-    3. Transcripts (/transcript) ← THIS PAGE (active)
-    4. Quiz (/quiz) ← NEW
-    5. Claims (/claim-tracker) ← NEW
-    6. Debates (/debate-arena)
-    7. AI Research (external) ← NEW
-    8. AI Debates (external) ← NEW
+    WHY THIS MATTERS:
+    When someone says "when I took office" in a transcript from 2019, we now check
+    2017 data (Trump's 1st term). Previously we'd guess 2025 (2nd term). The date
+    input eliminates this ambiguity!
     
     This file is complete and ready to deploy.
-    Last modified: December 27, 2024 - v3.7.0
+    Last modified: December 28, 2025 - v3.8.0
     I did no harm and this file is not truncated.
     -->
     <meta charset="UTF-8">
@@ -512,6 +504,24 @@
                     Maximum 50,000 characters. Supports plain text transcripts.
                 </div>
             </div>
+            
+            <!-- NEW v3.8.0: Transcript Date Input -->
+            <div class="input-group" style="margin-top: 20px;">
+                <label for="transcript-date">
+                    <i class="fas fa-calendar-alt"></i> When was this transcript recorded? (Optional)
+                </label>
+                <input 
+                    type="date" 
+                    id="transcript-date" 
+                    placeholder="Select date..."
+                    style="padding: 12px 16px; border: 2px solid var(--gray-300); border-radius: 8px; font-size: 15px; width: 100%; max-width: 300px;"
+                />
+                <div class="help-text">
+                    <i class="fas fa-info-circle"></i>
+                    Providing the date helps us accurately verify time-sensitive claims like "when I took office" or economic data references.
+                </div>
+            </div>
+            
             <button onclick="startAnalysis('text')">
                 <i class="fas fa-search"></i>
                 Analyze Transcript
@@ -642,7 +652,7 @@
     </div>
 
     <script>
-        console.log('[TranscriptApp] Module loading - v3.7.0 with unified navigation...');
+        console.log('[TranscriptApp] Module loading - v3.8.0 with transcript date input...');
         
         let currentJobId = null;
         let pollInterval = null;
@@ -900,14 +910,19 @@
         }
 
         // ============================================================================
-        // START ANALYSIS (Existing functionality)
+        // START ANALYSIS (Updated v3.8.0 to include transcript_date)
         // ============================================================================
         function startAnalysis(type) {
-            console.log('[TranscriptApp] Starting analysis, type:', type);
+            console.log('[TranscriptApp v3.8.0] Starting analysis, type:', type);
             
             if (type === 'text') {
                 const transcript = document.getElementById('text-input').value.trim();
-                console.log('[TranscriptApp] Processing text input, length:', transcript.length);
+                const transcriptDate = document.getElementById('transcript-date').value; // NEW v3.8.0
+                
+                console.log('[TranscriptApp v3.8.0] Processing text input, length:', transcript.length);
+                if (transcriptDate) {
+                    console.log('[TranscriptApp v3.8.0] Transcript date provided:', transcriptDate);
+                }
                 
                 if (!transcript) {
                     alert('Please enter a transcript to analyze.');
@@ -924,7 +939,7 @@
                     return;
                 }
                 
-                submitTextAnalysis(transcript);
+                submitTextAnalysis(transcript, transcriptDate); // Pass date to submission
                 
             } else if (type === 'youtube') {
                 const url = document.getElementById('youtube-url').value.trim();
@@ -945,19 +960,27 @@
         }
 
         // ============================================================================
-        // SUBMIT ANALYSES
+        // SUBMIT ANALYSES (Updated v3.8.0 to include transcript_date)
         // ============================================================================
-        async function submitTextAnalysis(transcript) {
+        async function submitTextAnalysis(transcript, transcriptDate) {
             try {
                 showProgressSection();
+                
+                // NEW v3.8.0: Build request body with optional transcript_date
+                const requestBody = {
+                    transcript: transcript,
+                    source_type: 'text'
+                };
+                
+                if (transcriptDate) {
+                    requestBody.transcript_date = transcriptDate;
+                    console.log('[TranscriptApp v3.8.0] Including transcript_date in request:', transcriptDate);
+                }
                 
                 const response = await fetch('/api/transcript/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        transcript: transcript,
-                        source_type: 'text'
-                    })
+                    body: JSON.stringify(requestBody)
                 });
                 
                 const data = await response.json();
@@ -967,7 +990,7 @@
                 }
                 
                 currentJobId = data.job_id;
-                console.log('[TranscriptApp] ✓ Job created:', currentJobId);
+                console.log('[TranscriptApp v3.8.0] ✓ Job created:', currentJobId);
                 
                 startPolling();
                 
@@ -1649,6 +1672,7 @@
             
             document.getElementById('text-input').value = '';
             document.getElementById('youtube-url').value = '';
+            document.getElementById('transcript-date').value = ''; // v3.8.0: Clear date field
             updateCharCount('text-char-count', '');
             
             // Reset progress banner text
@@ -1657,14 +1681,14 @@
             window.scrollTo({ behavior: 'smooth', top: 0 });
         }
 
-        console.log('[TranscriptApp] ✓ Initialized - v3.7.0 with unified navigation');
+        console.log('[TranscriptApp] ✓ Initialized - v3.8.0 with transcript date input');
     </script>
 </body>
 </html>
 
 <!--
 I did no harm and this file is not truncated.
-v3.7.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
+v3.8.0 - December 28, 2025 - TRANSCRIPT DATE INPUT
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
