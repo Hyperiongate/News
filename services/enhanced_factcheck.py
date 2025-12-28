@@ -206,45 +206,79 @@ class EnhancedFactChecker:
             temporal['has_temporal'] = True
             temporal['reference_type'] = 'took_office'
             
-            # Determine whose office
+            # Determine whose office - check BOTH speaker AND claim text
             speaker = temporal['speaker'].lower()
             
-            for figure, terms in self.POLITICAL_FIGURES.items():
-                if figure in speaker or figure in claim_lower:
-                    # v10.7.0: Use transcript_date to determine which term they're referring to
-                    selected_term = None
+            # First try to find figure name in claim text itself
+            figure_found = None
+            for figure in self.POLITICAL_FIGURES.keys():
+                # Check if figure name appears in the claim
+                if figure in claim_lower:
+                    figure_found = figure
+                    logger.info(f"[EnhancedFactCheck v10.7.0] Detected '{figure}' from claim text")
+                    break
+            
+            # If not found in claim, try speaker name
+            if not figure_found:
+                for figure in self.POLITICAL_FIGURES.keys():
+                    if figure in speaker:
+                        figure_found = figure
+                        logger.info(f"[EnhancedFactCheck v10.7.0] Detected '{figure}' from speaker name")
+                        break
+            
+            # If we found a figure, determine which term
+            if figure_found:
+                terms = self.POLITICAL_FIGURES[figure_found]
+                
+                # v10.7.0: Use transcript_date to determine which term they're referring to
+                selected_term = None
+                
+                if transcript_date:
+                    # Find the term that was active when the transcript was recorded
+                    for term in terms:
+                        term_start = datetime.strptime(term['start'], '%Y-%m-%d')
+                        term_end = datetime.strptime(term['end'], '%Y-%m-%d')
+                        
+                        # Check if transcript_date falls within this term
+                        if term_start <= transcript_date <= term_end:
+                            selected_term = term
+                            logger.info(f"[EnhancedFactCheck v10.7.0] '{figure_found}' was in office on {transcript_date_str} (term {term.get('term', 'unknown')})")
+                            break
                     
-                    if transcript_date:
-                        # Find the term that was active when the transcript was recorded
+                    # If not found in any term, find the most recent term before transcript_date
+                    if not selected_term:
+                        for term in reversed(terms):
+                            term_start = datetime.strptime(term['start'], '%Y-%m-%d')
+                            if term_start <= transcript_date:
+                                selected_term = term
+                                logger.info(f"[EnhancedFactCheck v10.7.0] Using most recent term before {transcript_date_str}: term {term.get('term', 'unknown')}")
+                                break
+                
+                # Fallback to latest term if no transcript_date or term not found
+                if not selected_term:
+                    selected_term = terms[-1]
+                    logger.info(f"[EnhancedFactCheck v10.7.0] No date context - defaulting to latest term for '{figure_found}'")
+                
+                temporal['reference_date'] = selected_term['start']
+                temporal['figure'] = figure_found
+                temporal['term_number'] = selected_term.get('term', 'unknown')
+                logger.info(f"[EnhancedFactCheck v10.7.0] Parsed '{figure_found}' took office: {temporal['reference_date']} (term {temporal['term_number']})")
+            else:
+                # No figure detected - check if claim uses first-person "I"
+                if 'when i took office' in claim_lower and transcript_date:
+                    # Assume it's whoever was president on the transcript date
+                    for figure, terms in self.POLITICAL_FIGURES.items():
                         for term in terms:
                             term_start = datetime.strptime(term['start'], '%Y-%m-%d')
                             term_end = datetime.strptime(term['end'], '%Y-%m-%d')
-                            
-                            # Check if transcript_date falls within this term
                             if term_start <= transcript_date <= term_end:
-                                selected_term = term
-                                logger.info(f"[EnhancedFactCheck v10.7.0] '{figure}' was in office on {transcript_date_str} (term {term.get('term', 'unknown')})")
+                                temporal['reference_date'] = term['start']
+                                temporal['figure'] = figure
+                                temporal['term_number'] = term.get('term', 'unknown')
+                                logger.info(f"[EnhancedFactCheck v10.7.0] Inferred '{figure}' from transcript date {transcript_date_str} (term {temporal['term_number']})")
                                 break
-                        
-                        # If not found in any term, find the most recent term before transcript_date
-                        if not selected_term:
-                            for term in reversed(terms):
-                                term_start = datetime.strptime(term['start'], '%Y-%m-%d')
-                                if term_start <= transcript_date:
-                                    selected_term = term
-                                    logger.info(f"[EnhancedFactCheck v10.7.0] Using most recent term before {transcript_date_str}: term {term.get('term', 'unknown')}")
-                                    break
-                    
-                    # Fallback to latest term if no transcript_date or term not found
-                    if not selected_term:
-                        selected_term = terms[-1]
-                        logger.info(f"[EnhancedFactCheck v10.7.0] No date context - defaulting to latest term for '{figure}'")
-                    
-                    temporal['reference_date'] = selected_term['start']
-                    temporal['figure'] = figure
-                    temporal['term_number'] = selected_term.get('term', 'unknown')
-                    logger.info(f"[EnhancedFactCheck v10.7.0] Parsed '{figure}' took office: {temporal['reference_date']} (term {temporal['term_number']})")
-                    break
+                        if temporal.get('reference_date'):
+                            break
         
         # Check for specific dates
         date_patterns = [
