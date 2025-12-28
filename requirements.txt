@@ -5,6 +5,8 @@
 # NEW IN THIS VERSION:
 # - Added python-dateutil for temporal claim parsing
 # - Enhanced fact-checker with FRED API integration
+# - FIXED: Changed httpx to 0.25.2 (compatible with all AI libraries)
+# - FIXED: Removed mistralai (caused dependency conflict)
 #
 # NOTES:
 # - FRED API key required (set as FRED_API_KEY in environment)
@@ -26,9 +28,8 @@ alembic==1.13.1
 # AI/ML Services
 openai==1.54.4
 anthropic==0.39.0
-httpx==0.27.2
+httpx==0.25.2
 cohere==4.37
-mistralai==0.0.11
 
 # NEW: Date parsing for enhanced fact-checker
 python-dateutil==2.8.2
