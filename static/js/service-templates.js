@@ -329,11 +329,12 @@ window.ServiceTemplates = {
             `,
             
             // ================================================================
-            // 7. CONTENT ANALYZER TEMPLATE
+            // 7. CONTENT ANALYZER TEMPLATE - WOW FACTOR v5.0.0 COMPATIBLE
             // ================================================================
             contentAnalyzer: `
                 <div class="service-analysis-section">
-                    <div class="content-analyzer-enhanced">
+                    <div class="content-analyzer-wow-factor">
+                        <!-- Score Display -->
                         <div class="score-display-large">
                             <div class="score-circle">
                                 <div class="score-number" id="content-score">--</div>
@@ -342,27 +343,74 @@ window.ServiceTemplates = {
                             <div class="score-label" id="content-level">Analyzing...</div>
                         </div>
                         
+                        <!-- Quality Rating -->
                         <div class="info-box">
                             <div class="info-label">Quality Rating</div>
                             <div class="info-value" id="content-quality">--</div>
                         </div>
                         
-                        <div class="analysis-text-box" id="content-summary-box" style="display: none;">
-                            <h4><i class="fas fa-file-alt"></i> Summary</h4>
-                            <p id="content-summary">Loading analysis...</p>
-                        </div>
-                        
-                        <div class="findings-box" id="content-findings-box" style="display: none;">
-                            <h4><i class="fas fa-list-check"></i> Key Findings</h4>
-                            <ul id="content-findings-list"></ul>
-                        </div>
-                        
-                        <div id="content-metrics-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e2e8f0;">
-                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
-                                <i class="fas fa-chart-bar"></i> Quality Metrics
+                        <!-- All Metrics Visual Dashboard -->
+                        <div id="content-all-metrics-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1.5rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
+                                <i class="fas fa-chart-line"></i> Quality Metrics Dashboard
                             </h4>
-                            <div id="content-metrics-list" style="display: grid; gap: 1rem;">
+                            <div id="content-all-metrics-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                                <!-- Metrics will be inserted here -->
                             </div>
+                        </div>
+                        
+                        <!-- Readability Dashboard -->
+                        <div id="content-readability-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 12px; border-left: 4px solid #3b82f6;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e40af; font-size: 1.1rem; font-weight: 700;">
+                                <i class="fas fa-book-open"></i> Readability Analysis
+                            </h4>
+                            <div id="content-readability-content"></div>
+                        </div>
+                        
+                        <!-- Improvement Priorities -->
+                        <div id="content-priorities-box" style="display: none; margin: 1.5rem 0;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
+                                <i class="fas fa-exclamation-circle"></i> Top Improvement Priorities
+                            </h4>
+                            <div id="content-priorities-list"></div>
+                        </div>
+                        
+                        <!-- Citation Analysis -->
+                        <div id="content-citation-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border-left: 4px solid #10b981;">
+                            <h4 style="margin: 0 0 1rem 0; color: #065f46; font-size: 1.1rem; font-weight: 700;">
+                                <i class="fas fa-quote-right"></i> Citations & Sourcing
+                            </h4>
+                            <div id="content-citation-content"></div>
+                        </div>
+                        
+                        <!-- Grammar Showcase -->
+                        <div id="content-grammar-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
+                                <i class="fas fa-spell-check"></i> Grammar & Mechanics
+                            </h4>
+                            <div id="content-grammar-content"></div>
+                        </div>
+                        
+                        <!-- Quality Comparison -->
+                        <div id="content-comparison-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e2e8f0;">
+                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
+                                <i class="fas fa-balance-scale"></i> Quality Comparison
+                            </h4>
+                            <div id="content-comparison-content"></div>
+                        </div>
+                        
+                        <!-- Did You Know Facts -->
+                        <div id="content-facts-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: linear-gradient(135deg, #fefce8 0%, #fef3c7 100%); border-radius: 12px; border-left: 4px solid #f59e0b;">
+                            <h4 style="margin: 0 0 1rem 0; color: #92400e; font-size: 1.1rem; font-weight: 700;">
+                                <i class="fas fa-lightbulb"></i> Did You Know?
+                            </h4>
+                            <div id="content-facts-list"></div>
+                        </div>
+                        
+                        <!-- Detailed Analysis (fallback) -->
+                        <div class="analysis-text-box" id="content-analysis-box" style="display: none;">
+                            <h4><i class="fas fa-file-alt"></i> Analysis</h4>
+                            <div id="content-analysis-content"></div>
                         </div>
                     </div>
                 </div>
@@ -1000,80 +1048,497 @@ window.ServiceTemplates = {
     },
     
     // ----------------------------------------------------------------
-    // 7. CONTENT ANALYZER
+    // 7. CONTENT ANALYZER - WOW FACTOR v5.0.0 COMPATIBLE
     // ----------------------------------------------------------------
     displayContentAnalyzer: function(data) {
-        console.log('[ServiceTemplates v5.11.0] Displaying Content Analyzer');
+        console.log('[ServiceTemplates v5.12.0] Displaying Content Analyzer WOW FACTOR');
+        console.log('[Content v5.12.0] Full data:', JSON.stringify(data, null, 2));
         
-        var score = data.score || data.quality_score || 0;
+        var score = data.score || data.quality_score || data.content_score || 0;
         this.updateElement('content-score', score);
         
         var level = data.level || data.quality_level || 'Unknown';
         this.updateElement('content-level', level);
         this.updateElement('content-quality', level);
         
-        // Summary
-        var summary = this.extractText(data.summary || data.analysis, null);
-        if (summary) {
-            var summaryBox = document.getElementById('content-summary-box');
-            if (summaryBox) {
-                summaryBox.style.display = 'block';
-                this.updateElement('content-summary', summary);
-            }
-        }
-        
-        // Findings
-        var findings = this.extractFindings(data);
-        if (findings.length > 0) {
-            var findingsBox = document.getElementById('content-findings-box');
-            var findingsList = document.getElementById('content-findings-list');
-            if (findingsBox && findingsList) {
-                findingsList.innerHTML = '';
-                findings.forEach(function(finding) {
-                    var li = document.createElement('li');
-                    li.textContent = finding;
-                    findingsList.appendChild(li);
-                });
-                findingsBox.style.display = 'block';
-            }
-        }
-        
-        // Quality metrics
-        if (data.details || data.metrics) {
-            var metricsData = data.details || data.metrics;
-            var metricsBox = document.getElementById('content-metrics-box');
-            var metricsList = document.getElementById('content-metrics-list');
+        // === WOW FACTOR SECTION 1: All Metrics Visual Dashboard ===
+        var allMetricsVisual = data.all_metrics_visual || [];
+        if (Array.isArray(allMetricsVisual) && allMetricsVisual.length > 0) {
+            console.log('[Content v5.12.0] Displaying', allMetricsVisual.length, 'metrics');
+            var metricsBox = document.getElementById('content-all-metrics-box');
+            var metricsGrid = document.getElementById('content-all-metrics-grid');
             
-            if (metricsBox && metricsList && typeof metricsData === 'object') {
-                metricsList.innerHTML = '';
+            if (metricsBox && metricsGrid) {
+                metricsGrid.innerHTML = '';
                 
-                Object.keys(metricsData).forEach(function(key) {
-                    var value = metricsData[key];
-                    var metricDiv = document.createElement('div');
-                    metricDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px;';
-                    metricDiv.innerHTML = `
-                        <span style="font-weight: 600; color: #475569;">${key.replace(/_/g, ' ').replace(/\b\w/g, function(l){ return l.toUpperCase() })}</span>
-                        <span style="color: #1e293b; font-weight: 700;">${value}</span>
+                allMetricsVisual.forEach(function(metric) {
+                    var metricCard = document.createElement('div');
+                    metricCard.style.cssText = `
+                        padding: 1rem;
+                        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                        border-radius: 8px;
+                        border-left: 4px solid ${metric.color || '#6366f1'};
+                        text-align: center;
                     `;
-                    metricsList.appendChild(metricDiv);
+                    
+                    metricCard.innerHTML = `
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">${metric.icon || '📊'}</div>
+                        <div style="font-size: 1.5rem; font-weight: 700; color: ${metric.color || '#6366f1'}; margin-bottom: 0.25rem;">
+                            ${metric.score}/100
+                        </div>
+                        <div style="font-size: 0.9rem; font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">
+                            ${metric.name}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #64748b;">
+                            ${metric.description || ''}
+                        </div>
+                    `;
+                    
+                    metricsGrid.appendChild(metricCard);
                 });
                 
                 metricsBox.style.display = 'block';
             }
         }
+        
+        // === WOW FACTOR SECTION 2: Readability Dashboard ===
+        var readabilityDashboard = data.readability_dashboard;
+        if (readabilityDashboard && readabilityDashboard.detected) {
+            console.log('[Content v5.12.0] Displaying readability dashboard');
+            var readBox = document.getElementById('content-readability-box');
+            var readContent = document.getElementById('content-readability-content');
+            
+            if (readBox && readContent) {
+                var meterData = readabilityDashboard.meter_data || {};
+                var sentenceAnalysis = readabilityDashboard.sentence_analysis || {};
+                var comparison = readabilityDashboard.comparison || {};
+                
+                readContent.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem;">
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                            <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">Flesch Reading Ease</div>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: ${meterData.color || '#3b82f6'};">
+                                ${meterData.score || 0}
+                            </div>
+                            <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.5rem;">
+                                ${meterData.label || 'Unknown'}
+                            </div>
+                        </div>
+                        
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                            <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 0.5rem;">Avg Sentence Length</div>
+                            <div style="font-size: 2.5rem; font-weight: 700; color: #3b82f6;">
+                                ${sentenceAnalysis.average || 0}
+                            </div>
+                            <div style="font-size: 0.9rem; color: #64748b; margin-top: 0.5rem;">
+                                words (ideal: ${sentenceAnalysis.ideal_range || '15-20'})
+                            </div>
+                            <div style="margin-top: 0.5rem; padding: 0.25rem 0.75rem; background: ${
+                                sentenceAnalysis.status === 'Good' ? '#10b981' : '#f59e0b'
+                            }; color: white; border-radius: 4px; display: inline-block; font-size: 0.85rem; font-weight: 600;">
+                                ${sentenceAnalysis.status || 'Unknown'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: white; border-radius: 8px;">
+                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Comparison to Standards:</div>
+                        <div style="display: grid; gap: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                                <span style="color: #64748b;">News Standard:</span>
+                                <span style="font-weight: 600; color: #1e293b;">${comparison.news_standard || '--'}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; padding: 0.5rem; background: #f8fafc; border-radius: 4px;">
+                                <span style="color: #64748b;">This Article:</span>
+                                <span style="font-weight: 600; color: #1e293b;">${comparison.this_article || '--'}</span>
+                            </div>
+                            <div style="padding: 0.75rem; background: ${
+                                comparison.verdict === 'Appropriate' ? '#ecfdf5' : '#fef3c7'
+                            }; border-radius: 4px; border-left: 4px solid ${
+                                comparison.verdict === 'Appropriate' ? '#10b981' : '#f59e0b'
+                            };">
+                                <div style="font-weight: 700; color: ${
+                                    comparison.verdict === 'Appropriate' ? '#065f46' : '#92400e'
+                                };">
+                                    ${comparison.verdict || 'Unknown'}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                readBox.style.display = 'block';
+            }
+        }
+        
+        // === WOW FACTOR SECTION 3: Improvement Priorities ===
+        var priorities = data.improvement_priorities || [];
+        if (Array.isArray(priorities) && priorities.length > 0) {
+            console.log('[Content v5.12.0] Displaying', priorities.length, 'improvement priorities');
+            var prioritiesBox = document.getElementById('content-priorities-box');
+            var prioritiesList = document.getElementById('content-priorities-list');
+            
+            if (prioritiesBox && prioritiesList) {
+                prioritiesList.innerHTML = '';
+                
+                priorities.forEach(function(priority) {
+                    var priorityCard = document.createElement('div');
+                    
+                    var bgColor, borderColor, badgeColor;
+                    if (priority.priority === 'HIGH') {
+                        bgColor = 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)';
+                        borderColor = '#ef4444';
+                        badgeColor = '#ef4444';
+                    } else if (priority.priority === 'MEDIUM') {
+                        bgColor = 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)';
+                        borderColor = '#f59e0b';
+                        badgeColor = '#f59e0b';
+                    } else {
+                        bgColor = 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)';
+                        borderColor = '#3b82f6';
+                        badgeColor = '#3b82f6';
+                    }
+                    
+                    priorityCard.style.cssText = `
+                        padding: 1.25rem;
+                        background: ${bgColor};
+                        border-radius: 8px;
+                        border-left: 4px solid ${borderColor};
+                        margin-bottom: 1rem;
+                    `;
+                    
+                    priorityCard.innerHTML = `
+                        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
+                            <div style="padding: 0.25rem 0.75rem; background: ${badgeColor}; color: white; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">
+                                ${priority.priority}
+                            </div>
+                            <div style="font-weight: 700; color: #1e293b; font-size: 1rem;">
+                                ${priority.category}
+                            </div>
+                        </div>
+                        <div style="margin-bottom: 0.75rem; color: #1e293b; font-weight: 600;">
+                            ${priority.issue}
+                        </div>
+                        <div style="margin-bottom: 0.75rem; padding: 0.75rem; background: white; border-radius: 6px; color: #1e293b;">
+                            <strong>Recommendation:</strong> ${priority.recommendation}
+                        </div>
+                        <div style="font-size: 0.9rem; color: #64748b;">
+                            <em>Impact:</em> ${priority.impact}
+                        </div>
+                    `;
+                    
+                    prioritiesList.appendChild(priorityCard);
+                });
+                
+                prioritiesBox.style.display = 'block';
+            }
+        }
+        
+        // === WOW FACTOR SECTION 4: Citation Analysis ===
+        var citationAnalysis = data.citation_analysis;
+        if (citationAnalysis && citationAnalysis.detected) {
+            console.log('[Content v5.12.0] Displaying citation analysis');
+            var citationBox = document.getElementById('content-citation-box');
+            var citationContent = document.getElementById('content-citation-content');
+            
+            if (citationBox && citationContent) {
+                var summary = citationAnalysis.summary || {};
+                var analysis = citationAnalysis.analysis || {};
+                var standards = citationAnalysis.standards || {};
+                var recommendations = citationAnalysis.recommendations || [];
+                
+                citationContent.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.25rem;">📚</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #10b981;">
+                                ${summary.citations || 0}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b;">Citations</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.25rem;">📊</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #10b981;">
+                                ${summary.statistics || 0}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b;">Statistics</div>
+                        </div>
+                        <div style="text-align: center; padding: 1rem; background: white; border-radius: 8px;">
+                            <div style="font-size: 2rem; margin-bottom: 0.25rem;">💬</div>
+                            <div style="font-size: 1.75rem; font-weight: 700; color: #10b981;">
+                                ${summary.quotes || 0}
+                            </div>
+                            <div style="font-size: 0.85rem; color: #64748b;">Quotes</div>
+                        </div>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem;">
+                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Overall Assessment:</div>
+                        <div style="color: #64748b;">${analysis.sourcing_quality || 'Unknown'}</div>
+                    </div>
+                    
+                    <div style="padding: 1rem; background: white; border-radius: 8px; margin-bottom: 1rem;">
+                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.5rem;">Standard Compliance:</div>
+                        <div style="display: grid; gap: 0.5rem;">
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #64748b;">Minimum Required:</span>
+                                <span style="font-weight: 600;">${standards.minimum_citations || '--'}</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="color: #64748b;">This Article:</span>
+                                <span style="font-weight: 600;">${standards.current_citations || 0} citations</span>
+                            </div>
+                            <div style="padding: 0.5rem; background: ${
+                                analysis.meets_standards ? '#ecfdf5' : '#fef2f2'
+                            }; border-radius: 4px; font-weight: 600; color: ${
+                                analysis.meets_standards ? '#065f46' : '#991b1b'
+                            };">
+                                ${standards.status || 'Unknown'}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${recommendations.length > 0 ? `
+                        <div style="padding: 1rem; background: white; border-radius: 8px;">
+                            <div style="font-weight: 600; color: #1e293b; margin-bottom: 0.75rem;">Recommendations:</div>
+                            <div style="display: grid; gap: 0.75rem;">
+                                ${recommendations.map(function(rec) {
+                                    var recBadgeColor = rec.priority === 'HIGH' ? '#ef4444' : 
+                                                       rec.priority === 'MEDIUM' ? '#f59e0b' : '#10b981';
+                                    return `
+                                        <div style="padding: 0.75rem; background: #f8fafc; border-radius: 6px; border-left: 3px solid ${recBadgeColor};">
+                                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                                <span style="padding: 0.125rem 0.5rem; background: ${recBadgeColor}; color: white; border-radius: 3px; font-size: 0.7rem; font-weight: 700;">
+                                                    ${rec.priority}
+                                                </span>
+                                                <span style="font-weight: 600; color: #1e293b; font-size: 0.9rem;">
+                                                    ${rec.recommendation}
+                                                </span>
+                                            </div>
+                                            <div style="font-size: 0.85rem; color: #64748b;">
+                                                ${rec.why}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+                
+                citationBox.style.display = 'block';
+            }
+        }
+        
+        // === WOW FACTOR SECTION 5: Grammar Showcase ===
+        var grammarShowcase = data.grammar_showcase;
+        if (grammarShowcase && grammarShowcase.detected) {
+            console.log('[Content v5.12.0] Displaying grammar showcase');
+            var grammarBox = document.getElementById('content-grammar-box');
+            var grammarContent = document.getElementById('content-grammar-content');
+            
+            if (grammarBox && grammarContent) {
+                var categories = grammarShowcase.categories || [];
+                
+                grammarContent.innerHTML = `
+                    <div style="padding: 1rem; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-radius: 8px; border-left: 4px solid #ef4444; margin-bottom: 1rem;">
+                        <div style="font-weight: 700; color: #991b1b; font-size: 1rem; margin-bottom: 0.5rem;">
+                            ${grammarShowcase.total_issues} Grammar Issues Found
+                        </div>
+                        <div style="font-size: 0.9rem; color: #7f1d1d;">
+                            ${grammarShowcase.assessment}
+                        </div>
+                    </div>
+                    
+                    ${categories.length > 0 ? `
+                        <div style="display: grid; gap: 0.75rem;">
+                            ${categories.map(function(cat) {
+                                return `
+                                    <div style="padding: 1rem; background: #f8fafc; border-radius: 6px; border-left: 3px solid ${
+                                        cat.severity === 'high' ? '#ef4444' : '#f59e0b'
+                                    };">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                            <span style="font-weight: 600; color: #1e293b;">
+                                                ${cat.type}
+                                            </span>
+                                            <span style="padding: 0.25rem 0.5rem; background: ${
+                                                cat.severity === 'high' ? '#ef4444' : '#f59e0b'
+                                            }; color: white; border-radius: 3px; font-size: 0.75rem; font-weight: 600;">
+                                                ${cat.count} found
+                                            </span>
+                                        </div>
+                                        <div style="font-size: 0.85rem; color: #64748b; font-family: monospace; background: white; padding: 0.5rem; border-radius: 4px;">
+                                            ${cat.example}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : ''}
+                `;
+                
+                grammarBox.style.display = 'block';
+            }
+        } else if (grammarShowcase && !grammarShowcase.detected) {
+            var grammarBox = document.getElementById('content-grammar-box');
+            var grammarContent = document.getElementById('content-grammar-content');
+            
+            if (grammarBox && grammarContent) {
+                grammarContent.innerHTML = `
+                    <div style="padding: 1.5rem; background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 8px; border-left: 4px solid #10b981; text-align: center;">
+                        <div style="font-size: 3rem; margin-bottom: 0.5rem;">✓</div>
+                        <div style="font-weight: 700; color: #065f46; font-size: 1.1rem; margin-bottom: 0.5rem;">
+                            ${grammarShowcase.message || 'No grammar issues detected!'}
+                        </div>
+                        <div style="color: #047857;">
+                            Excellent writing mechanics!
+                        </div>
+                    </div>
+                `;
+                grammarBox.style.display = 'block';
+            }
+        }
+        
+        // === WOW FACTOR SECTION 6: Quality Comparison ===
+        var qualityComparison = data.quality_comparison;
+        if (qualityComparison) {
+            console.log('[Content v5.12.0] Displaying quality comparison');
+            var comparisonBox = document.getElementById('content-comparison-box');
+            var comparisonContent = document.getElementById('content-comparison-content');
+            
+            if (comparisonBox && comparisonContent) {
+                var comparisonBars = qualityComparison.comparison_bars || [];
+                
+                comparisonContent.innerHTML = `
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="font-size: 1rem; color: #64748b; margin-bottom: 0.5rem;">This Article's Score:</div>
+                        <div style="font-size: 2rem; font-weight: 700; color: #1e293b;">
+                            ${qualityComparison.this_article_score}/100
+                        </div>
+                        <div style="margin-top: 0.5rem; padding: 0.75rem; background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 6px; border-left: 4px solid #3b82f6;">
+                            <div style="font-weight: 600; color: #1e40af;">
+                                Closest Match: ${qualityComparison.closest_standard}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 1rem;">
+                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 1rem;">Comparison to Industry Standards:</div>
+                        ${comparisonBars.map(function(bar) {
+                            var barWidth = bar.score;
+                            var isCurrent = bar.is_current;
+                            
+                            return `
+                                <div style="margin-bottom: 1rem;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                        <span style="font-size: 0.9rem; font-weight: ${isCurrent ? '700' : '500'}; color: ${isCurrent ? '#1e293b' : '#64748b'};">
+                                            ${bar.name}
+                                        </span>
+                                        <span style="font-weight: 600; color: ${isCurrent ? '#1e293b' : '#64748b'};">
+                                            ${bar.score}
+                                        </span>
+                                    </div>
+                                    <div style="width: 100%; height: ${isCurrent ? '10px' : '6px'}; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                                        <div style="width: ${barWidth}%; height: 100%; background: ${
+                                            isCurrent ? 'linear-gradient(90deg, #3b82f6 0%, #2563eb 100%)' : '#cbd5e1'
+                                        }; border-radius: 3px; transition: width 0.5s ease;"></div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    
+                    <div style="padding: 1rem; background: #f8fafc; border-radius: 6px; border-left: 4px solid #6366f1;">
+                        <div style="font-weight: 700; color: #1e293b; margin-bottom: 0.5rem;">Overall Verdict:</div>
+                        <div style="color: #64748b;">
+                            ${qualityComparison.verdict}
+                        </div>
+                    </div>
+                `;
+                
+                comparisonBox.style.display = 'block';
+            }
+        }
+        
+        // === WOW FACTOR SECTION 7: Did You Know Facts ===
+        var didYouKnow = data.did_you_know || [];
+        if (Array.isArray(didYouKnow) && didYouKnow.length > 0) {
+            console.log('[Content v5.12.0] Displaying', didYouKnow.length, 'quality facts');
+            var factsBox = document.getElementById('content-facts-box');
+            var factsList = document.getElementById('content-facts-list');
+            
+            if (factsBox && factsList) {
+                factsList.innerHTML = '';
+                
+                didYouKnow.forEach(function(fact) {
+                    var factCard = document.createElement('div');
+                    factCard.style.cssText = 'padding: 1rem; background: white; border-radius: 8px; margin-bottom: 0.75rem; border-left: 4px solid #f59e0b;';
+                    factCard.innerHTML = `
+                        <div style="display: flex; gap: 1rem;">
+                            <div style="font-size: 2rem; flex-shrink: 0;">${fact.icon || '💡'}</div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 700; color: #92400e; margin-bottom: 0.5rem;">
+                                    ${fact.fact}
+                                </div>
+                                <div style="font-size: 0.9rem; color: #78350f;">
+                                    ${fact.explanation}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    factsList.appendChild(factCard);
+                });
+                
+                factsBox.style.display = 'block';
+            }
+        }
+        
+        // === FALLBACK: Detailed Analysis (if WOW FACTOR data missing) ===
+        if (!allMetricsVisual || allMetricsVisual.length === 0) {
+            console.log('[Content v5.12.0] WOW FACTOR data missing, using fallback display');
+            
+            var analysis = data.analysis;
+            if (analysis) {
+                var analysisBox = document.getElementById('content-analysis-box');
+                var analysisContent = document.getElementById('content-analysis-content');
+                
+                if (analysisBox && analysisContent) {
+                    var html = '';
+                    
+                    if (analysis.what_we_looked) {
+                        html += '<div style="margin-bottom: 1rem;"><strong>What We Analyzed:</strong><br>' + analysis.what_we_looked + '</div>';
+                    }
+                    if (analysis.what_we_found) {
+                        html += '<div style="margin-bottom: 1rem;"><strong>What We Found:</strong><br>' + analysis.what_we_found + '</div>';
+                    }
+                    if (analysis.what_it_means) {
+                        html += '<div style="margin-bottom: 1rem;"><strong>What It Means:</strong><br>' + analysis.what_it_means + '</div>';
+                    }
+                    
+                    analysisContent.innerHTML = html;
+                    analysisBox.style.display = 'block';
+                }
+            }
+        }
+        
+        console.log('[Content v5.12.0] ✓ WOW FACTOR display complete!');
     }
 };
 
-console.log('[ServiceTemplates v5.11.0] ✅ ALL 7 TEMPLATES LOADED - Module initialized successfully');
-console.log('[ServiceTemplates v5.11.0] ✓ Source Credibility template ready');
-console.log('[ServiceTemplates v5.11.0] ✓ Bias Detector template ready');
-console.log('[ServiceTemplates v5.11.0] ✓ Fact Checker template ready');
-console.log('[ServiceTemplates v5.11.0] ✓ Author Analyzer template ready (enhanced v5.10.0)');
-console.log('[ServiceTemplates v5.11.0] ✓ Transparency Analyzer template ready');
-console.log('[ServiceTemplates v5.11.0] ✓ Manipulation Detector template ready');
-console.log('[ServiceTemplates v5.11.0] ✓ Content Analyzer template ready');
+console.log('[ServiceTemplates v5.12.0] ✅ ALL 7 TEMPLATES LOADED - WOW FACTOR CONTENT ANALYZER');
+console.log('[ServiceTemplates v5.12.0] ✓ Source Credibility template ready');
+console.log('[ServiceTemplates v5.12.0] ✓ Bias Detector template ready');
+console.log('[ServiceTemplates v5.12.0] ✓ Fact Checker template ready');
+console.log('[ServiceTemplates v5.12.0] ✓ Author Analyzer template ready (enhanced v5.10.0)');
+console.log('[ServiceTemplates v5.12.0] ✓ Transparency Analyzer template ready');
+console.log('[ServiceTemplates v5.12.0] ✓ Manipulation Detector template ready');
+console.log('[ServiceTemplates v5.12.0] ✓ Content Analyzer template ready (WOW FACTOR v5.0.0 compatible)');
 
 /**
  * I did no harm and this file is not truncated.
- * v5.11.0 - December 28, 2024 - ALL 7 TEMPLATES COMPLETE AND FUNCTIONAL
+ * v5.12.0 - December 28, 2024 - CONTENT ANALYZER WOW FACTOR UPGRADE
+ * - Added comprehensive Content Analyzer template matching backend v5.0.0
+ * - Displays all metrics dashboard, readability analysis, improvement priorities
+ * - Shows citation analysis, grammar showcase, quality comparison, and facts
+ * - All 7 services now fully functional with rich visual displays
  */
