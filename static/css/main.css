@@ -4557,3 +4557,283 @@ body {
  */
 
 /* I did no harm and this file is not truncated. */
+/**
+ * TruthLens - COLORED BAR RESTORATION CSS
+ * Version: 1.0.0 
+ * Date: December 29, 2025
+ * 
+ * CRITICAL FIX: Restores colored gradient bars in Source Credibility comparison chart
+ * 
+ * PROBLEM IDENTIFIED:
+ * - service-templates.js v5.14.0 uses class names: .comparison-bar-fill-current, .comparison-bar-fill, .comparison-bar-container
+ * - These classes were MISSING from main.css
+ * - Without CSS rules, bars appear as plain gray/transparent
+ * 
+ * SOLUTION:
+ * - Add CSS rules for these specific class names
+ * - Apply beautiful color gradients based on score ranges
+ * - Maintain "YOU ARE HERE" highlighting for current source
+ * 
+ * DEPLOYMENT INSTRUCTIONS:
+ * 1. Open your static/css/main.css file
+ * 2. Scroll to the VERY BOTTOM
+ * 3. Copy everything below the "START HERE" line
+ * 4. Paste at the end of main.css
+ * 5. Save and deploy to GitHub
+ * 
+ * ============================================================================
+ * START HERE - COPY EVERYTHING BELOW THIS LINE
+ * ============================================================================
+ */
+
+/* ============================================================================
+   COMPARISON BAR COLORED GRADIENTS v1.0.0
+   Date: December 29, 2025
+   
+   These styles work with service-templates.js v5.14.0
+   They add beautiful colored gradients to comparison bars
+   ============================================================================ */
+
+/* Container for each bar (track background) */
+.comparison-bar-container {
+    width: 100%;
+    height: 32px;
+    background: #e5e7eb;
+    border-radius: 16px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Bar fill - Current Source (YOU ARE HERE) - Bright Blue Gradient */
+.comparison-bar-fill-current {
+    height: 100%;
+    border-radius: 16px;
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+}
+
+/* Animated shimmer effect on current source bar */
+.comparison-bar-fill-current::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+    animation: bar-shimmer-current 2s infinite;
+    border-radius: 16px;
+}
+
+@keyframes bar-shimmer-current {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Bar fill - Other Sources - Color-coded by score */
+.comparison-bar-fill {
+    height: 100%;
+    border-radius: 16px;
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Animated shimmer effect on other bars */
+.comparison-bar-fill::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: bar-shimmer-other 2.5s infinite;
+    border-radius: 16px;
+}
+
+@keyframes bar-shimmer-other {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* ============================================================================
+   COLOR-CODED BARS BY SCORE RANGE
+   These styles are applied dynamically by JavaScript based on outlet score
+   ============================================================================ */
+
+/* Excellent (90-100): Vibrant Green Gradient */
+.comparison-bar-fill[data-score-range="excellent"],
+.comparison-bar-fill.excellent {
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+/* Very Good (85-89): Emerald Green Gradient */
+.comparison-bar-fill[data-score-range="very-good"],
+.comparison-bar-fill.very-good {
+    background: linear-gradient(90deg, #059669 0%, #047857 100%);
+}
+
+/* Good (80-84): Blue Gradient */
+.comparison-bar-fill[data-score-range="good"],
+.comparison-bar-fill.good {
+    background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+}
+
+/* Above Average (75-79): Light Blue Gradient */
+.comparison-bar-fill[data-score-range="above-average"],
+.comparison-bar-fill.above-average {
+    background: linear-gradient(90deg, #60a5fa 0%, #3b82f6 100%);
+}
+
+/* Average (70-74): Teal Gradient */
+.comparison-bar-fill[data-score-range="average"],
+.comparison-bar-fill.average {
+    background: linear-gradient(90deg, #14b8a6 0%, #0d9488 100%);
+}
+
+/* Fair (65-69): Yellow-Orange Gradient */
+.comparison-bar-fill[data-score-range="fair"],
+.comparison-bar-fill.fair {
+    background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+/* Below Average (60-64): Orange Gradient */
+.comparison-bar-fill[data-score-range="below-average"],
+.comparison-bar-fill.below-average {
+    background: linear-gradient(90deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* Poor (50-59): Orange-Red Gradient */
+.comparison-bar-fill[data-score-range="poor"],
+.comparison-bar-fill.poor {
+    background: linear-gradient(90deg, #f97316 0%, #ea580c 100%);
+}
+
+/* Very Poor (Below 50): Red Gradient */
+.comparison-bar-fill[data-score-range="very-poor"],
+.comparison-bar-fill.very-poor {
+    background: linear-gradient(90deg, #ef4444 0%, #dc2626 100%);
+}
+
+/* ============================================================================
+   ADDITIONAL STYLING FOR BAR TEXT AND LABELS
+   ============================================================================ */
+
+/* Style for source names in comparison */
+.comparison-bar-name {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #334155;
+}
+
+.comparison-bar-name-current {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+/* "YOU ARE HERE" badge */
+.comparison-bar-badge {
+    background: #3b82f6;
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.75rem;
+    margin-left: 0.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+/* Source type labels (e.g., "Wire Service") */
+.comparison-bar-type {
+    font-size: 0.8rem;
+    color: #94a3b8;
+}
+
+/* Score numbers */
+.comparison-bar-score {
+    font-weight: 600;
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+.comparison-bar-score-current {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 1.1rem;
+}
+
+/* ============================================================================
+   HOVER EFFECTS
+   ============================================================================ */
+
+.comparison-bar-item.comparison-bar-current:hover .comparison-bar-fill-current {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4);
+}
+
+.comparison-bar-item:hover .comparison-bar-fill {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* ============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .comparison-bar-container {
+        height: 28px;
+    }
+    
+    .comparison-bar-name,
+    .comparison-bar-name-current {
+        font-size: 0.875rem;
+    }
+    
+    .comparison-bar-score,
+    .comparison-bar-score-current {
+        font-size: 0.875rem;
+    }
+    
+    .comparison-bar-badge {
+        font-size: 0.65rem;
+        padding: 0.1rem 0.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .comparison-bar-container {
+        height: 24px;
+    }
+    
+    .comparison-bar-badge {
+        display: block;
+        margin-left: 0;
+        margin-top: 0.25rem;
+    }
+}
+
+/* ============================================================================
+   END OF COLORED BAR RESTORATION CSS v1.0.0
+   December 29, 2025
+   
+   VERIFICATION CHECKLIST:
+   ✅ Adds CSS for .comparison-bar-fill-current (current source - blue)
+   ✅ Adds CSS for .comparison-bar-fill (other sources - color-coded)
+   ✅ Adds CSS for .comparison-bar-container (bar track)
+   ✅ Provides 9 different color gradients based on score ranges
+   ✅ Includes shimmer animations for visual polish
+   ✅ Maintains "YOU ARE HERE" special styling
+   ✅ Fully responsive design
+   ✅ No changes needed to JavaScript
+   ✅ No harm to existing CSS (just additions)
+   
+   Simply append these styles to the END of your static/css/main.css file
+   ============================================================================ */
+
+/* I did no harm and this file is not truncated */
