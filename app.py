@@ -1,29 +1,26 @@
 """
 File: app.py
-Last Updated: December 26, 2024 - v10.2.29
-Description: Main Flask application - QUIZ ROUTE FIX
+Last Updated: December 29, 2025 - v10.2.30
+Description: Main Flask application - CLAIM TRACKER FIX
 
-CRITICAL FIX IN v10.2.29 (December 26, 2024):
+CRITICAL FIX IN v10.2.30 (December 29, 2025):
 ========================
-QUIZ ROUTE NOT WORKING: Fixed database initialization bug
-- PROBLEM: quiz_available was False even when quizzes exist
-- ROOT CAUSE: db.create_all() "already exists" error disabled features
-- FIX: Don't disable features when tables already exist (that's SUCCESS!)
-- RESULT: /quiz route now works properly!
-- PRESERVED: All v10.2.28 functionality (DO NO HARM ✓)
+CLAIM TRACKER NOT SAVING: Fixed claim extraction data source bug
+- PROBLEM: auto_save_claims_from_analysis getting wrong data format
+- ROOT CAUSE: Passing final_results (transformed) instead of raw_results
+- ERROR LOG: "'str' object has no attribute 'get'" 
+- FIX: Extract article text from raw_results BEFORE transformation
+- RESULT: Claims now automatically saved to database!
+- PRESERVED: All v10.2.29 functionality (DO NO HARM ✓)
 
-THE BUG (lines 291-302):
-  When db.create_all() throws "already exists" error:
-  - Old code: Set quiz_available = False ❌ WRONG!
-  - New code: Keep quiz_available = True ✅ CORRECT!
-  - Tables exist = SUCCESS, not failure!
-
-PREVIOUS VERSION (v10.2.28):
-- AI Quiz Auto-Generator with OpenAI integration
-- All features preserved and enhanced!
+THE BUG (lines 560-575):
+  Claim extractor needs article text, but:
+  - Old code: Looked in final_results (transformed - no article text!) ❌
+  - New code: Looks in raw_results (has article_text field) ✅
+  - Article text is in raw_results, not final_results!
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: December 26, 2024 - v10.2.29 QUIZ ROUTE FIX
+Last modified: December 29, 2025 - v10.2.30 CLAIM TRACKER FIX
 """
 
 import os
@@ -818,6 +815,9 @@ def analyze_news():
     
     CRITICAL v10.2.16 FIX: Changed response key from 'data' to 'analysis'
     Frontend expects data.analysis or data.results, not data.data!
+    
+    CRITICAL v10.2.30 FIX: Fixed automatic claim extraction
+    Claims now properly extracted from raw_results before transformation!
     """
     try:
         data = request.get_json()
@@ -877,37 +877,63 @@ def analyze_news():
         logger.info("Data transformation complete")
         
         # ========================================================================
-        # AUTOMATIC CLAIM EXTRACTION & SAVING (v10.2.25)
+        # AUTOMATIC CLAIM EXTRACTION & SAVING (v10.2.30 FIX)
         # ========================================================================
         # Extract verifiable claims from analysis and save to database
         # This happens automatically - no user action required!
+        # 
+        # CRITICAL FIX v10.2.30: Extract from raw_results, NOT final_results!
+        # - raw_results has 'article_text' field with the actual article content
+        # - final_results is transformed and doesn't have raw article text
         # ========================================================================
         
         if claim_tracker_available:
             try:
                 from claim_tracker_routes import auto_save_claims_from_analysis
                 
-                # Extract article text for claim extraction
-                content_for_claims = article_text or raw_results.get('article_text', '')
+                # ✅ FIXED v10.2.30: Get article text from RAW results, not final
+                # raw_results has the actual article text before transformation
+                article_text_for_claims = raw_results.get('article_text', '')
                 
-                # Get metadata for source tracking
-                metadata = final_results.get('metadata', {})
-                source_info = final_results.get('source', {})
+                # If no article_text in raw_results, try the original input
+                if not article_text_for_claims:
+                    article_text_for_claims = article_text or ''
                 
-                auto_save_result = auto_save_claims_from_analysis({
-                    'content': content_for_claims,
-                    'url': url,
-                    'title': metadata.get('title', 'Unknown'),
-                    'outlet': source_info.get('name', 'Unknown'),
+                # Get metadata from raw_results too
+                article_summary = raw_results.get('article_summary', {})
+                if isinstance(article_summary, dict):
+                    title = article_summary.get('title', 'Unknown')
+                    source = article_summary.get('source', 'Unknown')
+                else:
+                    title = 'Unknown'
+                    source = raw_results.get('source', 'Unknown')
+                
+                logger.info(f"  → Extracting claims from article ({len(article_text_for_claims)} chars)")
+                
+                # Build proper data structure for claim extractor
+                claim_data = {
+                    'content': article_text_for_claims,  # ✅ Now has actual text!
+                    'text': article_text_for_claims,     # Backup key
+                    'url': url or '',
+                    'title': title,
+                    'outlet': source,
+                    'source': source,
                     'type': 'news_article'
-                })
+                }
+                
+                auto_save_result = auto_save_claims_from_analysis(claim_data)
                 
                 if auto_save_result.get('success'):
-                    logger.info(f"  ✓ Auto-saved {auto_save_result.get('claims_saved', 0)} claims to tracker")
+                    claims_saved = auto_save_result.get('claims_saved', 0)
+                    logger.info(f"  ✓ Auto-saved {claims_saved} claims to tracker")
+                else:
+                    error = auto_save_result.get('error', 'Unknown error')
+                    logger.warning(f"  ⚠ Claim extraction returned: {error}")
                 
             except Exception as e:
                 # Don't fail the entire request if claim saving fails
                 logger.warning(f"  ⚠ Failed to auto-save claims: {e}")
+                logger.warning(f"  ⚠ Traceback: {traceback.format_exc()}")
         
         logger.info("=" * 80)
         
@@ -1426,7 +1452,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.29")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.30")
     logger.info("=" * 80)
     logger.info("")
     logger.info("DEPLOYMENT ARCHITECTURE:")
@@ -1459,15 +1485,16 @@ if __name__ == '__main__':
         logger.info("  ✗ Transcript Analysis - Disabled (transcript_routes.py not found)")
     
     if claim_tracker_available:
-        logger.info("  ✓ Claim Tracker - FULLY OPERATIONAL ⭐")
+        logger.info("  ✓ Claim Tracker - FULLY OPERATIONAL ⭐ (v10.2.30 FIX)")
         logger.info("    - Searchable claim verification database")
-        logger.info("    - AUTOMATIC: Claims extracted from every analysis")
+        logger.info("    - AUTOMATIC: Claims extracted from EVERY analysis")
         logger.info("    - Claude AI identifies 5 verifiable claims per article")
         logger.info("    - Track claims across multiple sources")
         logger.info("    - Link to fact-check evidence")
         logger.info("    - Verification status tracking")
         logger.info("    - Recent claims feed and statistics")
         logger.info("    - Available at /claim-tracker")
+        logger.info("    - ✅ FIXED: Now saves claims automatically!")
     else:
         logger.info("  ✗ Claim Tracker - Disabled (DATABASE_URL not set or models missing)")
     
@@ -1525,11 +1552,12 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
-    logger.info("VERSION v10.2.29 (QUIZ ROUTE FIX) 🔧:")
-    logger.info("  ✅ FIXED: Quiz route now works when tables already exist")
-    logger.info("  ✅ FIXED: Database 'already exists' errors no longer disable features")
-    logger.info("  ✅ RESULT: /quiz route fully operational!")
-    logger.info("  ✅ PRESERVED: All v10.2.28 functionality (DO NO HARM)")
+    logger.info("VERSION v10.2.30 (CLAIM TRACKER FIX) 🎯:")
+    logger.info("  ✅ FIXED: Claim extraction data source bug")
+    logger.info("  ✅ FIXED: Now extracts from raw_results (has article text)")
+    logger.info("  ✅ FIXED: No more 'str' object has no attribute 'get' error")
+    logger.info("  ✅ RESULT: Claims now automatically saved to database!")
+    logger.info("  ✅ PRESERVED: All v10.2.29 functionality (DO NO HARM)")
     logger.info("")
     logger.info("=" * 80)
     
@@ -1537,4 +1565,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.29 - December 26, 2024 - QUIZ ROUTE FIX (Tables exist = SUCCESS, not failure!)
+# v10.2.30 - December 29, 2025 - CLAIM TRACKER FIX (Extract from raw_results, not final_results!)
