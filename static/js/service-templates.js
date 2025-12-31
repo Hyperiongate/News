@@ -1,32 +1,26 @@
 /**
- * TruthLens Service Templates - CSS COLOR RESTORATION  
- * Version: 5.14.0 - FIXED COMPARISON BAR COLORS
- * Date: December 29, 2025
+ * TruthLens Service Templates - GRAMMAR REMOVED
+ * Version: 5.15.0 - NO GRAMMAR ANALYSIS
+ * Date: December 30, 2025
  * 
- * CRITICAL FIX v5.14.0 (December 29, 2025):
- * ✅ REMOVED INLINE COLOR STYLES from comparison bars (lines 720-883)
- * ✅ Now uses CSS classes: comparison-bar-current, comparison-bar-other
- * ✅ Let stylesheet handle colors - no more light grey (#cbd5e1) override
- * ✅ FIXED: Invisible bars on light purple background
+ * CRITICAL CHANGE v5.15.0 (December 30, 2025):
+ * ❌ REMOVED GRAMMAR DISPLAY from Content Analyzer
+ * - User feedback: False grammar errors destroy trust
+ * - Backend v6.0 no longer provides grammar data
+ * - Frontend no longer displays grammar showcase
  * 
- * PRESERVED FROM v5.13.0:
- * ✅ Comparison bars structure and YOU ARE HERE badge
- * ✅ Fact Checker multi-AI consensus badges  
- * ✅ Transparency source extraction
- * ✅ Content Quality WOW FACTOR dashboard
- * ✅ ALL 7 services complete
+ * REMOVED FROM v5.14.0:
+ * - ❌ Grammar showcase div from contentAnalyzer template (lines ~390-398)
  * 
- * THE PROBLEM in v5.13.0:
- * Line 720: var barColor = isCurrent ? '#3b82f6' : '#cbd5e1';  // Light grey!
- * Line 770: background: ${...barColor}  // Inline style overrides CSS
- * 
- * THE FIX in v5.14.0:
- * - NO inline color styles
- * - Use CSS classes for styling
- * - Let your working CSS handle the colors
+ * PRESERVED FROM v5.14.0:
+ * ✅ CSS-based comparison bar colors
+ * ✅ All 7 service templates complete
+ * ✅ Fact Checker multi-AI consensus
+ * ✅ Content Analyzer WOW FACTOR (without grammar)
+ * ✅ All other functionality
  * 
  * Save as: static/js/service-templates.js
- * Last Updated: December 29, 2025 - v5.14.0
+ * Last Updated: December 30, 2025 - v5.15.0
  * 
  * I did no harm and this file is not truncated.
  */
@@ -50,7 +44,7 @@ window.ServiceTemplates = {
         };
         
         var templateKey = toCamelCase(serviceId);
-        console.log('[ServiceTemplates v5.14.0] Template lookup:', serviceId, '→', templateKey);
+        console.log('[ServiceTemplates v5.15.0] Template lookup:', serviceId, '→', templateKey);
         
         const templates = {
             sourceCredibility: `
@@ -360,13 +354,6 @@ window.ServiceTemplates = {
                             <div id="content-citation-content"></div>
                         </div>
                         
-                        <div id="content-grammar-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e2e8f0;">
-                            <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
-                                <i class="fas fa-spell-check"></i> Grammar & Mechanics
-                            </h4>
-                            <div id="content-grammar-content"></div>
-                        </div>
-                        
                         <div id="content-comparison-box" style="display: none; margin: 1.5rem 0; padding: 1.5rem; background: white; border-radius: 12px; border: 2px solid #e2e8f0;">
                             <h4 style="margin: 0 0 1rem 0; color: #1e293b; font-size: 1.1rem; font-weight: 700;">
                                 <i class="fas fa-balance-scale"></i> Quality Comparison
@@ -393,10 +380,10 @@ window.ServiceTemplates = {
         var template = templates[templateKey];
         
         if (template) {
-            console.log('[ServiceTemplates v5.14.0] ✓ Template found for:', templateKey);
+            console.log('[ServiceTemplates v5.15.0] ✓ Template found for:', templateKey);
             return template;
         } else {
-            console.warn('[ServiceTemplates v5.14.0] ✗ Template not found for:', templateKey);
+            console.warn('[ServiceTemplates v5.15.0] ✗ Template not found for:', templateKey);
             return '<div class="service-analysis-section"><p>Template not available</p></div>';
         }
     },
@@ -496,7 +483,7 @@ window.ServiceTemplates = {
     },
     
     displayAllAnalyses: function(data, analyzer) {
-        console.log('[ServiceTemplates v5.14.0] displayAllAnalyses called - ALL 7 TEMPLATES ACTIVE');
+        console.log('[ServiceTemplates v5.15.0] displayAllAnalyses called - ALL 7 TEMPLATES - NO GRAMMAR');
         
         var detailed = null;
         
@@ -520,14 +507,14 @@ window.ServiceTemplates = {
         } else if (data.results && data.results.detailed_analysis) {
             detailed = data.results.detailed_analysis;
         } else {
-            console.error('[ServiceTemplates v5.14.0] ✗ Could not find services data');
+            console.error('[ServiceTemplates v5.15.0] ✗ Could not find services data');
             return;
         }
         
         var container = document.getElementById('serviceAnalysisContainer') || document.getElementById('service-results');
         
         if (!container) {
-            console.error('[ServiceTemplates v5.14.0] CRITICAL: Container not found!');
+            console.error('[ServiceTemplates v5.15.0] CRITICAL: Container not found!');
             return;
         }
         
@@ -607,7 +594,7 @@ window.ServiceTemplates = {
     },
     
     displaySourceCredibility: function(data) {
-        console.log('[ServiceTemplates v5.14.0] Source Credibility - CSS-BASED BARS (NO inline colors)');
+        console.log('[ServiceTemplates v5.15.0] Source Credibility - CSS-BASED BARS');
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('source-score', score);
@@ -740,7 +727,7 @@ window.ServiceTemplates = {
     },
     
     displayBiasDetector: function(data) {
-        console.log('[ServiceTemplates v5.14.0] Displaying Bias Detector');
+        console.log('[ServiceTemplates v5.15.0] Displaying Bias Detector');
         
         var score = data.score || data.objectivity_score || 0;
         this.updateElement('bias-score', score);
@@ -784,7 +771,7 @@ window.ServiceTemplates = {
     },
     
     displayFactChecker: function(data) {
-        console.log('[ServiceTemplates v5.14.0] Displaying Fact Checker with multi-AI consensus');
+        console.log('[ServiceTemplates v5.15.0] Displaying Fact Checker with multi-AI consensus');
         
         var score = data.score || data.verification_score || data.accuracy_score || 0;
         this.updateElement('fact-score', score);
@@ -934,7 +921,7 @@ window.ServiceTemplates = {
     },
     
     displayAuthorAnalyzer: function(data) {
-        console.log('[ServiceTemplates v5.14.0] Displaying Author Analyzer');
+        console.log('[ServiceTemplates v5.15.0] Displaying Author Analyzer');
         
         var score = data.score || data.credibility_score || 0;
         this.updateElement('author-score', score);
@@ -994,7 +981,7 @@ window.ServiceTemplates = {
     },
     
     displayTransparencyAnalyzer: function(data) {
-        console.log('[ServiceTemplates v5.14.0] Displaying Transparency Analyzer');
+        console.log('[ServiceTemplates v5.15.0] Displaying Transparency Analyzer');
         
         var score = data.score || data.transparency_score || 0;
         this.updateElement('transparency-score', score);
@@ -1061,7 +1048,7 @@ window.ServiceTemplates = {
     },
     
     displayManipulationDetector: function(data) {
-        console.log('[ServiceTemplates v5.14.0] Displaying Manipulation Detector');
+        console.log('[ServiceTemplates v5.15.0] Displaying Manipulation Detector');
         
         var score = data.score || data.integrity_score || 0;
         this.updateElement('manipulation-score', score);
@@ -1119,7 +1106,7 @@ window.ServiceTemplates = {
     },
     
     displayContentAnalyzer: function(data) {
-        console.log('[ServiceTemplates v5.14.0] Displaying Content Analyzer WOW FACTOR');
+        console.log('[ServiceTemplates v5.15.0] Displaying Content Analyzer WOW FACTOR (NO GRAMMAR)');
         
         var score = data.score || data.quality_score || data.content_score || 0;
         this.updateElement('content-score', score);
@@ -1176,11 +1163,14 @@ window.ServiceTemplates = {
     }
 };
 
-console.log('[ServiceTemplates v5.14.0] ✅ CSS-BASED COMPARISON BARS RESTORED');
-console.log('[ServiceTemplates v5.14.0] ✓ Removed inline color styles - let CSS handle colors');
-console.log('[ServiceTemplates v5.14.0] ✓ All 7 services ready with proper styling');
-console.log('[ServiceTemplates v5.14.0] ✓ Source Credibility: comparison-bar-current, comparison-bar-other classes');
-console.log('[ServiceTemplates v5.14.0] ✓ Fact Checker: multi-AI consensus badges');
-console.log('[ServiceTemplates v5.14.0] ✓ Content Analyzer: WOW FACTOR display');
+console.log('[ServiceTemplates v5.15.0] ✅ ALL 7 TEMPLATES LOADED - NO GRAMMAR ANALYSIS');
+console.log('[ServiceTemplates v5.15.0] ✓ CSS-based comparison bars preserved');
+console.log('[ServiceTemplates v5.15.0] ✓ Source Credibility ready');
+console.log('[ServiceTemplates v5.15.0] ✓ Bias Detector ready');
+console.log('[ServiceTemplates v5.15.0] ✓ Fact Checker ready (multi-AI consensus)');
+console.log('[ServiceTemplates v5.15.0] ✓ Author Analyzer ready');
+console.log('[ServiceTemplates v5.15.0] ✓ Transparency Analyzer ready');
+console.log('[ServiceTemplates v5.15.0] ✓ Manipulation Detector ready');
+console.log('[ServiceTemplates v5.15.0] ✓ Content Analyzer ready (NO GRAMMAR - backend v6.0 compatible)');
 
 // I did no harm and this file is not truncated
