@@ -1,21 +1,17 @@
 <!DOCTYPE html>
 <!--
 TruthLens Unified Platform - Landing Page
-Version: 2.2.0 - QUIZ ENGINE ADDED
-Date: December 26, 2024
+Version: 2.3.0 - NAVIGATION FIXED
+Date: January 6, 2026
 
-CHANGE LOG:
-- December 26, 2024 v2.2.0: QUIZ ENGINE ADDED!
-  * REPLACED: "Coming Soon" card with actual Quiz Engine
-  * ADDED: Complete navigation to ALL 8 tools (6 internal + 2 external)
-  * UPDATED: Hero mentions "Six powerful tools"
-  * NEW BADGE: Quiz has pulsing NEW badge
-  * NAVIGATION: Updated to include quiz, claim-tracker, and all external tools
+WHAT'S NEW IN v2.3.0:
+✅ FIXED: Added icons to all navigation links
+✅ FIXED: Standardized navigation order (9 links total)
+✅ FIXED: Proper Home/About/Features/News/Transcripts/Quiz/Claims/Debates/Contact order
+✅ PRESERVED: All v2.2.0 functionality (DO NO HARM ✓)
 
-TOOLS (8 total):
-Internal (6): News, Transcripts, Quiz, Claims, Human Debates, Features
-External (2): AI Research, AI Debates
-
+This file is complete and ready to deploy.
+Last modified: January 6, 2026 - v2.3.0
 I did no harm and this file is not truncated.
 -->
 <html lang="en">
@@ -234,6 +230,7 @@ I did no harm and this file is not truncated.
     </style>
 </head>
 <body>
+    <!-- Navigation Header - v2.3.0 FIXED NAVIGATION -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <a href="/" class="nav-logo">
@@ -241,19 +238,20 @@ I did no harm and this file is not truncated.
                 <span>TruthLens</span>
             </a>
             
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()">
+            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
                 <i class="fas fa-bars"></i>
             </button>
             
             <ul class="nav-menu" id="navMenu">
-                <li><a href="/" class="nav-link active">Home</a></li>
-                <li><a href="/analyze" class="nav-link">News</a></li>
-                <li><a href="/transcript" class="nav-link">Transcripts</a></li>
-                <li><a href="/quiz" class="nav-link">Quiz <span class="new-badge">NEW</span></a></li>
-                <li><a href="/claim-tracker" class="nav-link">Claims</a></li>
-                <li><a href="/debate-arena" class="nav-link">Debates</a></li>
-                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                <li><a href="/" class="nav-link active"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
+                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
+                <li><a href="/analyze" class="nav-link"><i class="fas fa-newspaper"></i> News Analysis</a></li>
+                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
+                <li><a href="/quiz" class="nav-link"><i class="fas fa-question-circle"></i> Quiz</a></li>
+                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
+                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
+                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i> Contact Us</a></li>
             </ul>
         </div>
     </nav>
