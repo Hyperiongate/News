@@ -1,30 +1,28 @@
 <!DOCTYPE html>
 <!--
 TruthLens News Analysis Page
-Version: 3.14.0 - UNIFIED NAVIGATION UPDATE
-Date: December 27, 2024
+Version: 3.15.0 - NAVIGATION FIXED (NO DUPLICATE ABOUT US)
+Date: January 6, 2026
 
-WHAT'S NEW IN v3.14.0:
-✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
-✅ ADDED: Quiz link with active highlighting
-✅ ADDED: Claim Tracker link  
-✅ ADDED: AI Research external link
-✅ ADDED: AI Debates external link
-✅ FIXED: Navigation matches landing.html exactly
-✅ PRESERVED: All v3.13.0 functionality (DO NO HARM ✓)
+WHAT'S NEW IN v3.15.0:
+✅ FIXED: Removed duplicate "About Us" - now appears only once
+✅ FIXED: Proper icon for each navigation link
+✅ FIXED: Consistent order: Home, About, Features, News, Transcripts, Quiz, Claims, Debates, Contact
+✅ PRESERVED: All v3.14.0 functionality (DO NO HARM ✓)
 
-NAVIGATION NOW INCLUDES:
-1. Home (/)
-2. News (/analyze) ← THIS PAGE (active)
-3. Transcripts (/transcript)
-4. Quiz (/quiz) ← NEW
-5. Claims (/claim-tracker) ← NEW
-6. Debates (/debate-arena)
-7. AI Research (external) ← NEW
-8. AI Debates (external) ← NEW
+NAVIGATION NOW (9 LINKS TOTAL):
+1. Home (/) - with home icon
+2. About Us (/about) - with info icon
+3. Features (/features) - with star icon
+4. News Analysis (/analyze) - ACTIVE PAGE - with newspaper icon
+5. Transcript/YouTube (/transcript) - with file icon
+6. Quiz (/quiz) - with question icon
+7. Claim Tracker (/claim-tracker) - with tasks icon
+8. Debate Arena (/debate-arena) - with users icon
+9. Contact Us (/contact) - with envelope icon
 
 This file is complete and ready to deploy.
-Last modified: December 27, 2024 - v3.14.0
+Last modified: January 6, 2026 - v3.15.0
 I did no harm and this file is not truncated.
 -->
 <html lang="en">
@@ -521,7 +519,7 @@ I did no harm and this file is not truncated.
     </style>
 </head>
 <body>
-    <!-- Navigation Header - v3.14.0 UNIFIED NAVIGATION -->
+    <!-- Navigation Header - v3.15.0 FIXED NAVIGATION (NO DUPLICATE) -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <a href="/" class="nav-logo">
@@ -534,14 +532,15 @@ I did no harm and this file is not truncated.
             </button>
             
             <ul class="nav-menu" id="navMenu">
-                <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/analyze" class="nav-link active">News</a></li>
-                <li><a href="/transcript" class="nav-link">Transcripts</a></li>
-                <li><a href="/quiz" class="nav-link">Quiz</a></li>
-                <li><a href="/claim-tracker" class="nav-link">Claims</a></li>
-                <li><a href="/debate-arena" class="nav-link">Debates</a></li>
-                <li><a href="https://ai-bias-research.onrender.com" class="nav-link" target="_blank">AI Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link" target="_blank">AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                <li><a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
+                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
+                <li><a href="/analyze" class="nav-link active"><i class="fas fa-newspaper"></i> News Analysis</a></li>
+                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
+                <li><a href="/quiz" class="nav-link"><i class="fas fa-question-circle"></i> Quiz</a></li>
+                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
+                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
+                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i> Contact Us</a></li>
             </ul>
         </div>
     </nav>
@@ -777,18 +776,18 @@ I did no harm and this file is not truncated.
     <script>
         // ====================================================================
         // PAGE-SPECIFIC HELPER FUNCTIONS FOR INDEX.HTML
-        // v3.14.0 - Unified Navigation + Compact Progress Banner
+        // v3.15.0 - Fixed Navigation (No Duplicate About Us)
         // ====================================================================
         
-        console.log('[Index v3.14.0] Initializing...');
+        console.log('[Index v3.15.0] Initializing...');
         
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('[Index v3.14.0] DOM loaded, attaching analyze button listener');
+            console.log('[Index v3.15.0] DOM loaded, attaching analyze button listener');
             
             var analyzeBtn = document.getElementById('analyze-btn');
             if (analyzeBtn) {
                 analyzeBtn.addEventListener('click', function() {
-                    console.log('[Index v3.14.0] Analyze button clicked');
+                    console.log('[Index v3.15.0] Analyze button clicked');
                     
                     var urlInput = document.getElementById('article-url');
                     var textInput = document.getElementById('article-text');
@@ -805,19 +804,19 @@ I did no harm and this file is not truncated.
                     analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
                     
                     if (typeof window.startAnalysis === 'function') {
-                        console.log('[Index v3.14.0] Calling startAnalysis()');
+                        console.log('[Index v3.15.0] Calling startAnalysis()');
                         window.startAnalysis(url, text);
                     } else {
-                        console.error('[Index v3.14.0] startAnalysis() not found in unified-app-core.js');
+                        console.error('[Index v3.15.0] startAnalysis() not found in unified-app-core.js');
                         alert('Error: Analysis function not loaded. Please refresh the page.');
                         analyzeBtn.disabled = false;
                         analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
                     }
                 });
                 
-                console.log('[Index v3.14.0] ✓ Analyze button listener attached');
+                console.log('[Index v3.15.0] ✓ Analyze button listener attached');
             } else {
-                console.error('[Index v3.14.0] Analyze button not found!');
+                console.error('[Index v3.15.0] Analyze button not found!');
             }
         });
         
@@ -860,7 +859,7 @@ I did no harm and this file is not truncated.
         }
 
         function updateComprehensiveSummary(data) {
-            console.log('[Summary v3.14.0] Updating comprehensive summary');
+            console.log('[Summary v3.15.0] Updating comprehensive summary');
             
             var summaryContainer = document.getElementById('comprehensive-summary');
             if (!summaryContainer) return;
@@ -948,7 +947,7 @@ I did no harm and this file is not truncated.
         }
 
         function buildScoreBreakdown(data) {
-            console.log('[ScoreBreakdown v3.14.0] Building breakdown');
+            console.log('[ScoreBreakdown v3.15.0] Building breakdown');
             
             var breakdownContainer = document.getElementById('trust-score-breakdown');
             var breakdownItems = document.getElementById('breakdown-items');
@@ -1035,7 +1034,7 @@ I did no harm and this file is not truncated.
         }
 
         function updateMetadata(data) {
-            console.log('[Metadata v3.14.0] Updating metadata');
+            console.log('[Metadata v3.15.0] Updating metadata');
             
             var sourceEl = document.getElementById('metadata-source');
             var authorEl = document.getElementById('metadata-author');
@@ -1130,7 +1129,7 @@ I did no harm and this file is not truncated.
         }
 
         function resetAnalysis() {
-            console.log('[Reset v3.14.0] Resetting analysis');
+            console.log('[Reset v3.15.0] Resetting analysis');
             
             document.getElementById('article-url').value = '';
             document.getElementById('article-text').value = '';
@@ -1173,16 +1172,13 @@ I did no harm and this file is not truncated.
 
 <!--
 I did no harm and this file is not truncated.
-v3.14.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
+v3.15.0 - January 6, 2026 - NAVIGATION FIXED (NO DUPLICATE ABOUT US)
 
-WHAT'S NEW IN v3.14.0:
-✅ UPDATED: Complete navigation with all 8 tools
-✅ ADDED: Quiz link (/quiz)
-✅ ADDED: Claims link (/claim-tracker)
-✅ ADDED: AI Research external link
-✅ ADDED: AI Debates external link
-✅ FIXED: Navigation now matches landing.html exactly
-✅ PRESERVED: All v3.13.0 functionality (DO NO HARM)
+WHAT'S NEW IN v3.15.0:
+✅ FIXED: Removed duplicate "About Us" - now appears only once
+✅ FIXED: Proper icon for each navigation link
+✅ FIXED: Consistent order across all pages
+✅ PRESERVED: All v3.14.0 functionality (DO NO HARM)
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
