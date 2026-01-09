@@ -1,738 +1,765 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!--
-    TruthLens Transcript Analysis Page
-    Version: 3.8.0 - TRANSCRIPT DATE INPUT
-    Date: December 28, 2025
-    
-    WHAT'S NEW IN v3.8.0:
-    ✅ ADDED: Optional "Transcript Date" input field in text tab
-    ✅ ADDED: Date is passed to API as transcript_date parameter
-    ✅ ENHANCED: Better temporal claim accuracy for "when I took office" etc.
-    ✅ PRESERVED: All v3.7.0 functionality (DO NO HARM ✓)
-    
-    WHY THIS MATTERS:
-    When someone says "when I took office" in a transcript from 2019, we now check
-    2017 data (Trump's 1st term). Previously we'd guess 2025 (2nd term). The date
-    input eliminates this ambiguity!
-    
-    This file is complete and ready to deploy.
-    Last modified: December 28, 2025 - v3.8.0
-    I did no harm and this file is not truncated.
-    -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transcript Fact Checker - TruthLens AI</title>
-    <meta name="description" content="AI-powered transcript fact-checking for speeches, interviews, and YouTube videos">
-    
-    <!-- External Styles -->
-    <link rel="stylesheet" href="/static/css/transcript-youtube.css">
-    
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <style>
-        /* Additional inline styles for navigation - standardized across all pages */
+{% extends "base.html" %}
+
+<!--
+TruthLens Transcript Analysis Page - TEMPLATE INHERITANCE VERSION
+Version: 4.0.0 - CONVERTED TO TEMPLATE INHERITANCE
+Date: January 8, 2026
+
+CONVERSION NOTES:
+✅ Now extends base.html (navigation defined once)
+✅ ALL v3.8.0 functionality preserved (DO NO HARM ✓)
+✅ All JavaScript intact
+✅ All CSS intact
+✅ All features working
+✅ Uses {% block %} structure
+
+PRESERVED FEATURES:
+- Text transcript input with date field
+- YouTube URL analysis
+- YouTube transcript extraction
+- Speaker quality analysis
+- Fact-checking with FRED economic data
+- PDF export for transcripts
+- Progress tracking
+- All speaker metrics
+
+Last modified: January 8, 2026 - v4.0.0 Template Inheritance
+I did no harm and this file is not truncated.
+-->
+
+{% block title %}Transcript Fact Checker - TruthLens AI{% endblock %}
+
+{% block description %}AI-powered transcript fact-checking for speeches, interviews, and YouTube videos{% endblock %}
+
+{% block styles %}
+<!-- External Styles -->
+<link rel="stylesheet" href="/static/css/transcript-youtube.css">
+
+<style>
+    /* Additional inline styles for transcript page */
+    body {
+        padding-top: 70px;
+    }
+
+    /* YouTube Caption Disclaimer Styling (v3.5.0) */
+    .caption-disclaimer {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #f59e0b;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin-top: 12px;
+        display: flex;
+        align-items: start;
+        gap: 12px;
+    }
+
+    .caption-disclaimer i {
+        color: #d97706;
+        font-size: 1.25rem;
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+
+    .caption-disclaimer-content {
+        flex: 1;
+    }
+
+    .caption-disclaimer-title {
+        font-weight: 700;
+        color: #92400e;
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+    }
+
+    .caption-disclaimer-text {
+        color: #78350f;
+        font-size: 0.875rem;
+        line-height: 1.5;
+    }
+
+    /* v3.6.0: Speaker Quality Styling */
+    .speaker-quality-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border: 2px solid #0ea5e9;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
+    }
+
+    .speaker-quality-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .speaker-quality-header i {
+        font-size: 28px;
+        color: #0ea5e9;
+    }
+
+    .speaker-quality-header h3 {
+        font-size: 22px;
+        font-weight: 800;
+        color: #0c4a6e;
+        margin: 0;
+    }
+
+    .speaker-quality-overall {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+        border-left: 4px solid #0ea5e9;
+    }
+
+    .speaker-quality-grade {
+        font-size: 32px;
+        font-weight: 900;
+        color: #0ea5e9;
+        margin-bottom: 8px;
+    }
+
+    .speaker-quality-assessment {
+        font-size: 15px;
+        color: #475569;
+        line-height: 1.6;
+    }
+
+    .speaker-metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+        margin-top: 16px;
+    }
+
+    .speaker-metric {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .speaker-metric-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #64748b;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .speaker-metric-label i {
+        color: #0ea5e9;
+    }
+
+    .speaker-metric-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #0c4a6e;
+        margin-bottom: 4px;
+    }
+
+    .speaker-metric-description {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .speaker-metric-bar {
+        width: 100%;
+        height: 8px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .speaker-metric-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
+        border-radius: 4px;
+        transition: width 0.6s ease;
+    }
+
+    .speaker-individual {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 16px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .speaker-individual-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .speaker-individual-header i {
+        font-size: 20px;
+        color: #0ea5e9;
+    }
+
+    .speaker-individual-header h4 {
+        font-size: 18px;
+        font-weight: 700;
+        color: #0c4a6e;
+        margin: 0;
+    }
+
+    .speaker-comparison {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #f59e0b;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 16px;
+    }
+
+    .speaker-comparison-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 15px;
+        font-weight: 700;
+        color: #92400e;
+        margin-bottom: 12px;
+    }
+
+    .speaker-comparison-title i {
+        color: #d97706;
+    }
+
+    .speaker-comparison-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .speaker-comparison-list li {
+        padding: 6px 0;
+        color: #78350f;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .speaker-comparison-list li:before {
+        content: "→ ";
+        color: #d97706;
+        font-weight: bold;
+        margin-right: 8px;
+    }
+
+    @media (max-width: 768px) {
         body {
-            padding-top: 70px;
+            padding-top: 60px;
         }
 
-        .main-navigation {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-        }
-
-        .nav-container-unified {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 2rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            height: 70px;
-        }
-
-        .nav-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            text-decoration: none;
-            color: white;
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 700;
-            transition: transform 0.3s ease;
-        }
-
-        .nav-logo:hover {
-            transform: scale(1.05);
-        }
-
-        .nav-logo i {
-            font-size: 1.75rem;
-        }
-
-        .nav-menu {
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-            list-style: none;
-            margin: 0;
-            padding: 0;
-        }
-
-        .nav-menu li {
-            list-style: none;
-        }
-
-        .nav-link {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.625rem 1rem;
-            color: rgba(255, 255, 255, 0.9);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-        }
-
-        .nav-link:hover {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .nav-link.active {
-            background: rgba(255, 255, 255, 0.25);
-            color: white;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-
-        .mobile-menu-toggle {
-            display: none;
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            font-size: 1.5rem;
-            padding: 0.5rem;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .mobile-menu-toggle:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
-        /* YouTube Caption Disclaimer Styling (v3.5.0) */
         .caption-disclaimer {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-top: 12px;
-            display: flex;
-            align-items: start;
-            gap: 12px;
+            padding: 10px 12px;
         }
 
         .caption-disclaimer i {
-            color: #d97706;
-            font-size: 1.25rem;
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
-
-        .caption-disclaimer-content {
-            flex: 1;
+            font-size: 1.1rem;
         }
 
         .caption-disclaimer-title {
-            font-weight: 700;
-            color: #92400e;
-            margin-bottom: 4px;
-            font-size: 0.95rem;
+            font-size: 0.875rem;
         }
 
         .caption-disclaimer-text {
-            color: #78350f;
-            font-size: 0.875rem;
-            line-height: 1.5;
-        }
-
-        /* NEW v3.6.0: Speaker Quality Styling */
-        .speaker-quality-card {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            border: 2px solid #0ea5e9;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 4px 12px rgba(14, 165, 233, 0.1);
-        }
-
-        .speaker-quality-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-
-        .speaker-quality-header i {
-            font-size: 28px;
-            color: #0ea5e9;
-        }
-
-        .speaker-quality-header h3 {
-            font-size: 22px;
-            font-weight: 800;
-            color: #0c4a6e;
-            margin: 0;
-        }
-
-        .speaker-quality-overall {
-            background: white;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            border-left: 4px solid #0ea5e9;
-        }
-
-        .speaker-quality-grade {
-            font-size: 32px;
-            font-weight: 900;
-            color: #0ea5e9;
-            margin-bottom: 8px;
-        }
-
-        .speaker-quality-assessment {
-            font-size: 15px;
-            color: #475569;
-            line-height: 1.6;
+            font-size: 0.8125rem;
         }
 
         .speaker-metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-            margin-top: 16px;
+            grid-template-columns: 1fr;
         }
 
-        .speaker-metric {
-            background: white;
-            border-radius: 8px;
-            padding: 16px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .speaker-metric-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #64748b;
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .speaker-metric-label i {
-            color: #0ea5e9;
-        }
-
-        .speaker-metric-value {
+        .speaker-quality-grade {
             font-size: 24px;
-            font-weight: 700;
-            color: #0c4a6e;
-            margin-bottom: 4px;
         }
+    }
+</style>
+{% endblock %}
 
-        .speaker-metric-description {
-            font-size: 13px;
-            color: #64748b;
-        }
+{% block content %}
+<!-- Main Content -->
+<div id="input-section" class="container">
+    <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 12px; color: var(--gray-900);">
+        <i class="fas fa-microphone-alt"></i>
+        Transcript Fact Checker
+    </h1>
+    <p style="color: var(--gray-600); margin-bottom: 30px; font-size: 16px;">
+        Analyze transcripts from speeches, interviews, podcasts, or YouTube videos
+    </p>
 
-        .speaker-metric-bar {
-            width: 100%;
-            height: 8px;
-            background: #e2e8f0;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
+    <!-- Tabs -->
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('text')">
+            <i class="fas fa-keyboard"></i> Text Input
+        </button>
+        <button class="tab" onclick="switchTab('youtube')">
+            <i class="fab fa-youtube"></i> YouTube URL
+        </button>
+    </div>
 
-        .speaker-metric-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
-            border-radius: 4px;
-            transition: width 0.6s ease;
-        }
-
-        .speaker-individual {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 16px;
-            border: 1px solid #e2e8f0;
-        }
-
-        .speaker-individual-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 16px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #e2e8f0;
-        }
-
-        .speaker-individual-header i {
-            font-size: 20px;
-            color: #0ea5e9;
-        }
-
-        .speaker-individual-header h4 {
-            font-size: 18px;
-            font-weight: 700;
-            color: #0c4a6e;
-            margin: 0;
-        }
-
-        .speaker-comparison {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
-        }
-
-        .speaker-comparison-title {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 15px;
-            font-weight: 700;
-            color: #92400e;
-            margin-bottom: 12px;
-        }
-
-        .speaker-comparison-title i {
-            color: #d97706;
-        }
-
-        .speaker-comparison-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .speaker-comparison-list li {
-            padding: 6px 0;
-            color: #78350f;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-
-        .speaker-comparison-list li:before {
-            content: "→ ";
-            color: #d97706;
-            font-weight: bold;
-            margin-right: 8px;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding-top: 60px;
-            }
-
-            .nav-container-unified {
-                padding: 0 1rem;
-                height: 60px;
-            }
-            
-            .mobile-menu-toggle {
-                display: block;
-            }
-            
-            .nav-menu {
-                position: fixed;
-                top: 60px;
-                left: 0;
-                right: 0;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                flex-direction: column;
-                gap: 0;
-                padding: 1rem 0;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-                transform: translateY(-100%);
-                opacity: 0;
-                visibility: hidden;
-                transition: all 0.3s ease;
-            }
-            
-            .nav-menu.active {
-                transform: translateY(0);
-                opacity: 1;
-                visibility: visible;
-            }
-            
-            .nav-menu li {
-                width: 100%;
-            }
-            
-            .nav-link {
-                width: 100%;
-                padding: 1rem 1.5rem;
-                border-radius: 0;
-                justify-content: flex-start;
-            }
-            
-            .nav-link:hover {
-                transform: none;
-                background: rgba(255, 255, 255, 0.15);
-            }
-            
-            .nav-link.active {
-                background: rgba(255, 255, 255, 0.25);
-                border-left: 4px solid white;
-            }
-
-            .caption-disclaimer {
-                padding: 10px 12px;
-            }
-
-            .caption-disclaimer i {
-                font-size: 1.1rem;
-            }
-
-            .caption-disclaimer-title {
-                font-size: 0.875rem;
-            }
-
-            .caption-disclaimer-text {
-                font-size: 0.8125rem;
-            }
-
-            .speaker-metrics-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .speaker-quality-grade {
-                font-size: 24px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .nav-logo {
-                font-size: 1.25rem;
-            }
-            
-            .nav-logo i {
-                font-size: 1.5rem;
-            }
-        }
-    </style>
-</head>
-<body>
-
-    <!-- Navigation Header - v2.0.0 TWO-ROW LAYOUT -->
-<nav class="main-navigation">
-    <div class="nav-container-unified">
-        <!-- Logo and Mobile Toggle -->
-        <div class="nav-header-row">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
-            
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
+    <!-- Text Input Tab -->
+    <div id="text-tab" class="tab-content active">
+        <div class="input-group">
+            <label for="text-input">
+                <i class="fas fa-file-text"></i> Paste your transcript
+            </label>
+            <textarea 
+                id="text-input" 
+                placeholder="Paste the transcript you want to fact-check here..."
+                oninput="updateCharCount('text-char-count', this.value)"
+            ></textarea>
+            <div class="char-counter" id="text-char-count">0 / 50,000</div>
+            <div class="help-text">
+                <i class="fas fa-info-circle"></i>
+                Maximum 50,000 characters. Supports plain text transcripts.
+            </div>
         </div>
         
-        <!-- Two-Row Menu Container -->
-        <div class="nav-menu-container" id="navMenu">
-            <!-- TOP ROW: Main Tools -->
-            <ul class="nav-menu-row top-row">
-                <li><a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
-                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
-                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
-                <li><a href="/analyze" class="nav-link"><i class="fas fa-newspaper"></i> News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link active"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
-            </ul>
-            
-            <!-- BOTTOM ROW: Secondary Tools -->
-            <ul class="nav-menu-row bottom-row">
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="/observatory" class="nav-link"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
-                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
-                <li><a href="/quiz" class="nav-link"><i class="fas fa-question-circle"></i> Quiz</a></li>
-                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i> Contact Us</a></li>
-            </ul>
+        <!-- v3.8.0: Transcript Date Input -->
+        <div class="input-group" style="margin-top: 20px;">
+            <label for="transcript-date">
+                <i class="fas fa-calendar-alt"></i> When was this transcript recorded? (Optional)
+            </label>
+            <input 
+                type="date" 
+                id="transcript-date" 
+                placeholder="Select date..."
+                style="padding: 12px 16px; border: 2px solid var(--gray-300); border-radius: 8px; font-size: 15px; width: 100%; max-width: 300px;"
+            />
+            <div class="help-text">
+                <i class="fas fa-info-circle"></i>
+                Providing the date helps us accurately verify time-sensitive claims like "when I took office" or economic data references.
+            </div>
         </div>
+        
+        <button onclick="startAnalysis('text')">
+            <i class="fas fa-search"></i>
+            Analyze Transcript
+        </button>
     </div>
-</nav>
-    <!-- Main Content -->
-    <div id="input-section" class="container">
-        <h1 style="font-size: 32px; font-weight: 800; margin-bottom: 12px; color: var(--gray-900);">
-            <i class="fas fa-microphone-alt"></i>
-            Transcript Fact Checker
-        </h1>
-        <p style="color: var(--gray-600); margin-bottom: 30px; font-size: 16px;">
-            Analyze transcripts from speeches, interviews, podcasts, or YouTube videos
-        </p>
 
-        <!-- Tabs -->
-        <div class="tabs">
-            <button class="tab active" onclick="switchTab('text')">
-                <i class="fas fa-keyboard"></i> Text Input
-            </button>
-            <button class="tab" onclick="switchTab('youtube')">
-                <i class="fab fa-youtube"></i> YouTube URL
-            </button>
-        </div>
-
-        <!-- Text Input Tab -->
-        <div id="text-tab" class="tab-content active">
-            <div class="input-group">
-                <label for="text-input">
-                    <i class="fas fa-file-text"></i> Paste your transcript
-                </label>
-                <textarea 
-                    id="text-input" 
-                    placeholder="Paste the transcript you want to fact-check here..."
-                    oninput="updateCharCount('text-char-count', this.value)"
-                ></textarea>
-                <div class="char-counter" id="text-char-count">0 / 50,000</div>
-                <div class="help-text">
-                    <i class="fas fa-info-circle"></i>
-                    Maximum 50,000 characters. Supports plain text transcripts.
-                </div>
+    <!-- YouTube URL Tab -->
+    <div id="youtube-tab" class="tab-content">
+        <div class="input-group">
+            <label for="youtube-url">
+                <i class="fab fa-youtube"></i> YouTube Video URL
+            </label>
+            <input 
+                type="text" 
+                id="youtube-url" 
+                placeholder="https://www.youtube.com/watch?v=..."
+            />
+            <div class="help-text">
+                <i class="fas fa-info-circle"></i>
+                Extract transcript or analyze the video's content
             </div>
             
-            <!-- NEW v3.8.0: Transcript Date Input -->
-            <div class="input-group" style="margin-top: 20px;">
-                <label for="transcript-date">
-                    <i class="fas fa-calendar-alt"></i> When was this transcript recorded? (Optional)
-                </label>
-                <input 
-                    type="date" 
-                    id="transcript-date" 
-                    placeholder="Select date..."
-                    style="padding: 12px 16px; border: 2px solid var(--gray-300); border-radius: 8px; font-size: 15px; width: 100%; max-width: 300px;"
-                />
-                <div class="help-text">
-                    <i class="fas fa-info-circle"></i>
-                    Providing the date helps us accurately verify time-sensitive claims like "when I took office" or economic data references.
-                </div>
-            </div>
-            
-            <button onclick="startAnalysis('text')">
-                <i class="fas fa-search"></i>
-                Analyze Transcript
-            </button>
-        </div>
-
-        <!-- YouTube URL Tab -->
-        <div id="youtube-tab" class="tab-content">
-            <div class="input-group">
-                <label for="youtube-url">
-                    <i class="fab fa-youtube"></i> YouTube Video URL
-                </label>
-                <input 
-                    type="text" 
-                    id="youtube-url" 
-                    placeholder="https://www.youtube.com/watch?v=..."
-                />
-                <div class="help-text">
-                    <i class="fas fa-info-circle"></i>
-                    Extract transcript or analyze the video's content
-                </div>
-                
-                <!-- YouTube Caption Disclaimer (v3.5.0) -->
-                <div class="caption-disclaimer">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    <div class="caption-disclaimer-content">
-                        <div class="caption-disclaimer-title">Important: Captions Required</div>
-                        <div class="caption-disclaimer-text">
-                            This feature only works on YouTube videos that have captions enabled by the creator. Videos with disabled captions cannot be analyzed.
-                        </div>
+            <!-- YouTube Caption Disclaimer (v3.5.0) -->
+            <div class="caption-disclaimer">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div class="caption-disclaimer-content">
+                    <div class="caption-disclaimer-title">Important: Captions Required</div>
+                    <div class="caption-disclaimer-text">
+                        This feature only works on YouTube videos that have captions enabled by the creator. Videos with disabled captions cannot be analyzed.
                     </div>
                 </div>
             </div>
-            <!-- Button Group for Analyze Video OR Create Transcript -->
-            <div class="button-group">
-                <button class="primary" onclick="startAnalysis('youtube')">
-                    <i class="fas fa-search"></i>
-                    Analyze Video
-                </button>
-                <button class="secondary" onclick="createTranscript()">
-                    <i class="fas fa-file-alt"></i>
-                    Create Transcript
-                </button>
-            </div>
         </div>
-    </div>
-
-    <!-- Progress Section -->
-    <div id="progress-section" class="progress-section">
-        <!-- Time Estimate Banner -->
-        <div class="time-estimate-banner">
-            <i class="fas fa-clock"></i>
-            <span id="progress-banner-text">⏱️ This analysis could take a couple of minutes... Hang tight!</span>
-        </div>
-
-        <!-- Sparkles Animation -->
-        <div class="sparkles-container" id="sparkles"></div>
-
-        <!-- Spinner -->
-        <div class="spinner-container">
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-        </div>
-
-        <!-- Progress Emoji -->
-        <div class="progress-emoji" id="progress-emoji">🔍</div>
-
-        <!-- Percentage -->
-        <div class="progress-percent" id="progress-percent">0%</div>
-
-        <!-- Progress Bar -->
-        <div class="progress-bar-container">
-            <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
-        </div>
-
-        <!-- Status Message -->
-        <p id="progress-message" style="font-size: 18px; font-weight: 600; color: var(--gray-700); margin: 20px 0;">
-            Starting analysis...
-        </p>
-
-        <!-- Claims Counter -->
-        <div class="claims-counter" id="claims-counter-container" style="display: none;">
-            <i class="fas fa-check-double"></i>
-            Verified <span id="claims-count">0</span> claims
-        </div>
-
-        <!-- Fun Facts -->
-        <div class="fun-fact" id="fun-fact">
-            🤖 AI models can process thousands of claims per minute!
-        </div>
-    </div>
-
-    <!-- Transcript Display Section -->
-    <div id="transcript-section" class="transcript-section">
-        <div class="transcript-header">
-            <h2>
-                <i class="fab fa-youtube"></i>
-                Video Transcript
-            </h2>
-        </div>
-
-        <div class="transcript-metadata" id="transcript-metadata">
-            <!-- Metadata will be inserted here -->
-        </div>
-
-        <div class="transcript-content">
-            <div class="transcript-text" id="transcript-text">
-                <!-- Transcript will be inserted here -->
-            </div>
-        </div>
-
-        <div class="transcript-actions">
-            <button class="btn-download" onclick="downloadTranscriptPDF()">
-                <i class="fas fa-file-pdf"></i>
-                Download PDF
+        <!-- Button Group for Analyze Video OR Create Transcript -->
+        <div class="button-group">
+            <button class="primary" onclick="startAnalysis('youtube')">
+                <i class="fas fa-search"></i>
+                Analyze Video
             </button>
-            <button class="btn-new" onclick="startNewAnalysis()">
-                <i class="fas fa-plus"></i>
-                New Analysis
+            <button class="secondary" onclick="createTranscript()">
+                <i class="fas fa-file-alt"></i>
+                Create Transcript
             </button>
         </div>
     </div>
+</div>
 
-    <!-- Results Section -->
-    <div id="results-section" class="results-section">
-        <!-- Results will be dynamically inserted here -->
+<!-- Progress Section -->
+<div id="progress-section" class="progress-section">
+    <!-- Time Estimate Banner -->
+    <div class="time-estimate-banner">
+        <i class="fas fa-clock"></i>
+        <span id="progress-banner-text">⏱️ This analysis could take a couple of minutes... Hang tight!</span>
     </div>
 
-    <script>
-        console.log('[TranscriptApp] Module loading - v3.8.0 with transcript date input...');
+    <!-- Sparkles Animation -->
+    <div class="sparkles-container" id="sparkles"></div>
+
+    <!-- Spinner -->
+    <div class="spinner-container">
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+        <div class="spinner-ring"></div>
+    </div>
+
+    <!-- Progress Emoji -->
+    <div class="progress-emoji" id="progress-emoji">🔍</div>
+
+    <!-- Percentage -->
+    <div class="progress-percent" id="progress-percent">0%</div>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar-container">
+        <div class="progress-bar" id="progress-bar" style="width: 0%;"></div>
+    </div>
+
+    <!-- Status Message -->
+    <p id="progress-message" style="font-size: 18px; font-weight: 600; color: var(--gray-700); margin: 20px 0;">
+        Starting analysis...
+    </p>
+
+    <!-- Claims Counter -->
+    <div class="claims-counter" id="claims-counter-container" style="display: none;">
+        <i class="fas fa-check-double"></i>
+        Verified <span id="claims-count">0</span> claims
+    </div>
+
+    <!-- Fun Facts -->
+    <div class="fun-fact" id="fun-fact">
+        🤖 AI models can process thousands of claims per minute!
+    </div>
+</div>
+
+<!-- Transcript Display Section -->
+<div id="transcript-section" class="transcript-section">
+    <div class="transcript-header">
+        <h2>
+            <i class="fab fa-youtube"></i>
+            Video Transcript
+        </h2>
+    </div>
+
+    <div class="transcript-metadata" id="transcript-metadata">
+        <!-- Metadata will be inserted here -->
+    </div>
+
+    <div class="transcript-content">
+        <div class="transcript-text" id="transcript-text">
+            <!-- Transcript will be inserted here -->
+        </div>
+    </div>
+
+    <div class="transcript-actions">
+        <button class="btn-download" onclick="downloadTranscriptPDF()">
+            <i class="fas fa-file-pdf"></i>
+            Download PDF
+        </button>
+        <button class="btn-new" onclick="startNewAnalysis()">
+            <i class="fas fa-plus"></i>
+            New Analysis
+        </button>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div id="results-section" class="results-section">
+    <!-- Results will be dynamically inserted here -->
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    console.log('[TranscriptApp] Module loading - v4.0.0 Template Inheritance...');
+    
+    let currentJobId = null;
+    let pollInterval = null;
+    let currentResults = null;
+    let funFactsInterval = null;
+    let currentTranscriptData = null; // Store transcript data
+
+    const funFacts = [
+        "🤖 AI models can process thousands of claims per minute!",
+        "🌍 Fact-checking helps combat misinformation worldwide.",
+        "📊 Our system cross-references multiple trusted sources.",
+        "🔍 The average person encounters 100+ claims daily.",
+        "✨ Truth is more fascinating than fiction!",
+        "🎯 Accuracy matters more than ever in the digital age.",
+        "🧠 Critical thinking is humanity's superpower.",
+        "📚 Knowledge is the best defense against false information.",
+        "🚀 Technology amplifies both truth and misinformation.",
+        "💡 Always verify before you trust!",
+        "🔬 Science and facts go hand in hand.",
+        "🗞️ Good journalism requires thorough fact-checking.",
+        "🎓 Education is the foundation of a truth-seeking society."
+    ];
+
+    console.log('[TranscriptApp] Initializing...');
+
+    // ============================================================================
+    // TAB SWITCHING
+    // ============================================================================
+    function switchTab(tabName) {
+        console.log('[TranscriptApp] Switching to tab:', tabName);
         
-        let currentJobId = null;
-        let pollInterval = null;
-        let currentResults = null;
-        let funFactsInterval = null;
-        let currentTranscriptData = null; // Store transcript data
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        tabs.forEach(tab => tab.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
+        document.getElementById(`${tabName}-tab`).classList.add('active');
+    }
 
-        const funFacts = [
-            "🤖 AI models can process thousands of claims per minute!",
-            "🌍 Fact-checking helps combat misinformation worldwide.",
-            "📊 Our system cross-references multiple trusted sources.",
-            "🔍 The average person encounters 100+ claims daily.",
-            "✨ Truth is more fascinating than fiction!",
-            "🎯 Accuracy matters more than ever in the digital age.",
-            "🧠 Critical thinking is humanity's superpower.",
-            "📚 Knowledge is the best defense against false information.",
-            "🚀 Technology amplifies both truth and misinformation.",
-            "💡 Always verify before you trust!",
-            "🔬 Science and facts go hand in hand.",
-            "🗞️ Good journalism requires thorough fact-checking.",
-            "🎓 Education is the foundation of a truth-seeking society."
-        ];
+    // ============================================================================
+    // CHARACTER COUNT
+    // ============================================================================
+    function updateCharCount(elementId, text) {
+        const count = text.length;
+        const maxCount = 50000;
+        const element = document.getElementById(elementId);
+        
+        element.textContent = `${count.toLocaleString()} / ${maxCount.toLocaleString()}`;
+        element.style.color = count > maxCount ? 'var(--error-red)' : 'var(--gray-600)';
+    }
 
-        console.log('[TranscriptApp] Initializing...');
-
-        // ============================================================================
-        // MOBILE MENU TOGGLE
-        // ============================================================================
-        function toggleMobileMenu() {
-            const navMenu = document.getElementById('navMenu');
-            navMenu.classList.toggle('active');
+    // ============================================================================
+    // CREATE TRANSCRIPT FUNCTION
+    // ============================================================================
+    async function createTranscript() {
+        const url = document.getElementById('youtube-url').value.trim();
+        console.log('[TranscriptApp] Creating transcript for:', url);
+        
+        if (!url) {
+            alert('Please enter a YouTube URL.');
+            return;
         }
-
-        // ============================================================================
-        // TAB SWITCHING
-        // ============================================================================
-        function switchTab(tabName) {
-            console.log('[TranscriptApp] Switching to tab:', tabName);
-            
-            const tabs = document.querySelectorAll('.tab');
-            const tabContents = document.querySelectorAll('.tab-content');
-            
-            tabs.forEach(tab => tab.classList.remove('active'));
-            tabContents.forEach(content => content.classList.remove('active'));
-            
-            document.querySelector(`[onclick="switchTab('${tabName}')"]`).classList.add('active');
-            document.getElementById(`${tabName}-tab`).classList.add('active');
+        
+        if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+            alert('Please enter a valid YouTube URL.');
+            return;
         }
-
-        // ============================================================================
-        // CHARACTER COUNT
-        // ============================================================================
-        function updateCharCount(elementId, text) {
-            const count = text.length;
-            const maxCount = 50000;
-            const element = document.getElementById(elementId);
+        
+        try {
+            // Show progress section with modified message
+            showProgressSection();
+            document.getElementById('progress-banner-text').textContent = '⏱️ Extracting transcript from video...';
+            document.getElementById('progress-message').textContent = 'Connecting to YouTube...';
+            document.getElementById('progress-emoji').textContent = '📝';
             
-            element.textContent = `${count.toLocaleString()} / ${maxCount.toLocaleString()}`;
-            element.style.color = count > maxCount ? 'var(--error-red)' : 'var(--gray-600)';
+            console.log('[TranscriptApp] Calling /api/youtube/create-transcript...');
+            
+            // Call new transcript-only endpoint
+            const response = await fetch('/api/youtube/create-transcript', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            });
+            
+            console.log('[TranscriptApp] Response status:', response.status);
+            
+            const data = await response.json();
+            console.log('[TranscriptApp] Response data:', data);
+            
+            if (!response.ok) {
+                const errorMsg = data.error || 'Failed to extract transcript';
+                const suggestion = data.suggestion || '';
+                const technicalDetails = data.technical_details || '';
+                
+                console.error('[TranscriptApp] Server returned error:', errorMsg);
+                console.error('[TranscriptApp] Suggestion:', suggestion);
+                if (technicalDetails) {
+                    console.error('[TranscriptApp] Technical details:', technicalDetails);
+                }
+                
+                // Build user-friendly error message
+                let userMessage = errorMsg;
+                if (suggestion) {
+                    userMessage += '\n\n' + suggestion;
+                }
+                
+                throw new Error(userMessage);
+            }
+            
+            // Store transcript data
+            currentTranscriptData = data;
+            
+            // Hide progress, show transcript
+            hideProgressSection();
+            displayTranscript(data);
+            
+            console.log('[TranscriptApp] ✓ Transcript created successfully');
+            
+        } catch (error) {
+            console.error('[TranscriptApp] Error creating transcript:', error);
+            hideProgressSection();
+            alert('Failed to create transcript:\n\n' + error.message);
         }
+    }
 
-        // ============================================================================
-        // CREATE TRANSCRIPT FUNCTION
-        // ============================================================================
-        async function createTranscript() {
+    // ============================================================================
+    // DISPLAY TRANSCRIPT
+    // ============================================================================
+    function displayTranscript(data) {
+        const section = document.getElementById('transcript-section');
+        const metadataDiv = document.getElementById('transcript-metadata');
+        const textDiv = document.getElementById('transcript-text');
+        
+        // Hide input and results sections
+        document.getElementById('input-section').style.display = 'none';
+        document.getElementById('results-section').classList.remove('active');
+        
+        // Build metadata HTML
+        const metadata = data.metadata || {};
+        let metadataHTML = '';
+        
+        if (metadata.title) {
+            metadataHTML += `
+                <div class="transcript-metadata-item">
+                    <i class="fas fa-video"></i>
+                    <strong>Title:</strong> ${metadata.title}
+                </div>
+            `;
+        }
+        
+        if (metadata.channel) {
+            metadataHTML += `
+                <div class="transcript-metadata-item">
+                    <i class="fas fa-user"></i>
+                    <strong>Channel:</strong> ${metadata.channel}
+                </div>
+            `;
+        }
+        
+        if (metadata.duration_formatted) {
+            metadataHTML += `
+                <div class="transcript-metadata-item">
+                    <i class="fas fa-clock"></i>
+                    <strong>Duration:</strong> ${metadata.duration_formatted}
+                </div>
+            `;
+        }
+        
+        if (metadata.upload_date) {
+            metadataHTML += `
+                <div class="transcript-metadata-item">
+                    <i class="fas fa-calendar"></i>
+                    <strong>Published:</strong> ${metadata.upload_date}
+                </div>
+            `;
+        }
+        
+        const wordCount = data.transcript.split(/\s+/).length;
+        metadataHTML += `
+            <div class="transcript-metadata-item">
+                <i class="fas fa-file-alt"></i>
+                <strong>Length:</strong> ${data.transcript.length.toLocaleString()} characters, ${wordCount.toLocaleString()} words
+            </div>
+        `;
+        
+        // Insert content
+        metadataDiv.innerHTML = metadataHTML;
+        textDiv.textContent = data.transcript;
+        
+        // Show transcript section
+        section.classList.add('active');
+        
+        // Scroll to transcript
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ============================================================================
+    // DOWNLOAD TRANSCRIPT PDF
+    // ============================================================================
+    async function downloadTranscriptPDF() {
+        if (!currentTranscriptData) {
+            alert('No transcript available to download.');
+            return;
+        }
+        
+        console.log('[TranscriptApp] Downloading transcript as PDF...');
+        
+        try {
+            const response = await fetch('/api/youtube/download-transcript-pdf', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentTranscriptData)
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to generate PDF');
+            }
+            
+            // Get filename from header or use default
+            let filename = 'transcript.pdf';
+            const contentDisposition = response.headers.get('Content-Disposition');
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?(.+)"?/);
+                if (match) filename = match[1];
+            }
+            
+            // Download the PDF
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+            
+            console.log('[TranscriptApp] ✓ PDF downloaded:', filename);
+            
+        } catch (error) {
+            console.error('[TranscriptApp] Error downloading PDF:', error);
+            alert('Failed to download PDF: ' + error.message);
+        }
+    }
+
+    // ============================================================================
+    // START ANALYSIS (v3.8.0 with transcript_date support)
+    // ============================================================================
+    function startAnalysis(type) {
+        console.log('[TranscriptApp v4.0.0] Starting analysis, type:', type);
+        
+        if (type === 'text') {
+            const transcript = document.getElementById('text-input').value.trim();
+            const transcriptDate = document.getElementById('transcript-date').value;
+            
+            console.log('[TranscriptApp v4.0.0] Processing text input, length:', transcript.length);
+            if (transcriptDate) {
+                console.log('[TranscriptApp v4.0.0] Transcript date provided:', transcriptDate);
+            }
+            
+            if (!transcript) {
+                alert('Please enter a transcript to analyze.');
+                return;
+            }
+            
+            if (transcript.length < 10) {
+                alert('Transcript is too short. Please provide at least 10 characters.');
+                return;
+            }
+            
+            if (transcript.length > 50000) {
+                alert('Transcript is too long. Maximum 50,000 characters allowed.');
+                return;
+            }
+            
+            submitTextAnalysis(transcript, transcriptDate);
+            
+        } else if (type === 'youtube') {
             const url = document.getElementById('youtube-url').value.trim();
-            console.log('[TranscriptApp] Creating transcript for:', url);
+            console.log('[TranscriptApp] Processing YouTube URL:', url);
             
             if (!url) {
                 alert('Please enter a YouTube URL.');
@@ -744,964 +771,735 @@
                 return;
             }
             
-            try {
-                // Show progress section with modified message
-                showProgressSection();
-                document.getElementById('progress-banner-text').textContent = '⏱️ Extracting transcript from video...';
-                document.getElementById('progress-message').textContent = 'Connecting to YouTube...';
-                document.getElementById('progress-emoji').textContent = '📝';
-                
-                console.log('[TranscriptApp] Calling /api/youtube/create-transcript...');
-                
-                // Call new transcript-only endpoint
-                const response = await fetch('/api/youtube/create-transcript', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url })
-                });
-                
-                console.log('[TranscriptApp] Response status:', response.status);
-                
-                const data = await response.json();
-                console.log('[TranscriptApp] Response data:', data);
-                
-                if (!response.ok) {
-                    const errorMsg = data.error || 'Failed to extract transcript';
-                    const suggestion = data.suggestion || '';
-                    const technicalDetails = data.technical_details || '';
-                    
-                    console.error('[TranscriptApp] Server returned error:', errorMsg);
-                    console.error('[TranscriptApp] Suggestion:', suggestion);
-                    if (technicalDetails) {
-                        console.error('[TranscriptApp] Technical details:', technicalDetails);
-                    }
-                    
-                    // Build user-friendly error message
-                    let userMessage = errorMsg;
-                    if (suggestion) {
-                        userMessage += '\n\n' + suggestion;
-                    }
-                    
-                    throw new Error(userMessage);
-                }
-                
-                // Store transcript data
-                currentTranscriptData = data;
-                
-                // Hide progress, show transcript
-                hideProgressSection();
-                displayTranscript(data);
-                
-                console.log('[TranscriptApp] ✓ Transcript created successfully');
-                
-            } catch (error) {
-                console.error('[TranscriptApp] Error creating transcript:', error);
-                hideProgressSection();
-                alert('Failed to create transcript:\n\n' + error.message);
-            }
+            submitYouTubeAnalysis(url);
         }
+    }
 
-        // ============================================================================
-        // DISPLAY TRANSCRIPT
-        // ============================================================================
-        function displayTranscript(data) {
-            const section = document.getElementById('transcript-section');
-            const metadataDiv = document.getElementById('transcript-metadata');
-            const textDiv = document.getElementById('transcript-text');
+    // ============================================================================
+    // SUBMIT ANALYSES (v3.8.0 with transcript_date support)
+    // ============================================================================
+    async function submitTextAnalysis(transcript, transcriptDate) {
+        try {
+            showProgressSection();
             
-            // Hide input and results sections
-            document.getElementById('input-section').style.display = 'none';
-            document.getElementById('results-section').classList.remove('active');
-            
-            // Build metadata HTML
-            const metadata = data.metadata || {};
-            let metadataHTML = '';
-            
-            if (metadata.title) {
-                metadataHTML += `
-                    <div class="transcript-metadata-item">
-                        <i class="fas fa-video"></i>
-                        <strong>Title:</strong> ${metadata.title}
-                    </div>
-                `;
-            }
-            
-            if (metadata.channel) {
-                metadataHTML += `
-                    <div class="transcript-metadata-item">
-                        <i class="fas fa-user"></i>
-                        <strong>Channel:</strong> ${metadata.channel}
-                    </div>
-                `;
-            }
-            
-            if (metadata.duration_formatted) {
-                metadataHTML += `
-                    <div class="transcript-metadata-item">
-                        <i class="fas fa-clock"></i>
-                        <strong>Duration:</strong> ${metadata.duration_formatted}
-                    </div>
-                `;
-            }
-            
-            if (metadata.upload_date) {
-                metadataHTML += `
-                    <div class="transcript-metadata-item">
-                        <i class="fas fa-calendar"></i>
-                        <strong>Published:</strong> ${metadata.upload_date}
-                    </div>
-                `;
-            }
-            
-            const wordCount = data.transcript.split(/\s+/).length;
-            metadataHTML += `
-                <div class="transcript-metadata-item">
-                    <i class="fas fa-file-alt"></i>
-                    <strong>Length:</strong> ${data.transcript.length.toLocaleString()} characters, ${wordCount.toLocaleString()} words
-                </div>
-            `;
-            
-            // Insert content
-            metadataDiv.innerHTML = metadataHTML;
-            textDiv.textContent = data.transcript;
-            
-            // Show transcript section
-            section.classList.add('active');
-            
-            // Scroll to transcript
-            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-
-        // ============================================================================
-        // DOWNLOAD TRANSCRIPT PDF
-        // ============================================================================
-        async function downloadTranscriptPDF() {
-            if (!currentTranscriptData) {
-                alert('No transcript available to download.');
-                return;
-            }
-            
-            console.log('[TranscriptApp] Downloading transcript as PDF...');
-            
-            try {
-                const response = await fetch('/api/youtube/download-transcript-pdf', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(currentTranscriptData)
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to generate PDF');
-                }
-                
-                // Get filename from header or use default
-                let filename = 'transcript.pdf';
-                const contentDisposition = response.headers.get('Content-Disposition');
-                if (contentDisposition) {
-                    const match = contentDisposition.match(/filename="?(.+)"?/);
-                    if (match) filename = match[1];
-                }
-                
-                // Download the PDF
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(downloadUrl);
-                document.body.removeChild(a);
-                
-                console.log('[TranscriptApp] ✓ PDF downloaded:', filename);
-                
-            } catch (error) {
-                console.error('[TranscriptApp] Error downloading PDF:', error);
-                alert('Failed to download PDF: ' + error.message);
-            }
-        }
-
-        // ============================================================================
-        // START ANALYSIS (Updated v3.8.0 to include transcript_date)
-        // ============================================================================
-        function startAnalysis(type) {
-            console.log('[TranscriptApp v3.8.0] Starting analysis, type:', type);
-            
-            if (type === 'text') {
-                const transcript = document.getElementById('text-input').value.trim();
-                const transcriptDate = document.getElementById('transcript-date').value; // NEW v3.8.0
-                
-                console.log('[TranscriptApp v3.8.0] Processing text input, length:', transcript.length);
-                if (transcriptDate) {
-                    console.log('[TranscriptApp v3.8.0] Transcript date provided:', transcriptDate);
-                }
-                
-                if (!transcript) {
-                    alert('Please enter a transcript to analyze.');
-                    return;
-                }
-                
-                if (transcript.length < 10) {
-                    alert('Transcript is too short. Please provide at least 10 characters.');
-                    return;
-                }
-                
-                if (transcript.length > 50000) {
-                    alert('Transcript is too long. Maximum 50,000 characters allowed.');
-                    return;
-                }
-                
-                submitTextAnalysis(transcript, transcriptDate); // Pass date to submission
-                
-            } else if (type === 'youtube') {
-                const url = document.getElementById('youtube-url').value.trim();
-                console.log('[TranscriptApp] Processing YouTube URL:', url);
-                
-                if (!url) {
-                    alert('Please enter a YouTube URL.');
-                    return;
-                }
-                
-                if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
-                    alert('Please enter a valid YouTube URL.');
-                    return;
-                }
-                
-                submitYouTubeAnalysis(url);
-            }
-        }
-
-        // ============================================================================
-        // SUBMIT ANALYSES (Updated v3.8.0 to include transcript_date)
-        // ============================================================================
-        async function submitTextAnalysis(transcript, transcriptDate) {
-            try {
-                showProgressSection();
-                
-                // NEW v3.8.0: Build request body with optional transcript_date
-                const requestBody = {
-                    transcript: transcript,
-                    source_type: 'text'
-                };
-                
-                if (transcriptDate) {
-                    requestBody.transcript_date = transcriptDate;
-                    console.log('[TranscriptApp v3.8.0] Including transcript_date in request:', transcriptDate);
-                }
-                
-                const response = await fetch('/api/transcript/analyze', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Analysis failed');
-                }
-                
-                currentJobId = data.job_id;
-                console.log('[TranscriptApp v3.8.0] ✓ Job created:', currentJobId);
-                
-                startPolling();
-                
-            } catch (error) {
-                console.error('[TranscriptApp] Error:', error);
-                hideProgressSection();
-                alert('Analysis failed: ' + error.message);
-            }
-        }
-
-        async function submitYouTubeAnalysis(url) {
-            try {
-                console.log('[TranscriptApp] Calling /api/youtube/process...');
-                showProgressSection();
-                
-                const response = await fetch('/api/youtube/process', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: url })
-                });
-                
-                const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Failed to process YouTube video');
-                }
-                
-                currentJobId = data.job_id;
-                console.log('[TranscriptApp] ✓ Job created:', currentJobId);
-                
-                startPolling();
-                
-            } catch (error) {
-                console.error('[TranscriptApp] Error:', error);
-                hideProgressSection();
-                alert('YouTube analysis failed: ' + error.message);
-            }
-        }
-
-        // ============================================================================
-        // PROGRESS UI
-        // ============================================================================
-        function showProgressSection() {
-            document.getElementById('input-section').style.display = 'none';
-            document.getElementById('progress-section').classList.add('active');
-            document.getElementById('results-section').classList.remove('active');
-            document.getElementById('transcript-section').classList.remove('active');
-            
-            // Reset progress
-            updateProgress(0, 'Starting analysis...');
-            document.getElementById('claims-counter-container').style.display = 'none';
-            document.getElementById('claims-count').textContent = '0';
-            
-            // Start fun facts rotation
-            startFunFactsRotation();
-            
-            // Create sparkles
-            createSparkles();
-        }
-
-        function hideProgressSection() {
-            document.getElementById('progress-section').classList.remove('active');
-            stopFunFactsRotation();
-        }
-
-        function updateProgress(percent, message) {
-            document.getElementById('progress-percent').textContent = Math.round(percent) + '%';
-            document.getElementById('progress-bar').style.width = percent + '%';
-            document.getElementById('progress-message').textContent = message;
-            
-            // Update emoji based on progress
-            const emoji = document.getElementById('progress-emoji');
-            if (percent < 30) emoji.textContent = '🔍';
-            else if (percent < 60) emoji.textContent = '🧠';
-            else if (percent < 90) emoji.textContent = '⚡';
-            else emoji.textContent = '✨';
-        }
-
-        function createSparkles() {
-            const container = document.getElementById('sparkles');
-            container.innerHTML = '';
-            
-            for (let i = 0; i < 20; i++) {
-                const sparkle = document.createElement('div');
-                sparkle.className = 'sparkle';
-                sparkle.style.left = Math.random() * 100 + '%';
-                sparkle.style.animationDelay = Math.random() * 3 + 's';
-                container.appendChild(sparkle);
-            }
-        }
-
-        function startFunFactsRotation() {
-            let currentIndex = 0;
-            const funFactElement = document.getElementById('fun-fact');
-            
-            funFactsInterval = setInterval(() => {
-                currentIndex = (currentIndex + 1) % funFacts.length;
-                funFactElement.style.opacity = '0';
-                
-                setTimeout(() => {
-                    funFactElement.textContent = funFacts[currentIndex];
-                    funFactElement.style.opacity = '1';
-                }, 300);
-            }, 5000);
-        }
-
-        function stopFunFactsRotation() {
-            if (funFactsInterval) {
-                clearInterval(funFactsInterval);
-                funFactsInterval = null;
-            }
-        }
-
-        // ============================================================================
-        // POLLING
-        // ============================================================================
-        function startPolling() {
-            console.log('[TranscriptApp] Starting polling for job:', currentJobId);
-            
-            pollInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`/api/transcript/status/${currentJobId}`);
-                    const data = await response.json();
-                    
-                    console.log('[TranscriptApp] Poll response:', data.status);
-                    
-                    const status = data.status;
-                    const progress = data.progress || 0;
-                    const message = data.message || 'Processing...';
-                    
-                    updateProgress(progress, message);
-                    
-                    // Show claims counter if available
-                    if (data.claims_verified !== undefined) {
-                        document.getElementById('claims-counter-container').style.display = 'flex';
-                        document.getElementById('claims-count').textContent = data.claims_verified;
-                    }
-                    
-                    if (status === 'completed') {
-                        clearInterval(pollInterval);
-                        pollInterval = null;
-                        
-                        console.log('[TranscriptApp] ✓ Analysis completed');
-                        currentResults = data.results;
-                        
-                        setTimeout(() => {
-                            hideProgressSection();
-                            displayResults(data.results);
-                        }, 500);
-                    } else if (status === 'error') {
-                        clearInterval(pollInterval);
-                        pollInterval = null;
-                        
-                        console.error('[TranscriptApp] ✗ Analysis error:', data.error);
-                        hideProgressSection();
-                        alert('Analysis failed: ' + (data.error || 'Unknown error'));
-                    }
-                    
-                } catch (error) {
-                    console.error('[TranscriptApp] Polling error:', error);
-                }
-            }, 2000);
-        }
-
-        // ============================================================================
-        // NEW v3.6.0: SPEAKER QUALITY DISPLAY
-        // ============================================================================
-        function buildSpeakerQualityHTML(speakerQuality) {
-            if (!speakerQuality || !speakerQuality.success) {
-                return '';
-            }
-
-            console.log('[TranscriptApp] Building speaker quality display');
-            
-            let html = '<div class="speaker-quality-card">';
-            
-            // Header
-            html += `
-                <div class="speaker-quality-header">
-                    <i class="fas fa-user-graduate"></i>
-                    <h3>Speaker Quality Analysis</h3>
-                </div>
-            `;
-            
-            // Check if multi-speaker
-            const isMultiSpeaker = speakerQuality.analysis_type === 'transcript_with_speakers';
-            
-            if (isMultiSpeaker) {
-                // Multi-speaker analysis
-                const speakerCount = speakerQuality.speaker_count || 0;
-                html += `<p style="color: #64748b; margin-bottom: 16px; font-size: 14px;">
-                    <i class="fas fa-users"></i> Analysis of ${speakerCount} speakers
-                </p>`;
-                
-                // Display each speaker
-                const speakers = speakerQuality.speakers || {};
-                for (const [speakerName, analysis] of Object.entries(speakers)) {
-                    html += buildIndividualSpeakerHTML(speakerName, analysis);
-                }
-                
-                // Display comparison if available
-                if (speakerQuality.comparison && speakerQuality.comparison.key_differences) {
-                    html += buildSpeakerComparisonHTML(speakerQuality.comparison);
-                }
-            } else {
-                // Single speaker analysis
-                html += buildOverallQualityHTML(speakerQuality);
-            }
-            
-            html += '</div>';
-            return html;
-        }
-
-        function buildOverallQualityHTML(analysis) {
-            let html = '';
-            
-            // Overall assessment card
-            if (analysis.overall_assessment || analysis.grade_level) {
-                html += '<div class="speaker-quality-overall">';
-                
-                if (analysis.grade_level && analysis.grade_level.grade_level_label) {
-                    html += `<div class="speaker-quality-grade">
-                        <i class="fas fa-graduation-cap"></i> ${analysis.grade_level.grade_level_label}
-                    </div>`;
-                }
-                
-                if (analysis.overall_assessment) {
-                    html += `<div class="speaker-quality-assessment">${analysis.overall_assessment}</div>`;
-                }
-                
-                html += '</div>';
-            }
-            
-            // Metrics grid
-            html += '<div class="speaker-metrics-grid">';
-            
-            // Grade Level
-            if (analysis.grade_level && analysis.grade_level.flesch_kincaid_grade !== undefined) {
-                const gradeScore = analysis.grade_level.flesch_kincaid_grade;
-                const gradePercent = Math.min((gradeScore / 18) * 100, 100);
-                html += `
-                    <div class="speaker-metric">
-                        <div class="speaker-metric-label">
-                            <i class="fas fa-book"></i> Grade Level
-                        </div>
-                        <div class="speaker-metric-value">${gradeScore.toFixed(1)}</div>
-                        <div class="speaker-metric-description">${analysis.grade_level.interpretation || ''}</div>
-                        <div class="speaker-metric-bar">
-                            <div class="speaker-metric-bar-fill" style="width: ${gradePercent}%"></div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Language Style
-            if (analysis.language_style && analysis.language_style.inflammatory_percentage !== undefined) {
-                const infPercent = analysis.language_style.inflammatory_percentage;
-                html += `
-                    <div class="speaker-metric">
-                        <div class="speaker-metric-label">
-                            <i class="fas fa-fire"></i> Inflammatory Language
-                        </div>
-                        <div class="speaker-metric-value">${infPercent.toFixed(1)}%</div>
-                        <div class="speaker-metric-description">${analysis.language_style.style_assessment || ''}</div>
-                        <div class="speaker-metric-bar">
-                            <div class="speaker-metric-bar-fill" style="width: ${infPercent}%; background: ${infPercent > 15 ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(90deg, #10b981 0%, #059669 100%)'}"></div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Sentence Quality
-            if (analysis.sentence_quality && analysis.sentence_quality.completion_rate !== undefined) {
-                const completionRate = analysis.sentence_quality.completion_rate;
-                html += `
-                    <div class="speaker-metric">
-                        <div class="speaker-metric-label">
-                            <i class="fas fa-check-circle"></i> Sentence Completion
-                        </div>
-                        <div class="speaker-metric-value">${completionRate.toFixed(1)}%</div>
-                        <div class="speaker-metric-description">${analysis.sentence_quality.quality_assessment || ''}</div>
-                        <div class="speaker-metric-bar">
-                            <div class="speaker-metric-bar-fill" style="width: ${completionRate}%"></div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Coherence
-            if (analysis.coherence && analysis.coherence.coherence_score !== undefined) {
-                const coherenceScore = analysis.coherence.coherence_score;
-                html += `
-                    <div class="speaker-metric">
-                        <div class="speaker-metric-label">
-                            <i class="fas fa-link"></i> Coherence
-                        </div>
-                        <div class="speaker-metric-value">${coherenceScore.toFixed(1)}%</div>
-                        <div class="speaker-metric-description">${analysis.coherence.logical_flow || ''}</div>
-                        <div class="speaker-metric-bar">
-                            <div class="speaker-metric-bar-fill" style="width: ${coherenceScore}%"></div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Vocabulary
-            if (analysis.vocabulary && analysis.vocabulary.vocabulary_diversity !== undefined) {
-                const vocabScore = analysis.vocabulary.vocabulary_diversity;
-                html += `
-                    <div class="speaker-metric">
-                        <div class="speaker-metric-label">
-                            <i class="fas fa-book-open"></i> Vocabulary Diversity
-                        </div>
-                        <div class="speaker-metric-value">${vocabScore.toFixed(1)}%</div>
-                        <div class="speaker-metric-description">${analysis.vocabulary.complexity_level || ''}</div>
-                        <div class="speaker-metric-bar">
-                            <div class="speaker-metric-bar-fill" style="width: ${vocabScore}%"></div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Rhetorical Devices
-            if (analysis.rhetorical_devices && analysis.rhetorical_devices.tactics_used) {
-                const tactics = analysis.rhetorical_devices.tactics_used;
-                html += `
-                    <div class="speaker-metric">
-                        <div class="speaker-metric-label">
-                            <i class="fas fa-comments"></i> Rhetorical Tactics
-                        </div>
-                        <div class="speaker-metric-value">${tactics.length}</div>
-                        <div class="speaker-metric-description">${tactics.join(', ')}</div>
-                    </div>
-                `;
-            }
-            
-            html += '</div>';
-            return html;
-        }
-
-        function buildIndividualSpeakerHTML(speakerName, analysis) {
-            let html = '<div class="speaker-individual">';
-            
-            html += `
-                <div class="speaker-individual-header">
-                    <i class="fas fa-user"></i>
-                    <h4>${speakerName}</h4>
-                </div>
-            `;
-            
-            html += buildOverallQualityHTML(analysis);
-            
-            html += '</div>';
-            return html;
-        }
-
-        function buildSpeakerComparisonHTML(comparison) {
-            if (!comparison || !comparison.key_differences || comparison.key_differences.length === 0) {
-                return '';
-            }
-            
-            let html = '<div class="speaker-comparison">';
-            html += `
-                <div class="speaker-comparison-title">
-                    <i class="fas fa-balance-scale"></i>
-                    Key Differences Between Speakers
-                </div>
-                <ul class="speaker-comparison-list">
-            `;
-            
-            for (const diff of comparison.key_differences) {
-                html += `<li>${diff}</li>`;
-            }
-            
-            html += '</ul></div>';
-            return html;
-        }
-
-        // ============================================================================
-        // DISPLAY RESULTS (Updated with Speaker Quality)
-        // ============================================================================
-        function displayResults(results) {
-            console.log('[TranscriptApp] Displaying results');
-            
-            const resultsSection = document.getElementById('results-section');
-            
-            // Hide transcript section if it's showing
-            document.getElementById('transcript-section').classList.remove('active');
-            
-            // Detect format and build appropriate HTML
-            let html = '';
-            
-            if (results.fact_checks && Array.isArray(results.fact_checks)) {
-                console.log('[TranscriptApp] Detected TRANSCRIPT format');
-                html = buildTranscriptResultsHTML(results);
-            } else if (results.credibility_score || results.analysis) {
-                console.log('[TranscriptApp] Detected NEWS format');
-                html = buildNewsResultsHTML(results);
-            } else {
-                console.log('[TranscriptApp] Unknown format, using generic display');
-                html = buildGenericResultsHTML(results);
-            }
-            
-            resultsSection.innerHTML = html;
-            resultsSection.classList.add('active');
-            
-            window.scrollTo({ behavior: 'smooth', top: 0 });
-        }
-
-        function buildTranscriptResultsHTML(results) {
-            console.log('[TranscriptApp] Building TRANSCRIPT results');
-            
-            const factChecks = results.fact_checks || results.claims || [];
-            
-            let html = `
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                        <i class="fas fa-plus"></i> New Analysis
-                    </button>
-                </div>
-            `;
-            
-            // NEW v3.6.0: Add speaker quality display if available
-            if (results.speaker_quality) {
-                console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
-                html += buildSpeakerQualityHTML(results.speaker_quality);
-            }
-            
-            html += `
-                <div style="background: var(--gray-50); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">
-                        <i class="fas fa-info-circle" style="color: var(--primary-blue);"></i> Summary
-                    </h3>
-                    <p style="color: var(--gray-700); line-height: 1.8;">${results.summary || 'Analysis complete.'}</p>
-                </div>
-                
-                <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-                    <button onclick="exportResults('pdf')" style="flex: 1; padding: 12px; background: var(--error-red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </button>
-                    <button onclick="exportResults('json')" style="flex: 1; padding: 12px; background: var(--warning-orange); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-code"></i> JSON
-                    </button>
-                    <button onclick="exportResults('txt')" style="flex: 1; padding: 12px; background: var(--success-green); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-file-alt"></i> TXT
-                    </button>
-                </div>
-            `;
-            
-            if (factChecks.length > 0) {
-                html += `<h3 style="font-size: 20px; font-weight: 800; margin-bottom: 16px;">Fact-Checked Claims (${factChecks.length})</h3>`;
-                
-                factChecks.forEach((check, index) => {
-                    const verdict = check.verdict || 'unverified';
-                    const color = check.verdict_color || getVerdictColor(verdict);
-                    const label = check.verdict_label || verdict.replace('_', ' ').toUpperCase();
-                    
-                    html += `
-                        <div class="claim-card">
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-                                <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; text-align: center; line-height: 32px; font-weight: 700;">${index + 1}</div>
-                                <div class="verdict-badge" style="background: ${color}20; color: ${color};">
-                                    ${check.verdict_icon || '•'} ${label}
-                                </div>
-                            </div>
-                            
-                            <p style="font-size: 16px; font-weight: 600; margin-bottom: 12px; line-height: 1.6;">
-                                "${check.claim || check.text || 'Unknown claim'}"
-                            </p>
-                            
-                            ${check.speaker ? `<p style="font-size: 14px; color: var(--gray-600); margin-bottom: 12px;"><i class="fas fa-user"></i> <strong>Speaker:</strong> ${check.speaker}</p>` : ''}
-                            
-                            <p style="font-size: 14px; color: var(--gray-700); line-height: 1.6; margin-bottom: 12px;">
-                                <strong>Analysis:</strong> ${check.explanation || 'No explanation provided.'}
-                            </p>
-                            
-                            ${check.confidence ? `<p style="font-size: 13px; color: var(--gray-600);"><i class="fas fa-chart-bar"></i> <strong>Confidence:</strong> ${check.confidence}%</p>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            return html;
-        }
-
-        function buildNewsResultsHTML(results) {
-            console.log('[TranscriptApp] Building NEWS results');
-            
-            // CRITICAL FIX v3.6.1: Check BOTH results.fact_checks AND results.claims
-            const factChecks = results.fact_checks || results.claims || [];
-            
-            const scoreData = results.credibility_score || { score: 0, label: 'Unknown' };
-            
-            let html = `
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                        <i class="fas fa-plus"></i> New Analysis
-                    </button>
-                </div>
-            `;
-            
-            // NEW v3.6.0: Add speaker quality display if available
-            if (results.speaker_quality) {
-                console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
-                html += buildSpeakerQualityHTML(results.speaker_quality);
-            }
-            
-            html += `
-                <div class="credibility-card">
-                    <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; opacity: 0.9;">
-                        Overall Credibility Score
-                    </h3>
-                    <div class="meter-score">${scoreData.score}/100</div>
-                    <div class="credibility-label">${scoreData.label}</div>
-                </div>
-                
-                <div style="background: var(--gray-50); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">
-                        <i class="fas fa-info-circle" style="color: var(--primary-blue);"></i> Summary
-                    </h3>
-                    <p style="color: var(--gray-700); line-height: 1.8;">${results.summary || 'Analysis complete.'}</p>
-                </div>
-                
-                <div style="display: flex; gap: 12px; margin-bottom: 24px;">
-                    <button onclick="exportResults('pdf')" style="flex: 1; padding: 12px; background: var(--error-red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-file-pdf"></i> PDF
-                    </button>
-                    <button onclick="exportResults('json')" style="flex: 1; padding: 12px; background: var(--warning-orange); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-code"></i> JSON
-                    </button>
-                    <button onclick="exportResults('txt')" style="flex: 1; padding: 12px; background: var(--success-green); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-file-alt"></i> TXT
-                    </button>
-                </div>
-            `;
-            
-            if (factChecks.length > 0) {
-                html += `<h3 style="font-size: 20px; font-weight: 800; margin-bottom: 16px;">Fact-Checked Claims (${factChecks.length})</h3>`;
-                
-                factChecks.forEach((check, index) => {
-                    const verdict = check.verdict || 'unverified';
-                    const color = check.verdict_color || getVerdictColor(verdict);
-                    const label = check.verdict_label || verdict.replace('_', ' ').toUpperCase();
-                    
-                    html += `
-                        <div class="claim-card">
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-                                <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; text-align: center; line-height: 32px; font-weight: 700;">${index + 1}</div>
-                                <div class="verdict-badge" style="background: ${color}20; color: ${color};">
-                                    ${check.verdict_icon || '•'} ${label}
-                                </div>
-                            </div>
-                            
-                            <p style="font-size: 16px; font-weight: 600; margin-bottom: 12px; line-height: 1.6;">
-                                "${check.claim || check.text || 'Unknown claim'}"
-                            </p>
-                            
-                            ${check.speaker ? `<p style="font-size: 14px; color: var(--gray-600); margin-bottom: 12px;"><i class="fas fa-user"></i> <strong>Speaker:</strong> ${check.speaker}</p>` : ''}
-                            
-                            <p style="font-size: 14px; color: var(--gray-700); line-height: 1.6; margin-bottom: 12px;">
-                                <strong>Analysis:</strong> ${check.explanation || 'No explanation provided.'}
-                            </p>
-                            
-                            ${check.confidence ? `<p style="font-size: 13px; color: var(--gray-600);"><i class="fas fa-chart-bar"></i> <strong>Confidence:</strong> ${check.confidence}%</p>` : ''}
-                        </div>
-                    `;
-                });
-            }
-            
-            return html;
-        }
-
-        function buildGenericResultsHTML(results) {
-            // FALLBACK for unknown format
-            console.log('[TranscriptApp] Building GENERIC results');
-            
-            let html = `
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer;">
-                        <i class="fas fa-plus"></i> New Analysis
-                    </button>
-                </div>
-            `;
-            
-            // NEW v3.6.0: Add speaker quality display if available
-            if (results.speaker_quality) {
-                console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
-                html += buildSpeakerQualityHTML(results.speaker_quality);
-            }
-            
-            html += `
-                <div style="background: var(--gray-50); border-radius: 12px; padding: 24px;">
-                    <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
-                        <i class="fas fa-info-circle"></i> Analysis Results
-                    </h3>
-                    <pre style="white-space: pre-wrap; word-wrap: break-word; background: white; padding: 16px; border-radius: 8px; overflow-x: auto;">${JSON.stringify(results, null, 2)}</pre>
-                </div>
-            `;
-            
-            return html;
-        }
-
-        function getVerdictColor(verdict) {
-            const colors = {
-                'true': '#10b981',
-                'mostly_true': '#34d399',
-                'mixed': '#f59e0b',
-                'partially_true': '#f59e0b',
-                'misleading': '#f97316',
-                'mostly_false': '#f87171',
-                'false': '#ef4444',
-                'unverified': '#9ca3af',
-                'unverifiable': '#9ca3af'
+            const requestBody = {
+                transcript: transcript,
+                source_type: 'text'
             };
-            return colors[verdict.toLowerCase()] || '#9ca3af';
-        }
-
-        // ============================================================================
-        // EXPORT FUNCTIONS
-        // ============================================================================
-        async function exportResults(format) {
-            if (!currentJobId) {
-                alert('No analysis results to export.');
-                return;
+            
+            if (transcriptDate) {
+                requestBody.transcript_date = transcriptDate;
+                console.log('[TranscriptApp v4.0.0] Including transcript_date in request:', transcriptDate);
             }
             
-            console.log('[TranscriptApp] Exporting:', format);
+            const response = await fetch('/api/transcript/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            });
             
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Analysis failed');
+            }
+            
+            currentJobId = data.job_id;
+            console.log('[TranscriptApp v4.0.0] ✓ Job created:', currentJobId);
+            
+            startPolling();
+            
+        } catch (error) {
+            console.error('[TranscriptApp] Error:', error);
+            hideProgressSection();
+            alert('Analysis failed: ' + error.message);
+        }
+    }
+
+    async function submitYouTubeAnalysis(url) {
+        try {
+            console.log('[TranscriptApp] Calling /api/youtube/process...');
+            showProgressSection();
+            
+            const response = await fetch('/api/youtube/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: url })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Failed to process YouTube video');
+            }
+            
+            currentJobId = data.job_id;
+            console.log('[TranscriptApp] ✓ Job created:', currentJobId);
+            
+            startPolling();
+            
+        } catch (error) {
+            console.error('[TranscriptApp] Error:', error);
+            hideProgressSection();
+            alert('YouTube analysis failed: ' + error.message);
+        }
+    }
+
+    // ============================================================================
+    // PROGRESS UI
+    // ============================================================================
+    function showProgressSection() {
+        document.getElementById('input-section').style.display = 'none';
+        document.getElementById('progress-section').classList.add('active');
+        document.getElementById('results-section').classList.remove('active');
+        document.getElementById('transcript-section').classList.remove('active');
+        
+        // Reset progress
+        updateProgress(0, 'Starting analysis...');
+        document.getElementById('claims-counter-container').style.display = 'none';
+        document.getElementById('claims-count').textContent = '0';
+        
+        // Start fun facts rotation
+        startFunFactsRotation();
+        
+        // Create sparkles
+        createSparkles();
+    }
+
+    function hideProgressSection() {
+        document.getElementById('progress-section').classList.remove('active');
+        stopFunFactsRotation();
+    }
+
+    function updateProgress(percent, message) {
+        document.getElementById('progress-percent').textContent = Math.round(percent) + '%';
+        document.getElementById('progress-bar').style.width = percent + '%';
+        document.getElementById('progress-message').textContent = message;
+        
+        // Update emoji based on progress
+        const emoji = document.getElementById('progress-emoji');
+        if (percent < 30) emoji.textContent = '🔍';
+        else if (percent < 60) emoji.textContent = '🧠';
+        else if (percent < 90) emoji.textContent = '⚡';
+        else emoji.textContent = '✨';
+    }
+
+    function createSparkles() {
+        const container = document.getElementById('sparkles');
+        container.innerHTML = '';
+        
+        for (let i = 0; i < 20; i++) {
+            const sparkle = document.createElement('div');
+            sparkle.className = 'sparkle';
+            sparkle.style.left = Math.random() * 100 + '%';
+            sparkle.style.animationDelay = Math.random() * 3 + 's';
+            container.appendChild(sparkle);
+        }
+    }
+
+    function startFunFactsRotation() {
+        let currentIndex = 0;
+        const funFactElement = document.getElementById('fun-fact');
+        
+        funFactsInterval = setInterval(() => {
+            currentIndex = (currentIndex + 1) % funFacts.length;
+            funFactElement.style.opacity = '0';
+            
+            setTimeout(() => {
+                funFactElement.textContent = funFacts[currentIndex];
+                funFactElement.style.opacity = '1';
+            }, 300);
+        }, 5000);
+    }
+
+    function stopFunFactsRotation() {
+        if (funFactsInterval) {
+            clearInterval(funFactsInterval);
+            funFactsInterval = null;
+        }
+    }
+
+    // ============================================================================
+    // POLLING
+    // ============================================================================
+    function startPolling() {
+        console.log('[TranscriptApp] Starting polling for job:', currentJobId);
+        
+        pollInterval = setInterval(async () => {
             try {
-                const url = `/api/transcript/export/${currentJobId}/${format}`;
-                const response = await fetch(url);
+                const response = await fetch(`/api/transcript/status/${currentJobId}`);
+                const data = await response.json();
                 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Export failed');
+                console.log('[TranscriptApp] Poll response:', data.status);
+                
+                const status = data.status;
+                const progress = data.progress || 0;
+                const message = data.message || 'Processing...';
+                
+                updateProgress(progress, message);
+                
+                // Show claims counter if available
+                if (data.claims_verified !== undefined) {
+                    document.getElementById('claims-counter-container').style.display = 'flex';
+                    document.getElementById('claims-count').textContent = data.claims_verified;
                 }
                 
-                let filename = `transcript-analysis.${format}`;
-                const contentDisposition = response.headers.get('Content-Disposition');
-                if (contentDisposition) {
-                    const match = contentDisposition.match(/filename="?(.+)"?/);
-                    if (match) filename = match[1];
+                if (status === 'completed') {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    
+                    console.log('[TranscriptApp] ✓ Analysis completed');
+                    currentResults = data.results;
+                    
+                    setTimeout(() => {
+                        hideProgressSection();
+                        displayResults(data.results);
+                    }, 500);
+                } else if (status === 'error') {
+                    clearInterval(pollInterval);
+                    pollInterval = null;
+                    
+                    console.error('[TranscriptApp] ✗ Analysis error:', data.error);
+                    hideProgressSection();
+                    alert('Analysis failed: ' + (data.error || 'Unknown error'));
                 }
-                
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(downloadUrl);
-                document.body.removeChild(a);
-                
-                console.log('[TranscriptApp] ✓ Exported:', filename);
                 
             } catch (error) {
-                console.error('[TranscriptApp] Export error:', error);
-                alert('Failed to export: ' + error.message);
+                console.error('[TranscriptApp] Polling error:', error);
             }
+        }, 2000);
+    }
+
+    // ============================================================================
+    // v3.6.0: SPEAKER QUALITY DISPLAY
+    // ============================================================================
+    function buildSpeakerQualityHTML(speakerQuality) {
+        if (!speakerQuality || !speakerQuality.success) {
+            return '';
         }
 
-        // ============================================================================
-        // UTILITIES
-        // ============================================================================
-        function startNewAnalysis() {
-            currentJobId = null;
-            currentResults = null;
-            currentTranscriptData = null;
-            if (pollInterval) {
-                clearInterval(pollInterval);
-                pollInterval = null;
+        console.log('[TranscriptApp] Building speaker quality display');
+        
+        let html = '<div class="speaker-quality-card">';
+        
+        // Header
+        html += `
+            <div class="speaker-quality-header">
+                <i class="fas fa-user-graduate"></i>
+                <h3>Speaker Quality Analysis</h3>
+            </div>
+        `;
+        
+        // Check if multi-speaker
+        const isMultiSpeaker = speakerQuality.analysis_type === 'transcript_with_speakers';
+        
+        if (isMultiSpeaker) {
+            // Multi-speaker analysis
+            const speakerCount = speakerQuality.speaker_count || 0;
+            html += `<p style="color: #64748b; margin-bottom: 16px; font-size: 14px;">
+                <i class="fas fa-users"></i> Analysis of ${speakerCount} speakers
+            </p>`;
+            
+            // Display each speaker
+            const speakers = speakerQuality.speakers || {};
+            for (const [speakerName, analysis] of Object.entries(speakers)) {
+                html += buildIndividualSpeakerHTML(speakerName, analysis);
             }
-            stopFunFactsRotation();
             
-            document.getElementById('results-section').classList.remove('active');
-            document.getElementById('transcript-section').classList.remove('active');
-            document.getElementById('input-section').style.display = 'block';
-            
-            document.getElementById('text-input').value = '';
-            document.getElementById('youtube-url').value = '';
-            document.getElementById('transcript-date').value = ''; // v3.8.0: Clear date field
-            updateCharCount('text-char-count', '');
-            
-            // Reset progress banner text
-            document.getElementById('progress-banner-text').textContent = '⏱️ This analysis could take a couple of minutes... Hang tight!';
-            
-            window.scrollTo({ behavior: 'smooth', top: 0 });
+            // Display comparison if available
+            if (speakerQuality.comparison && speakerQuality.comparison.key_differences) {
+                html += buildSpeakerComparisonHTML(speakerQuality.comparison);
+            }
+        } else {
+            // Single speaker analysis
+            html += buildOverallQualityHTML(speakerQuality);
         }
+        
+        html += '</div>';
+        return html;
+    }
 
-        console.log('[TranscriptApp] ✓ Initialized - v3.8.0 with transcript date input');
-    </script>
-</body>
-</html>
+    function buildOverallQualityHTML(analysis) {
+        let html = '';
+        
+        // Overall assessment card
+        if (analysis.overall_assessment || analysis.grade_level) {
+            html += '<div class="speaker-quality-overall">';
+            
+            if (analysis.grade_level && analysis.grade_level.grade_level_label) {
+                html += `<div class="speaker-quality-grade">
+                    <i class="fas fa-graduation-cap"></i> ${analysis.grade_level.grade_level_label}
+                </div>`;
+            }
+            
+            if (analysis.overall_assessment) {
+                html += `<div class="speaker-quality-assessment">${analysis.overall_assessment}</div>`;
+            }
+            
+            html += '</div>';
+        }
+        
+        // Metrics grid
+        html += '<div class="speaker-metrics-grid">';
+        
+        // Grade Level
+        if (analysis.grade_level && analysis.grade_level.flesch_kincaid_grade !== undefined) {
+            const gradeScore = analysis.grade_level.flesch_kincaid_grade;
+            const gradePercent = Math.min((gradeScore / 18) * 100, 100);
+            html += `
+                <div class="speaker-metric">
+                    <div class="speaker-metric-label">
+                        <i class="fas fa-book"></i> Grade Level
+                    </div>
+                    <div class="speaker-metric-value">${gradeScore.toFixed(1)}</div>
+                    <div class="speaker-metric-description">${analysis.grade_level.interpretation || ''}</div>
+                    <div class="speaker-metric-bar">
+                        <div class="speaker-metric-bar-fill" style="width: ${gradePercent}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Language Style
+        if (analysis.language_style && analysis.language_style.inflammatory_percentage !== undefined) {
+            const infPercent = analysis.language_style.inflammatory_percentage;
+            html += `
+                <div class="speaker-metric">
+                    <div class="speaker-metric-label">
+                        <i class="fas fa-fire"></i> Inflammatory Language
+                    </div>
+                    <div class="speaker-metric-value">${infPercent.toFixed(1)}%</div>
+                    <div class="speaker-metric-description">${analysis.language_style.style_assessment || ''}</div>
+                    <div class="speaker-metric-bar">
+                        <div class="speaker-metric-bar-fill" style="width: ${infPercent}%; background: ${infPercent > 15 ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)' : 'linear-gradient(90deg, #10b981 0%, #059669 100%)'}"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Sentence Quality
+        if (analysis.sentence_quality && analysis.sentence_quality.completion_rate !== undefined) {
+            const completionRate = analysis.sentence_quality.completion_rate;
+            html += `
+                <div class="speaker-metric">
+                    <div class="speaker-metric-label">
+                        <i class="fas fa-check-circle"></i> Sentence Completion
+                    </div>
+                    <div class="speaker-metric-value">${completionRate.toFixed(1)}%</div>
+                    <div class="speaker-metric-description">${analysis.sentence_quality.quality_assessment || ''}</div>
+                    <div class="speaker-metric-bar">
+                        <div class="speaker-metric-bar-fill" style="width: ${completionRate}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Coherence
+        if (analysis.coherence && analysis.coherence.coherence_score !== undefined) {
+            const coherenceScore = analysis.coherence.coherence_score;
+            html += `
+                <div class="speaker-metric">
+                    <div class="speaker-metric-label">
+                        <i class="fas fa-link"></i> Coherence
+                    </div>
+                    <div class="speaker-metric-value">${coherenceScore.toFixed(1)}%</div>
+                    <div class="speaker-metric-description">${analysis.coherence.logical_flow || ''}</div>
+                    <div class="speaker-metric-bar">
+                        <div class="speaker-metric-bar-fill" style="width: ${coherenceScore}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Vocabulary
+        if (analysis.vocabulary && analysis.vocabulary.vocabulary_diversity !== undefined) {
+            const vocabScore = analysis.vocabulary.vocabulary_diversity;
+            html += `
+                <div class="speaker-metric">
+                    <div class="speaker-metric-label">
+                        <i class="fas fa-book-open"></i> Vocabulary Diversity
+                    </div>
+                    <div class="speaker-metric-value">${vocabScore.toFixed(1)}%</div>
+                    <div class="speaker-metric-description">${analysis.vocabulary.complexity_level || ''}</div>
+                    <div class="speaker-metric-bar">
+                        <div class="speaker-metric-bar-fill" style="width: ${vocabScore}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Rhetorical Devices
+        if (analysis.rhetorical_devices && analysis.rhetorical_devices.tactics_used) {
+            const tactics = analysis.rhetorical_devices.tactics_used;
+            html += `
+                <div class="speaker-metric">
+                    <div class="speaker-metric-label">
+                        <i class="fas fa-comments"></i> Rhetorical Tactics
+                    </div>
+                    <div class="speaker-metric-value">${tactics.length}</div>
+                    <div class="speaker-metric-description">${tactics.join(', ')}</div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        return html;
+    }
+
+    function buildIndividualSpeakerHTML(speakerName, analysis) {
+        let html = '<div class="speaker-individual">';
+        
+        html += `
+            <div class="speaker-individual-header">
+                <i class="fas fa-user"></i>
+                <h4>${speakerName}</h4>
+            </div>
+        `;
+        
+        html += buildOverallQualityHTML(analysis);
+        
+        html += '</div>';
+        return html;
+    }
+
+    function buildSpeakerComparisonHTML(comparison) {
+        if (!comparison || !comparison.key_differences || comparison.key_differences.length === 0) {
+            return '';
+        }
+        
+        let html = '<div class="speaker-comparison">';
+        html += `
+            <div class="speaker-comparison-title">
+                <i class="fas fa-balance-scale"></i>
+                Key Differences Between Speakers
+            </div>
+            <ul class="speaker-comparison-list">
+        `;
+        
+        for (const diff of comparison.key_differences) {
+            html += `<li>${diff}</li>`;
+        }
+        
+        html += '</ul></div>';
+        return html;
+    }
+
+    // ============================================================================
+    // DISPLAY RESULTS (with Speaker Quality)
+    // ============================================================================
+    function displayResults(results) {
+        console.log('[TranscriptApp] Displaying results');
+        
+        const resultsSection = document.getElementById('results-section');
+        
+        // Hide transcript section if it's showing
+        document.getElementById('transcript-section').classList.remove('active');
+        
+        // Detect format and build appropriate HTML
+        let html = '';
+        
+        if (results.fact_checks && Array.isArray(results.fact_checks)) {
+            console.log('[TranscriptApp] Detected TRANSCRIPT format');
+            html = buildTranscriptResultsHTML(results);
+        } else if (results.credibility_score || results.analysis) {
+            console.log('[TranscriptApp] Detected NEWS format');
+            html = buildNewsResultsHTML(results);
+        } else {
+            console.log('[TranscriptApp] Unknown format, using generic display');
+            html = buildGenericResultsHTML(results);
+        }
+        
+        resultsSection.innerHTML = html;
+        resultsSection.classList.add('active');
+        
+        window.scrollTo({ behavior: 'smooth', top: 0 });
+    }
+
+    function buildTranscriptResultsHTML(results) {
+        console.log('[TranscriptApp] Building TRANSCRIPT results');
+        
+        const factChecks = results.fact_checks || results.claims || [];
+        
+        let html = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                    <i class="fas fa-plus"></i> New Analysis
+                </button>
+            </div>
+        `;
+        
+        // v3.6.0: Add speaker quality display if available
+        if (results.speaker_quality) {
+            console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
+            html += buildSpeakerQualityHTML(results.speaker_quality);
+        }
+        
+        html += `
+            <div style="background: var(--gray-50); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">
+                    <i class="fas fa-info-circle" style="color: var(--primary-blue);"></i> Summary
+                </h3>
+                <p style="color: var(--gray-700); line-height: 1.8;">${results.summary || 'Analysis complete.'}</p>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                <button onclick="exportResults('pdf')" style="flex: 1; padding: 12px; background: var(--error-red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
+                <button onclick="exportResults('json')" style="flex: 1; padding: 12px; background: var(--warning-orange); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-code"></i> JSON
+                </button>
+                <button onclick="exportResults('txt')" style="flex: 1; padding: 12px; background: var(--success-green); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-file-alt"></i> TXT
+                </button>
+            </div>
+        `;
+        
+        if (factChecks.length > 0) {
+            html += `<h3 style="font-size: 20px; font-weight: 800; margin-bottom: 16px;">Fact-Checked Claims (${factChecks.length})</h3>`;
+            
+            factChecks.forEach((check, index) => {
+                const verdict = check.verdict || 'unverified';
+                const color = check.verdict_color || getVerdictColor(verdict);
+                const label = check.verdict_label || verdict.replace('_', ' ').toUpperCase();
+                
+                html += `
+                    <div class="claim-card">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                            <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; text-align: center; line-height: 32px; font-weight: 700;">${index + 1}</div>
+                            <div class="verdict-badge" style="background: ${color}20; color: ${color};">
+                                ${check.verdict_icon || '•'} ${label}
+                            </div>
+                        </div>
+                        
+                        <p style="font-size: 16px; font-weight: 600; margin-bottom: 12px; line-height: 1.6;">
+                            "${check.claim || check.text || 'Unknown claim'}"
+                        </p>
+                        
+                        ${check.speaker ? `<p style="font-size: 14px; color: var(--gray-600); margin-bottom: 12px;"><i class="fas fa-user"></i> <strong>Speaker:</strong> ${check.speaker}</p>` : ''}
+                        
+                        <p style="font-size: 14px; color: var(--gray-700); line-height: 1.6; margin-bottom: 12px;">
+                            <strong>Analysis:</strong> ${check.explanation || 'No explanation provided.'}
+                        </p>
+                        
+                        ${check.confidence ? `<p style="font-size: 13px; color: var(--gray-600);"><i class="fas fa-chart-bar"></i> <strong>Confidence:</strong> ${check.confidence}%</p>` : ''}
+                    </div>
+                `;
+            });
+        }
+        
+        return html;
+    }
+
+    function buildNewsResultsHTML(results) {
+        console.log('[TranscriptApp] Building NEWS results');
+        
+        const factChecks = results.fact_checks || results.claims || [];
+        const scoreData = results.credibility_score || { score: 0, label: 'Unknown' };
+        
+        let html = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                    <i class="fas fa-plus"></i> New Analysis
+                </button>
+            </div>
+        `;
+        
+        // v3.6.0: Add speaker quality display if available
+        if (results.speaker_quality) {
+            console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
+            html += buildSpeakerQualityHTML(results.speaker_quality);
+        }
+        
+        html += `
+            <div class="credibility-card">
+                <h3 style="font-size: 18px; font-weight: 600; margin-bottom: 16px; opacity: 0.9;">
+                    Overall Credibility Score
+                </h3>
+                <div class="meter-score">${scoreData.score}/100</div>
+                <div class="credibility-label">${scoreData.label}</div>
+            </div>
+            
+            <div style="background: var(--gray-50); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 12px;">
+                    <i class="fas fa-info-circle" style="color: var(--primary-blue);"></i> Summary
+                </h3>
+                <p style="color: var(--gray-700); line-height: 1.8;">${results.summary || 'Analysis complete.'}</p>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                <button onclick="exportResults('pdf')" style="flex: 1; padding: 12px; background: var(--error-red); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-file-pdf"></i> PDF
+                </button>
+                <button onclick="exportResults('json')" style="flex: 1; padding: 12px; background: var(--warning-orange); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-code"></i> JSON
+                </button>
+                <button onclick="exportResults('txt')" style="flex: 1; padding: 12px; background: var(--success-green); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-file-alt"></i> TXT
+                </button>
+            </div>
+        `;
+        
+        if (factChecks.length > 0) {
+            html += `<h3 style="font-size: 20px; font-weight: 800; margin-bottom: 16px;">Fact-Checked Claims (${factChecks.length})</h3>`;
+            
+            factChecks.forEach((check, index) => {
+                const verdict = check.verdict || 'unverified';
+                const color = check.verdict_color || getVerdictColor(verdict);
+                const label = check.verdict_label || verdict.replace('_', ' ').toUpperCase();
+                
+                html += `
+                    <div class="claim-card">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                            <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; text-align: center; line-height: 32px; font-weight: 700;">${index + 1}</div>
+                            <div class="verdict-badge" style="background: ${color}20; color: ${color};">
+                                ${check.verdict_icon || '•'} ${label}
+                            </div>
+                        </div>
+                        
+                        <p style="font-size: 16px; font-weight: 600; margin-bottom: 12px; line-height: 1.6;">
+                            "${check.claim || check.text || 'Unknown claim'}"
+                        </p>
+                        
+                        ${check.speaker ? `<p style="font-size: 14px; color: var(--gray-600); margin-bottom: 12px;"><i class="fas fa-user"></i> <strong>Speaker:</strong> ${check.speaker}</p>` : ''}
+                        
+                        <p style="font-size: 14px; color: var(--gray-700); line-height: 1.6; margin-bottom: 12px;">
+                            <strong>Analysis:</strong> ${check.explanation || 'No explanation provided.'}
+                        </p>
+                        
+                        ${check.confidence ? `<p style="font-size: 13px; color: var(--gray-600);"><i class="fas fa-chart-bar"></i> <strong>Confidence:</strong> ${check.confidence}%</p>` : ''}
+                    </div>
+                `;
+            });
+        }
+        
+        return html;
+    }
+
+    function buildGenericResultsHTML(results) {
+        console.log('[TranscriptApp] Building GENERIC results');
+        
+        let html = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <button onclick="startNewAnalysis()" style="padding: 12px 32px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 25px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                    <i class="fas fa-plus"></i> New Analysis
+                </button>
+            </div>
+        `;
+        
+        // v3.6.0: Add speaker quality display if available
+        if (results.speaker_quality) {
+            console.log('[TranscriptApp] ✓ Speaker quality data found, displaying...');
+            html += buildSpeakerQualityHTML(results.speaker_quality);
+        }
+        
+        html += `
+            <div style="background: var(--gray-50); border-radius: 12px; padding: 24px;">
+                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 16px;">
+                    <i class="fas fa-info-circle"></i> Analysis Results
+                </h3>
+                <pre style="white-space: pre-wrap; word-wrap: break-word; background: white; padding: 16px; border-radius: 8px; overflow-x: auto;">${JSON.stringify(results, null, 2)}</pre>
+            </div>
+        `;
+        
+        return html;
+    }
+
+    function getVerdictColor(verdict) {
+        const colors = {
+            'true': '#10b981',
+            'mostly_true': '#34d399',
+            'mixed': '#f59e0b',
+            'partially_true': '#f59e0b',
+            'misleading': '#f97316',
+            'mostly_false': '#f87171',
+            'false': '#ef4444',
+            'unverified': '#9ca3af',
+            'unverifiable': '#9ca3af'
+        };
+        return colors[verdict.toLowerCase()] || '#9ca3af';
+    }
+
+    // ============================================================================
+    // EXPORT FUNCTIONS
+    // ============================================================================
+    async function exportResults(format) {
+        if (!currentJobId) {
+            alert('No analysis results to export.');
+            return;
+        }
+        
+        console.log('[TranscriptApp] Exporting:', format);
+        
+        try {
+            const url = `/api/transcript/export/${currentJobId}/${format}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Export failed');
+            }
+            
+            let filename = `transcript-analysis.${format}`;
+            const contentDisposition = response.headers.get('Content-Disposition');
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename="?(.+)"?/);
+                if (match) filename = match[1];
+            }
+            
+            const blob = await response.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(downloadUrl);
+            document.body.removeChild(a);
+            
+            console.log('[TranscriptApp] ✓ Exported:', filename);
+            
+        } catch (error) {
+            console.error('[TranscriptApp] Export error:', error);
+            alert('Failed to export: ' + error.message);
+        }
+    }
+
+    // ============================================================================
+    // UTILITIES
+    // ============================================================================
+    function startNewAnalysis() {
+        currentJobId = null;
+        currentResults = null;
+        currentTranscriptData = null;
+        if (pollInterval) {
+            clearInterval(pollInterval);
+            pollInterval = null;
+        }
+        stopFunFactsRotation();
+        
+        document.getElementById('results-section').classList.remove('active');
+        document.getElementById('transcript-section').classList.remove('active');
+        document.getElementById('input-section').style.display = 'block';
+        
+        document.getElementById('text-input').value = '';
+        document.getElementById('youtube-url').value = '';
+        document.getElementById('transcript-date').value = '';
+        updateCharCount('text-char-count', '');
+        
+        // Reset progress banner text
+        document.getElementById('progress-banner-text').textContent = '⏱️ This analysis could take a couple of minutes... Hang tight!';
+        
+        window.scrollTo({ behavior: 'smooth', top: 0 });
+    }
+
+    console.log('[TranscriptApp] ✓ Initialized - v4.0.0 Template Inheritance');
+</script>
+{% endblock %}
 
 <!--
 I did no harm and this file is not truncated.
-v3.8.0 - December 28, 2025 - TRANSCRIPT DATE INPUT
+v4.0.0 - January 8, 2026 - TEMPLATE INHERITANCE VERSION
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
