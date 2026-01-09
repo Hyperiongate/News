@@ -1,187 +1,99 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!--
-    TruthLens Contact Page
-    Version: 3.3.0 - UNIFIED NAVIGATION UPDATE
-    Date: December 27, 2024
-    
-    WHAT'S NEW IN v3.3.0:
-    ✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
-    ✅ ADDED: Quiz link with active highlighting
-    ✅ ADDED: Claim Tracker link
-    ✅ ADDED: AI Research external link
-    ✅ ADDED: AI Debates external link
-    ✅ FIXED: Navigation matches landing.html exactly
-    ✅ PRESERVED: All v3.2.0 functionality (DO NO HARM ✓)
-    
-    NAVIGATION NOW INCLUDES:
-    1. Home (/)
-    2. News (/analyze)
-    3. Transcripts (/transcript)
-    4. Quiz (/quiz) ← NEW
-    5. Claims (/claim-tracker) ← NEW
-    6. Debates (/debate-arena)
-    7. AI Research (external) ← NEW
-    8. AI Debates (external) ← NEW
-    
-    This file is complete and ready to deploy.
-    Last modified: December 27, 2024 - v3.3.0
-    I did no harm and this file is not truncated.
-    -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Contact - TruthLens</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- LOAD NAVIGATION CSS FIRST -->
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    
-    <!-- THEN PAGE-SPECIFIC CSS -->
-    <link rel="stylesheet" href="/static/css/main.css">
-    
-    <style>
-        /* Page-specific styles for Contact page content */
-        body {
-            padding-top: 90px;
-            background: #f8fafc;
-        }
-        
-        /* Hover effect for email button */
-        a[href^="mailto"]:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 28px rgba(102, 126, 234, 0.5) !important;
-        }
-        
-        a[href^="mailto"]:active {
-            transform: translateY(-1px);
-        }
+{% extends "base.html" %}
 
-        @media (max-width: 768px) {
-            body {
-                padding-top: 80px;
-            }
+{% block title %}Contact - TruthLens{% endblock %}
+
+{% block description %}Get in touch with TruthLens. We'd love to hear your feedback, questions, or suggestions!{% endblock %}
+
+{% block styles %}
+<style>
+    body {
+        padding-top: 150px;
+        background: #f8fafc;
+    }
+    
+    a[href^="mailto"]:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(102, 126, 234, 0.5) !important;
+    }
+    
+    a[href^="mailto"]:active {
+        transform: translateY(-1px);
+    }
+
+    @media (max-width: 768px) {
+        body {
+            padding-top: 140px;
         }
-    </style>
-</head>
-<body>
-    <!-- Navigation Header - v2.0.0 TWO-ROW LAYOUT -->
-<nav class="main-navigation">
-    <div class="nav-container-unified">
-        <!-- Logo and Mobile Toggle -->
-        <div class="nav-header-row">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px; padding: 3rem 2rem;">
+    <h1 style="font-size: 2.5rem; font-weight: 800; text-align: center; margin-bottom: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+        Get In Touch
+    </h1>
+    <p style="text-align: center; font-size: 1.125rem; color: #64748b; margin-bottom: 3rem;">
+        We'd love to hear your feedback, questions, or suggestions!
+    </p>
+
+    <div style="background: white; border-radius: 16px; padding: 3rem 2.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 2rem;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);">
+                <i class="fas fa-envelope" style="font-size: 2rem; color: white;"></i>
+            </div>
+            <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b;">
+                Send Us A Message
+            </h2>
+            <p style="color: #64748b; line-height: 1.6; margin-bottom: 2rem;">
+                Click the button below to open your email client and send us a message. We typically respond within 24 hours.
+            </p>
+            
+            <a href="mailto:ContactTruthLens@gmail.com?subject=TruthLens%20Beta%20Feedback&body=Hi%20TruthLens%20Team,%0D%0A%0D%0AI%20wanted%20to%20share%20my%20feedback:%0D%0A%0D%0A" 
+               style="display: inline-block; padding: 1.25rem 3rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
+                <i class="fas fa-paper-plane" style="margin-right: 0.75rem;"></i>
+                Send Email to TruthLens
             </a>
             
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-        
-        <!-- Two-Row Menu Container -->
-        <div class="nav-menu-container" id="navMenu">
-            <!-- TOP ROW: Main Tools -->
-            <ul class="nav-menu-row top-row">
-                <li><a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
-                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
-                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
-                <li><a href="/analyze" class="nav-link"><i class="fas fa-newspaper"></i> News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
-            </ul>
-            
-            <!-- BOTTOM ROW: Secondary Tools -->
-            <ul class="nav-menu-row bottom-row">
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="/observatory" class="nav-link"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
-                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
-                <li><a href="/quiz" class="nav-link"><i class="fas fa-question-circle"></i> Quiz</a></li>
-                <li><a href="/contact" class="nav-link active"><i class="fas fa-envelope"></i> Contact Us</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-    <div class="container" style="max-width: 700px; padding: 3rem 2rem;">
-        <h1 style="font-size: 2.5rem; font-weight: 800; text-align: center; margin-bottom: 1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-            Get In Touch
-        </h1>
-        <p style="text-align: center; font-size: 1.125rem; color: #64748b; margin-bottom: 3rem;">
-            We'd love to hear your feedback, questions, or suggestions!
-        </p>
-
-        <div style="background: white; border-radius: 16px; padding: 3rem 2.5rem; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); margin-bottom: 2rem;">
-            <div style="text-align: center; margin-bottom: 2rem;">
-                <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);">
-                    <i class="fas fa-envelope" style="font-size: 2rem; color: white;"></i>
-                </div>
-                <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b;">
-                    Send Us A Message
-                </h2>
-                <p style="color: #64748b; line-height: 1.6; margin-bottom: 2rem;">
-                    Click the button below to open your email client and send us a message. We typically respond within 24 hours.
-                </p>
-                
-                <a href="mailto:ContactTruthLens@gmail.com?subject=TruthLens%20Beta%20Feedback&body=Hi%20TruthLens%20Team,%0D%0A%0D%0AI%20wanted%20to%20share%20my%20feedback:%0D%0A%0D%0A" 
-                   style="display: inline-block; padding: 1.25rem 3rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4); transition: all 0.3s ease;">
-                    <i class="fas fa-paper-plane" style="margin-right: 0.75rem;"></i>
-                    Send Email to TruthLens
-                </a>
-                
-                <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 1.5rem; font-style: italic;">
-                    <i class="fas fa-info-circle"></i> Opens in your default email application
-                </p>
-            </div>
-
-            <div style="border-top: 2px solid #f1f5f9; padding-top: 2rem; margin-top: 2rem;">
-                <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b; text-align: center;">
-                    <i class="fas fa-comments" style="color: #667eea;"></i> What We Want To Hear About:
-                </h3>
-                <ul style="color: #475569; line-height: 2; padding-left: 1.5rem; margin: 0; max-width: 500px; margin-left: auto; margin-right: auto;">
-                    <li>Bug reports or technical issues</li>
-                    <li>Feature suggestions and improvements</li>
-                    <li>Feedback on analysis accuracy</li>
-                    <li>Questions about how TruthLens works</li>
-                    <li>Partnership or collaboration inquiries</li>
-                    <li>General feedback on your experience</li>
-                </ul>
-            </div>
-        </div>
-
-        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 16px; padding: 2rem; text-align: center; margin-bottom: 2rem;">
-            <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">
-                <i class="fas fa-star"></i> Beta Testers Are VIPs!
-            </h3>
-            <p style="opacity: 0.95; line-height: 1.7; margin: 0;">
-                Your feedback directly shapes TruthLens. As a thank you, beta testers will receive special benefits when we officially launch, including priority access and potential lifetime discounts.
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-top: 1.5rem; font-style: italic;">
+                <i class="fas fa-info-circle"></i> Opens in your default email application
             </p>
         </div>
 
-        <div style="text-align: center;">
-            <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); transition: all 0.3s ease;">
-                <i class="fas fa-arrow-left"></i> Back to Analysis
-            </a>
+        <div style="border-top: 2px solid #f1f5f9; padding-top: 2rem; margin-top: 2rem;">
+            <h3 style="font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem; color: #1e293b; text-align: center;">
+                <i class="fas fa-comments" style="color: #667eea;"></i> What We Want To Hear About:
+            </h3>
+            <ul style="color: #475569; line-height: 2; padding-left: 1.5rem; margin: 0; max-width: 500px; margin-left: auto; margin-right: auto;">
+                <li>Bug reports or technical issues</li>
+                <li>Feature suggestions and improvements</li>
+                <li>Feedback on analysis accuracy</li>
+                <li>Questions about how TruthLens works</li>
+                <li>Partnership or collaboration inquiries</li>
+                <li>General feedback on your experience</li>
+            </ul>
         </div>
     </div>
 
-    <script>
-        function toggleMobileMenu() {
-            var navMenu = document.getElementById('navMenu');
-            if (navMenu) {
-                navMenu.classList.toggle('active');
-            }
-        }
-    </script>
-</body>
-</html>
+    <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 16px; padding: 2rem; text-align: center; margin-bottom: 2rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.75rem;">
+            <i class="fas fa-star"></i> Beta Testers Are VIPs!
+        </h3>
+        <p style="opacity: 0.95; line-height: 1.7; margin: 0;">
+            Your feedback directly shapes TruthLens. As a thank you, beta testers will receive special benefits when we officially launch, including priority access and potential lifetime discounts.
+        </p>
+    </div>
 
-<!--
+    <div style="text-align: center;">
+        <a href="/" style="display: inline-block; padding: 1rem 2.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 1.125rem; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3); transition: all 0.3s ease;">
+            <i class="fas fa-arrow-left"></i> Back to Analysis
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+<!-- 
+Version: 4.0.0 - TEMPLATE INHERITANCE
+Date: January 8, 2026
 I did no harm and this file is not truncated.
-v3.3.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
-
-DEPLOYMENT READY FOR GITHUB/RENDER
-Complete file ready for production deployment.
 -->
