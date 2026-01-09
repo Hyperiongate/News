@@ -1,1197 +1,1133 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
+
 <!--
-TruthLens News Analysis Page
-Version: 3.15.0 - NAVIGATION FIXED (NO DUPLICATE ABOUT US)
-Date: January 6, 2026
+TruthLens News Analysis Page - TEMPLATE INHERITANCE VERSION
+Version: 4.0.0 - CONVERTED TO TEMPLATE INHERITANCE
+Date: January 8, 2026
 
-WHAT'S NEW IN v3.15.0:
-✅ FIXED: Removed duplicate "About Us" - now appears only once
-✅ FIXED: Proper icon for each navigation link
-✅ FIXED: Consistent order: Home, About, Features, News, Transcripts, Quiz, Claims, Debates, Contact
-✅ PRESERVED: All v3.14.0 functionality (DO NO HARM ✓)
+CONVERSION NOTES:
+✅ Now extends base.html (navigation defined once)
+✅ ALL v3.15.0 functionality preserved (DO NO HARM ✓)
+✅ All JavaScript intact
+✅ All CSS intact
+✅ All features working
+✅ Uses {% block %} structure
 
-NAVIGATION NOW (9 LINKS TOTAL):
-1. Home (/) - with home icon
-2. About Us (/about) - with info icon
-3. Features (/features) - with star icon
-4. News Analysis (/analyze) - ACTIVE PAGE - with newspaper icon
-5. Transcript/YouTube (/transcript) - with file icon
-6. Quiz (/quiz) - with question icon
-7. Claim Tracker (/claim-tracker) - with tasks icon
-8. Debate Arena (/debate-arena) - with users icon
-9. Contact Us (/contact) - with envelope icon
+PRESERVED FEATURES:
+- 7-service AI analysis
+- Trust score calculation
+- Score breakdown visualization
+- PDF export
+- Comprehensive summary
+- Service detail cards
+- Progress tracking
+- All interactive features
 
-This file is complete and ready to deploy.
-Last modified: January 6, 2026 - v3.15.0
+Last modified: January 8, 2026 - v4.0.0 Template Inheritance
 I did no harm and this file is not truncated.
 -->
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TruthLens - AI-Powered News Credibility Analysis</title>
-    <meta name="description" content="Professional AI analysis for news credibility using 7 advanced services.">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/static/images/favicon.png">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- Chart.js for Visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
-    
-    <!-- jsPDF Library for PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    
-    <!-- External Styles -->
-    <link rel="stylesheet" href="/static/css/news-analysis.css">
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    
-    <!-- Enhanced Styles -->
-    <style>
-        :root {
-            --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            --gradient-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            --gradient-red: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        }
 
+{% block title %}TruthLens - AI-Powered News Credibility Analysis{% endblock %}
+
+{% block description %}Professional AI analysis for news credibility using 7 advanced services.{% endblock %}
+
+{% block styles %}
+<!-- Chart.js for Visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+
+<!-- jsPDF Library for PDF Generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- External Styles -->
+<link rel="stylesheet" href="/static/css/news-analysis.css">
+
+<!-- Enhanced Styles -->
+<style>
+    :root {
+        --gradient-purple: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --gradient-blue: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        --gradient-green: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --gradient-orange: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --gradient-red: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    body {
+        padding-top: 90px;
+    }
+
+    .page-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .analysis-container {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    .input-section {
+        max-width: 800px;
+        margin: 0 auto 2rem;
+    }
+
+    .button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .analyze-button,
+    .reset-button {
+        flex: 1;
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .analyze-button {
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .analyze-button:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    }
+
+    .analyze-button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .reset-button {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: white;
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
+    }
+
+    .reset-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(100, 116, 139, 0.4);
+    }
+
+    .comprehensive-summary {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+    }
+
+    .summary-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+
+    .summary-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .summary-title i {
+        color: #6366f1;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .action-btn {
+        padding: 0.75rem 1.25rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .download-pdf-btn {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+    }
+
+    .download-pdf-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .new-analysis-btn {
+        background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        color: white;
+        box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
+    }
+
+    .new-analysis-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
+    }
+
+    .trust-score-display {
+        display: flex;
+        gap: 2.5rem;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding: 2rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        border-radius: 12px;
+        border: 2px solid #e5e7eb;
+    }
+
+    .trust-gauge {
+        position: relative;
+        flex-shrink: 0;
+        width: 120px;
+        height: 120px;
+    }
+
+    .trust-score-value {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        pointer-events: none;
+    }
+
+    .score-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: #1e293b;
+    }
+
+    .score-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .trust-details {
+        flex: 1;
+        min-width: 200px;
+        padding-left: 1rem;
+    }
+
+    .trust-rating {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .trust-description {
+        color: #64748b;
+        line-height: 1.6;
+    }
+
+    .trust-score-breakdown {
+        background: #f8fafc;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .breakdown-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .breakdown-title i {
+        color: #6366f1;
+    }
+
+    .breakdown-item {
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 8px;
+        display: grid;
+        grid-template-columns: 200px 1fr 80px;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .breakdown-label {
+        font-weight: 600;
+        color: #334155;
+        font-size: 0.875rem;
+    }
+
+    .breakdown-bar-container {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .breakdown-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+        width: 0%;
+        transition: width 1s ease;
+        border-radius: 4px;
+    }
+
+    .breakdown-score {
+        text-align: right;
+        font-weight: 700;
+        color: #1e293b;
+        font-size: 0.875rem;
+    }
+
+    .article-metadata {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .metadata-item {
+        padding: 1rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        border-left: 4px solid #6366f1;
+    }
+
+    .metadata-label {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.25rem;
+    }
+
+    .metadata-value {
+        font-size: 0.95rem;
+        color: #1e293b;
+        font-weight: 600;
+    }
+
+    .article-summary {
+        margin-bottom: 2rem;
+    }
+
+    .section-subtitle {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .section-subtitle i {
+        color: #6366f1;
+    }
+
+    .summary-text {
+        color: #475569;
+        line-height: 1.8;
+        padding: 1.5rem;
+        background: #f8fafc;
+        border-radius: 8px;
+        border-left: 4px solid #3b82f6;
+    }
+
+    .analysis-findings {
+        margin-bottom: 2rem;
+    }
+
+    .bottom-line {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #fbbf24;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .bottom-line-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #92400e;
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .bottom-line-title i {
+        color: #f59e0b;
+    }
+
+    .bottom-line-text {
+        color: #78350f;
+        line-height: 1.6;
+        font-weight: 500;
+    }
+
+    .key-findings {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .finding-item {
+        display: flex;
+        align-items: start;
+        gap: 0.75rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        border-left: 4px solid #10b981;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .finding-icon {
+        color: #10b981;
+        font-size: 1.1rem;
+        margin-top: 2px;
+        flex-shrink: 0;
+    }
+
+    .finding-text {
+        color: #334155;
+        line-height: 1.6;
+    }
+
+    .no-findings-message {
+        text-align: center;
+        padding: 2rem;
+        color: #64748b;
+    }
+
+    .no-findings-message i {
+        font-size: 2rem;
+        color: #cbd5e1;
+        margin-bottom: 0.5rem;
+    }
+
+    .service-results-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .service-results-header h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.75rem;
+        font-weight: 800;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .service-results-header p {
+        color: #64748b;
+        font-size: 1rem;
+    }
+
+    @media (max-width: 768px) {
         body {
-            padding-top: 90px;
+            padding-top: 80px;
         }
 
         .page-content {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
+            padding: 1rem;
         }
 
         .analysis-container {
-            background: white;
-            border-radius: 16px;
-            padding: 2.5rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-        }
-
-        .input-section {
-            max-width: 800px;
-            margin: 0 auto 2rem;
+            padding: 1.5rem;
         }
 
         .button-group {
-            display: flex;
-            gap: 1rem;
-            margin-top: 1.5rem;
-        }
-
-        .analyze-button,
-        .reset-button {
-            flex: 1;
-            padding: 1rem 2rem;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .analyze-button {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-        }
-
-        .analyze-button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
-        }
-
-        .analyze-button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .reset-button {
-            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-            color: white;
-            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3);
-        }
-
-        .reset-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(100, 116, 139, 0.4);
-        }
-
-        .comprehensive-summary {
-            background: white;
-            border-radius: 16px;
-            padding: 2.5rem;
-            margin-bottom: 2rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
-        }
-
-        .summary-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2.5rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 2px solid #f1f5f9;
-        }
-
-        .summary-title {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .summary-title i {
-            color: #6366f1;
-        }
-
-        .action-buttons {
-            display: flex;
-            gap: 0.75rem;
-        }
-
-        .action-btn {
-            padding: 0.75rem 1.25rem;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-        }
-
-        .download-pdf-btn {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            color: white;
-            box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
-        }
-
-        .download-pdf-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-        }
-
-        .new-analysis-btn {
-            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-            color: white;
-            box-shadow: 0 2px 8px rgba(100, 116, 139, 0.3);
-        }
-
-        .new-analysis-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.4);
+            flex-direction: column;
         }
 
         .trust-score-display {
-            display: flex;
-            gap: 2.5rem;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding: 2rem;
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            border-radius: 12px;
-            border: 2px solid #e5e7eb;
-        }
-
-        .trust-gauge {
-            position: relative;
-            flex-shrink: 0;
-            width: 120px;
-            height: 120px;
-        }
-
-        .trust-score-value {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            flex-direction: column;
             text-align: center;
-            pointer-events: none;
-        }
-
-        .score-number {
-            font-size: 2rem;
-            font-weight: 800;
-            color: #1e293b;
-        }
-
-        .score-label {
-            font-size: 0.75rem;
-            color: #64748b;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
+            gap: 1.5rem;
         }
 
         .trust-details {
-            flex: 1;
-            min-width: 200px;
-            padding-left: 1rem;
-        }
-
-        .trust-rating {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-        }
-
-        .trust-description {
-            color: #64748b;
-            line-height: 1.6;
-        }
-
-        .trust-score-breakdown {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .breakdown-title {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .breakdown-title i {
-            color: #6366f1;
+            padding-left: 0;
         }
 
         .breakdown-item {
-            margin-bottom: 1rem;
-            padding: 0.75rem;
-            background: white;
-            border-radius: 8px;
-            display: grid;
-            grid-template-columns: 200px 1fr 80px;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .breakdown-label {
-            font-weight: 600;
-            color: #334155;
-            font-size: 0.875rem;
-        }
-
-        .breakdown-bar-container {
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-
-        .breakdown-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
-            width: 0%;
-            transition: width 1s ease;
-            border-radius: 4px;
+            grid-template-columns: 1fr;
+            gap: 0.5rem;
         }
 
         .breakdown-score {
-            text-align: right;
-            font-weight: 700;
-            color: #1e293b;
-            font-size: 0.875rem;
+            text-align: left;
         }
 
         .article-metadata {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+            grid-template-columns: 1fr;
         }
 
-        .metadata-item {
-            padding: 1rem;
-            background: #f8fafc;
-            border-radius: 8px;
-            border-left: 4px solid #6366f1;
-        }
-
-        .metadata-label {
-            font-size: 0.75rem;
-            color: #64748b;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 0.25rem;
-        }
-
-        .metadata-value {
-            font-size: 0.95rem;
-            color: #1e293b;
-            font-weight: 600;
-        }
-
-        .article-summary {
-            margin-bottom: 2rem;
-        }
-
-        .section-subtitle {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .section-subtitle i {
-            color: #6366f1;
-        }
-
-        .summary-text {
-            color: #475569;
-            line-height: 1.8;
-            padding: 1.5rem;
-            background: #f8fafc;
-            border-radius: 8px;
-            border-left: 4px solid #3b82f6;
-        }
-
-        .analysis-findings {
-            margin-bottom: 2rem;
-        }
-
-        .bottom-line {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #fbbf24;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .bottom-line-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #92400e;
-            margin-bottom: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .bottom-line-title i {
-            color: #f59e0b;
-        }
-
-        .bottom-line-text {
-            color: #78350f;
-            line-height: 1.6;
-            font-weight: 500;
-        }
-
-        .key-findings {
-            display: flex;
+        .action-buttons {
             flex-direction: column;
-            gap: 0.75rem;
         }
+    }
+</style>
+{% endblock %}
 
-        .finding-item {
-            display: flex;
-            align-items: start;
-            gap: 0.75rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 8px;
-            border-left: 4px solid #10b981;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
+{% block content %}
+<!-- Compact Progress Banner -->
+<div id="progressBannerFixed" class="progress-banner-fixed">
+    <div class="progress-banner-content">
+        <div class="progress-service-info">
+            <div class="progress-service-icon" id="progressServiceIcon">
+                🔍
+            </div>
+            <div class="progress-service-text">
+                <div class="progress-service-name" id="progressServiceName">
+                    Initializing Analysis
+                </div>
+                <div class="progress-service-description" id="progressServiceDescription">
+                    Preparing to analyze your article
+                </div>
+            </div>
+        </div>
+        <div class="progress-bar-section">
+            <div class="progress-bar-header">
+                <span class="progress-bar-label">Analyzing</span>
+                <span class="progress-percentage-compact" id="progressPercentageCompact">0%</span>
+            </div>
+            <div class="progress-bar-container-compact">
+                <div class="progress-bar-compact-fill" id="progressBarCompactFill"></div>
+            </div>
+        </div>
+        <div class="progress-steps-compact">
+            <div class="progress-step-dot"></div>
+            <div class="progress-step-dot"></div>
+            <div class="progress-step-dot"></div>
+            <div class="progress-step-dot"></div>
+            <div class="progress-step-dot"></div>
+            <div class="progress-step-dot"></div>
+            <div class="progress-step-dot"></div>
+            <div class="progress-step-dot"></div>
+        </div>
+    </div>
+</div>
 
-        .finding-icon {
-            color: #10b981;
-            font-size: 1.1rem;
-            margin-top: 2px;
-            flex-shrink: 0;
-        }
+<!-- Main Content -->
+<div class="page-content">
+    <!-- Hero Section -->
+    <div class="section-header-compact">
+        <h1 class="main-title-compact">
+            <i class="fas fa-newspaper" style="color: #3b82f6; margin-right: 8px;"></i>
+            News Credibility Analysis
+        </h1>
+        <p class="subtitle-compact">Professional AI analysis for news articles, editorials, and opinion pieces</p>
+    </div>
 
-        .finding-text {
-            color: #334155;
-            line-height: 1.6;
-        }
+    <!-- Capabilities Showcase -->
+    <div class="capabilities-showcase">
+        <div class="capability-badge">
+            <i class="fas fa-link"></i>
+            <span>URL Analysis</span>
+        </div>
+        <div class="capability-badge">
+            <i class="fas fa-file-alt"></i>
+            <span>Text Analysis</span>
+        </div>
+        <div class="capability-badge">
+            <i class="fas fa-chart-line"></i>
+            <span>7 AI Services</span>
+        </div>
+        <div class="capability-badge">
+            <i class="fas fa-file-pdf"></i>
+            <span>PDF Reports</span>
+        </div>
+    </div>
 
-        .no-findings-message {
-            text-align: center;
-            padding: 2rem;
-            color: #64748b;
-        }
+    <!-- Analysis Container -->
+    <div class="analysis-container">
+        <!-- Input Section -->
+        <div class="input-section">
+            <label class="input-label" for="article-url">
+                <i class="fas fa-link"></i> Article URL (Optional)
+            </label>
+            <input 
+                type="url" 
+                id="article-url" 
+                class="input-field" 
+                placeholder="https://example.com/article">
 
-        .no-findings-message i {
-            font-size: 2rem;
-            color: #cbd5e1;
-            margin-bottom: 0.5rem;
-        }
+            <label class="input-label" for="article-text" style="margin-top: 16px;">
+                <i class="fas fa-align-left"></i> Or Paste Article Text
+            </label>
+            <textarea 
+                id="article-text" 
+                class="input-field" 
+                placeholder="Paste the full article text here for analysis..."></textarea>
 
-        .service-results-header {
-            text-align: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 2px solid #e5e7eb;
-        }
+            <div class="button-group">
+                <button 
+                    class="analyze-button" 
+                    id="analyze-btn">
+                    <i class="fas fa-search"></i> Analyze Article
+                </button>
+                <button 
+                    class="reset-button" 
+                    onclick="resetAnalysis()"
+                    id="reset-btn">
+                    <i class="fas fa-redo"></i> Reset
+                </button>
+            </div>
+        </div>
 
-        .service-results-header h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
-
-        .service-results-header p {
-            color: #64748b;
-            font-size: 1rem;
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding-top: 80px;
-            }
-
-            .page-content {
-                padding: 1rem;
-            }
-
-            .analysis-container {
-                padding: 1.5rem;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
-
-            .trust-score-display {
-                flex-direction: column;
-                text-align: center;
-                gap: 1.5rem;
-            }
-
-            .trust-details {
-                padding-left: 0;
-            }
-
-            .breakdown-item {
-                grid-template-columns: 1fr;
-                gap: 0.5rem;
-            }
-
-            .breakdown-score {
-                text-align: left;
-            }
-
-            .article-metadata {
-                grid-template-columns: 1fr;
-            }
-
-            .action-buttons {
-                flex-direction: column;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation Header - v2.0.0 TWO-ROW LAYOUT -->
-<nav class="main-navigation">
-    <div class="nav-container-unified">
-        <!-- Logo and Mobile Toggle -->
-        <div class="nav-header-row">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
+        <div id="resultsSection" style="display: none;">
             
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
-        
-        <!-- Two-Row Menu Container -->
-        <div class="nav-menu-container" id="navMenu">
-            <!-- TOP ROW: Main Tools -->
-            <ul class="nav-menu-row top-row">
-                <li><a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
-                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
-                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
-                <li><a href="/analyze" class="nav-link active"><i class="fas fa-newspaper"></i> News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
-            </ul>
-            
-            <!-- BOTTOM ROW: Secondary Tools -->
-            <ul class="nav-menu-row bottom-row">
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="/observatory" class="nav-link"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
-                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
-                <li><a href="/quiz" class="nav-link"><i class="fas fa-question-circle"></i> Quiz</a></li>
-                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i> Contact Us</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-    <!-- Compact Progress Banner -->
-    <div id="progressBannerFixed" class="progress-banner-fixed">
-        <div class="progress-banner-content">
-            <div class="progress-service-info">
-                <div class="progress-service-icon" id="progressServiceIcon">
-                    🔍
-                </div>
-                <div class="progress-service-text">
-                    <div class="progress-service-name" id="progressServiceName">
-                        Initializing Analysis
-                    </div>
-                    <div class="progress-service-description" id="progressServiceDescription">
-                        Preparing to analyze your article
+            <!-- Comprehensive Summary Section -->
+            <div id="comprehensive-summary" class="comprehensive-summary" style="display: none;">
+                <div class="summary-header">
+                    <h2 class="summary-title">
+                        <i class="fas fa-clipboard-check"></i>
+                        Analysis Summary
+                    </h2>
+                    <div class="action-buttons">
+                        <button class="action-btn download-pdf-btn" onclick="generatePDF()">
+                            <i class="fas fa-file-pdf"></i>
+                            Download PDF
+                        </button>
+                        <button class="action-btn new-analysis-btn" onclick="resetAnalysis()">
+                            <i class="fas fa-redo"></i>
+                            New Analysis
+                        </button>
                     </div>
                 </div>
-            </div>
-            <div class="progress-bar-section">
-                <div class="progress-bar-header">
-                    <span class="progress-bar-label">Analyzing</span>
-                    <span class="progress-percentage-compact" id="progressPercentageCompact">0%</span>
-                </div>
-                <div class="progress-bar-container-compact">
-                    <div class="progress-bar-compact-fill" id="progressBarCompactFill"></div>
-                </div>
-            </div>
-            <div class="progress-steps-compact">
-                <div class="progress-step-dot"></div>
-                <div class="progress-step-dot"></div>
-                <div class="progress-step-dot"></div>
-                <div class="progress-step-dot"></div>
-                <div class="progress-step-dot"></div>
-                <div class="progress-step-dot"></div>
-                <div class="progress-step-dot"></div>
-                <div class="progress-step-dot"></div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Main Content -->
-    <div class="page-content">
-        <!-- Hero Section -->
-        <div class="section-header-compact">
-            <h1 class="main-title-compact">
-                <i class="fas fa-newspaper" style="color: #3b82f6; margin-right: 8px;"></i>
-                News Credibility Analysis
-            </h1>
-            <p class="subtitle-compact">Professional AI analysis for news articles, editorials, and opinion pieces</p>
-        </div>
-
-        <!-- Capabilities Showcase -->
-        <div class="capabilities-showcase">
-            <div class="capability-badge">
-                <i class="fas fa-link"></i>
-                <span>URL Analysis</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-file-alt"></i>
-                <span>Text Analysis</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-chart-line"></i>
-                <span>7 AI Services</span>
-            </div>
-            <div class="capability-badge">
-                <i class="fas fa-file-pdf"></i>
-                <span>PDF Reports</span>
-            </div>
-        </div>
-
-        <!-- Analysis Container -->
-        <div class="analysis-container">
-            <!-- Input Section -->
-            <div class="input-section">
-                <label class="input-label" for="article-url">
-                    <i class="fas fa-link"></i> Article URL (Optional)
-                </label>
-                <input 
-                    type="url" 
-                    id="article-url" 
-                    class="input-field" 
-                    placeholder="https://example.com/article">
-
-                <label class="input-label" for="article-text" style="margin-top: 16px;">
-                    <i class="fas fa-align-left"></i> Or Paste Article Text
-                </label>
-                <textarea 
-                    id="article-text" 
-                    class="input-field" 
-                    placeholder="Paste the full article text here for analysis..."></textarea>
-
-                <div class="button-group">
-                    <button 
-                        class="analyze-button" 
-                        id="analyze-btn">
-                        <i class="fas fa-search"></i> Analyze Article
-                    </button>
-                    <button 
-                        class="reset-button" 
-                        onclick="resetAnalysis()"
-                        id="reset-btn">
-                        <i class="fas fa-redo"></i> Reset
-                    </button>
-                </div>
-            </div>
-
-            <div id="resultsSection" style="display: none;">
-                
-                <!-- Comprehensive Summary Section -->
-                <div id="comprehensive-summary" class="comprehensive-summary" style="display: none;">
-                    <div class="summary-header">
-                        <h2 class="summary-title">
-                            <i class="fas fa-clipboard-check"></i>
-                            Analysis Summary
-                        </h2>
-                        <div class="action-buttons">
-                            <button class="action-btn download-pdf-btn" onclick="generatePDF()">
-                                <i class="fas fa-file-pdf"></i>
-                                Download PDF
-                            </button>
-                            <button class="action-btn new-analysis-btn" onclick="resetAnalysis()">
-                                <i class="fas fa-redo"></i>
-                                New Analysis
-                            </button>
+                <!-- Trust Score Display -->
+                <div class="trust-score-display">
+                    <div class="trust-gauge">
+                        <canvas id="trust-gauge-canvas" width="120" height="120"></canvas>
+                        <div class="trust-score-value">
+                            <div class="score-number" id="trust-score-number">0</div>
+                            <div class="score-label">Trust Score</div>
                         </div>
                     </div>
-
-                    <!-- Trust Score Display -->
-                    <div class="trust-score-display">
-                        <div class="trust-gauge">
-                            <canvas id="trust-gauge-canvas" width="120" height="120"></canvas>
-                            <div class="trust-score-value">
-                                <div class="score-number" id="trust-score-number">0</div>
-                                <div class="score-label">Trust Score</div>
-                            </div>
-                        </div>
-                        <div class="trust-details">
-                            <div class="trust-rating" id="trust-rating">Calculating...</div>
-                            <div class="trust-description" id="trust-description">
-                                Analyzing article across 7 comprehensive dimensions...
-                            </div>
+                    <div class="trust-details">
+                        <div class="trust-rating" id="trust-rating">Calculating...</div>
+                        <div class="trust-description" id="trust-description">
+                            Analyzing article across 7 comprehensive dimensions...
                         </div>
                     </div>
-
-                    <!-- Trust Score Breakdown -->
-                    <div class="trust-score-breakdown" id="trust-score-breakdown" style="display: none;">
-                        <div class="breakdown-title">
-                            <i class="fas fa-chart-bar"></i>
-                            How This Score Was Calculated
-                        </div>
-                        <div id="breakdown-items">
-                            <!-- Breakdown items will be inserted here -->
-                        </div>
-                    </div>
-
-                    <!-- Article Metadata -->
-                    <div class="article-metadata">
-                        <div class="metadata-item">
-                            <div class="metadata-label">Source</div>
-                            <div class="metadata-value" id="metadata-source">Loading...</div>
-                        </div>
-                        <div class="metadata-item">
-                            <div class="metadata-label">Author</div>
-                            <div class="metadata-value" id="metadata-author">Loading...</div>
-                        </div>
-                        <div class="metadata-item">
-                            <div class="metadata-label">Word Count</div>
-                            <div class="metadata-value" id="metadata-wordcount">Loading...</div>
-                        </div>
-                        <div class="metadata-item">
-                            <div class="metadata-label">Analysis Date</div>
-                            <div class="metadata-value" id="metadata-date">Loading...</div>
-                        </div>
-                    </div>
-
-                    <!-- Article Summary -->
-                    <div class="article-summary">
-                        <h3 class="section-subtitle">
-                            <i class="fas fa-align-left"></i>
-                            Article Summary
-                        </h3>
-                        <div class="summary-text" id="article-summary-text">
-                            Loading article summary...
-                        </div>
-                    </div>
-
-                    <!-- Analysis Findings -->
-                    <div class="analysis-findings">
-                        <h3 class="section-subtitle">
-                            <i class="fas fa-lightbulb"></i>
-                            Key Insights
-                        </h3>
-                        
-                        <div class="bottom-line">
-                            <div class="bottom-line-title">
-                                <i class="fas fa-flag"></i> Bottom Line
-                            </div>
-                            <div class="bottom-line-text" id="bottom-line-text">
-                                Analyzing content...
-                            </div>
-                        </div>
-
-                        <div class="key-findings" id="key-findings-list">
-                            <!-- Findings will be inserted here dynamically -->
-                        </div>
-                    </div>
-
                 </div>
 
-                <!-- Detailed Service Results Section -->
-                <div id="service-results-wrapper" style="display: none;">
-                    <div class="service-results-header">
-                        <h2>Detailed Service Analysis</h2>
-                        <p>In-depth breakdowns from each of our 7 AI-powered analysis services</p>
+                <!-- Trust Score Breakdown -->
+                <div class="trust-score-breakdown" id="trust-score-breakdown" style="display: none;">
+                    <div class="breakdown-title">
+                        <i class="fas fa-chart-bar"></i>
+                        How This Score Was Calculated
                     </div>
-                    <div id="serviceAnalysisContainer">
-                        <!-- Service cards will be dynamically inserted here -->
+                    <div id="breakdown-items">
+                        <!-- Breakdown items will be inserted here -->
                     </div>
+                </div>
+
+                <!-- Article Metadata -->
+                <div class="article-metadata">
+                    <div class="metadata-item">
+                        <div class="metadata-label">Source</div>
+                        <div class="metadata-value" id="metadata-source">Loading...</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="metadata-label">Author</div>
+                        <div class="metadata-value" id="metadata-author">Loading...</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="metadata-label">Word Count</div>
+                        <div class="metadata-value" id="metadata-wordcount">Loading...</div>
+                    </div>
+                    <div class="metadata-item">
+                        <div class="metadata-label">Analysis Date</div>
+                        <div class="metadata-value" id="metadata-date">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Article Summary -->
+                <div class="article-summary">
+                    <h3 class="section-subtitle">
+                        <i class="fas fa-align-left"></i>
+                        Article Summary
+                    </h3>
+                    <div class="summary-text" id="article-summary-text">
+                        Loading article summary...
+                    </div>
+                </div>
+
+                <!-- Analysis Findings -->
+                <div class="analysis-findings">
+                    <h3 class="section-subtitle">
+                        <i class="fas fa-lightbulb"></i>
+                        Key Insights
+                    </h3>
+                    
+                    <div class="bottom-line">
+                        <div class="bottom-line-title">
+                            <i class="fas fa-flag"></i> Bottom Line
+                        </div>
+                        <div class="bottom-line-text" id="bottom-line-text">
+                            Analyzing content...
+                        </div>
+                    </div>
+
+                    <div class="key-findings" id="key-findings-list">
+                        <!-- Findings will be inserted here dynamically -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Detailed Service Results Section -->
+            <div id="service-results-wrapper" style="display: none;">
+                <div class="service-results-header">
+                    <h2>Detailed Service Analysis</h2>
+                    <p>In-depth breakdowns from each of our 7 AI-powered analysis services</p>
+                </div>
+                <div id="serviceAnalysisContainer">
+                    <!-- Service cards will be dynamically inserted here -->
                 </div>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <!-- Load JavaScript Dependencies -->
-    <script src="/static/js/chart-renderer.js"></script>
-    <script src="/static/js/service-templates.js"></script>
-    <script src="/static/js/unified-app-core.js"></script>
-    <script src="/static/js/truthlens-pdf-generator-v5.0.js"></script>
+{% block scripts %}
+<!-- Load JavaScript Dependencies -->
+<script src="/static/js/chart-renderer.js"></script>
+<script src="/static/js/service-templates.js"></script>
+<script src="/static/js/unified-app-core.js"></script>
+<script src="/static/js/truthlens-pdf-generator-v5.0.js"></script>
+
+<script>
+    // ====================================================================
+    // PAGE-SPECIFIC HELPER FUNCTIONS FOR INDEX.HTML
+    // v4.0.0 - Template Inheritance Version
+    // ====================================================================
     
-    <script>
-        // ====================================================================
-        // PAGE-SPECIFIC HELPER FUNCTIONS FOR INDEX.HTML
-        // v3.15.0 - Fixed Navigation (No Duplicate About Us)
-        // ====================================================================
+    console.log('[Index v4.0.0] Initializing...');
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('[Index v4.0.0] DOM loaded, attaching analyze button listener');
         
-        console.log('[Index v3.15.0] Initializing...');
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('[Index v3.15.0] DOM loaded, attaching analyze button listener');
-            
-            var analyzeBtn = document.getElementById('analyze-btn');
-            if (analyzeBtn) {
-                analyzeBtn.addEventListener('click', function() {
-                    console.log('[Index v3.15.0] Analyze button clicked');
-                    
-                    var urlInput = document.getElementById('article-url');
-                    var textInput = document.getElementById('article-text');
-                    
-                    var url = urlInput ? urlInput.value.trim() : '';
-                    var text = textInput ? textInput.value.trim() : '';
-                    
-                    if (!url && !text) {
-                        alert('Please enter either an article URL or paste article text.');
-                        return;
-                    }
-                    
-                    analyzeBtn.disabled = true;
-                    analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
-                    
-                    if (typeof window.startAnalysis === 'function') {
-                        console.log('[Index v3.15.0] Calling startAnalysis()');
-                        window.startAnalysis(url, text);
-                    } else {
-                        console.error('[Index v3.15.0] startAnalysis() not found in unified-app-core.js');
-                        alert('Error: Analysis function not loaded. Please refresh the page.');
-                        analyzeBtn.disabled = false;
-                        analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
-                    }
-                });
+        var analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.addEventListener('click', function() {
+                console.log('[Index v4.0.0] Analyze button clicked');
                 
-                console.log('[Index v3.15.0] ✓ Analyze button listener attached');
-            } else {
-                console.error('[Index v3.15.0] Analyze button not found!');
-            }
-        });
-        
-        function safeExtractText(value, fallback) {
-            fallback = fallback || 'Not available';
-            
-            if (value === null || value === undefined) {
-                return fallback;
-            }
-            
-            if (typeof value === 'string') {
-                return value || fallback;
-            }
-            
-            if (typeof value === 'number') {
-                return String(value);
-            }
-            
-            if (typeof value === 'object' && !Array.isArray(value)) {
-                if (value.text) return String(value.text);
-                if (value.summary) return String(value.summary);
-                if (value.analysis) return safeExtractText(value.analysis, fallback);
-                if (value.description) return String(value.description);
-                if (value.content) return String(value.content);
-                if (value.message) return String(value.message);
+                var urlInput = document.getElementById('article-url');
+                var textInput = document.getElementById('article-text');
                 
-                var keys = Object.keys(value);
-                if (keys.length === 1) {
-                    return safeExtractText(value[keys[0]], fallback);
+                var url = urlInput ? urlInput.value.trim() : '';
+                var text = textInput ? textInput.value.trim() : '';
+                
+                if (!url && !text) {
+                    alert('Please enter either an article URL or paste article text.');
+                    return;
                 }
                 
-                return fallback;
-            }
+                analyzeBtn.disabled = true;
+                analyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+                
+                if (typeof window.startAnalysis === 'function') {
+                    console.log('[Index v4.0.0] Calling startAnalysis()');
+                    window.startAnalysis(url, text);
+                } else {
+                    console.error('[Index v4.0.0] startAnalysis() not found in unified-app-core.js');
+                    alert('Error: Analysis function not loaded. Please refresh the page.');
+                    analyzeBtn.disabled = false;
+                    analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+                }
+            });
             
-            if (Array.isArray(value) && value.length > 0) {
-                return safeExtractText(value[0], fallback);
+            console.log('[Index v4.0.0] ✓ Analyze button listener attached');
+        } else {
+            console.error('[Index v4.0.0] Analyze button not found!');
+        }
+    });
+    
+    function safeExtractText(value, fallback) {
+        fallback = fallback || 'Not available';
+        
+        if (value === null || value === undefined) {
+            return fallback;
+        }
+        
+        if (typeof value === 'string') {
+            return value || fallback;
+        }
+        
+        if (typeof value === 'number') {
+            return String(value);
+        }
+        
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            if (value.text) return String(value.text);
+            if (value.summary) return String(value.summary);
+            if (value.analysis) return safeExtractText(value.analysis, fallback);
+            if (value.description) return String(value.description);
+            if (value.content) return String(value.content);
+            if (value.message) return String(value.message);
+            
+            var keys = Object.keys(value);
+            if (keys.length === 1) {
+                return safeExtractText(value[keys[0]], fallback);
             }
             
             return fallback;
         }
-
-        function updateComprehensiveSummary(data) {
-            console.log('[Summary v3.15.0] Updating comprehensive summary');
-            
-            var summaryContainer = document.getElementById('comprehensive-summary');
-            if (!summaryContainer) return;
-            
-            summaryContainer.style.display = 'block';
-            
-            var trustScore = data.trust_score || 0;
-            var trustScoreEl = document.getElementById('trust-score-number');
-            if (trustScoreEl) {
-                trustScoreEl.textContent = Math.round(trustScore);
-            }
-            
-            var ratingEl = document.getElementById('trust-rating');
-            if (ratingEl) {
-                if (trustScore >= 70) {
-                    ratingEl.textContent = 'Highly Credible';
-                    ratingEl.style.color = '#10b981';
-                } else if (trustScore >= 40) {
-                    ratingEl.textContent = 'Moderate Credibility';
-                    ratingEl.style.color = '#f59e0b';
-                } else {
-                    ratingEl.textContent = 'Low Credibility';
-                    ratingEl.style.color = '#ef4444';
-                }
-            }
-            
-            var descEl = document.getElementById('trust-description');
-            if (descEl) {
-                descEl.textContent = safeExtractText(extractBottomLine(data), 'Analysis complete.');
-            }
-            
-            buildScoreBreakdown(data);
-            drawTrustGauge(trustScore);
-            updateMetadata(data);
-            
-            var summaryTextEl = document.getElementById('article-summary-text');
-            if (summaryTextEl) {
-                summaryTextEl.textContent = safeExtractText(
-                    data.article_summary || data.summary,
-                    'No summary available for this article.'
-                );
-            }
-            
-            var findingsListEl = document.getElementById('key-findings-list');
-            var bottomLineTextEl = document.getElementById('bottom-line-text');
-            
-            if (bottomLineTextEl) {
-                bottomLineTextEl.textContent = safeExtractText(
-                    extractBottomLine(data),
-                    'Analysis results are available in the service breakdowns below.'
-                );
-            }
-            
-            if (findingsListEl) {
-                var findings = extractRealFindings(data);
-                findingsListEl.innerHTML = '';
-                
-                if (findings.length > 0) {
-                    findings.forEach(function(finding) {
-                        var findingText = safeExtractText(finding, '');
-                        if (findingText) {
-                            var findingEl = document.createElement('div');
-                            findingEl.className = 'finding-item';
-                            findingEl.innerHTML = `
-                                <i class="fas fa-check-circle finding-icon"></i>
-                                <div class="finding-text">${findingText}</div>
-                            `;
-                            findingsListEl.appendChild(findingEl);
-                        }
-                    });
-                } else {
-                    findingsListEl.innerHTML = `
-                        <div class="no-findings-message">
-                            <i class="fas fa-info-circle"></i>
-                            <p>See detailed service breakdowns below for comprehensive insights.</p>
-                        </div>
-                    `;
-                }
-            }
-            
-            var serviceWrapper = document.getElementById('service-results-wrapper');
-            if (serviceWrapper) {
-                serviceWrapper.style.display = 'block';
-            }
+        
+        if (Array.isArray(value) && value.length > 0) {
+            return safeExtractText(value[0], fallback);
         }
+        
+        return fallback;
+    }
 
-        function buildScoreBreakdown(data) {
-            console.log('[ScoreBreakdown v3.15.0] Building breakdown');
-            
-            var breakdownContainer = document.getElementById('trust-score-breakdown');
-            var breakdownItems = document.getElementById('breakdown-items');
-            
-            if (!breakdownContainer || !breakdownItems) return;
-            
-            var services = [
-                { id: 'source_credibility', label: 'Source Credibility', weight: 25 },
-                { id: 'bias_detector', label: 'Bias Detection', weight: 20 },
-                { id: 'fact_checker', label: 'Fact Checking', weight: 15 },
-                { id: 'author_analyzer', label: 'Author Analysis', weight: 15 },
-                { id: 'transparency_analyzer', label: 'Transparency', weight: 10 },
-                { id: 'manipulation_detector', label: 'Manipulation Detection', weight: 10 },
-                { id: 'content_analyzer', label: 'Content Quality', weight: 5 }
-            ];
-            
-            breakdownItems.innerHTML = '';
-            
-            services.forEach(function(service) {
-                var score = 0;
-                
-                if (data.detailed_analysis && data.detailed_analysis[service.id]) {
-                    var serviceData = data.detailed_analysis[service.id];
-                    score = serviceData.score || serviceData.trust_score || 0;
-                } else if (data[service.id]) {
-                    score = data[service.id].score || 0;
-                }
-                
-                var itemEl = document.createElement('div');
-                itemEl.className = 'breakdown-item';
-                itemEl.setAttribute('data-service', service.id);
-                itemEl.innerHTML = `
-                    <div class="breakdown-label">${service.label}</div>
-                    <div class="breakdown-bar-container">
-                        <div class="breakdown-bar-fill" style="width: 0%"></div>
-                    </div>
-                    <div class="breakdown-score">${Math.round(score)}/100</div>
-                `;
-                breakdownItems.appendChild(itemEl);
-                
-                setTimeout(function() {
-                    var barFill = itemEl.querySelector('.breakdown-bar-fill');
-                    if (barFill) {
-                        barFill.style.width = score + '%';
-                    }
-                }, 100);
-            });
-            
-            breakdownContainer.style.display = 'block';
+    function updateComprehensiveSummary(data) {
+        console.log('[Summary v4.0.0] Updating comprehensive summary');
+        
+        var summaryContainer = document.getElementById('comprehensive-summary');
+        if (!summaryContainer) return;
+        
+        summaryContainer.style.display = 'block';
+        
+        var trustScore = data.trust_score || 0;
+        var trustScoreEl = document.getElementById('trust-score-number');
+        if (trustScoreEl) {
+            trustScoreEl.textContent = Math.round(trustScore);
         }
-
-        function drawTrustGauge(score) {
-            var canvas = document.getElementById('trust-gauge-canvas');
-            if (!canvas) return;
-            
-            var ctx = canvas.getContext('2d');
-            var centerX = canvas.width / 2;
-            var centerY = canvas.height / 2;
-            var radius = 50;
-            
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-            ctx.fillStyle = '#f1f5f9';
-            ctx.fill();
-            
-            var startAngle = -0.5 * Math.PI;
-            var endAngle = startAngle + (score / 100) * 2 * Math.PI;
-            
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
-            ctx.lineWidth = 12;
-            
-            if (score >= 70) {
-                ctx.strokeStyle = '#10b981';
-            } else if (score >= 40) {
-                ctx.strokeStyle = '#f59e0b';
+        
+        var ratingEl = document.getElementById('trust-rating');
+        if (ratingEl) {
+            if (trustScore >= 70) {
+                ratingEl.textContent = 'Highly Credible';
+                ratingEl.style.color = '#10b981';
+            } else if (trustScore >= 40) {
+                ratingEl.textContent = 'Moderate Credibility';
+                ratingEl.style.color = '#f59e0b';
             } else {
-                ctx.strokeStyle = '#ef4444';
+                ratingEl.textContent = 'Low Credibility';
+                ratingEl.style.color = '#ef4444';
             }
-            
-            ctx.stroke();
         }
-
-        function updateMetadata(data) {
-            console.log('[Metadata v3.15.0] Updating metadata');
+        
+        var descEl = document.getElementById('trust-description');
+        if (descEl) {
+            descEl.textContent = safeExtractText(extractBottomLine(data), 'Analysis complete.');
+        }
+        
+        buildScoreBreakdown(data);
+        drawTrustGauge(trustScore);
+        updateMetadata(data);
+        
+        var summaryTextEl = document.getElementById('article-summary-text');
+        if (summaryTextEl) {
+            summaryTextEl.textContent = safeExtractText(
+                data.article_summary || data.summary,
+                'No summary available for this article.'
+            );
+        }
+        
+        var findingsListEl = document.getElementById('key-findings-list');
+        var bottomLineTextEl = document.getElementById('bottom-line-text');
+        
+        if (bottomLineTextEl) {
+            bottomLineTextEl.textContent = safeExtractText(
+                extractBottomLine(data),
+                'Analysis results are available in the service breakdowns below.'
+            );
+        }
+        
+        if (findingsListEl) {
+            var findings = extractRealFindings(data);
+            findingsListEl.innerHTML = '';
             
-            var sourceEl = document.getElementById('metadata-source');
-            var authorEl = document.getElementById('metadata-author');
-            var wordcountEl = document.getElementById('metadata-wordcount');
-            var dateEl = document.getElementById('metadata-date');
-            
-            if (sourceEl) {
-                sourceEl.textContent = safeExtractText(data.source, 'Unknown Source');
-            }
-            if (authorEl) {
-                authorEl.textContent = safeExtractText(data.author, 'Unknown Author');
-            }
-            if (wordcountEl) {
-                var wordCount = data.word_count || data.wordCount || 'N/A';
-                wordcountEl.textContent = String(wordCount);
-            }
-            if (dateEl) {
-                var now = new Date();
-                dateEl.textContent = now.toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
+            if (findings.length > 0) {
+                findings.forEach(function(finding) {
+                    var findingText = safeExtractText(finding, '');
+                    if (findingText) {
+                        var findingEl = document.createElement('div');
+                        findingEl.className = 'finding-item';
+                        findingEl.innerHTML = `
+                            <i class="fas fa-check-circle finding-icon"></i>
+                            <div class="finding-text">${findingText}</div>
+                        `;
+                        findingsListEl.appendChild(findingEl);
+                    }
                 });
+            } else {
+                findingsListEl.innerHTML = `
+                    <div class="no-findings-message">
+                        <i class="fas fa-info-circle"></i>
+                        <p>See detailed service breakdowns below for comprehensive insights.</p>
+                    </div>
+                `;
             }
         }
+        
+        var serviceWrapper = document.getElementById('service-results-wrapper');
+        if (serviceWrapper) {
+            serviceWrapper.style.display = 'block';
+        }
+    }
 
-        function extractBottomLine(data) {
-            var bottomLine = '';
+    function buildScoreBreakdown(data) {
+        console.log('[ScoreBreakdown v4.0.0] Building breakdown');
+        
+        var breakdownContainer = document.getElementById('trust-score-breakdown');
+        var breakdownItems = document.getElementById('breakdown-items');
+        
+        if (!breakdownContainer || !breakdownItems) return;
+        
+        var services = [
+            { id: 'source_credibility', label: 'Source Credibility', weight: 25 },
+            { id: 'bias_detector', label: 'Bias Detection', weight: 20 },
+            { id: 'fact_checker', label: 'Fact Checking', weight: 15 },
+            { id: 'author_analyzer', label: 'Author Analysis', weight: 15 },
+            { id: 'transparency_analyzer', label: 'Transparency', weight: 10 },
+            { id: 'manipulation_detector', label: 'Manipulation Detection', weight: 10 },
+            { id: 'content_analyzer', label: 'Content Quality', weight: 5 }
+        ];
+        
+        breakdownItems.innerHTML = '';
+        
+        services.forEach(function(service) {
+            var score = 0;
             
-            if (data.findings_summary) bottomLine = data.findings_summary;
-            else if (data.bottom_line) bottomLine = data.bottom_line;
-            else {
-                var trustScore = data.trust_score || 0;
-                if (trustScore >= 70) {
-                    return 'This article comes from a highly credible source with strong fact-checking and minimal bias.';
-                } else if (trustScore >= 40) {
-                    return 'This article shows moderate credibility with some concerns about bias or fact-checking.';
-                } else {
-                    return 'This article has credibility concerns including potential bias, questionable facts, or manipulation tactics.';
-                }
+            if (data.detailed_analysis && data.detailed_analysis[service.id]) {
+                var serviceData = data.detailed_analysis[service.id];
+                score = serviceData.score || serviceData.trust_score || 0;
+            } else if (data[service.id]) {
+                score = data[service.id].score || 0;
             }
             
-            if (typeof bottomLine === 'string') {
-                bottomLine = bottomLine
+            var itemEl = document.createElement('div');
+            itemEl.className = 'breakdown-item';
+            itemEl.setAttribute('data-service', service.id);
+            itemEl.innerHTML = `
+                <div class="breakdown-label">${service.label}</div>
+                <div class="breakdown-bar-container">
+                    <div class="breakdown-bar-fill" style="width: 0%"></div>
+                </div>
+                <div class="breakdown-score">${Math.round(score)}/100</div>
+            `;
+            breakdownItems.appendChild(itemEl);
+            
+            setTimeout(function() {
+                var barFill = itemEl.querySelector('.breakdown-bar-fill');
+                if (barFill) {
+                    barFill.style.width = score + '%';
+                }
+            }, 100);
+        });
+        
+        breakdownContainer.style.display = 'block';
+    }
+
+    function drawTrustGauge(score) {
+        var canvas = document.getElementById('trust-gauge-canvas');
+        if (!canvas) return;
+        
+        var ctx = canvas.getContext('2d');
+        var centerX = canvas.width / 2;
+        var centerY = canvas.height / 2;
+        var radius = 50;
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fill();
+        
+        var startAngle = -0.5 * Math.PI;
+        var endAngle = startAngle + (score / 100) * 2 * Math.PI;
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.lineWidth = 12;
+        
+        if (score >= 70) {
+            ctx.strokeStyle = '#10b981';
+        } else if (score >= 40) {
+            ctx.strokeStyle = '#f59e0b';
+        } else {
+            ctx.strokeStyle = '#ef4444';
+        }
+        
+        ctx.stroke();
+    }
+
+    function updateMetadata(data) {
+        console.log('[Metadata v4.0.0] Updating metadata');
+        
+        var sourceEl = document.getElementById('metadata-source');
+        var authorEl = document.getElementById('metadata-author');
+        var wordcountEl = document.getElementById('metadata-wordcount');
+        var dateEl = document.getElementById('metadata-date');
+        
+        if (sourceEl) {
+            sourceEl.textContent = safeExtractText(data.source, 'Unknown Source');
+        }
+        if (authorEl) {
+            authorEl.textContent = safeExtractText(data.author, 'Unknown Author');
+        }
+        if (wordcountEl) {
+            var wordCount = data.word_count || data.wordCount || 'N/A';
+            wordcountEl.textContent = String(wordCount);
+        }
+        if (dateEl) {
+            var now = new Date();
+            dateEl.textContent = now.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            });
+        }
+    }
+
+    function extractBottomLine(data) {
+        var bottomLine = '';
+        
+        if (data.findings_summary) bottomLine = data.findings_summary;
+        else if (data.bottom_line) bottomLine = data.bottom_line;
+        else {
+            var trustScore = data.trust_score || 0;
+            if (trustScore >= 70) {
+                return 'This article comes from a highly credible source with strong fact-checking and minimal bias.';
+            } else if (trustScore >= 40) {
+                return 'This article shows moderate credibility with some concerns about bias or fact-checking.';
+            } else {
+                return 'This article has credibility concerns including potential bias, questionable facts, or manipulation tactics.';
+            }
+        }
+        
+        if (typeof bottomLine === 'string') {
+            bottomLine = bottomLine
+                .replace(/what to verify[\s\S]*/gi, '')
+                .replace(/verification needed[\s\S]*/gi, '')
+                .replace(/needs? verif[\s\S]*/gi, '')
+                .replace(/to be verified[\s\S]*/gi, '')
+                .replace(/requires? verification[\s\S]*/gi, '')
+                .replace(/verify the following[\s\S]*/gi, '')
+                .replace(/points? to verify[\s\S]*/gi, '')
+                .replace(/items? to verify[\s\S]*/gi, '')
+                .replace(/claims? to verify[\s\S]*/gi, '')
+                .replace(/\*\*what to verify\*\*[\s\S]*/gi, '')
+                .replace(/\#\#\s*what to verify[\s\S]*/gi, '')
+                .trim();
+        }
+        
+        return bottomLine || 'Analysis complete. See detailed breakdowns below.';
+    }
+
+    function extractRealFindings(data) {
+        var findings = [];
+        
+        if (data.detailed_analysis) {
+            Object.keys(data.detailed_analysis).forEach(function(serviceId) {
+                var service = data.detailed_analysis[serviceId];
+                if (service.findings && Array.isArray(service.findings)) {
+                    findings = findings.concat(service.findings);
+                } else if (service.summary) {
+                    findings.push(service.summary);
+                }
+            });
+        }
+        
+        findings = findings.map(function(finding) {
+            if (typeof finding === 'string') {
+                return finding
                     .replace(/what to verify[\s\S]*/gi, '')
                     .replace(/verification needed[\s\S]*/gi, '')
                     .replace(/needs? verif[\s\S]*/gi, '')
                     .replace(/to be verified[\s\S]*/gi, '')
                     .replace(/requires? verification[\s\S]*/gi, '')
-                    .replace(/verify the following[\s\S]*/gi, '')
-                    .replace(/points? to verify[\s\S]*/gi, '')
-                    .replace(/items? to verify[\s\S]*/gi, '')
-                    .replace(/claims? to verify[\s\S]*/gi, '')
-                    .replace(/\*\*what to verify\*\*[\s\S]*/gi, '')
-                    .replace(/\#\#\s*what to verify[\s\S]*/gi, '')
                     .trim();
             }
-            
-            return bottomLine || 'Analysis complete. See detailed breakdowns below.';
-        }
-
-        function extractRealFindings(data) {
-            var findings = [];
-            
-            if (data.detailed_analysis) {
-                Object.keys(data.detailed_analysis).forEach(function(serviceId) {
-                    var service = data.detailed_analysis[serviceId];
-                    if (service.findings && Array.isArray(service.findings)) {
-                        findings = findings.concat(service.findings);
-                    } else if (service.summary) {
-                        findings.push(service.summary);
-                    }
-                });
-            }
-            
-            findings = findings.map(function(finding) {
-                if (typeof finding === 'string') {
-                    return finding
-                        .replace(/what to verify[\s\S]*/gi, '')
-                        .replace(/verification needed[\s\S]*/gi, '')
-                        .replace(/needs? verif[\s\S]*/gi, '')
-                        .replace(/to be verified[\s\S]*/gi, '')
-                        .replace(/requires? verification[\s\S]*/gi, '')
-                        .trim();
-                }
-                return finding;
-            }).filter(function(finding) {
-                return finding && finding.length > 0;
-            });
-            
-            return findings.slice(0, 5);
-        }
-
-        function resetAnalysis() {
-            console.log('[Reset v3.15.0] Resetting analysis');
-            
-            document.getElementById('article-url').value = '';
-            document.getElementById('article-text').value = '';
-            
-            var resultsSection = document.getElementById('resultsSection');
-            if (resultsSection) {
-                resultsSection.style.display = 'none';
-            }
-            
-            var summaryContainer = document.getElementById('comprehensive-summary');
-            if (summaryContainer) {
-                summaryContainer.style.display = 'none';
-            }
-            
-            var serviceWrapper = document.getElementById('service-results-wrapper');
-            if (serviceWrapper) {
-                serviceWrapper.style.display = 'none';
-            }
-            
-            var analyzeBtn = document.getElementById('analyze-btn');
-            if (analyzeBtn) {
-                analyzeBtn.disabled = false;
-                analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
-            }
-            
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        function toggleMobileMenu() {
-            var navMenu = document.getElementById('navMenu');
-            if (navMenu) {
-                navMenu.classList.toggle('active');
-            }
-        }
-
+            return finding;
+        }).filter(function(finding) {
+            return finding && finding.length > 0;
+        });
         
-    </script>
-</body>
-</html>
+        return findings.slice(0, 5);
+    }
+
+    function resetAnalysis() {
+        console.log('[Reset v4.0.0] Resetting analysis');
+        
+        document.getElementById('article-url').value = '';
+        document.getElementById('article-text').value = '';
+        
+        var resultsSection = document.getElementById('resultsSection');
+        if (resultsSection) {
+            resultsSection.style.display = 'none';
+        }
+        
+        var summaryContainer = document.getElementById('comprehensive-summary');
+        if (summaryContainer) {
+            summaryContainer.style.display = 'none';
+        }
+        
+        var serviceWrapper = document.getElementById('service-results-wrapper');
+        if (serviceWrapper) {
+            serviceWrapper.style.display = 'none';
+        }
+        
+        var analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.disabled = false;
+            analyzeBtn.innerHTML = '<i class="fas fa-search"></i> Analyze Article';
+        }
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+{% endblock %}
 
 <!--
 I did no harm and this file is not truncated.
-v3.15.0 - January 6, 2026 - NAVIGATION FIXED (NO DUPLICATE ABOUT US)
-
-WHAT'S NEW IN v3.15.0:
-✅ FIXED: Removed duplicate "About Us" - now appears only once
-✅ FIXED: Proper icon for each navigation link
-✅ FIXED: Consistent order across all pages
-✅ PRESERVED: All v3.14.0 functionality (DO NO HARM)
+v4.0.0 - January 8, 2026 - TEMPLATE INHERITANCE VERSION
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
