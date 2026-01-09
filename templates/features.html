@@ -2,26 +2,45 @@
 
 <!--
 TruthLens Features Page - TEMPLATE INHERITANCE VERSION
-Version: 4.0.0 - CONVERTED TO TEMPLATE INHERITANCE
+Version: 5.0.0 - COMPLETE TOOL SUITE UPDATE
 Date: January 8, 2026
 
 CONVERSION NOTES:
 ✅ Now extends base.html (navigation defined once)
-✅ ALL v3.4.0 functionality preserved (DO NO HARM ✓)
+✅ ALL tools now included (11 total features)
 ✅ All CSS intact (marketing page styling)
 ✅ All features working
 ✅ Uses {% block %} structure
 
+WHAT'S NEW IN v5.0.0:
+✅ ADDED: Media Literacy Quiz feature card
+✅ ADDED: Claim Tracker feature card
+✅ ADDED: AI Observatory feature card
+✅ NOW COMPLETE: All 11 TruthLens tools displayed
+
 PRESERVED FEATURES:
 - Beta banner
-- 8 feature cards (Source Credibility, Bias Detection, etc.)
+- 11 feature cards (complete tool suite)
 - Coming Soon section (3 future features)
 - Data sources showcase (16+ sources)
 - CTA section
 - All marketing content
 - Responsive design
 
-Last modified: January 8, 2026 - v4.0.0 Template Inheritance
+COMPLETE TOOL SUITE (11 TOOLS):
+1. Source Credibility (News Analysis)
+2. Bias Detection (News Analysis)
+3. Fact-Checking (News Analysis)
+4. Author Analysis (News Analysis)
+5. Transparency Scoring (News Analysis)
+6. Content Quality (News Analysis)
+7. Transcript Analysis (YouTube/Speech Analysis)
+8. Debate Arena (Human Debates)
+9. Media Literacy Quiz (Educational)
+10. Claim Tracker (Database Search)
+11. AI Observatory (Threat Monitoring)
+
+Last modified: January 8, 2026 - v5.0.0 Complete Tool Suite
 I did no harm and this file is not truncated.
 -->
 
@@ -135,6 +154,9 @@ I did no harm and this file is not truncated.
     .feature-icon.content { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
     .feature-icon.transcript { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
     .feature-icon.debate { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+    .feature-icon.quiz { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+    .feature-icon.claims { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
+    .feature-icon.observatory { background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%); }
 
     .feature-card h3 {
         font-size: 1.5rem;
@@ -362,7 +384,7 @@ I did no harm and this file is not truncated.
 
     <h1 class="page-title">Comprehensive Analysis Features</h1>
     <p class="page-subtitle">
-        Advanced AI-powered tools to analyze news, transcripts, and live streams with professional-grade accuracy
+        Advanced AI-powered tools using 10 AI systems, Federal Reserve economic data, and 500+ news sources for professional-grade accuracy
     </p>
 
     <div class="features-grid">
@@ -437,6 +459,33 @@ I did no harm and this file is not truncated.
             <p>Start debates on news topics and let the community decide. Create arguments, challenge opposing views, and vote on who made the stronger case. Anonymous participation with live voting results.</p>
             <span class="feature-badge">Free Forever</span>
         </div>
+
+        <div class="feature-card">
+            <div class="feature-icon quiz">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <h3>Media Literacy Quiz</h3>
+            <p>Test your knowledge and learn essential media literacy skills. 8 educational topics covering clickbait, bias, fact vs. opinion, source credibility, and more. Track your progress with detailed explanations.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon claims">
+                <i class="fas fa-database"></i>
+            </div>
+            <h3>Claim Tracker</h3>
+            <p>Search and verify claims across news and media. Track misinformation patterns, filter by category and verification status. Comprehensive database with sources and evidence.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon observatory">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <h3>AI Observatory</h3>
+            <p>Monitor AI threats and behavior in real-time. Economic threat tracker with Federal Reserve data integration, AI behavior monitoring, and predictive threat analysis using machine learning.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
     </div>
 
     <!-- COMING SOON SECTION -->
@@ -472,6 +521,156 @@ I did no harm and this file is not truncated.
                 <span class="coming-soon-badge">Coming Soon</span>
             </div>
         </div>
+    </div>
+
+    <!-- AI SYSTEMS & DATA INFRASTRUCTURE -->
+    <div class="sources-section">
+        <h2><i class="fas fa-brain"></i> Our AI & Data Infrastructure</h2>
+        <p style="text-align: center; color: #64748b; margin-bottom: 2rem;">
+            We leverage 10 advanced AI systems and authoritative data sources for comprehensive analysis
+        </p>
+
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; color: #1e293b;">
+            <i class="fas fa-robot" style="color: #667eea;"></i> 10 AI Systems
+        </h3>
+
+        <div class="sources-grid">
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    OpenAI GPT-4
+                </div>
+                <div class="source-type">News & Transcript Analysis</div>
+                <div class="source-founded">USA • OpenAI</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    Anthropic Claude Sonnet 4
+                </div>
+                <div class="source-type">News & Transcript Analysis</div>
+                <div class="source-founded">USA • Anthropic</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    Google Gemini 2.0 Flash
+                </div>
+                <div class="source-type">Multi-Modal Analysis</div>
+                <div class="source-founded">USA • Google DeepMind</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    Mistral Large 2
+                </div>
+                <div class="source-type">European AI Perspective</div>
+                <div class="source-founded">France • Mistral AI</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    DeepSeek Chat V3
+                </div>
+                <div class="source-type">Chinese AI Perspective</div>
+                <div class="source-founded">China • DeepSeek</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    Cohere Command R+
+                </div>
+                <div class="source-type">Enterprise AI Analysis</div>
+                <div class="source-founded">Canada • Cohere</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    Meta Llama 3.3 70B
+                </div>
+                <div class="source-type">Open Source AI (via Groq)</div>
+                <div class="source-founded">USA • Meta AI</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    xAI Grok 3
+                </div>
+                <div class="source-type">Real-Time Analysis</div>
+                <div class="source-founded">USA • xAI</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    AI21 Jamba Mini
+                </div>
+                <div class="source-type">Debate & Analysis</div>
+                <div class="source-founded">Israel • AI21 Labs</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-brain"></i>
+                    Reka Core
+                </div>
+                <div class="source-type">Multi-Modal Understanding</div>
+                <div class="source-founded">Singapore • Reka AI</div>
+            </div>
+        </div>
+
+        <h3 style="font-size: 1.5rem; font-weight: 700; margin: 3rem 0 1.5rem 0; color: #1e293b;">
+            <i class="fas fa-chart-line" style="color: #667eea;"></i> Authoritative Data Sources
+        </h3>
+
+        <div class="sources-grid">
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-university"></i>
+                    Federal Reserve (FRED)
+                </div>
+                <div class="source-type">Economic Data API</div>
+                <div class="source-founded">8 indicators • GDP, inflation, unemployment</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-briefcase"></i>
+                    Bureau of Labor Statistics
+                </div>
+                <div class="source-type">Employment Data API</div>
+                <div class="source-founded">Wages, jobs, labor force statistics</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-database"></i>
+                    News Source Database
+                </div>
+                <div class="source-type">Credibility Database</div>
+                <div class="source-founded">500+ outlets with metadata</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-check-circle"></i>
+                    Fact-Checking Network
+                </div>
+                <div class="source-type">Verification Sources</div>
+                <div class="source-founded">Cross-referenced trusted databases</div>
+            </div>
+        </div>
+
+        <p style="text-align: center; color: #64748b; margin-top: 2rem; font-size: 0.95rem;">
+            <i class="fas fa-globe"></i> <strong>Geographic Diversity:</strong> AI systems from USA (5), China (1), France (1), Canada (1), Israel (1), Singapore (1)
+        </p>
     </div>
 
     <div class="sources-section">
@@ -643,7 +842,13 @@ I did no harm and this file is not truncated.
 
 <!--
 I did no harm and this file is not truncated.
-v4.0.0 - January 8, 2026 - TEMPLATE INHERITANCE VERSION
+v5.0.0 - January 8, 2026 - COMPLETE TOOL SUITE UPDATE
+
+WHAT'S NEW IN v5.0.0:
+✅ Added Media Literacy Quiz feature card
+✅ Added Claim Tracker feature card  
+✅ Added AI Observatory feature card
+✅ Now shows ALL 11 TruthLens tools (was missing 3)
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
