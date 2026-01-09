@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<!--
+TruthLens - Base Template with Two-Row Navigation
+Version: 1.0.0
+Date: January 8, 2026
+
+This is the BASE TEMPLATE that all other pages extend.
+Navigation is defined ONCE here - all pages inherit it.
+
+WHAT THIS FILE CONTAINS:
+✅ Two-row navigation (defined once)
+✅ Common CSS imports
+✅ Mobile menu JavaScript
+✅ {% block %} placeholders for page-specific content
+
+HOW TO USE:
+Other pages use: {% extends "base.html" %}
+Then override blocks: {% block title %}, {% block content %}, {% block styles %}
+
+Last modified: January 8, 2026 - v1.0.0
+I did no harm and this file is not truncated.
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Page title - override in child templates -->
+    <title>{% block title %}TruthLens - Find Truth in Media{% endblock %}</title>
+    
+    <!-- Meta description - override in child templates -->
+    <meta name="description" content="{% block description %}TruthLens: Comprehensive AI-powered tools for news analysis, fact-checking, and media literacy.{% endblock %}">
+    
+    <!-- Common fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    
+    <!-- NAVIGATION CSS FIRST -->
+    <link rel="stylesheet" href="/static/css/navigation.css">
+    
+    <!-- COMMON STYLES -->
+    <link rel="stylesheet" href="/static/css/main.css">
+    
+    <!-- Page-specific styles - override in child templates -->
+    {% block styles %}{% endblock %}
+</head>
+<body>
+    <!-- ========================================================================
+         NAVIGATION - DEFINED ONCE, INHERITED BY ALL PAGES
+         ======================================================================== -->
+    <nav class="main-navigation">
+        <div class="nav-container-unified">
+            <!-- Logo and Mobile Toggle -->
+            <div class="nav-header-row">
+                <a href="/" class="nav-logo">
+                    <i class="fas fa-shield-check"></i>
+                    <span>TruthLens</span>
+                </a>
+                
+                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <!-- Two-Row Menu Container -->
+            <div class="nav-menu-container" id="navMenu">
+                <!-- TOP ROW: Main Tools -->
+                <ul class="nav-menu-row top-row">
+                    <li><a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="/about" class="nav-link {% if active_page == 'about' %}active{% endif %}"><i class="fas fa-info-circle"></i> About Us</a></li>
+                    <li><a href="/features" class="nav-link {% if active_page == 'features' %}active{% endif %}"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="/analyze" class="nav-link {% if active_page == 'news' %}active{% endif %}"><i class="fas fa-newspaper"></i> News Analysis</a></li>
+                    <li><a href="/transcript" class="nav-link {% if active_page == 'transcript' %}active{% endif %}"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
+                    <li><a href="/debate-arena" class="nav-link {% if active_page == 'debates' %}active{% endif %}"><i class="fas fa-users"></i> Debate Arena</a></li>
+                </ul>
+                
+                <!-- BOTTOM ROW: Secondary Tools -->
+                <ul class="nav-menu-row bottom-row">
+                    <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                    <li><a href="/observatory" class="nav-link {% if active_page == 'observatory' %}active{% endif %}"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
+                    <li><a href="/claim-tracker" class="nav-link {% if active_page == 'claims' %}active{% endif %}"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
+                    <li><a href="/quiz" class="nav-link {% if active_page == 'quiz' %}active{% endif %}"><i class="fas fa-question-circle"></i> Quiz</a></li>
+                    <li><a href="/contact" class="nav-link {% if active_page == 'contact' %}active{% endif %}"><i class="fas fa-envelope"></i> Contact Us</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ========================================================================
+         PAGE CONTENT - CHILD TEMPLATES INSERT THEIR CONTENT HERE
+         ======================================================================== -->
+    {% block content %}
+    <!-- Child templates will override this block -->
+    {% endblock %}
+
+    <!-- ========================================================================
+         MOBILE MENU JAVASCRIPT
+         ======================================================================== -->
+    <script>
+        function toggleMobileMenu() {
+            var navMenu = document.getElementById('navMenu');
+            if (navMenu) {
+                navMenu.classList.toggle('active');
+            }
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            var navMenu = document.getElementById('navMenu');
+            var menuToggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (navMenu && menuToggle) {
+                if (!navMenu.contains(event.target) && !menuToggle.contains(event.target)) {
+                    navMenu.classList.remove('active');
+                }
+            }
+        });
+    </script>
+
+    <!-- Page-specific scripts - override in child templates -->
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+
+<!-- I did no harm and this file is not truncated -->
