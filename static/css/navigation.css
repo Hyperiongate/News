@@ -1,27 +1,26 @@
 /*
 TruthLens Navigation CSS - TWO-ROW LAYOUT
-Version: 2.0.0
-Date: January 7, 2026
+Version: 2.1.0 - Z-INDEX STACKING FIX
+Date: January 9, 2026
 
-WHAT'S NEW IN v2.0.0:
-✅ Two-row navigation layout
-✅ Top row: Main tools (6 items)
-✅ Bottom row: Secondary tools (5 items)
-✅ Better organization and readability
-✅ No more overflow/wrapping issues
-✅ Responsive mobile hamburger menu preserved
+WHAT'S NEW IN v2.1.0:
+✅ FIXED: Navigation now stays on top when scrolling
+✅ Added: transform: translateZ(0) to force GPU layer
+✅ Added: isolation: isolate to create stacking context
+✅ Added: will-change: transform for better performance
+✅ PRESERVED: All v2.0.0 functionality
 
 Navigation Structure:
-- Top Row: Home, About, Features, News, Transcripts, Debates
-- Bottom Row: AI Debates, AI Observatory, Claims, Quiz, Contact
+- Top Row: Main tools (6 items)
+- Bottom Row: Secondary tools (5 items)
 
 This file is complete and ready to deploy.
-Last modified: January 7, 2026 - v2.0.0
+Last modified: January 9, 2026 - v2.1.0
 I did no harm and this file is not truncated.
 */
 
 /* ============================================================================
-   NAVIGATION CONTAINER
+   NAVIGATION CONTAINER - WITH STACKING CONTEXT FIX
    ============================================================================ */
 
 .main-navigation {
@@ -32,6 +31,11 @@ I did no harm and this file is not truncated.
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     z-index: 1000;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    
+    /* STACKING CONTEXT FIX - Forces navigation to stay on top */
+    transform: translateZ(0);
+    isolation: isolate;
+    will-change: transform;
 }
 
 .nav-container-unified {
@@ -224,6 +228,7 @@ I did no harm and this file is not truncated.
         padding: 1rem;
         max-height: 80vh;
         overflow-y: auto;
+        z-index: 999; /* Below main nav but above everything else */
     }
     
     .nav-menu-container.active {
