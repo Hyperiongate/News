@@ -1,7 +1,28 @@
 """
 File: app.py
-Last Updated: December 29, 2025 - v10.2.30
-Description: Main Flask application - CLAIM TRACKER FIX
+Last Updated: January 8, 2026 - v10.3.0
+Description: Main Flask application - TEMPLATE INHERITANCE UPDATE
+
+NEW IN v10.3.0 (January 8, 2026):
+========================
+TEMPLATE INHERITANCE IMPLEMENTATION
+- ADDED: active_page parameter to all routes
+- PURPOSE: Enable automatic navigation highlighting in base.html
+- PATTERN: Each route now passes active_page='pagename'
+- BENEFIT: Navigation changes once in base.html = affects all pages
+- NO HARM: All existing functionality preserved ✓
+
+ROUTES UPDATED:
+- / → active_page='home'
+- /about → active_page='about'
+- /features → active_page='features'
+- /analyze → active_page='news'
+- /transcript → active_page='transcript'
+- /debate-arena → active_page='debates'
+- /claim-tracker → active_page='claims'
+- /quiz → active_page='quiz'
+- /contact → active_page='contact'
+- /observatory → active_page='observatory'
 
 CRITICAL FIX IN v10.2.30 (December 29, 2025):
 ========================
@@ -13,14 +34,8 @@ CLAIM TRACKER NOT SAVING: Fixed claim extraction data source bug
 - RESULT: Claims now automatically saved to database!
 - PRESERVED: All v10.2.29 functionality (DO NO HARM ✓)
 
-THE BUG (lines 560-575):
-  Claim extractor needs article text, but:
-  - Old code: Looked in final_results (transformed - no article text!) ❌
-  - New code: Looks in raw_results (has article_text field) ✅
-  - Article text is in raw_results, not final_results!
-
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: December 29, 2025 - v10.2.30 CLAIM TRACKER FIX
+Last modified: January 8, 2026 - v10.3.0 TEMPLATE INHERITANCE
 """
 
 import os
@@ -551,23 +566,23 @@ def validate_url(url: str) -> bool:
         return False
 
 # ============================================================================
-# STATIC PAGE ROUTES
+# STATIC PAGE ROUTES - NOW WITH active_page FOR TEMPLATE INHERITANCE (v10.3.0)
 # ============================================================================
 
 @app.route('/')
 def landing_page():
     """Main landing page showing all four apps"""
-    return render_template('landing.html')
+    return render_template('landing.html', active_page='home')
 
 @app.route('/analyze')
 def analyze_page():
     """News Analysis Tool (formerly at /)"""
-    return render_template('index.html')
+    return render_template('index.html', active_page='news')
 
 @app.route('/transcript')
 def transcript():
     """Transcript analysis page"""
-    return render_template('transcript.html')
+    return render_template('transcript.html', active_page='transcript')
 
 @app.route('/claim-tracker')
 def claim_tracker_page():
@@ -600,7 +615,7 @@ def claim_tracker_page():
         </body>
         </html>
         ''', 503
-    return render_template('claim-tracker.html')
+    return render_template('claim-tracker.html', active_page='claims')
 
 @app.route('/quiz')
 def quiz_page():
@@ -635,27 +650,27 @@ def quiz_page():
         </body>
         </html>
         ''', 503
-    return render_template('quiz.html')
+    return render_template('quiz.html', active_page='quiz')
 
 @app.route('/features')
 def features():
     """Features page"""
-    return render_template('features.html')
+    return render_template('features.html', active_page='features')
 
 @app.route('/about')
 def about():
     """About page"""
-    return render_template('about.html')
+    return render_template('about.html', active_page='about')
 
 @app.route('/contact')
 def contact():
     """Contact page"""
-    return render_template('contact.html')
+    return render_template('contact.html', active_page='contact')
 
 @app.route('/live-stream')
 def live_stream():
     """Live stream analysis page"""
-    return render_template('live-stream.html')
+    return render_template('live-stream.html', active_page='live')
 
 @app.route('/debate-arena')
 def debate_arena():
@@ -697,7 +712,7 @@ def debate_arena():
         </body>
         </html>
         ''', 503
-    return render_template('ultra-simple-debate.html')
+    return render_template('ultra-simple-debate.html', active_page='debates')
 
 @app.route('/simple-debate-arena')
 def simple_debate_arena():
@@ -746,7 +761,7 @@ def simple_debate_arena():
         </body>
         </html>
         ''', 503
-    return render_template('simple-debate-arena.html')
+    return render_template('simple-debate-arena.html', active_page='debates')
 
 @app.route('/ultra-simple-debate')
 def ultra_simple_debate():
@@ -799,7 +814,12 @@ def ultra_simple_debate():
         </body>
         </html>
         ''', 503
-    return render_template('ultra-simple-debate.html')
+    return render_template('ultra-simple-debate.html', active_page='debates')
+
+@app.route('/observatory')
+def observatory_home():
+    """AI Observatory dashboard page"""
+    return render_template('observatory_dashboard.html', active_page='observatory')
 
 # ============================================================================
 # API ROUTES - NEWS ANALYSIS
@@ -1452,14 +1472,20 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.2.30")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.3.0")
     logger.info("=" * 80)
     logger.info("")
     logger.info("DEPLOYMENT ARCHITECTURE:")
-    logger.info("  🌐 Frontend: factsandfakes.ai (Bluehost)")
+    logger.info("  🌐 Frontend: factsandfakes.ai (Render)")
     logger.info("  ⚙️ Backend: news-analyzer-qtgb.onrender.com (Render)")
     logger.info("  🗄️ Database: PostgreSQL (Render)")
     logger.info("  🔗 CORS: Configured for cross-origin requests")
+    logger.info("")
+    logger.info("NEW IN v10.3.0 (January 8, 2026):")
+    logger.info("  ✅ Template inheritance implemented")
+    logger.info("  ✅ Navigation now defined in ONE place (base.html)")
+    logger.info("  ✅ All routes pass active_page for automatic highlighting")
+    logger.info("  ✅ No harm to existing functionality")
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
     logger.info("  ✓ News Analysis - 7 AI services with comprehensive fact-checking")
@@ -1552,17 +1578,10 @@ if __name__ == '__main__':
         logger.info("  ✗ Debate Arenas - Disabled (DATABASE_URL not set)")
     
     logger.info("")
-    logger.info("VERSION v10.2.30 (CLAIM TRACKER FIX) 🎯:")
-    logger.info("  ✅ FIXED: Claim extraction data source bug")
-    logger.info("  ✅ FIXED: Now extracts from raw_results (has article text)")
-    logger.info("  ✅ FIXED: No more 'str' object has no attribute 'get' error")
-    logger.info("  ✅ RESULT: Claims now automatically saved to database!")
-    logger.info("  ✅ PRESERVED: All v10.2.29 functionality (DO NO HARM)")
-    logger.info("")
     logger.info("=" * 80)
     
     port = int(os.getenv('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.2.30 - December 29, 2025 - CLAIM TRACKER FIX (Extract from raw_results, not final_results!)
+# v10.3.0 - January 8, 2026 - TEMPLATE INHERITANCE (Added active_page to all routes)
