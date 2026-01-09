@@ -55,6 +55,20 @@ I did no harm and this file is not truncated.
         padding-top: 90px;
     }
 
+    /* 
+    CRITICAL FIX: Progress banner positioning
+    The banner should appear ABOVE the navigation bar
+    Navigation has z-index: 1000, so banner needs z-index: 1001+
+    */
+    #progressBannerFixed.progress-banner-fixed {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        z-index: 1100 !important; /* Higher than navigation (1000) */
+        /* Banner typically has its own height styling from news-analysis.css */
+    }
+
     .page-content {
         max-width: 1400px;
         margin: 0 auto;
