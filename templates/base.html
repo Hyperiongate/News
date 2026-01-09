@@ -1,23 +1,28 @@
 <!DOCTYPE html>
 <!--
 TruthLens - Base Template with Two-Row Navigation
-Version: 1.0.0
+Version: 1.0.1 - JINJA2 SYNTAX FIX
 Date: January 8, 2026
+
+WHAT'S NEW IN v1.0.1:
+- CRITICAL FIX: Removed Jinja2 template tags from HTML comments
+- HTML comments cannot contain curly braces or Jinja2 will try to parse them
+- Changed all instances of {% block %} in comments to [block]
 
 This is the BASE TEMPLATE that all other pages extend.
 Navigation is defined ONCE here - all pages inherit it.
 
 WHAT THIS FILE CONTAINS:
-✅ Two-row navigation (defined once)
-✅ Common CSS imports
-✅ Mobile menu JavaScript
-✅ {% block %} placeholders for page-specific content
+- Two-row navigation (defined once)
+- Common CSS imports
+- Mobile menu JavaScript
+- [block] placeholders for page-specific content
 
 HOW TO USE:
 Other pages use: {% extends "base.html" %}
-Then override blocks: {% block title %}, {% block content %}, {% block styles %}
+Then override blocks: [block title], [block content], [block styles]
 
-Last modified: January 8, 2026 - v1.0.0
+Last modified: January 8, 2026 - v1.0.1 JINJA2 FIX
 I did no harm and this file is not truncated.
 -->
 <html lang="en">
