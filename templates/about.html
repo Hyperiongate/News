@@ -1,453 +1,362 @@
-<!DOCTYPE html>
-<!--
-TruthLens - About Page
-Version: 4.1.0 - UNIFIED NAVIGATION UPDATE
-Date: December 27, 2024
+{% extends "base.html" %}
 
-WHAT'S NEW IN v4.1.0:
-✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
-✅ ADDED: Quiz link with active highlighting
-✅ ADDED: Claim Tracker link
-✅ ADDED: AI Research external link
-✅ ADDED: AI Debates external link
-✅ FIXED: Navigation matches landing.html exactly
-✅ PRESERVED: All v4.0.0 content (DO NO HARM ✓)
+{% block title %}About - TruthLens | Our Quest for Truth{% endblock %}
 
-NAVIGATION NOW INCLUDES:
-1. Home (/)
-2. News (/analyze)
-3. Transcripts (/transcript)
-4. Quiz (/quiz) ← NEW
-5. Claims (/claim-tracker) ← NEW
-6. Debates (/debate-arena)
-7. AI Research (external) ← NEW
-8. AI Debates (external) ← NEW
+{% block description %}TruthLens: Six powerful tools designed to help you find truth, even when it challenges your perspective. News analysis, AI research, debates, and more.{% endblock %}
 
-This file is complete and ready to deploy.
-Last modified: December 27, 2024 - v4.1.0
-I did no harm and this file is not truncated.
--->
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>About - TruthLens | Our Quest for Truth</title>
-    <meta name="description" content="TruthLens: Six powerful tools designed to help you find truth, even when it challenges your perspective. News analysis, AI research, debates, and more.">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- LOAD NAVIGATION CSS FIRST -->
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    
-    <!-- THEN PAGE-SPECIFIC CSS -->
-    <link rel="stylesheet" href="/static/css/main.css">
-    
-    <style>
+{% block styles %}
+<style>
+    body {
+        padding-top: 90px;
+        background: #f8fafc;
+    }
+
+    .container {
+        max-width: 900px;
+        padding: 3rem 2rem;
+        margin: 0 auto;
+    }
+
+    .page-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .page-header p {
+        font-size: 1.25rem;
+        color: #64748b;
+    }
+
+    .content-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2.5rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        margin-bottom: 2rem;
+    }
+
+    .content-card h2 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #1e293b;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .content-card h2 i {
+        color: #667eea;
+        font-size: 1.5rem;
+    }
+
+    .content-card p {
+        color: #475569;
+        line-height: 1.8;
+        font-size: 1.05rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .content-card ul {
+        color: #475569;
+        line-height: 2;
+        padding-left: 1.5rem;
+        margin-bottom: 1.5rem;
+        font-size: 1.05rem;
+    }
+
+    .content-card ul li {
+        margin-bottom: 0.75rem;
+    }
+
+    .content-card ul li strong {
+        color: #1e293b;
+    }
+
+    .highlight-box {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-left: 4px solid #667eea;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin: 1.5rem 0;
+    }
+
+    .highlight-box p {
+        margin-bottom: 0;
+        font-weight: 500;
+        color: #1e293b;
+    }
+
+    .tool-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .tool-item {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .tool-item h3 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tool-item h3 i {
+        color: #667eea;
+    }
+
+    .tool-item p {
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 0;
+        color: #64748b;
+    }
+
+    .cta-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 16px;
+        padding: 3rem;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .cta-section h2 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+        color: white;
+    }
+
+    .cta-section p {
+        font-size: 1.125rem;
+        line-height: 1.7;
+        margin-bottom: 2rem;
+        opacity: 0.95;
+        color: white;
+    }
+
+    .cta-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .cta-button {
+        display: inline-block;
+        padding: 1rem 2.5rem;
+        background: white;
+        color: #667eea;
+        text-decoration: none;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 1.125rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .cta-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+    }
+
+    .cta-button.secondary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+    }
+
+    @media (max-width: 768px) {
         body {
-            padding-top: 90px;
-            background: #f8fafc;
-        }
-
-        .container {
-            max-width: 900px;
-            padding: 3rem 2rem;
-            margin: 0 auto;
-        }
-
-        .page-header {
-            text-align: center;
-            margin-bottom: 3rem;
+            padding-top: 80px;
         }
 
         .page-header h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .page-header p {
-            font-size: 1.25rem;
-            color: #64748b;
+            font-size: 2rem;
         }
 
         .content-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2.5rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 2rem;
-        }
-
-        .content-card h2 {
-            font-size: 1.75rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-            color: #1e293b;
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-
-        .content-card h2 i {
-            color: #667eea;
-            font-size: 1.5rem;
-        }
-
-        .content-card p {
-            color: #475569;
-            line-height: 1.8;
-            font-size: 1.05rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .content-card ul {
-            color: #475569;
-            line-height: 2;
-            padding-left: 1.5rem;
-            margin-bottom: 1.5rem;
-            font-size: 1.05rem;
-        }
-
-        .content-card ul li {
-            margin-bottom: 0.75rem;
-        }
-
-        .content-card ul li strong {
-            color: #1e293b;
-        }
-
-        .highlight-box {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            border-left: 4px solid #667eea;
             padding: 1.5rem;
-            border-radius: 8px;
-            margin: 1.5rem 0;
-        }
-
-        .highlight-box p {
-            margin-bottom: 0;
-            font-weight: 500;
-            color: #1e293b;
         }
 
         .tool-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-top: 1.5rem;
+            grid-template-columns: 1fr;
         }
+    }
+</style>
+{% endblock %}
 
-        .tool-item {
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
-            padding: 1.5rem;
-            border-radius: 12px;
-            border: 1px solid rgba(102, 126, 234, 0.1);
-        }
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1>About TruthLens</h1>
+        <p>Our Quest for Truth in an Age of Information Overload</p>
+    </div>
 
-        .tool-item h3 {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .tool-item h3 i {
-            color: #667eea;
-        }
-
-        .tool-item p {
-            font-size: 0.95rem;
-            line-height: 1.6;
-            margin-bottom: 0;
-            color: #64748b;
-        }
-
-        .cta-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 16px;
-            padding: 3rem;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
-        }
-
-        .cta-section h2 {
-            font-size: 1.75rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            color: white;
-        }
-
-        .cta-section p {
-            font-size: 1.125rem;
-            line-height: 1.7;
-            margin-bottom: 2rem;
-            opacity: 0.95;
-            color: white;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .cta-button {
-            display: inline-block;
-            padding: 1rem 2.5rem;
-            background: white;
-            color: #667eea;
-            text-decoration: none;
-            border-radius: 10px;
-            font-weight: 700;
-            font-size: 1.125rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .cta-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-        }
-
-        .cta-button.secondary {
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.5);
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding-top: 80px;
-            }
-
-            .page-header h1 {
-                font-size: 2rem;
-            }
-
-            .content-card {
-                padding: 1.5rem;
-            }
-
-            .tool-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation Header - v2.0.0 TWO-ROW LAYOUT -->
-<nav class="main-navigation">
-    <div class="nav-container-unified">
-        <!-- Logo and Mobile Toggle -->
-        <div class="nav-header-row">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
-            
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
-        </div>
+    <!-- Mission Section -->
+    <div class="content-card">
+        <h2>
+            <i class="fas fa-compass"></i>
+            Our Mission: Finding Truth, Even When It's Uncomfortable
+        </h2>
+        <p>
+            In a world drowning in information, TruthLens exists for one purpose: <strong>to help you find the truth, even when it means adjusting your perspective</strong>.
+        </p>
+        <p>
+            We believe that truth-seeking requires intellectual honesty and humility. Sometimes the truth confirms what we believe. Sometimes it challenges us. Sometimes it surprises us entirely. Our job is to give you the tools to discover it—wherever it leads.
+        </p>
         
-        <!-- Two-Row Menu Container -->
-        <div class="nav-menu-container" id="navMenu">
-            <!-- TOP ROW: Main Tools -->
-            <ul class="nav-menu-row top-row">
-                <li><a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
-                <li><a href="/about" class="nav-link active"><i class="fas fa-info-circle"></i> About Us</a></li>
-                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
-                <li><a href="/analyze" class="nav-link"><i class="fas fa-newspaper"></i> News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
-            </ul>
-            
-            <!-- BOTTOM ROW: Secondary Tools -->
-            <ul class="nav-menu-row bottom-row">
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="/observatory" class="nav-link"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
-                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
-                <li><a href="/quiz" class="nav-link"><i class="fas fa-question-circle"></i> Quiz</a></li>
-                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i> Contact Us</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
-
-    <div class="container">
-        <!-- Page Header -->
-        <div class="page-header">
-            <h1>About TruthLens</h1>
-            <p>Our Quest for Truth in an Age of Information Overload</p>
-        </div>
-
-        <!-- Mission Section -->
-        <div class="content-card">
-            <h2>
-                <i class="fas fa-compass"></i>
-                Our Mission: Finding Truth, Even When It's Uncomfortable
-            </h2>
+        <div class="highlight-box">
             <p>
-                In a world drowning in information, TruthLens exists for one purpose: <strong>to help you find the truth, even when it means adjusting your perspective</strong>.
+                <i class="fas fa-quote-left" style="color: #667eea; margin-right: 0.5rem;"></i>
+                <strong>Truth doesn't care about our opinions.</strong> Our mission is to help you find it anyway.
+                <i class="fas fa-quote-right" style="color: #667eea; margin-left: 0.5rem;"></i>
             </p>
-            <p>
-                We believe that truth-seeking requires intellectual honesty and humility. Sometimes the truth confirms what we believe. Sometimes it challenges us. Sometimes it surprises us entirely. Our job is to give you the tools to discover it—wherever it leads.
-            </p>
-            
-            <div class="highlight-box">
-                <p>
-                    <i class="fas fa-quote-left" style="color: #667eea; margin-right: 0.5rem;"></i>
-                    <strong>Truth doesn't care about our opinions.</strong> Our mission is to help you find it anyway.
-                    <i class="fas fa-quote-right" style="color: #667eea; margin-left: 0.5rem;"></i>
-                </p>
-            </div>
-        </div>
-
-        <!-- The Toolkit Section -->
-        <div class="content-card">
-            <h2>
-                <i class="fas fa-toolbox"></i>
-                Five Tools for the Truth-Seeking Journey
-            </h2>
-            <p>
-                TruthLens isn't just one app—it's a comprehensive suite of five tools designed to approach truth from multiple angles. Each tool serves a different purpose in your quest for clarity:
-            </p>
-
-            <div class="tool-grid">
-                <div class="tool-item">
-                    <h3><i class="fas fa-shield-check"></i> News Analysis</h3>
-                    <p>Evaluate news articles with 7 AI services analyzing credibility, bias, fact-checking, and more. Get a comprehensive Trust Score (0-100).</p>
-                </div>
-
-                <div class="tool-item">
-                    <h3><i class="fas fa-file-alt"></i> Transcript Analysis</h3>
-                    <p>Fact-check speeches, interviews, and transcripts. Extract claims, verify facts, assess speaker credibility. Truth doesn't just live in news—it's in what people say.</p>
-                </div>
-
-                <div class="tool-item">
-                    <h3><i class="fas fa-brain"></i> AI Bias Research</h3>
-                    <p>Ask the same question to 7 different AI systems and compare their answers. See how geography, training, and design affect AI perspectives. Are they aligned on truth—or divided by bias?</p>
-                </div>
-
-                <div class="tool-item">
-                    <h3><i class="fas fa-users"></i> Human Debates</h3>
-                    <p>Debate real people on any topic, then let the community vote on who made the best argument. Democracy of ideas. May the best case win.</p>
-                </div>
-
-                <div class="tool-item">
-                    <h3><i class="fas fa-robot"></i> AI Debates</h3>
-                    <p>Watch 2 AI systems debate each other on any topic. Then watch a third AI judge their performance and pick a winner. See how AI reasons, argues, and reaches conclusions.</p>
-                </div>
-            </div>
-
-            <p style="margin-top: 1.5rem; font-style: italic; color: #64748b;">
-                <i class="fas fa-rocket" style="color: #667eea;"></i> 
-                <strong>Coming Soon:</strong> Deepfake detection, AI-generated content scanner, plagiarism checker, image manipulation analysis, and more truth detection capabilities.
-            </p>
-        </div>
-
-        <!-- How We Approach Truth -->
-        <div class="content-card">
-            <h2>
-                <i class="fas fa-lightbulb"></i>
-                How We Approach Truth
-            </h2>
-            <p>
-                Truth is rarely found in a single source or perspective. That's why TruthLens uses multiple approaches:
-            </p>
-            <ul>
-                <li><strong>Multiple AI Systems:</strong> We don't trust one AI—we compare many. If 7 AI systems disagree, that tells you something important.</li>
-                <li><strong>Human Wisdom:</strong> AI is powerful, but humans provide context, nuance, and lived experience. Our debate tools let people make the case.</li>
-                <li><strong>Transparency:</strong> We show you <em>how</em> we reach conclusions, not just <em>what</em> they are. You decide what to believe.</li>
-                <li><strong>No Agenda:</strong> We're not here to tell you what to think. We're here to help you think better.</li>
-                <li><strong>Continuous Improvement:</strong> Truth-seeking tools must evolve as deception techniques evolve. We're always adding new capabilities.</li>
-            </ul>
-
-            <div class="highlight-box">
-                <p>
-                    <strong>The goal isn't to be right—it's to get closer to truth.</strong> That means being willing to change your mind when evidence changes.
-                </p>
-            </div>
-        </div>
-
-        <!-- Why It Matters -->
-        <div class="content-card">
-            <h2>
-                <i class="fas fa-flag"></i>
-                Why This Matters
-            </h2>
-            <p>
-                We live in an era of unprecedented information access—and unprecedented misinformation. Deepfakes, AI-generated content, coordinated disinformation campaigns, and algorithmic echo chambers make it harder than ever to separate truth from fiction.
-            </p>
-            <p>
-                But here's the thing: <strong>the tools to deceive are getting better, so the tools to detect deception must get better too.</strong>
-            </p>
-            <p>
-                TruthLens is our contribution to that arms race. We're building tools that help you:
-            </p>
-            <ul>
-                <li>Verify what you read before you share it</li>
-                <li>Understand when you're being manipulated</li>
-                <li>See multiple perspectives instead of just one</li>
-                <li>Make informed decisions based on facts, not fear</li>
-                <li>Adjust your beliefs when new evidence emerges</li>
-            </ul>
-        </div>
-
-        <!-- Beta & Free Access -->
-        <div class="content-card">
-            <h2>
-                <i class="fas fa-flask"></i>
-                Free Beta Access
-            </h2>
-            <p>
-                TruthLens is currently in beta testing, which means <strong>all features are completely free</strong> while we refine the platform and gather feedback.
-            </p>
-            <p>
-                We're looking for truth-seekers who want to help us build better tools. If that's you, jump in and start exploring. Your feedback will shape the future of this platform.
-            </p>
-        </div>
-
-        <!-- Call to Action -->
-        <div class="cta-section">
-            <h2><i class="fas fa-rocket"></i> Join the Quest for Truth</h2>
-            <p>
-                Whether you're a journalist, researcher, student, skeptic, or just someone who cares about facts—we'd love to have you on board. The truth is out there. Let's find it together.
-            </p>
-            <div class="cta-buttons">
-                <a href="/" class="cta-button">
-                    <i class="fas fa-play"></i> Start Exploring
-                </a>
-                <a href="/contact" class="cta-button secondary">
-                    <i class="fas fa-envelope"></i> Get In Touch
-                </a>
-            </div>
         </div>
     </div>
 
-    <script>
-        function toggleMobileMenu() {
-            var navMenu = document.getElementById('navMenu');
-            if (navMenu) {
-                navMenu.classList.toggle('active');
-            }
-        }
-    </script>
-</body>
-</html>
+    <!-- The Toolkit Section -->
+    <div class="content-card">
+        <h2>
+            <i class="fas fa-toolbox"></i>
+            Five Tools for the Truth-Seeking Journey
+        </h2>
+        <p>
+            TruthLens isn't just one app—it's a comprehensive suite of five tools designed to approach truth from multiple angles. Each tool serves a different purpose in your quest for clarity:
+        </p>
 
-<!--
-I did no harm and this file is not truncated.
-v4.1.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
+        <div class="tool-grid">
+            <div class="tool-item">
+                <h3><i class="fas fa-shield-check"></i> News Analysis</h3>
+                <p>Evaluate news articles with 7 AI services analyzing credibility, bias, fact-checking, and more. Get a comprehensive Trust Score (0-100).</p>
+            </div>
 
-DEPLOYMENT READY FOR GITHUB/RENDER
-This file is complete and ready to deploy.
--->
+            <div class="tool-item">
+                <h3><i class="fas fa-file-alt"></i> Transcript Analysis</h3>
+                <p>Fact-check speeches, interviews, and transcripts. Extract claims, verify facts, assess speaker credibility. Truth doesn't just live in news—it's in what people say.</p>
+            </div>
+
+            <div class="tool-item">
+                <h3><i class="fas fa-brain"></i> AI Bias Research</h3>
+                <p>Ask the same question to 7 different AI systems and compare their answers. See how geography, training, and design affect AI perspectives. Are they aligned on truth—or divided by bias?</p>
+            </div>
+
+            <div class="tool-item">
+                <h3><i class="fas fa-users"></i> Human Debates</h3>
+                <p>Debate real people on any topic, then let the community vote on who made the best argument. Democracy of ideas. May the best case win.</p>
+            </div>
+
+            <div class="tool-item">
+                <h3><i class="fas fa-robot"></i> AI Debates</h3>
+                <p>Watch 2 AI systems debate each other on any topic. Then watch a third AI judge their performance and pick a winner. See how AI reasons, argues, and reaches conclusions.</p>
+            </div>
+        </div>
+
+        <p style="margin-top: 1.5rem; font-style: italic; color: #64748b;">
+            <i class="fas fa-rocket" style="color: #667eea;"></i> 
+            <strong>Coming Soon:</strong> Deepfake detection, AI-generated content scanner, plagiarism checker, image manipulation analysis, and more truth detection capabilities.
+        </p>
+    </div>
+
+    <!-- How We Approach Truth -->
+    <div class="content-card">
+        <h2>
+            <i class="fas fa-lightbulb"></i>
+            How We Approach Truth
+        </h2>
+        <p>
+            Truth is rarely found in a single source or perspective. That's why TruthLens uses multiple approaches:
+        </p>
+        <ul>
+            <li><strong>Multiple AI Systems:</strong> We don't trust one AI—we compare many. If 7 AI systems disagree, that tells you something important.</li>
+            <li><strong>Human Wisdom:</strong> AI is powerful, but humans provide context, nuance, and lived experience. Our debate tools let people make the case.</li>
+            <li><strong>Transparency:</strong> We show you <em>how</em> we reach conclusions, not just <em>what</em> they are. You decide what to believe.</li>
+            <li><strong>No Agenda:</strong> We're not here to tell you what to think. We're here to help you think better.</li>
+            <li><strong>Continuous Improvement:</strong> Truth-seeking tools must evolve as deception techniques evolve. We're always adding new capabilities.</li>
+        </ul>
+
+        <div class="highlight-box">
+            <p>
+                <strong>The goal isn't to be right—it's to get closer to truth.</strong> That means being willing to change your mind when evidence changes.
+            </p>
+        </div>
+    </div>
+
+    <!-- Why It Matters -->
+    <div class="content-card">
+        <h2>
+            <i class="fas fa-flag"></i>
+            Why This Matters
+        </h2>
+        <p>
+            We live in an era of unprecedented information access—and unprecedented misinformation. Deepfakes, AI-generated content, coordinated disinformation campaigns, and algorithmic echo chambers make it harder than ever to separate truth from fiction.
+        </p>
+        <p>
+            But here's the thing: <strong>the tools to deceive are getting better, so the tools to detect deception must get better too.</strong>
+        </p>
+        <p>
+            TruthLens is our contribution to that arms race. We're building tools that help you:
+        </p>
+        <ul>
+            <li>Verify what you read before you share it</li>
+            <li>Understand when you're being manipulated</li>
+            <li>See multiple perspectives instead of just one</li>
+            <li>Make informed decisions based on facts, not fear</li>
+            <li>Adjust your beliefs when new evidence emerges</li>
+        </ul>
+    </div>
+
+    <!-- Beta & Free Access -->
+    <div class="content-card">
+        <h2>
+            <i class="fas fa-flask"></i>
+            Free Beta Access
+        </h2>
+        <p>
+            TruthLens is currently in beta testing, which means <strong>all features are completely free</strong> while we refine the platform and gather feedback.
+        </p>
+        <p>
+            We're looking for truth-seekers who want to help us build better tools. If that's you, jump in and start exploring. Your feedback will shape the future of this platform.
+        </p>
+    </div>
+
+    <!-- Call to Action -->
+    <div class="cta-section">
+        <h2><i class="fas fa-rocket"></i> Join the Quest for Truth</h2>
+        <p>
+            Whether you're a journalist, researcher, student, skeptic, or just someone who cares about facts—we'd love to have you on board. The truth is out there. Let's find it together.
+        </p>
+        <div class="cta-buttons">
+            <a href="/" class="cta-button">
+                <i class="fas fa-play"></i> Start Exploring
+            </a>
+            <a href="/contact" class="cta-button secondary">
+                <i class="fas fa-envelope"></i> Get In Touch
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- I did no harm and this file is not truncated -->
