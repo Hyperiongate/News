@@ -1,22 +1,21 @@
 /*
 TruthLens Navigation CSS - TWO-ROW LAYOUT
-Version: 2.2.0 - COMPLETE STACKING FIX
+Version: 2.3.0 - NUCLEAR Z-INDEX FIX
 Date: January 9, 2026
 
-WHAT'S NEW IN v2.2.0:
-✅ FIXED: Navigation background AND buttons now stay on top
-✅ Changed: z-index to 9999 !important
-✅ Added: transform: translate3d(0, 0, 0) for proper compositing
-✅ Added: backface-visibility to prevent layer splitting
-✅ Added: .main-navigation * rule to keep all children in same layer
-✅ PRESERVED: All v2.1.0 functionality
+WHAT'S NEW IN v2.3.0:
+✅ FIXED: ALL navigation elements (background + buttons) stay on top
+✅ Changed: Every child element gets z-index: 9999 !important
+✅ Added: min-height: fit-content to ensure background covers all buttons
+✅ Added: overflow: visible to extend stacking context
+✅ NUCLEAR OPTION: Everything in navigation gets z-index: 9999
 
 Navigation Structure:
 - Top Row: Main tools (6 items)
 - Bottom Row: Secondary tools (5 items)
 
 This file is complete and ready to deploy.
-Last modified: January 9, 2026 - v2.2.0
+Last modified: January 9, 2026 - v2.3.0
 I did no harm and this file is not truncated.
 */
 
@@ -38,12 +37,17 @@ I did no harm and this file is not truncated.
     transform: translate3d(0, 0, 0);
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
+    
+    /* ENSURE BACKGROUND COVERS ALL CONTENT */
+    min-height: fit-content;
+    overflow: visible;
 }
 
 /* Force all navigation children to stay in the same layer */
+.main-navigation,
 .main-navigation * {
     position: relative;
-    z-index: inherit;
+    z-index: 9999 !important;
 }
 
 .nav-container-unified {
@@ -53,6 +57,8 @@ I did no harm and this file is not truncated.
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    position: relative;
+    z-index: 9999 !important;
 }
 
 /* ============================================================================
