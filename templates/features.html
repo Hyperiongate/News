@@ -1,710 +1,651 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <!--
-    TruthLens Features Page
-    Version: 3.4.0 - UNIFIED NAVIGATION UPDATE
-    Date: December 27, 2024
-    
-    WHAT'S NEW IN v3.4.0:
-    ✅ UPDATED: Navigation now includes ALL 8 tools (was missing Quiz, Claims, AI tools)
-    ✅ ADDED: Quiz link with active highlighting
-    ✅ ADDED: Claim Tracker link  
-    ✅ ADDED: AI Research external link
-    ✅ ADDED: AI Debates external link
-    ✅ FIXED: Navigation matches landing.html exactly
-    ✅ PRESERVED: All v3.3.0 content including Debate Arena feature (DO NO HARM ✓)
-    
-    NAVIGATION NOW INCLUDES:
-    1. Home (/)
-    2. News (/analyze)
-    3. Transcripts (/transcript)
-    4. Quiz (/quiz) ← NEW
-    5. Claims (/claim-tracker) ← NEW
-    6. Debates (/debate-arena)
-    7. AI Research (external) ← NEW
-    8. AI Debates (external) ← NEW
-    
-    This file is complete and ready to deploy.
-    Last modified: December 27, 2024 - v3.4.0
-    I did no harm and this file is not truncated.
-    -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Features - TruthLens AI Analysis</title>
-    <meta name="description" content="Comprehensive AI-powered news and transcript analysis features. Free during beta testing.">
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- Navigation CSS -->
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+{% extends "base.html" %}
 
+<!--
+TruthLens Features Page - TEMPLATE INHERITANCE VERSION
+Version: 4.0.0 - CONVERTED TO TEMPLATE INHERITANCE
+Date: January 8, 2026
+
+CONVERSION NOTES:
+✅ Now extends base.html (navigation defined once)
+✅ ALL v3.4.0 functionality preserved (DO NO HARM ✓)
+✅ All CSS intact (marketing page styling)
+✅ All features working
+✅ Uses {% block %} structure
+
+PRESERVED FEATURES:
+- Beta banner
+- 8 feature cards (Source Credibility, Bias Detection, etc.)
+- Coming Soon section (3 future features)
+- Data sources showcase (16+ sources)
+- CTA section
+- All marketing content
+- Responsive design
+
+Last modified: January 8, 2026 - v4.0.0 Template Inheritance
+I did no harm and this file is not truncated.
+-->
+
+{% block title %}Features - TruthLens AI Analysis{% endblock %}
+
+{% block description %}Comprehensive AI-powered news and transcript analysis features. Free during beta testing.{% endblock %}
+
+{% block styles %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: #f8fafc;
+        color: #1e293b;
+        line-height: 1.6;
+        padding-top: 90px;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 3rem 2rem;
+    }
+
+    .beta-banner {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        text-align: center;
+        padding: 1.5rem 2rem;
+        margin: -3rem -2rem 3rem;
+        border-radius: 0 0 16px 16px;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    .beta-banner h2 {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+
+    .beta-banner p {
+        font-size: 1.125rem;
+        opacity: 0.95;
+    }
+
+    .page-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .page-subtitle {
+        text-align: center;
+        font-size: 1.25rem;
+        color: #64748b;
+        margin-bottom: 3rem;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 2rem;
+        margin-bottom: 4rem;
+    }
+
+    .feature-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+        border-color: #667eea;
+    }
+
+    .feature-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .feature-icon.source { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+    .feature-icon.bias { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
+    .feature-icon.facts { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+    .feature-icon.author { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
+    .feature-icon.transparency { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
+    .feature-icon.content { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
+    .feature-icon.transcript { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+    .feature-icon.debate { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
+
+    .feature-card h3 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.75rem;
+    }
+
+    .feature-card p {
+        color: #64748b;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+
+    .feature-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .coming-soon-section {
+        margin-top: 4rem;
+        margin-bottom: 4rem;
+    }
+
+    .coming-soon-section h2 {
+        font-size: 2rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 1rem;
+        color: #1e293b;
+    }
+
+    .coming-soon-section > p {
+        text-align: center;
+        color: #64748b;
+        margin-bottom: 3rem;
+    }
+
+    .coming-soon-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+    }
+
+    .coming-soon-card {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        border: 2px dashed #d1d5db;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .coming-soon-card:hover {
+        border-color: #667eea;
+        background: #f9fafb;
+    }
+
+    .coming-soon-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: white;
+        margin: 0 auto 1.5rem;
+    }
+
+    .coming-soon-icon.ai { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
+    .coming-soon-icon.deepfake { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
+    .coming-soon-icon.plagiarism { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
+
+    .coming-soon-card h3 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.75rem;
+    }
+
+    .coming-soon-card p {
+        color: #64748b;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+    }
+
+    .coming-soon-badge {
+        display: inline-block;
+        padding: 6px 16px;
+        background: #e5e7eb;
+        color: #6b7280;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .sources-section {
+        background: white;
+        border-radius: 20px;
+        padding: 3rem 2rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        margin-bottom: 4rem;
+    }
+
+    .sources-section h2 {
+        text-align: center;
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 2rem;
+        color: #1e293b;
+    }
+
+    .sources-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .source-item {
+        background: #f8fafc;
+        padding: 1.5rem;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .source-item:hover {
+        background: #eff6ff;
+        transform: translateY(-2px);
+    }
+
+    .source-name {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .source-name i {
+        color: #667eea;
+    }
+
+    .source-type {
+        font-size: 0.875rem;
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+
+    .source-founded {
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+
+    .cta-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-align: center;
+        padding: 4rem 2rem;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+    }
+
+    .cta-section h2 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        margin-bottom: 1rem;
+    }
+
+    .cta-section p {
+        font-size: 1.25rem;
+        margin-bottom: 2rem;
+        opacity: 0.95;
+    }
+
+    .cta-button {
+        display: inline-block;
+        padding: 1.25rem 3rem;
+        background: white;
+        color: #667eea;
+        text-decoration: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 1.125rem;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s ease;
+    }
+
+    .cta-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+    }
+
+    @media (max-width: 768px) {
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #f8fafc;
-            color: #1e293b;
-            line-height: 1.6;
-            padding-top: 90px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 3rem 2rem;
-        }
-
-        .beta-banner {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            text-align: center;
-            padding: 1.5rem 2rem;
-            margin: -3rem -2rem 3rem;
-            border-radius: 0 0 16px 16px;
-            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.3);
-        }
-
-        .beta-banner h2 {
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 0.5rem;
-        }
-
-        .beta-banner p {
-            font-size: 1.125rem;
-            opacity: 0.95;
+            padding-top: 80px;
         }
 
         .page-title {
-            font-size: 2.5rem;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 1rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .page-subtitle {
-            text-align: center;
-            font-size: 1.25rem;
-            color: #64748b;
-            margin-bottom: 3rem;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 2rem;
-            margin-bottom: 4rem;
-        }
-
-        .feature-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-            border-color: #667eea;
-        }
-
-        .feature-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             font-size: 2rem;
-            color: white;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .feature-icon.source { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
-        .feature-icon.bias { background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%); }
-        .feature-icon.facts { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
-        .feature-icon.author { background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); }
-        .feature-icon.transparency { background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 100%); }
-        .feature-icon.content { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); }
-        .feature-icon.transcript { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
-        .feature-icon.debate { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); }
-
-        .feature-card h3 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-        }
-
-        .feature-card p {
-            color: #64748b;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-        }
-
-        .feature-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .coming-soon-section {
-            margin-top: 4rem;
-            margin-bottom: 4rem;
-        }
-
-        .coming-soon-section h2 {
-            font-size: 2rem;
-            font-weight: 800;
-            text-align: center;
-            margin-bottom: 1rem;
-            color: #1e293b;
-        }
-
-        .coming-soon-section > p {
-            text-align: center;
-            color: #64748b;
-            margin-bottom: 3rem;
-        }
-
-        .coming-soon-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .coming-soon-card {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            border: 2px dashed #d1d5db;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .coming-soon-card:hover {
-            border-color: #667eea;
-            background: #f9fafb;
-        }
-
-        .coming-soon-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: white;
-            margin: 0 auto 1.5rem;
-        }
-
-        .coming-soon-icon.ai { background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%); }
-        .coming-soon-icon.deepfake { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
-        .coming-soon-icon.plagiarism { background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%); }
-
-        .coming-soon-card h3 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-        }
-
-        .coming-soon-card p {
-            color: #64748b;
-            line-height: 1.7;
-            margin-bottom: 1rem;
-        }
-
-        .coming-soon-badge {
-            display: inline-block;
-            padding: 6px 16px;
-            background: #e5e7eb;
-            color: #6b7280;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .sources-section {
-            background: white;
-            border-radius: 20px;
-            padding: 3rem 2rem;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 4rem;
-        }
-
-        .sources-section h2 {
-            text-align: center;
-            font-size: 2rem;
-            font-weight: 800;
-            margin-bottom: 2rem;
-            color: #1e293b;
-        }
-
-        .sources-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .source-item {
-            background: #f8fafc;
-            padding: 1.5rem;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-        }
-
-        .source-item:hover {
-            background: #eff6ff;
-            transform: translateY(-2px);
-        }
-
-        .source-name {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .source-name i {
-            color: #667eea;
-        }
-
-        .source-type {
-            font-size: 0.875rem;
-            color: #667eea;
-            font-weight: 600;
-            margin-bottom: 0.25rem;
-        }
-
-        .source-founded {
-            font-size: 0.875rem;
-            color: #64748b;
-        }
-
-        .cta-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-align: center;
-            padding: 4rem 2rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
         }
 
         .cta-section h2 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
+            font-size: 2rem;
         }
+    }
+</style>
+{% endblock %}
 
-        .cta-section p {
-            font-size: 1.25rem;
-            margin-bottom: 2rem;
-            opacity: 0.95;
-        }
+{% block content %}
+<div class="container">
+    <div class="beta-banner">
+        <h2>🎉 FREE Beta Access</h2>
+        <p>All features completely free during beta testing • No credit card required</p>
+    </div>
 
-        .cta-button {
-            display: inline-block;
-            padding: 1.25rem 3rem;
-            background: white;
-            color: #667eea;
-            text-decoration: none;
-            border-radius: 12px;
-            font-weight: 700;
-            font-size: 1.125rem;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
+    <h1 class="page-title">Comprehensive Analysis Features</h1>
+    <p class="page-subtitle">
+        Advanced AI-powered tools to analyze news, transcripts, and live streams with professional-grade accuracy
+    </p>
 
-        .cta-button:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
-        }
-
-        @media (max-width: 768px) {
-            body {
-                padding-top: 80px;
-            }
-
-            .page-title {
-                font-size: 2rem;
-            }
-
-            .cta-section h2 {
-                font-size: 2rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation Header - v2.0.0 TWO-ROW LAYOUT -->
-<nav class="main-navigation">
-    <div class="nav-container-unified">
-        <!-- Logo and Mobile Toggle -->
-        <div class="nav-header-row">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
-            
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon source">
+                <i class="fas fa-shield-alt"></i>
+            </div>
+            <h3>Source Credibility</h3>
+            <p>Evaluates news outlet reliability based on founding history, awards, bias ratings, and track record. Database of 500+ sources with detailed metadata.</p>
+            <span class="feature-badge">Free Forever</span>
         </div>
-        
-        <!-- Two-Row Menu Container -->
-        <div class="nav-menu-container" id="navMenu">
-            <!-- TOP ROW: Main Tools -->
-            <ul class="nav-menu-row top-row">
-                <li><a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
-                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
-                <li><a href="/features" class="nav-link active"><i class="fas fa-star"></i> Features</a></li>
-                <li><a href="/analyze" class="nav-link"><i class="fas fa-newspaper"></i> News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
-            </ul>
-            
-            <!-- BOTTOM ROW: Secondary Tools -->
-            <ul class="nav-menu-row bottom-row">
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="/observatory" class="nav-link"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
-                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
-                <li><a href="/quiz" class="nav-link"><i class="fas fa-question-circle"></i> Quiz</a></li>
-                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i> Contact Us</a></li>
-            </ul>
+
+        <div class="feature-card">
+            <div class="feature-icon bias">
+                <i class="fas fa-balance-scale"></i>
+            </div>
+            <h3>Bias Detection</h3>
+            <p>Identifies political lean, sensationalism, loaded language, and editorial slant. Provides visual bias meter and specific examples.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon facts">
+                <i class="fas fa-check-double"></i>
+            </div>
+            <h3>Fact-Checking</h3>
+            <p>Verifies factual claims against trusted databases and sources. Cross-references statistics, quotes, and statements for accuracy.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon author">
+                <i class="fas fa-user-edit"></i>
+            </div>
+            <h3>Author Analysis</h3>
+            <p>Assesses journalist credentials, expertise, publication history, and professional background. Links to social profiles when available.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon transparency">
+                <i class="fas fa-eye"></i>
+            </div>
+            <h3>Transparency Scoring</h3>
+            <p>Measures source citations, attribution quality, and journalistic standards. Identifies unsourced claims and anonymous sources.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon content">
+                <i class="fas fa-star-half-alt"></i>
+            </div>
+            <h3>Content Quality</h3>
+            <p>Evaluates depth, comprehensiveness, and completeness of coverage. Assesses whether key context is provided.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon transcript">
+                <i class="fas fa-file-video"></i>
+            </div>
+            <h3>Transcript Analysis</h3>
+            <p>Specialized fact-checking for speeches, interviews, and YouTube videos. Paste transcript text OR provide YouTube URL for automatic extraction and analysis.</p>
+            <span class="feature-badge">Free Forever</span>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon debate">
+                <i class="fas fa-gavel"></i>
+            </div>
+            <h3>Debate Arena</h3>
+            <p>Start debates on news topics and let the community decide. Create arguments, challenge opposing views, and vote on who made the stronger case. Anonymous participation with live voting results.</p>
+            <span class="feature-badge">Free Forever</span>
         </div>
     </div>
-</nav>
-    <div class="container">
-        <div class="beta-banner">
-            <h2>🎉 FREE Beta Access</h2>
-            <p>All features completely free during beta testing • No credit card required</p>
-        </div>
 
-        <h1 class="page-title">Comprehensive Analysis Features</h1>
-        <p class="page-subtitle">
-            Advanced AI-powered tools to analyze news, transcripts, and live streams with professional-grade accuracy
+    <!-- COMING SOON SECTION -->
+    <div class="coming-soon-section">
+        <h2>🚀 Coming Soon</h2>
+        <p>We're constantly innovating to bring you cutting-edge analysis tools. Here's what's next:</p>
+        
+        <div class="coming-soon-grid">
+            <div class="coming-soon-card">
+                <div class="coming-soon-icon ai">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>AI-Generated Content Detection</h3>
+                <p>Advanced detection to identify text written by AI tools like ChatGPT, helping you distinguish between human and machine-generated content.</p>
+                <span class="coming-soon-badge">Coming Soon</span>
+            </div>
+
+            <div class="coming-soon-card">
+                <div class="coming-soon-icon deepfake">
+                    <i class="fas fa-video"></i>
+                </div>
+                <h3>Deepfake Detection</h3>
+                <p>Cutting-edge technology to analyze videos and images for signs of manipulation, helping you identify synthetic media and altered content.</p>
+                <span class="coming-soon-badge">Coming Soon</span>
+            </div>
+
+            <div class="coming-soon-card">
+                <div class="coming-soon-icon plagiarism">
+                    <i class="fas fa-copy"></i>
+                </div>
+                <h3>Plagiarism Detection</h3>
+                <p>Comprehensive scanning to detect copied content, verify originality, and identify sources. Ensures content authenticity and proper attribution.</p>
+                <span class="coming-soon-badge">Coming Soon</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="sources-section">
+        <h2><i class="fas fa-database"></i> Our Comprehensive Data Sources</h2>
+        <p style="text-align: center; color: #64748b; margin-bottom: 2rem;">
+            We analyze news from hundreds of trusted outlets and cross-reference against authoritative sources
         </p>
 
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon source">
-                    <i class="fas fa-shield-alt"></i>
+        <div class="sources-grid">
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    Reuters
                 </div>
-                <h3>Source Credibility</h3>
-                <p>Evaluates news outlet reliability based on founding history, awards, bias ratings, and track record. Database of 500+ sources with detailed metadata.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Wire Service</div>
+                <div class="source-founded">Founded 1851 | 95/100 Credibility</div>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon bias">
-                    <i class="fas fa-balance-scale"></i>
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    Associated Press
                 </div>
-                <h3>Bias Detection</h3>
-                <p>Identifies political lean, sensationalism, loaded language, and editorial slant. Provides visual bias meter and specific examples.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Wire Service</div>
+                <div class="source-founded">Founded 1846 | 94/100 Credibility</div>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon facts">
-                    <i class="fas fa-check-double"></i>
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-broadcast-tower"></i>
+                    BBC
                 </div>
-                <h3>Fact-Checking</h3>
-                <p>Verifies factual claims against trusted databases and sources. Cross-references statistics, quotes, and statements for accuracy.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Public Broadcaster</div>
+                <div class="source-founded">Founded 1922 | 92/100 Credibility</div>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon author">
-                    <i class="fas fa-user-edit"></i>
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    The New York Times
                 </div>
-                <h3>Author Analysis</h3>
-                <p>Assesses journalist credentials, expertise, publication history, and professional background. Links to social profiles when available.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Newspaper</div>
+                <div class="source-founded">Founded 1851 | 90/100 Credibility</div>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon transparency">
-                    <i class="fas fa-eye"></i>
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    The Washington Post
                 </div>
-                <h3>Transparency Scoring</h3>
-                <p>Measures source citations, attribution quality, and journalistic standards. Identifies unsourced claims and anonymous sources.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Newspaper</div>
+                <div class="source-founded">Founded 1877 | 88/100 Credibility</div>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon content">
-                    <i class="fas fa-star-half-alt"></i>
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-radio"></i>
+                    NPR
                 </div>
-                <h3>Content Quality</h3>
-                <p>Evaluates depth, comprehensiveness, and completeness of coverage. Assesses whether key context is provided.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Public Radio</div>
+                <div class="source-founded">Founded 1970 | 88/100 Credibility</div>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon transcript">
-                    <i class="fas fa-file-video"></i>
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    The Wall Street Journal
                 </div>
-                <h3>Transcript Analysis</h3>
-                <p>Specialized fact-checking for speeches, interviews, and YouTube videos. Paste transcript text OR provide YouTube URL for automatic extraction and analysis.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Newspaper</div>
+                <div class="source-founded">Founded 1889 | 87/100 Credibility</div>
             </div>
 
-            <div class="feature-card">
-                <div class="feature-icon debate">
-                    <i class="fas fa-gavel"></i>
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-tv"></i>
+                    ABC News
                 </div>
-                <h3>Debate Arena</h3>
-                <p>Start debates on news topics and let the community decide. Create arguments, challenge opposing views, and vote on who made the stronger case. Anonymous participation with live voting results.</p>
-                <span class="feature-badge">Free Forever</span>
+                <div class="source-type">Television Network</div>
+                <div class="source-founded">Founded 1943 | 85/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-tv"></i>
+                    CBS News
+                </div>
+                <div class="source-type">Television Network</div>
+                <div class="source-founded">Founded 1927 | 84/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-tv"></i>
+                    NBC News
+                </div>
+                <div class="source-type">Television Network</div>
+                <div class="source-founded">Founded 1940 | 83/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    Politico
+                </div>
+                <div class="source-type">Digital/Print</div>
+                <div class="source-founded">Founded 2007 | 82/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    Axios
+                </div>
+                <div class="source-type">Digital Media</div>
+                <div class="source-founded">Founded 2016 | 81/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-satellite-dish"></i>
+                    CNN
+                </div>
+                <div class="source-type">Cable News</div>
+                <div class="source-founded">Founded 1980 | 80/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-newspaper"></i>
+                    The Hill
+                </div>
+                <div class="source-type">Digital/Print</div>
+                <div class="source-founded">Founded 1994 | 78/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-satellite-dish"></i>
+                    Fox News
+                </div>
+                <div class="source-type">Cable News</div>
+                <div class="source-founded">Founded 1996 | 75/100 Credibility</div>
+            </div>
+
+            <div class="source-item">
+                <div class="source-name">
+                    <i class="fas fa-plus"></i>
+                    500+ More Sources
+                </div>
+                <div class="source-type">Comprehensive Database</div>
+                <div class="source-founded">Continuously updated</div>
             </div>
         </div>
 
-        <!-- COMING SOON SECTION -->
-        <div class="coming-soon-section">
-            <h2>🚀 Coming Soon</h2>
-            <p>We're constantly innovating to bring you cutting-edge analysis tools. Here's what's next:</p>
-            
-            <div class="coming-soon-grid">
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon ai">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <h3>AI-Generated Content Detection</h3>
-                    <p>Advanced detection to identify text written by AI tools like ChatGPT, helping you distinguish between human and machine-generated content.</p>
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </div>
-
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon deepfake">
-                        <i class="fas fa-video"></i>
-                    </div>
-                    <h3>Deepfake Detection</h3>
-                    <p>Cutting-edge technology to analyze videos and images for signs of manipulation, helping you identify synthetic media and altered content.</p>
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </div>
-
-                <div class="coming-soon-card">
-                    <div class="coming-soon-icon plagiarism">
-                        <i class="fas fa-copy"></i>
-                    </div>
-                    <h3>Plagiarism Detection</h3>
-                    <p>Comprehensive scanning to detect copied content, verify originality, and identify sources. Ensures content authenticity and proper attribution.</p>
-                    <span class="coming-soon-badge">Coming Soon</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="sources-section">
-            <h2><i class="fas fa-database"></i> Our Comprehensive Data Sources</h2>
-            <p style="text-align: center; color: #64748b; margin-bottom: 2rem;">
-                We analyze news from hundreds of trusted outlets and cross-reference against authoritative sources
-            </p>
-
-            <div class="sources-grid">
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Reuters
-                    </div>
-                    <div class="source-type">Wire Service</div>
-                    <div class="source-founded">Founded 1851 | 95/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Associated Press
-                    </div>
-                    <div class="source-type">Wire Service</div>
-                    <div class="source-founded">Founded 1846 | 94/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-broadcast-tower"></i>
-                        BBC
-                    </div>
-                    <div class="source-type">Public Broadcaster</div>
-                    <div class="source-founded">Founded 1922 | 92/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The New York Times
-                    </div>
-                    <div class="source-type">Newspaper</div>
-                    <div class="source-founded">Founded 1851 | 90/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The Washington Post
-                    </div>
-                    <div class="source-type">Newspaper</div>
-                    <div class="source-founded">Founded 1877 | 88/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-radio"></i>
-                        NPR
-                    </div>
-                    <div class="source-type">Public Radio</div>
-                    <div class="source-founded">Founded 1970 | 88/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The Wall Street Journal
-                    </div>
-                    <div class="source-type">Newspaper</div>
-                    <div class="source-founded">Founded 1889 | 87/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-tv"></i>
-                        ABC News
-                    </div>
-                    <div class="source-type">Television Network</div>
-                    <div class="source-founded">Founded 1943 | 85/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-tv"></i>
-                        CBS News
-                    </div>
-                    <div class="source-type">Television Network</div>
-                    <div class="source-founded">Founded 1927 | 84/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-tv"></i>
-                        NBC News
-                    </div>
-                    <div class="source-type">Television Network</div>
-                    <div class="source-founded">Founded 1940 | 83/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Politico
-                    </div>
-                    <div class="source-type">Digital/Print</div>
-                    <div class="source-founded">Founded 2007 | 82/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        Axios
-                    </div>
-                    <div class="source-type">Digital Media</div>
-                    <div class="source-founded">Founded 2016 | 81/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-satellite-dish"></i>
-                        CNN
-                    </div>
-                    <div class="source-type">Cable News</div>
-                    <div class="source-founded">Founded 1980 | 80/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-newspaper"></i>
-                        The Hill
-                    </div>
-                    <div class="source-type">Digital/Print</div>
-                    <div class="source-founded">Founded 1994 | 78/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-satellite-dish"></i>
-                        Fox News
-                    </div>
-                    <div class="source-type">Cable News</div>
-                    <div class="source-founded">Founded 1996 | 75/100 Credibility</div>
-                </div>
-
-                <div class="source-item">
-                    <div class="source-name">
-                        <i class="fas fa-plus"></i>
-                        500+ More Sources
-                    </div>
-                    <div class="source-type">Comprehensive Database</div>
-                    <div class="source-founded">Continuously updated</div>
-                </div>
-            </div>
-
-            <p style="text-align: center; color: #64748b; margin-top: 2rem; font-size: 0.95rem;">
-                <i class="fas fa-info-circle"></i> We maintain detailed metadata on over 500 news outlets including founding dates, ownership, political lean, credibility scores, and awards.
-            </p>
-        </div>
-
-        <div class="cta-section">
-            <h2>Ready to Start Analyzing?</h2>
-            <p>Everything is free during our beta testing phase. Try it now!</p>
-            <a href="/" class="cta-button">
-                <i class="fas fa-arrow-right"></i> Start Free Analysis
-            </a>
-        </div>
+        <p style="text-align: center; color: #64748b; margin-top: 2rem; font-size: 0.95rem;">
+            <i class="fas fa-info-circle"></i> We maintain detailed metadata on over 500 news outlets including founding dates, ownership, political lean, credibility scores, and awards.
+        </p>
     </div>
 
-    <script>
-        function toggleMobileMenu() {
-            const navMenu = document.getElementById('navMenu');
-            navMenu.classList.toggle('active');
-        }
-    </script>
-</body>
-</html>
+    <div class="cta-section">
+        <h2>Ready to Start Analyzing?</h2>
+        <p>Everything is free during our beta testing phase. Try it now!</p>
+        <a href="/" class="cta-button">
+            <i class="fas fa-arrow-right"></i> Start Free Analysis
+        </a>
+    </div>
+</div>
+{% endblock %}
 
 <!--
 I did no harm and this file is not truncated.
-v3.4.0 - December 27, 2024 - UNIFIED NAVIGATION UPDATE
+v4.0.0 - January 8, 2026 - TEMPLATE INHERITANCE VERSION
 
-DEPLOYMENT READY FOR GITHUB
+DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
+This file contains all code and is NOT truncated.
 -->
