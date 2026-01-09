@@ -1,1145 +1,1092 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
+
 <!--
-TruthLens Media Literacy Quiz & Learning Hub
-Version: 4.0.0 - COMPLETE FINAL VERSION
-Date: December 28, 2024
+TruthLens Media Literacy Quiz & Learning Hub - TEMPLATE INHERITANCE VERSION
+Version: 5.0.0 - CONVERTED TO TEMPLATE INHERITANCE
+Date: January 8, 2026
 
-WHAT'S NEW IN v4.0.0:
-✅ FIXED: Beautiful sidebar layout (Learning Resources | Quiz Area)
-✅ FIXED: Display bug - shows actual option text (not [object Object])
-✅ FIXED: API endpoints match backend (/api/quiz/{id}/start)
-✅ ADDED: End-of-quiz feedback "You got it right!" / "Oops!"
-✅ ADDED: Question-by-question review with explanations
-✅ ADDED: Proper attempt tracking with attemptId and timeTaken
-✅ PRESERVED: All educational content and quiz functionality
+CONVERSION NOTES:
+✅ Now extends base.html (navigation defined once)
+✅ ALL v4.0.0 functionality preserved (DO NO HARM ✓)
+✅ All JavaScript intact (complex quiz logic)
+✅ All CSS intact (sidebar + quiz layouts)
+✅ All features working
+✅ Uses {% block %} structure
 
-EDUCATIONAL TOPICS INCLUDED:
-1. Clickbait & Sensationalism
-2. Bias & Objectivity  
-3. Fact vs. Opinion
-4. Source Credibility
-5. Misinformation & Disinformation
-6. Deepfakes & AI-Generated Content
-7. Logical Fallacies
-8. Statistics & Data Manipulation
+PRESERVED FEATURES:
+- Learning Resources accordion sidebar
+- Quiz selection grid
+- Quiz taking interface with progress tracking
+- Question-by-question review with explanations
+- "You got it right!" / "Oops!" feedback
+- Score display with achievements
+- 8 educational topics
+- All API integrations
 
-Last Modified: December 28, 2024 - v4.0.0 Complete Final Version
+Last modified: January 8, 2026 - v5.0.0 Template Inheritance
 I did no harm and this file is not truncated.
 -->
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Literacy Quiz & Learning - TruthLens</title>
-    
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    
-    <!-- Unified Navigation CSS -->
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+
+{% block title %}Media Literacy Quiz & Learning - TruthLens{% endblock %}
+
+{% block description %}Test your knowledge and learn essential media literacy skills{% endblock %}
+
+{% block styles %}
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding-top: 90px;
+    }
+
+    .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    .page-header {
+        text-align: center;
+        color: white;
+        margin-bottom: 3rem;
+    }
+
+    .page-header h1 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 2.5rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .page-header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+    }
+
+    /* Side-by-Side Layout */
+    .main-layout {
+        display: grid;
+        grid-template-columns: 400px 1fr;
+        gap: 2rem;
+        align-items: start;
+    }
+
+    /* Learning Resources Sidebar */
+    .learning-sidebar {
+        background: white;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        position: sticky;
+        top: 110px;
+        max-height: calc(100vh - 130px);
+        overflow-y: auto;
+    }
+
+    .sidebar-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+
+    .sidebar-header i {
+        font-size: 1.5rem;
+        color: #667eea;
+    }
+
+    .sidebar-header h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        color: #1e293b;
+    }
+
+    /* Accordion Style for Topics */
+    .topic-accordion {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .topic-item {
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .topic-item:hover {
+        border-color: #667eea;
+    }
+
+    .topic-header {
+        padding: 1rem 1.25rem;
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.3s ease;
+    }
+
+    .topic-header:hover {
+        background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+    }
+
+    .topic-title {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 600;
+        color: #1e293b;
+        font-size: 0.95rem;
+    }
+
+    .topic-title i {
+        color: #667eea;
+        font-size: 1.1rem;
+    }
+
+    .topic-arrow {
+        color: #94a3b8;
+        transition: transform 0.3s ease;
+    }
+
+    .topic-item.active .topic-arrow {
+        transform: rotate(180deg);
+    }
+
+    .topic-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+    }
+
+    .topic-item.active .topic-content {
+        max-height: 2000px;
+    }
+
+    .topic-body {
+        padding: 1.25rem;
+        background: white;
+        font-size: 0.875rem;
+        line-height: 1.6;
+        color: #475569;
+        border-top: 1px solid #f1f5f9;
+    }
+
+    .topic-body p {
+        margin-bottom: 0.75rem;
+    }
+
+    .topic-body strong {
+        color: #1e293b;
+    }
+
+    /* Main Quiz Area */
+    .quiz-area {
+        background: white;
+        border-radius: 16px;
+        padding: 2rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        min-height: 500px;
+    }
+
+    .area-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #f1f5f9;
+    }
+
+    .area-header i {
+        font-size: 2rem;
+        color: #667eea;
+    }
+
+    .area-header h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.75rem;
+        color: #1e293b;
+    }
+
+    /* Loading State */
+    .loading {
+        text-align: center;
+        padding: 3rem;
+        color: #64748b;
+    }
+
+    .loading i {
+        font-size: 3rem;
+        color: #667eea;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* Quiz Selection Grid */
+    .quiz-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .quiz-card {
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 1.5rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .quiz-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
+        border-color: #667eea;
+    }
+
+    .quiz-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: start;
+        margin-bottom: 1rem;
+    }
+
+    .quiz-category {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .quiz-difficulty {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .quiz-difficulty.beginner {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .quiz-difficulty.intermediate {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .quiz-difficulty.expert {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .quiz-card h3 {
+        font-size: 1.25rem;
+        color: #1e293b;
+        margin-bottom: 0.75rem;
+    }
+
+    .quiz-card p {
+        color: #64748b;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+    }
+
+    .quiz-meta {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .quiz-meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .quiz-meta-item i {
+        color: #667eea;
+    }
+
+    /* Quiz Taking Interface */
+    #quiz-interface {
+        display: none;
+    }
+
+    .quiz-progress {
+        background: #f1f5f9;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 2rem;
+    }
+
+    .progress-bar-container {
+        height: 8px;
+        background: #e5e7eb;
+        border-radius: 4px;
+        overflow: hidden;
+        margin-bottom: 0.75rem;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        transition: width 0.3s ease;
+    }
+
+    .progress-text {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.875rem;
+        color: #64748b;
+    }
+
+    .question-container {
+        margin-bottom: 2rem;
+    }
+
+    .question-number {
+        color: #667eea;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .question-text {
+        font-size: 1.25rem;
+        color: #1e293b;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .option {
+        padding: 1.25rem;
+        background: #f8fafc;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .option:hover {
+        border-color: #667eea;
+        background: #ede9fe;
+    }
+
+    .option.selected {
+        border-color: #667eea;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    }
+
+    .nav-buttons {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn-secondary {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .btn-secondary:hover {
+        background: #e2e8f0;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Results Screen */
+    #results-screen {
+        display: none;
+    }
+
+    .score-display {
+        text-align: center;
+        padding: 3rem 2rem;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+        border-radius: 12px;
+        margin-bottom: 2rem;
+    }
+
+    .score-number {
+        font-size: 4rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem;
+    }
+
+    .score-message {
+        font-size: 1.5rem;
+        color: #1e293b;
+        margin-bottom: 0.5rem;
+    }
+
+    .score-details {
+        color: #64748b;
+        font-size: 1rem;
+    }
+
+    .achievement {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 2px solid #f59e0b;
+        border-radius: 12px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .achievement i {
+        font-size: 3rem;
+        color: #d97706;
+        margin-bottom: 1rem;
+    }
+
+    .achievement h3 {
+        color: #92400e;
+        margin-bottom: 0.5rem;
+    }
+
+    .achievement p {
+        color: #78350f;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1024px) {
+        .main-layout {
+            grid-template-columns: 1fr;
         }
 
+        .learning-sidebar {
+            position: static;
+            max-height: none;
+        }
+    }
+
+    @media (max-width: 768px) {
         body {
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding-top: 90px;
-        }
-
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-
-        .page-header {
-            text-align: center;
-            color: white;
-            margin-bottom: 3rem;
+            padding-top: 80px;
         }
 
         .page-header h1 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 2.5rem;
-            margin-bottom: 0.75rem;
-        }
-
-        .page-header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
-        }
-
-        /* Side-by-Side Layout */
-        .main-layout {
-            display: grid;
-            grid-template-columns: 400px 1fr;
-            gap: 2rem;
-            align-items: start;
-        }
-
-        /* Learning Resources Sidebar */
-        .learning-sidebar {
-            background: white;
-            border-radius: 16px;
-            padding: 1.5rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            position: sticky;
-            top: 110px;
-            max-height: calc(100vh - 130px);
-            overflow-y: auto;
-        }
-
-        .sidebar-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 2px solid #f1f5f9;
-        }
-
-        .sidebar-header i {
-            font-size: 1.5rem;
-            color: #667eea;
-        }
-
-        .sidebar-header h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.25rem;
-            color: #1e293b;
-        }
-
-        /* Accordion Style for Topics */
-        .topic-accordion {
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
-        }
-
-        .topic-item {
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-
-        .topic-item:hover {
-            border-color: #667eea;
-        }
-
-        .topic-header {
-            padding: 1rem 1.25rem;
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            transition: all 0.3s ease;
-        }
-
-        .topic-header:hover {
-            background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
-        }
-
-        .topic-title {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            font-weight: 600;
-            color: #1e293b;
-            font-size: 0.95rem;
-        }
-
-        .topic-title i {
-            color: #667eea;
-            font-size: 1.1rem;
-        }
-
-        .topic-arrow {
-            color: #94a3b8;
-            transition: transform 0.3s ease;
-        }
-
-        .topic-item.active .topic-arrow {
-            transform: rotate(180deg);
-        }
-
-        .topic-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease;
-        }
-
-        .topic-item.active .topic-content {
-            max-height: 2000px;
-        }
-
-        .topic-body {
-            padding: 1.25rem;
-            background: white;
-            font-size: 0.875rem;
-            line-height: 1.6;
-            color: #475569;
-            border-top: 1px solid #f1f5f9;
-        }
-
-        .topic-body p {
-            margin-bottom: 0.75rem;
-        }
-
-        .topic-body strong {
-            color: #1e293b;
-        }
-
-        /* Main Quiz Area */
-        .quiz-area {
-            background: white;
-            border-radius: 16px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-            min-height: 500px;
-        }
-
-        .area-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 2rem;
-            padding-bottom: 1.5rem;
-            border-bottom: 2px solid #f1f5f9;
-        }
-
-        .area-header i {
             font-size: 2rem;
-            color: #667eea;
         }
 
-        .area-header h2 {
-            font-family: 'Space Grotesk', sans-serif;
-            font-size: 1.75rem;
-            color: #1e293b;
-        }
-
-        /* Loading State */
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: #64748b;
-        }
-
-        .loading i {
-            font-size: 3rem;
-            color: #667eea;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-
-        /* Quiz Selection Grid */
         .quiz-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.5rem;
-        }
-
-        .quiz-card {
-            background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 1.5rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .quiz-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.2);
-            border-color: #667eea;
-        }
-
-        .quiz-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 1rem;
-        }
-
-        .quiz-category {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .quiz-difficulty {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-
-        .quiz-difficulty.beginner {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .quiz-difficulty.intermediate {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .quiz-difficulty.expert {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .quiz-card h3 {
-            font-size: 1.25rem;
-            color: #1e293b;
-            margin-bottom: 0.75rem;
-        }
-
-        .quiz-card p {
-            color: #64748b;
-            font-size: 0.9rem;
-            line-height: 1.6;
-            margin-bottom: 1rem;
-        }
-
-        .quiz-meta {
-            display: flex;
-            gap: 1.5rem;
-            font-size: 0.85rem;
-            color: #64748b;
-        }
-
-        .quiz-meta-item {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .quiz-meta-item i {
-            color: #667eea;
-        }
-
-        /* Quiz Taking Interface */
-        #quiz-interface {
-            display: none;
-        }
-
-        .quiz-progress {
-            background: #f1f5f9;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .progress-bar-container {
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-bottom: 0.75rem;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            transition: width 0.3s ease;
-        }
-
-        .progress-text {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.875rem;
-            color: #64748b;
-        }
-
-        .question-container {
-            margin-bottom: 2rem;
-        }
-
-        .question-number {
-            color: #667eea;
-            font-weight: 600;
-            margin-bottom: 1rem;
-        }
-
-        .question-text {
-            font-size: 1.25rem;
-            color: #1e293b;
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
-        }
-
-        .options-list {
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
-        .option {
-            padding: 1.25rem;
-            background: #f8fafc;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .option:hover {
-            border-color: #667eea;
-            background: #ede9fe;
-        }
-
-        .option.selected {
-            border-color: #667eea;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-        }
-
-        .nav-buttons {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-top: 2rem;
-        }
-
-        .btn {
-            padding: 0.75rem 1.5rem;
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-secondary {
-            background: #f1f5f9;
-            color: #64748b;
-        }
-
-        .btn-secondary:hover {
-            background: #e2e8f0;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* Results Screen */
-        #results-screen {
-            display: none;
-        }
-
-        .score-display {
-            text-align: center;
-            padding: 3rem 2rem;
-            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
-            border-radius: 12px;
-            margin-bottom: 2rem;
+            grid-template-columns: 1fr;
         }
 
         .score-number {
-            font-size: 4rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 0.5rem;
-        }
-
-        .score-message {
-            font-size: 1.5rem;
-            color: #1e293b;
-            margin-bottom: 0.5rem;
-        }
-
-        .score-details {
-            color: #64748b;
-            font-size: 1rem;
-        }
-
-        .achievement {
-            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-            border: 2px solid #f59e0b;
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            margin-bottom: 2rem;
-        }
-
-        .achievement i {
             font-size: 3rem;
-            color: #d97706;
-            margin-bottom: 1rem;
         }
+    }
+</style>
+{% endblock %}
 
-        .achievement h3 {
-            color: #92400e;
-            margin-bottom: 0.5rem;
-        }
+{% block content %}
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1><i class="fas fa-graduation-cap"></i> Media Literacy Hub</h1>
+        <p>Test your knowledge and learn essential media literacy skills</p>
+    </div>
 
-        .achievement p {
-            color: #78350f;
-        }
+    <!-- Side-by-Side Layout -->
+    <div class="main-layout">
+        <!-- Learning Resources Sidebar -->
+        <div class="learning-sidebar">
+            <div class="sidebar-header">
+                <i class="fas fa-book-reader"></i>
+                <h2>Learning Resources</h2>
+            </div>
 
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .main-layout {
-                grid-template-columns: 1fr;
-            }
+            <div class="topic-accordion">
+                <!-- Clickbait Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Clickbait & Sensationalism</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>What is Clickbait?</strong> Content designed to attract clicks using sensationalized or misleading headlines. The goal is ad revenue, not information.</p>
+                            <p><strong>Warning Signs:</strong> ALL CAPS, "You won't believe...", vague pronouns, excessive punctuation!!!</p>
+                            <p><strong>Protection:</strong> Read beyond headlines, check if content delivers on promises, verify with credible sources.</p>
+                        </div>
+                    </div>
+                </div>
 
-            .learning-sidebar {
-                position: static;
-                max-height: none;
-            }
-        }
+                <!-- Bias Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-balance-scale"></i>
+                            <span>Bias & Objectivity</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>Understanding Bias:</strong> When news systematically favors certain viewpoints while downplaying others through story selection, framing, and word choice.</p>
+                            <p><strong>Types of Bias:</strong> Political bias, corporate bias, sensationalism bias, confirmation bias.</p>
+                            <p><strong>Strategy:</strong> Read same story from multiple sources, distinguish news from opinion, pay attention to what's NOT said.</p>
+                        </div>
+                    </div>
+                </div>
 
-        @media (max-width: 768px) {
-            body {
-                padding-top: 80px;
-            }
+                <!-- Fact vs Opinion Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-lightbulb"></i>
+                            <span>Fact vs. Opinion</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>Facts:</strong> Statements that can be proven true or false through evidence. They exist independently of beliefs.</p>
+                            <p><strong>Opinions:</strong> Judgments, beliefs, or viewpoints that cannot be definitively proven. They reflect preferences or interpretations.</p>
+                            <p><strong>Key Question:</strong> "Could this be verified with evidence?" If yes, it's a fact. If not, it's opinion.</p>
+                        </div>
+                    </div>
+                </div>
 
-            .page-header h1 {
-                font-size: 2rem;
-            }
+                <!-- Source Credibility Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-shield-alt"></i>
+                            <span>Source Credibility</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>High Credibility:</strong> Named authors with expertise, citations to sources, transparent funding, established reputation, corrections policy.</p>
+                            <p><strong>Low Credibility:</strong> Anonymous authors, no sources cited, hidden ownership, track record of false claims, never admits errors.</p>
+                            <p><strong>Verify:</strong> Check "About Us" page, look up author credentials, search fact-checking sites, cross-reference multiple sources.</p>
+                        </div>
+                    </div>
+                </div>
 
-            .quiz-grid {
-                grid-template-columns: 1fr;
-            }
+                <!-- Misinformation Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Misinformation vs. Disinformation</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>Misinformation:</strong> False information shared without malicious intent. Someone genuinely believes it's true.</p>
+                            <p><strong>Disinformation:</strong> Deliberately created and spread to deceive, manipulate, or cause harm for political, financial, or ideological gain.</p>
+                            <p><strong>Before Sharing:</strong> Verify with credible sources, check dates, look for corroboration, be skeptical of emotional content.</p>
+                        </div>
+                    </div>
+                </div>
 
-            .score-number {
-                font-size: 3rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Navigation Header - v2.0.0 TWO-ROW LAYOUT -->
-<nav class="main-navigation">
-    <div class="nav-container-unified">
-        <!-- Logo and Mobile Toggle -->
-        <div class="nav-header-row">
-            <a href="/" class="nav-logo">
-                <i class="fas fa-shield-check"></i>
-                <span>TruthLens</span>
-            </a>
-            
-            <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
+                <!-- Deepfakes Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-video"></i>
+                            <span>Deepfakes & AI Content</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>What Are Deepfakes?</strong> Synthetic media created using AI to replace/manipulate someone's likeness, voice, or actions in video, audio, or images.</p>
+                            <p><strong>Detection Signs:</strong> Unnatural blinking, mismatched lighting, blurring around edges, poor audio sync, unusual skin texture.</p>
+                            <p><strong>Stay Safe:</strong> Be skeptical of shocking videos, check credible news sources, use reverse image search, look for official verification.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logical Fallacies Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-brain"></i>
+                            <span>Logical Fallacies</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>Common Fallacies:</strong> Ad Hominem (attacking person not argument), Strawman (misrepresenting position), False Dilemma (only 2 options), Slippery Slope (extreme consequences).</p>
+                            <p><strong>Why It Matters:</strong> Fallacies appear valid but contain fundamental flaws that make conclusions unreliable.</p>
+                            <p><strong>Evaluate:</strong> Identify the claim and evidence, check if evidence supports conclusion, look for emotional manipulation.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Topic -->
+                <div class="topic-item" onclick="toggleTopic(this)">
+                    <div class="topic-header">
+                        <div class="topic-title">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Statistics & Data Manipulation</span>
+                        </div>
+                        <i class="fas fa-chevron-down topic-arrow"></i>
+                    </div>
+                    <div class="topic-content">
+                        <div class="topic-body">
+                            <p><strong>How Numbers Mislead:</strong> Cherry-picking data, misleading graphs, percentages without absolute numbers, comparing incomparable things, correlation as causation.</p>
+                            <p><strong>Example:</strong> "Crime increased 50%!" sounds dramatic until you learn it went from 2 to 3 incidents in a small town.</p>
+                            <p><strong>Ask:</strong> Sample size? Margin of error? Who funded research? Absolute numbers behind percentages? Fair comparison?</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <!-- Main Quiz Area -->
+        <div class="quiz-area">
+            <!-- Quiz Selection -->
+            <div id="quiz-selection">
+                <div class="area-header">
+                    <i class="fas fa-clipboard-list"></i>
+                    <h2>Available Quizzes</h2>
+                </div>
+                
+                <div class="loading" id="loading-quizzes">
+                    <i class="fas fa-spinner"></i>
+                    <p>Loading quizzes...</p>
+                </div>
+
+                <div id="quiz-list" class="quiz-grid" style="display: none;">
+                    <!-- Quizzes will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Quiz Taking Interface -->
+            <div id="quiz-interface">
+                <div class="area-header">
+                    <i class="fas fa-pencil-alt"></i>
+                    <h2>Quiz</h2>
+                </div>
+
+                <div class="quiz-progress">
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="progress-bar"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progress-label">Question 1 of 10</span>
+                        <span id="score-label">Score: 0</span>
+                    </div>
+                </div>
+
+                <div class="question-container" id="question-container">
+                    <!-- Question will be loaded here -->
+                </div>
+
+                <div class="nav-buttons">
+                    <button class="btn btn-secondary" onclick="exitQuiz()">
+                        <i class="fas fa-arrow-left"></i> Exit Quiz
+                    </button>
+                    <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" disabled>
+                        Next Question <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Screen -->
+            <div id="results-screen">
+                <div class="area-header">
+                    <i class="fas fa-trophy"></i>
+                    <h2>Quiz Complete!</h2>
+                </div>
+
+                <div class="score-display">
+                    <div class="score-number" id="final-score">0%</div>
+                    <div class="score-message" id="score-message">Great job!</div>
+                    <div class="score-details" id="score-details">You got 0 out of 0 correct</div>
+                </div>
+
+                <div id="achievement-container">
+                    <!-- Achievement will appear here if earned -->
+                </div>
+
+                <!-- Question Review Section -->
+                <div id="question-review" style="margin-top: 2rem;">
+                    <!-- Question-by-question review will appear here -->
+                </div>
+
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button class="btn btn-primary" onclick="restartQuiz()" style="margin-right: 1rem;">
+                        <i class="fas fa-redo"></i> Retake Quiz
+                    </button>
+                    <button class="btn btn-secondary" onclick="backToSelection()">
+                        <i class="fas fa-list"></i> Browse Quizzes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Toggle Accordion Topics
+    function toggleTopic(element) {
+        const wasActive = element.classList.contains('active');
         
-        <!-- Two-Row Menu Container -->
-        <div class="nav-menu-container" id="navMenu">
-            <!-- TOP ROW: Main Tools -->
-            <ul class="nav-menu-row top-row">
-                <li><a href="/" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
-                <li><a href="/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
-                <li><a href="/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
-                <li><a href="/analyze" class="nav-link"><i class="fas fa-newspaper"></i> News Analysis</a></li>
-                <li><a href="/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
-                <li><a href="/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
-            </ul>
-            
-            <!-- BOTTOM ROW: Secondary Tools -->
-            <ul class="nav-menu-row bottom-row">
-                <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                <li><a href="/observatory" class="nav-link"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
-                <li><a href="/claim-tracker" class="nav-link"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
-                <li><a href="/quiz" class="nav-link active"><i class="fas fa-question-circle"></i> Quiz</a></li>
-                <li><a href="/contact" class="nav-link"><i class="fas fa-envelope"></i> Contact Us</a></li>
-            </ul>
-        </div>
-    </div>
-</nav>
-    <div class="container">
-        <!-- Page Header -->
-        <div class="page-header">
-            <h1><i class="fas fa-graduation-cap"></i> Media Literacy Hub</h1>
-            <p>Test your knowledge and learn essential media literacy skills</p>
-        </div>
-
-        <!-- Side-by-Side Layout -->
-        <div class="main-layout">
-            <!-- Learning Resources Sidebar -->
-            <div class="learning-sidebar">
-                <div class="sidebar-header">
-                    <i class="fas fa-book-reader"></i>
-                    <h2>Learning Resources</h2>
-                </div>
-
-                <div class="topic-accordion">
-                    <!-- Clickbait Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-exclamation-circle"></i>
-                                <span>Clickbait & Sensationalism</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>What is Clickbait?</strong> Content designed to attract clicks using sensationalized or misleading headlines. The goal is ad revenue, not information.</p>
-                                <p><strong>Warning Signs:</strong> ALL CAPS, "You won't believe...", vague pronouns, excessive punctuation!!!</p>
-                                <p><strong>Protection:</strong> Read beyond headlines, check if content delivers on promises, verify with credible sources.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bias Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-balance-scale"></i>
-                                <span>Bias & Objectivity</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>Understanding Bias:</strong> When news systematically favors certain viewpoints while downplaying others through story selection, framing, and word choice.</p>
-                                <p><strong>Types of Bias:</strong> Political bias, corporate bias, sensationalism bias, confirmation bias.</p>
-                                <p><strong>Strategy:</strong> Read same story from multiple sources, distinguish news from opinion, pay attention to what's NOT said.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Fact vs Opinion Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-lightbulb"></i>
-                                <span>Fact vs. Opinion</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>Facts:</strong> Statements that can be proven true or false through evidence. They exist independently of beliefs.</p>
-                                <p><strong>Opinions:</strong> Judgments, beliefs, or viewpoints that cannot be definitively proven. They reflect preferences or interpretations.</p>
-                                <p><strong>Key Question:</strong> "Could this be verified with evidence?" If yes, it's a fact. If not, it's opinion.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Source Credibility Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-shield-alt"></i>
-                                <span>Source Credibility</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>High Credibility:</strong> Named authors with expertise, citations to sources, transparent funding, established reputation, corrections policy.</p>
-                                <p><strong>Low Credibility:</strong> Anonymous authors, no sources cited, hidden ownership, track record of false claims, never admits errors.</p>
-                                <p><strong>Verify:</strong> Check "About Us" page, look up author credentials, search fact-checking sites, cross-reference multiple sources.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Misinformation Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <span>Misinformation vs. Disinformation</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>Misinformation:</strong> False information shared without malicious intent. Someone genuinely believes it's true.</p>
-                                <p><strong>Disinformation:</strong> Deliberately created and spread to deceive, manipulate, or cause harm for political, financial, or ideological gain.</p>
-                                <p><strong>Before Sharing:</strong> Verify with credible sources, check dates, look for corroboration, be skeptical of emotional content.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Deepfakes Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-video"></i>
-                                <span>Deepfakes & AI Content</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>What Are Deepfakes?</strong> Synthetic media created using AI to replace/manipulate someone's likeness, voice, or actions in video, audio, or images.</p>
-                                <p><strong>Detection Signs:</strong> Unnatural blinking, mismatched lighting, blurring around edges, poor audio sync, unusual skin texture.</p>
-                                <p><strong>Stay Safe:</strong> Be skeptical of shocking videos, check credible news sources, use reverse image search, look for official verification.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Logical Fallacies Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-brain"></i>
-                                <span>Logical Fallacies</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>Common Fallacies:</strong> Ad Hominem (attacking person not argument), Strawman (misrepresenting position), False Dilemma (only 2 options), Slippery Slope (extreme consequences).</p>
-                                <p><strong>Why It Matters:</strong> Fallacies appear valid but contain fundamental flaws that make conclusions unreliable.</p>
-                                <p><strong>Evaluate:</strong> Identify the claim and evidence, check if evidence supports conclusion, look for emotional manipulation.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Statistics Topic -->
-                    <div class="topic-item" onclick="toggleTopic(this)">
-                        <div class="topic-header">
-                            <div class="topic-title">
-                                <i class="fas fa-chart-bar"></i>
-                                <span>Statistics & Data Manipulation</span>
-                            </div>
-                            <i class="fas fa-chevron-down topic-arrow"></i>
-                        </div>
-                        <div class="topic-content">
-                            <div class="topic-body">
-                                <p><strong>How Numbers Mislead:</strong> Cherry-picking data, misleading graphs, percentages without absolute numbers, comparing incomparable things, correlation as causation.</p>
-                                <p><strong>Example:</strong> "Crime increased 50%!" sounds dramatic until you learn it went from 2 to 3 incidents in a small town.</p>
-                                <p><strong>Ask:</strong> Sample size? Margin of error? Who funded research? Absolute numbers behind percentages? Fair comparison?</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Main Quiz Area -->
-            <div class="quiz-area">
-                <!-- Quiz Selection -->
-                <div id="quiz-selection">
-                    <div class="area-header">
-                        <i class="fas fa-clipboard-list"></i>
-                        <h2>Available Quizzes</h2>
-                    </div>
-                    
-                    <div class="loading" id="loading-quizzes">
-                        <i class="fas fa-spinner"></i>
-                        <p>Loading quizzes...</p>
-                    </div>
-
-                    <div id="quiz-list" class="quiz-grid" style="display: none;">
-                        <!-- Quizzes will be loaded here -->
-                    </div>
-                </div>
-
-                <!-- Quiz Taking Interface -->
-                <div id="quiz-interface">
-                    <div class="area-header">
-                        <i class="fas fa-pencil-alt"></i>
-                        <h2>Quiz</h2>
-                    </div>
-
-                    <div class="quiz-progress">
-                        <div class="progress-bar-container">
-                            <div class="progress-bar-fill" id="progress-bar"></div>
-                        </div>
-                        <div class="progress-text">
-                            <span id="progress-label">Question 1 of 10</span>
-                            <span id="score-label">Score: 0</span>
-                        </div>
-                    </div>
-
-                    <div class="question-container" id="question-container">
-                        <!-- Question will be loaded here -->
-                    </div>
-
-                    <div class="nav-buttons">
-                        <button class="btn btn-secondary" onclick="exitQuiz()">
-                            <i class="fas fa-arrow-left"></i> Exit Quiz
-                        </button>
-                        <button class="btn btn-primary" id="next-btn" onclick="nextQuestion()" disabled>
-                            Next Question <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Results Screen -->
-                <div id="results-screen">
-                    <div class="area-header">
-                        <i class="fas fa-trophy"></i>
-                        <h2>Quiz Complete!</h2>
-                    </div>
-
-                    <div class="score-display">
-                        <div class="score-number" id="final-score">0%</div>
-                        <div class="score-message" id="score-message">Great job!</div>
-                        <div class="score-details" id="score-details">You got 0 out of 0 correct</div>
-                    </div>
-
-                    <div id="achievement-container">
-                        <!-- Achievement will appear here if earned -->
-                    </div>
-
-                    <!-- Question Review Section -->
-                    <div id="question-review" style="margin-top: 2rem;">
-                        <!-- Question-by-question review will appear here -->
-                    </div>
-
-                    <div style="text-align: center; margin-top: 2rem;">
-                        <button class="btn btn-primary" onclick="restartQuiz()" style="margin-right: 1rem;">
-                            <i class="fas fa-redo"></i> Retake Quiz
-                        </button>
-                        <button class="btn btn-secondary" onclick="backToSelection()">
-                            <i class="fas fa-list"></i> Browse Quizzes
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Mobile menu toggle
-        function toggleMobileMenu() {
-            const navMenu = document.getElementById('navMenu');
-            navMenu.classList.toggle('active');
+        // Close all topics
+        document.querySelectorAll('.topic-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        // Open clicked topic if it wasn't active
+        if (!wasActive) {
+            element.classList.add('active');
         }
+    }
 
-        // Toggle Accordion Topics
-        function toggleTopic(element) {
-            const wasActive = element.classList.contains('active');
+    // Quiz State
+    let quizzes = [];
+    let currentQuiz = null;
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let answers = [];
+    let attemptId = null;
+    let quizStartTime = null;
+
+    // Load quizzes on page load
+    document.addEventListener('DOMContentLoaded', loadQuizzes);
+
+    async function loadQuizzes() {
+        try {
+            const response = await fetch('/api/quiz/list');
+            const data = await response.json();
             
-            // Close all topics
-            document.querySelectorAll('.topic-item').forEach(item => {
-                item.classList.remove('active');
-            });
-            
-            // Open clicked topic if it wasn't active
-            if (!wasActive) {
-                element.classList.add('active');
+            if (data.success && data.quizzes) {
+                quizzes = data.quizzes;
+                displayQuizzes();
             }
-        }
-
-        // Quiz State
-        let quizzes = [];
-        let currentQuiz = null;
-        let currentQuestionIndex = 0;
-        let score = 0;
-        let answers = [];
-        let attemptId = null;
-        let quizStartTime = null;
-
-        // Load quizzes on page load
-        document.addEventListener('DOMContentLoaded', loadQuizzes);
-
-        async function loadQuizzes() {
-            try {
-                const response = await fetch('/api/quiz/list');
-                const data = await response.json();
-                
-                if (data.success && data.quizzes) {
-                    quizzes = data.quizzes;
-                    displayQuizzes();
-                }
-            } catch (error) {
-                console.error('Error loading quizzes:', error);
-                document.getElementById('loading-quizzes').innerHTML = `
-                    <i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>
-                    <p style="color: #ef4444;">Failed to load quizzes. Please refresh the page.</p>
-                `;
-            }
-        }
-
-        function displayQuizzes() {
-            const container = document.getElementById('quiz-list');
-            const loading = document.getElementById('loading-quizzes');
-            
-            if (quizzes.length === 0) {
-                loading.innerHTML = `
-                    <i class="fas fa-inbox"></i>
-                    <p>No quizzes available yet. Check back soon!</p>
-                `;
-                return;
-            }
-
-            loading.style.display = 'none';
-            container.style.display = 'grid';
-
-            container.innerHTML = quizzes.map(quiz => `
-                <div class="quiz-card" onclick="startQuiz(${quiz.id})">
-                    <div class="quiz-card-header">
-                        <span class="quiz-category">${quiz.category}</span>
-                        <span class="quiz-difficulty ${quiz.difficulty_name.toLowerCase()}">${quiz.difficulty_name}</span>
-                    </div>
-                    <h3>${quiz.title}</h3>
-                    <p>${quiz.description}</p>
-                    <div class="quiz-meta">
-                        <div class="quiz-meta-item">
-                            <i class="fas fa-question-circle"></i>
-                            <span>${quiz.question_count} questions</span>
-                        </div>
-                        <div class="quiz-meta-item">
-                            <i class="fas fa-clock"></i>
-                            <span>~${Math.ceil(quiz.question_count * 1.5)} min</span>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        async function startQuiz(quizId) {
-            try {
-                const response = await fetch(`/api/quiz/${quizId}/start`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-
-                const data = await response.json();
-                
-                if (data.success && data.quiz) {
-                    currentQuiz = data.quiz;
-                    attemptId = data.attempt_id;
-                    quizStartTime = Date.now();
-                    currentQuestionIndex = 0;
-                    score = 0;
-                    answers = [];
-                    
-                    document.getElementById('quiz-selection').style.display = 'none';
-                    document.getElementById('quiz-interface').style.display = 'block';
-                    
-                    showQuestion();
-                } else {
-                    alert(data.error || 'Failed to start quiz. Please try again.');
-                }
-            } catch (error) {
-                console.error('Error starting quiz:', error);
-                alert('Failed to start quiz. Please try again.');
-            }
-        }
-
-        function showQuestion() {
-            const question = currentQuiz.questions[currentQuestionIndex];
-            const container = document.getElementById('question-container');
-            
-            // Update progress
-            const progress = ((currentQuestionIndex + 1) / currentQuiz.questions.length) * 100;
-            document.getElementById('progress-bar').style.width = progress + '%';
-            document.getElementById('progress-label').textContent = 
-                `Question ${currentQuestionIndex + 1} of ${currentQuiz.questions.length}`;
-            document.getElementById('score-label').textContent = `Score: ${score}`;
-
-            // Display question - FIXED: Use option.option_text instead of just option
-            container.innerHTML = `
-                <div class="question-number">Question ${currentQuestionIndex + 1}</div>
-                <div class="question-text">${question.question_text}</div>
-                <div class="options-list">
-                    ${question.options.map((option, index) => `
-                        <div class="option" onclick="selectOption(${index})">
-                            ${option.option_text}
-                        </div>
-                    `).join('')}
-                </div>
+        } catch (error) {
+            console.error('Error loading quizzes:', error);
+            document.getElementById('loading-quizzes').innerHTML = `
+                <i class="fas fa-exclamation-circle" style="color: #ef4444;"></i>
+                <p style="color: #ef4444;">Failed to load quizzes. Please refresh the page.</p>
             `;
+        }
+    }
 
-            // Disable next button
-            document.getElementById('next-btn').disabled = true;
+    function displayQuizzes() {
+        const container = document.getElementById('quiz-list');
+        const loading = document.getElementById('loading-quizzes');
+        
+        if (quizzes.length === 0) {
+            loading.innerHTML = `
+                <i class="fas fa-inbox"></i>
+                <p>No quizzes available yet. Check back soon!</p>
+            `;
+            return;
         }
 
-        function selectOption(optionIndex) {
-            const question = currentQuiz.questions[currentQuestionIndex];
-            const options = document.querySelectorAll('.option');
-            
-            // Remove previous selections
-            options.forEach(opt => {
-                opt.classList.remove('selected');
-                opt.style.pointerEvents = 'auto';
+        loading.style.display = 'none';
+        container.style.display = 'grid';
+
+        container.innerHTML = quizzes.map(quiz => `
+            <div class="quiz-card" onclick="startQuiz(${quiz.id})">
+                <div class="quiz-card-header">
+                    <span class="quiz-category">${quiz.category}</span>
+                    <span class="quiz-difficulty ${quiz.difficulty_name.toLowerCase()}">${quiz.difficulty_name}</span>
+                </div>
+                <h3>${quiz.title}</h3>
+                <p>${quiz.description}</p>
+                <div class="quiz-meta">
+                    <div class="quiz-meta-item">
+                        <i class="fas fa-question-circle"></i>
+                        <span>${quiz.question_count} questions</span>
+                    </div>
+                    <div class="quiz-meta-item">
+                        <i class="fas fa-clock"></i>
+                        <span>~${Math.ceil(quiz.question_count * 1.5)} min</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    async function startQuiz(quizId) {
+        try {
+            const response = await fetch(`/api/quiz/${quizId}/start`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
             });
 
-            // Mark selected option
-            options[optionIndex].classList.add('selected');
-
-            // Disable further selections for this question
-            options.forEach(opt => opt.style.pointerEvents = 'none');
-
-            // Enable next button
-            document.getElementById('next-btn').disabled = false;
-
-            // Record answer with option_id for backend validation
-            answers.push({
-                question_id: question.id,
-                selected_option_id: question.options[optionIndex].id
-            });
-        }
-
-        function nextQuestion() {
-            currentQuestionIndex++;
+            const data = await response.json();
             
-            if (currentQuestionIndex < currentQuiz.questions.length) {
+            if (data.success && data.quiz) {
+                currentQuiz = data.quiz;
+                attemptId = data.attempt_id;
+                quizStartTime = Date.now();
+                currentQuestionIndex = 0;
+                score = 0;
+                answers = [];
+                
+                document.getElementById('quiz-selection').style.display = 'none';
+                document.getElementById('quiz-interface').style.display = 'block';
+                
                 showQuestion();
             } else {
-                showResults();
+                alert(data.error || 'Failed to start quiz. Please try again.');
             }
+        } catch (error) {
+            console.error('Error starting quiz:', error);
+            alert('Failed to start quiz. Please try again.');
+        }
+    }
+
+    function showQuestion() {
+        const question = currentQuiz.questions[currentQuestionIndex];
+        const container = document.getElementById('question-container');
+        
+        // Update progress
+        const progress = ((currentQuestionIndex + 1) / currentQuiz.questions.length) * 100;
+        document.getElementById('progress-bar').style.width = progress + '%';
+        document.getElementById('progress-label').textContent = 
+            `Question ${currentQuestionIndex + 1} of ${currentQuiz.questions.length}`;
+        document.getElementById('score-label').textContent = `Score: ${score}`;
+
+        // Display question - FIXED: Use option.option_text instead of just option
+        container.innerHTML = `
+            <div class="question-number">Question ${currentQuestionIndex + 1}</div>
+            <div class="question-text">${question.question_text}</div>
+            <div class="options-list">
+                ${question.options.map((option, index) => `
+                    <div class="option" onclick="selectOption(${index})">
+                        ${option.option_text}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        // Disable next button
+        document.getElementById('next-btn').disabled = true;
+    }
+
+    function selectOption(optionIndex) {
+        const question = currentQuiz.questions[currentQuestionIndex];
+        const options = document.querySelectorAll('.option');
+        
+        // Remove previous selections
+        options.forEach(opt => {
+            opt.classList.remove('selected');
+            opt.style.pointerEvents = 'auto';
+        });
+
+        // Mark selected option
+        options[optionIndex].classList.add('selected');
+
+        // Disable further selections for this question
+        options.forEach(opt => opt.style.pointerEvents = 'none');
+
+        // Enable next button
+        document.getElementById('next-btn').disabled = false;
+
+        // Record answer with option_id for backend validation
+        answers.push({
+            question_id: question.id,
+            selected_option_id: question.options[optionIndex].id
+        });
+    }
+
+    function nextQuestion() {
+        currentQuestionIndex++;
+        
+        if (currentQuestionIndex < currentQuiz.questions.length) {
+            showQuestion();
+        } else {
+            showResults();
+        }
+    }
+
+    async function showResults() {
+        const timeTaken = Math.floor((Date.now() - quizStartTime) / 1000);
+        
+        // Convert answers array to backend format: { question_id: option_id }
+        const answersDict = {};
+        answers.forEach(answer => {
+            answersDict[answer.question_id] = answer.selected_option_id;
+        });
+        
+        // Submit results to backend and get detailed feedback
+        let backendResults = null;
+        try {
+            const response = await fetch(`/api/quiz/${currentQuiz.id}/submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    attempt_id: attemptId,
+                    answers: answersDict,
+                    time_taken: timeTaken
+                })
+            });
+            const data = await response.json();
+            if (data.success && data.results) {
+                backendResults = data.results;
+                score = data.results.correct_answers;
+            }
+        } catch (error) {
+            console.error('Error submitting results:', error);
         }
 
-        async function showResults() {
-            const timeTaken = Math.floor((Date.now() - quizStartTime) / 1000);
+        const percentage = backendResults ? backendResults.score : Math.round((score / currentQuiz.questions.length) * 100);
+
+        // Display results
+        document.getElementById('quiz-interface').style.display = 'none';
+        document.getElementById('results-screen').style.display = 'block';
+
+        document.getElementById('final-score').textContent = percentage + '%';
+        document.getElementById('score-details').textContent = 
+            `You got ${score} out of ${currentQuiz.questions.length} correct`;
+
+        // Determine message based on score
+        let message = '';
+        if (percentage >= 90) message = 'Outstanding! 🌟';
+        else if (percentage >= 75) message = 'Great job! 👏';
+        else if (percentage >= 60) message = 'Good effort! 👍';
+        else message = 'Keep learning! 📚';
+        
+        document.getElementById('score-message').textContent = message;
+
+        // Show achievement if perfect score
+        const achievementContainer = document.getElementById('achievement-container');
+        if (percentage === 100) {
+            achievementContainer.innerHTML = `
+                <div class="achievement">
+                    <i class="fas fa-trophy"></i>
+                    <h3>Perfect Score!</h3>
+                    <p>You answered every question correctly. Excellent work!</p>
+                </div>
+            `;
+        } else {
+            achievementContainer.innerHTML = '';
+        }
+
+        // Show question-by-question review with "You got it right!" / "Oops!" feedback
+        if (backendResults && backendResults.by_question) {
+            const reviewSection = document.getElementById('question-review');
+            let reviewHTML = '<h3 style="font-family: Space Grotesk, sans-serif; font-size: 1.5rem; color: #1e293b; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-clipboard-check" style="color: #667eea;"></i> Question Review</h3>';
             
-            // Convert answers array to backend format: { question_id: option_id }
-            const answersDict = {};
-            answers.forEach(answer => {
-                answersDict[answer.question_id] = answer.selected_option_id;
-            });
-            
-            // Submit results to backend and get detailed feedback
-            let backendResults = null;
-            try {
-                const response = await fetch(`/api/quiz/${currentQuiz.id}/submit`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        attempt_id: attemptId,
-                        answers: answersDict,
-                        time_taken: timeTaken
-                    })
-                });
-                const data = await response.json();
-                if (data.success && data.results) {
-                    backendResults = data.results;
-                    score = data.results.correct_answers;
-                }
-            } catch (error) {
-                console.error('Error submitting results:', error);
-            }
-
-            const percentage = backendResults ? backendResults.score : Math.round((score / currentQuiz.questions.length) * 100);
-
-            // Display results
-            document.getElementById('quiz-interface').style.display = 'none';
-            document.getElementById('results-screen').style.display = 'block';
-
-            document.getElementById('final-score').textContent = percentage + '%';
-            document.getElementById('score-details').textContent = 
-                `You got ${score} out of ${currentQuiz.questions.length} correct`;
-
-            // Determine message based on score
-            let message = '';
-            if (percentage >= 90) message = 'Outstanding! 🌟';
-            else if (percentage >= 75) message = 'Great job! 👏';
-            else if (percentage >= 60) message = 'Good effort! 👍';
-            else message = 'Keep learning! 📚';
-            
-            document.getElementById('score-message').textContent = message;
-
-            // Show achievement if perfect score
-            const achievementContainer = document.getElementById('achievement-container');
-            if (percentage === 100) {
-                achievementContainer.innerHTML = `
-                    <div class="achievement">
-                        <i class="fas fa-trophy"></i>
-                        <h3>Perfect Score!</h3>
-                        <p>You answered every question correctly. Excellent work!</p>
-                    </div>
-                `;
-            } else {
-                achievementContainer.innerHTML = '';
-            }
-
-            // NEW: Show question-by-question review with "You got it right!" / "Oops!" feedback
-            if (backendResults && backendResults.by_question) {
-                const reviewSection = document.getElementById('question-review');
-                let reviewHTML = '<h3 style="font-family: Space Grotesk, sans-serif; font-size: 1.5rem; color: #1e293b; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;"><i class="fas fa-clipboard-check" style="color: #667eea;"></i> Question Review</h3>';
+            backendResults.by_question.forEach((result, index) => {
+                const isCorrect = result.is_correct;
                 
-                backendResults.by_question.forEach((result, index) => {
-                    const isCorrect = result.is_correct;
-                    
-                    reviewHTML += `
-                        <div style="background: ${isCorrect ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'}; border-left: 4px solid ${isCorrect ? '#10b981' : '#ef4444'}; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                            <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1rem;">
-                                <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%; background: ${isCorrect ? '#10b981' : '#ef4444'}; display: flex; align-items: center; justify-content: center;">
-                                    <i class="fas fa-${isCorrect ? 'check' : 'times'}" style="color: white; font-size: 1.5rem;"></i>
-                                </div>
-                                <div style="flex: 1;">
-                                    <h4 style="color: ${isCorrect ? '#065f46' : '#991b1b'}; font-size: 1.25rem; margin-bottom: 0.5rem; font-weight: 700;">
-                                        ${isCorrect ? '✓ You got it right!' : '✗ Oops! That\'s incorrect'}
-                                    </h4>
-                                    <p style="color: #475569; font-size: 0.9rem; margin-bottom: 0.75rem;">Question ${index + 1} of ${backendResults.by_question.length}</p>
-                                    <p style="color: #1e293b; font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; line-height: 1.6;">${result.question_text}</p>
-                                    ${!isCorrect ? `<p style="background: white; padding: 0.75rem; border-radius: 6px; color: #64748b; font-size: 0.95rem; margin-bottom: 1rem;"><i class="fas fa-info-circle" style="color: #3b82f6;"></i> <strong>The correct answer was different from your selection.</strong></p>` : ''}
-                                    <div style="background: white; padding: 1.25rem; border-radius: 8px; border-left: 3px solid #0ea5e9;">
-                                        <p style="color: #0c4a6e; margin: 0; line-height: 1.7;"><strong style="color: #075985;"><i class="fas fa-lightbulb" style="color: #f59e0b;"></i> Explanation:</strong> ${result.explanation || 'No explanation provided.'}</p>
-                                    </div>
+                reviewHTML += `
+                    <div style="background: ${isCorrect ? 'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'}; border-left: 4px solid ${isCorrect ? '#10b981' : '#ef4444'}; padding: 1.5rem; border-radius: 12px; margin-bottom: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; align-items: start; gap: 1rem; margin-bottom: 1rem;">
+                            <div style="flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%; background: ${isCorrect ? '#10b981' : '#ef4444'}; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-${isCorrect ? 'check' : 'times'}" style="color: white; font-size: 1.5rem;"></i>
+                            </div>
+                            <div style="flex: 1;">
+                                <h4 style="color: ${isCorrect ? '#065f46' : '#991b1b'}; font-size: 1.25rem; margin-bottom: 0.5rem; font-weight: 700;">
+                                    ${isCorrect ? '✓ You got it right!' : '✗ Oops! That\'s incorrect'}
+                                </h4>
+                                <p style="color: #475569; font-size: 0.9rem; margin-bottom: 0.75rem;">Question ${index + 1} of ${backendResults.by_question.length}</p>
+                                <p style="color: #1e293b; font-size: 1.05rem; font-weight: 600; margin-bottom: 1rem; line-height: 1.6;">${result.question_text}</p>
+                                ${!isCorrect ? `<p style="background: white; padding: 0.75rem; border-radius: 6px; color: #64748b; font-size: 0.95rem; margin-bottom: 1rem;"><i class="fas fa-info-circle" style="color: #3b82f6;"></i> <strong>The correct answer was different from your selection.</strong></p>` : ''}
+                                <div style="background: white; padding: 1.25rem; border-radius: 8px; border-left: 3px solid #0ea5e9;">
+                                    <p style="color: #0c4a6e; margin: 0; line-height: 1.7;"><strong style="color: #075985;"><i class="fas fa-lightbulb" style="color: #f59e0b;"></i> Explanation:</strong> ${result.explanation || 'No explanation provided.'}</p>
                                 </div>
                             </div>
                         </div>
-                    `;
-                });
-                
-                reviewSection.innerHTML = reviewHTML;
-            }
-        }
-
-        function restartQuiz() {
-            // Restart with new attempt
-            startQuiz(currentQuiz.id);
-        }
-
-        function backToSelection() {
-            document.getElementById('results-screen').style.display = 'none';
-            document.getElementById('quiz-selection').style.display = 'block';
+                    </div>
+                `;
+            });
             
-            currentQuiz = null;
-            currentQuestionIndex = 0;
-            score = 0;
-            answers = [];
-            attemptId = null;
-            quizStartTime = null;
+            reviewSection.innerHTML = reviewHTML;
         }
+    }
 
-        function exitQuiz() {
-            if (confirm('Are you sure you want to exit this quiz? Your progress will be lost.')) {
-                backToSelection();
-                document.getElementById('quiz-interface').style.display = 'none';
-            }
+    function restartQuiz() {
+        // Restart with new attempt
+        startQuiz(currentQuiz.id);
+    }
+
+    function backToSelection() {
+        document.getElementById('results-screen').style.display = 'none';
+        document.getElementById('quiz-selection').style.display = 'block';
+        
+        currentQuiz = null;
+        currentQuestionIndex = 0;
+        score = 0;
+        answers = [];
+        attemptId = null;
+        quizStartTime = null;
+    }
+
+    function exitQuiz() {
+        if (confirm('Are you sure you want to exit this quiz? Your progress will be lost.')) {
+            backToSelection();
+            document.getElementById('quiz-interface').style.display = 'none';
         }
-    </script>
-</body>
-</html>
+    }
+</script>
+{% endblock %}
 
 <!--
 I did no harm and this file is not truncated.
-v4.0.0 - December 28, 2024 - COMPLETE FINAL VERSION
+v5.0.0 - January 8, 2026 - TEMPLATE INHERITANCE VERSION
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
