@@ -1,20 +1,20 @@
 """
 AI Council Service - Multi-AI Query & Consensus Generation
 File: services/ai_council_service.py
-Date: January 9, 2026
-Version: 1.0.0
+Date: January 10, 2026
+Version: 1.1.0
 
 PURPOSE:
-Query multiple AI services with the same question and generate consensus. 
+Query multiple AI services with the same question and generate consensus.
 
 AI SERVICES (7 total):
 1. OpenAI GPT-4
 2. Anthropic Claude Sonnet 4
 3. Mistral Large
 4. DeepSeek Chat
-5. Cohere Command
-6. Groq Llama
-7. xAI Grok
+5. Cohere Command R+
+6. Groq Llama 3.1 70B
+7. xAI Grok 3
 
 FEATURES:
 - Parallel execution (all 7 AIs queried simultaneously)
@@ -23,7 +23,16 @@ FEATURES:
 - Consensus generation using Claude
 - Claim extraction from responses
 
-Last modified: January 9, 2026 - v1.0.0 Initial Release
+CHANGELOG:
+v1.1.0 (January 10, 2026):
+- Updated xAI: grok-beta → grok-3 (deprecated model fix)
+- Updated Cohere: command → command-r-plus (deprecated model fix)
+- All 7 AI services now using current models
+
+v1.0.0 (January 9, 2026):
+- Initial release
+
+Last modified: January 10, 2026 - v1.1.0 Model Updates
 I did no harm and this file is not truncated.
 """
 
@@ -116,10 +125,10 @@ class AICouncilService:
             if api_key:
                 self.ai_clients['cohere'] = {
                     'client': cohere.Client(api_key=api_key),
-                    'model': 'command',
-                    'name': 'Cohere Command'
+                    'model': 'command-r-plus',
+                    'name': 'Cohere Command R+'
                 }
-                logger.info("✓ Cohere initialized")
+                logger.info("✓ Cohere Command R+ initialized")
         except Exception as e:
             logger.warning(f"Cohere unavailable: {e}")
         
@@ -147,10 +156,10 @@ class AICouncilService:
                         api_key=api_key,
                         base_url="https://api.x.ai/v1"
                     ),
-                    'model': 'grok-beta',
-                    'name': 'xAI Grok'
+                    'model': 'grok-3',
+                    'name': 'xAI Grok 3'
                 }
-                logger.info("✓ xAI Grok initialized")
+                logger.info("✓ xAI Grok 3 initialized")
         except Exception as e:
             logger.warning(f"xAI unavailable: {e}")
     
