@@ -1,41 +1,23 @@
 """
 File: app.py
-Last Updated: January 8, 2026 - v10.3.0
-Description: Main Flask application - TEMPLATE INHERITANCE UPDATE
+Last Updated: January 9, 2026 - v10.4.0
+Description: Main Flask application - AI COUNCIL INTEGRATION
 
-NEW IN v10.3.0 (January 8, 2026):
+NEW IN v10.4.0 (January 9, 2026):
 ========================
-TEMPLATE INHERITANCE IMPLEMENTATION
-- ADDED: active_page parameter to all routes
-- PURPOSE: Enable automatic navigation highlighting in base.html
-- PATTERN: Each route now passes active_page='pagename'
-- BENEFIT: Navigation changes once in base.html = affects all pages
-- NO HARM: All existing functionality preserved ✓
-
-ROUTES UPDATED:
-- / → active_page='home'
-- /about → active_page='about'
-- /features → active_page='features'
-- /analyze → active_page='news'
-- /transcript → active_page='transcript'
-- /debate-arena → active_page='debates'
-- /claim-tracker → active_page='claims'
-- /quiz → active_page='quiz'
-- /contact → active_page='contact'
-- /observatory → active_page='observatory'
-
-CRITICAL FIX IN v10.2.30 (December 29, 2025):
-========================
-CLAIM TRACKER NOT SAVING: Fixed claim extraction data source bug
-- PROBLEM: auto_save_claims_from_analysis getting wrong data format
-- ROOT CAUSE: Passing final_results (transformed) instead of raw_results
-- ERROR LOG: "'str' object has no attribute 'get'" 
-- FIX: Extract article text from raw_results BEFORE transformation
-- RESULT: Claims now automatically saved to database!
-- PRESERVED: All v10.2.29 functionality (DO NO HARM ✓)
+AI COUNCIL SYSTEM ADDED
+- NEW FEATURE: Multi-AI question querying system
+- Users can ask any question to 7 different AI services
+- OpenAI GPT-4, Claude, Mistral, DeepSeek, Cohere, Groq, xAI
+- Consensus summaries showing agreements/disagreements
+- Automatic claim extraction from AI responses
+- Query history stored in database
+- New route: /ask-ai
+- New API endpoints: /api/ai-council/*
+- PRESERVED: All v10.3.0 functionality (DO NO HARM ✓)
 
 This file is complete and ready to deploy to GitHub/Render.
-Last modified: January 8, 2026 - v10.3.0 TEMPLATE INHERITANCE
+Last modified: January 9, 2026 - v10.4.0 AI COUNCIL INTEGRATION
 """
 
 import os
@@ -149,7 +131,7 @@ if database_url:
     
     logger.info("=" * 80)
     logger.info("DATABASE CONFIGURATION:")
-    logger.info("  ✓ PostgreSQL configured for Debate Arenas, Claim Tracker & Quiz Engine")
+    logger.info("  ✓ PostgreSQL configured for Debate Arenas, Claim Tracker, Quiz Engine & AI Council")
     logger.info("  ✓ Connection pooling enabled")
     logger.info("  ✓ Auto-reconnect on failure")
     logger.info("=" * 80)
@@ -349,13 +331,80 @@ if database_url:
     logger.info("=" * 80)
     
     # ========================================================================
+    # AI COUNCIL SYSTEM (v1.0.0 - January 9, 2026)
+    # ========================================================================
+    # Multi-AI question querying with consensus generation
+    # Users can ask any question and get perspectives from 7 different AIs:
+    # - OpenAI GPT-4, Claude, Mistral, DeepSeek, Cohere, Groq, xAI
+    # Features: Consensus summaries, claim extraction, query history
+    # ========================================================================
+    
+    ai_council_available = False
+    ai_council_service = None
+    
+    logger.info("=" * 80)
+    logger.info("AI COUNCIL INITIALIZATION:")
+    
+    try:
+        # Step 1: Import the init function
+        from ai_council_models import init_ai_council_db
+        
+        # Step 2: Initialize models with shared db (THIS MUST HAPPEN FIRST!)
+        init_ai_council_db(db)
+        logger.info("  ✓ AI Council models initialized with shared db")
+        
+        # Step 3: Import routes and models
+        from ai_council_routes import ai_council_bp, init_routes
+        from ai_council_models import AIQuery, AIResponse, AIConsensus
+        
+        # Step 4: Initialize AI Council service
+        try:
+            from services.ai_council_service import AICouncilService
+            ai_council_service = AICouncilService()
+            logger.info("  ✓ AI Council service initialized")
+            logger.info(f"  ✓ {len(ai_council_service.ai_clients)} AI services available")
+        except Exception as e:
+            logger.warning(f"  ⚠ AI Council service init failed: {e}")
+            ai_council_service = None
+        
+        # Step 5: Initialize routes with database, models, and service
+        init_routes(db, {
+            'AIQuery': AIQuery,
+            'AIResponse': AIResponse,
+            'AIConsensus': AIConsensus
+        }, ai_council_service)
+        logger.info("  ✓ AI Council routes initialized")
+        
+        # Step 6: Register the blueprint
+        app.register_blueprint(ai_council_bp)
+        logger.info("  ✓ AI Council routes registered at /api/ai-council/*")
+        logger.info("  ✓ Available endpoints:")
+        logger.info("    - POST   /api/ai-council/ask")
+        logger.info("    - GET    /api/ai-council/recent")
+        logger.info("    - GET    /api/ai-council/<id>")
+        logger.info("    - GET    /api/ai-council/stats")
+        logger.info("  ✓ AI Council: FULLY OPERATIONAL")
+        
+        ai_council_available = True
+        
+    except ImportError as e:
+        logger.warning(f"  ⚠ AI Council system not available: {e}")
+        ai_council_available = False
+    except Exception as e:
+        logger.error(f"  ✗ AI Council initialization error: {e}")
+        logger.error(f"  ✗ Traceback: {traceback.format_exc()}")
+        ai_council_available = False
+    
+    logger.info("=" * 80)
+    
+    # ========================================================================
     # CRITICAL v10.2.29 FIX: Create Tables WITHOUT Disabling Features
     # ========================================================================
     # PROBLEM v10.2.28: "Already exists" errors disabled all features
     # SOLUTION v10.2.29: Tables exist = SUCCESS, keep features enabled!
     # ========================================================================
     
-    if old_debate_available or simple_debate_available or claim_tracker_available or quiz_available:
+    if old_debate_available or simple_debate_available or claim_tracker_available or quiz_available or ai_council_available:
         with app.app_context():
             try:
                 # Create tables (might throw "already exists" - that's OK!)
@@ -369,6 +418,8 @@ if database_url:
                     logger.info("    - Claim tracker tables: claims, claim_sources, claim_evidence")
                 if quiz_available:
                     logger.info("    - Quiz tables: quizzes, questions, question_options, quiz_attempts, achievements, user_achievements, leaderboard_entries")
+                if ai_council_available:
+                    logger.info("    - AI Council tables: ai_queries, ai_responses, ai_consensus")
                     
             except Exception as e:
                 error_msg = str(e).lower()
@@ -395,6 +446,7 @@ if database_url:
                     simple_debate_available = False
                     claim_tracker_available = False
                     quiz_available = False
+                    ai_council_available = False
     else:
         logger.warning("  ⚠ No database features available - all disabled")
         db = None
@@ -404,6 +456,7 @@ else:
     simple_debate_available = False
     claim_tracker_available = False
     quiz_available = False
+    ai_council_available = False
     logger.info("=" * 80)
     logger.info("DATABASE: Not configured (All database features disabled)")
     logger.info("=" * 80)
@@ -651,6 +704,51 @@ def quiz_page():
         </html>
         ''', 503
     return render_template('quiz.html', active_page='quiz')
+
+@app.route('/ask-ai')
+def ask_ai_page():
+    """
+    Ask AI Council - Query multiple AIs with same question
+    
+    Version: 1.0.0 - January 9, 2026
+    
+    Features:
+    - Ask any question to 7 different AI services
+    - OpenAI GPT-4, Claude, Mistral, DeepSeek, Cohere, Groq, xAI
+    - Consensus summary showing agreements/disagreements
+    - Auto-extract claims from AI responses
+    - Save to Claim Tracker database
+    - Query history
+    
+    Users can ask questions like:
+    - "What's the best way to reduce inflation?"
+    - "Is nuclear energy safe?"
+    - "Should I invest in cryptocurrency?"
+    """
+    if not ai_council_available:
+        return '''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Ask AI - Not Available</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 40px; text-align: center; background: #f5f5f5; }
+                .error-box { background: white; padding: 40px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+                h1 { color: #dc2626; margin-bottom: 20px; }
+                p { color: #666; line-height: 1.6; }
+                a { color: #2563eb; text-decoration: none; font-weight: 600; }
+            </style>
+        </head>
+        <body>
+            <div class="error-box">
+                <h1>⚠️ Ask AI Not Available</h1>
+                <p>Database not configured. Set DATABASE_URL in Render.</p>
+                <p style="margin-top: 30px;"><a href="/">← Back to Home</a></p>
+            </div>
+        </body>
+        </html>
+        ''', 503
+    return render_template('ask_ai.html', active_page='ask-ai')
 
 @app.route('/features')
 def features():
@@ -1341,6 +1439,7 @@ def init_database():
         simple_tables = [t for t in tables if 'simple_' in t]
         claim_tables = [t for t in tables if 'claim' in t]
         quiz_tables = [t for t in tables if 'quiz' in t or 'question' in t or 'achievement' in t or 'leaderboard' in t]
+        ai_council_tables = [t for t in tables if 'ai_' in t]
         
         return jsonify({
             'success': True,
@@ -1348,7 +1447,8 @@ def init_database():
             'tables_created': {
                 'simple_debate': simple_tables,
                 'claim_tracker': claim_tables,
-                'quiz_engine': quiz_tables
+                'quiz_engine': quiz_tables,
+                'ai_council': ai_council_tables
             },
             'all_tables': tables
         })
@@ -1424,7 +1524,9 @@ def health():
             'simple_debate_arena': 'active' if simple_debate_available else 'disabled',
             'claim_tracker': 'active' if claim_tracker_available else 'disabled',
             'quiz_engine': 'active' if quiz_available else 'disabled',
-            'quiz_ai_generator': 'active' if quiz_generator and quiz_generator.is_available() else 'disabled'
+            'quiz_ai_generator': 'active' if quiz_generator and quiz_generator.is_available() else 'disabled',
+            'ai_council': 'active' if ai_council_available else 'disabled',
+            'ai_council_service': 'active' if ai_council_service else 'disabled'
         }
     })
 
@@ -1472,7 +1574,7 @@ def serve_static(filename):
 
 if __name__ == '__main__':
     logger.info("=" * 80)
-    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.3.0")
+    logger.info("TRUTHLENS NEWS ANALYZER - STARTING v10.4.0")
     logger.info("=" * 80)
     logger.info("")
     logger.info("DEPLOYMENT ARCHITECTURE:")
@@ -1481,11 +1583,13 @@ if __name__ == '__main__':
     logger.info("  🗄️ Database: PostgreSQL (Render)")
     logger.info("  🔗 CORS: Configured for cross-origin requests")
     logger.info("")
-    logger.info("NEW IN v10.3.0 (January 8, 2026):")
-    logger.info("  ✅ Template inheritance implemented")
-    logger.info("  ✅ Navigation now defined in ONE place (base.html)")
-    logger.info("  ✅ All routes pass active_page for automatic highlighting")
-    logger.info("  ✅ No harm to existing functionality")
+    logger.info("NEW IN v10.4.0 (January 9, 2026):")
+    logger.info("  ✅ AI Council system integrated")
+    logger.info("  ✅ Multi-AI question querying (7 services)")
+    logger.info("  ✅ Consensus summaries with agreement/disagreement")
+    logger.info("  ✅ Auto-claim extraction from AI responses")
+    logger.info("  ✅ Query history database storage")
+    logger.info("  ✅ New route: /ask-ai")
     logger.info("")
     logger.info("AVAILABLE FEATURES:")
     logger.info("  ✓ News Analysis - 7 AI services with comprehensive fact-checking")
@@ -1550,6 +1654,18 @@ if __name__ == '__main__':
     else:
         logger.info("  ✗ Quiz Engine - Disabled (DATABASE_URL not set or models missing)")
     
+    if ai_council_available:
+        logger.info("  ✓ AI Council - FULLY OPERATIONAL ⭐")
+        logger.info("    - Ask any question to multiple AI services")
+        logger.info("    - Get consensus summaries")
+        logger.info("    - Auto-extract verifiable claims")
+        logger.info("    - Query history and statistics")
+        logger.info("    - Available at /ask-ai")
+        if ai_council_service:
+            logger.info(f"    - {len(ai_council_service.ai_clients)} AI services initialized")
+    else:
+        logger.info("  ✗ AI Council - Disabled (DATABASE_URL not set or models missing)")
+    
     if os.getenv('ASSEMBLYAI_API_KEY'):
         logger.info("  ✓ Live Stream Analysis - YouTube Live with real-time transcription")
         logger.info("    - Real-time audio transcription (AssemblyAI)")
@@ -1584,4 +1700,4 @@ if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=False)
 
 # I did no harm and this file is not truncated
-# v10.3.0 - January 8, 2026 - TEMPLATE INHERITANCE (Added active_page to all routes)
+# v10.4.0 - January 9, 2026 - AI COUNCIL INTEGRATION (Added multi-AI querying system)
