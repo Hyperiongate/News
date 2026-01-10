@@ -1,21 +1,20 @@
 /*
 TruthLens Navigation CSS - TWO-ROW LAYOUT
-Version: 2.3.0 - NUCLEAR Z-INDEX FIX
+Version: 2.4.0 - POSITION FIXED PRESERVATION
 Date: January 9, 2026
 
-WHAT'S NEW IN v2.3.0:
-✅ FIXED: ALL navigation elements (background + buttons) stay on top
-✅ Changed: Every child element gets z-index: 9999 !important
-✅ Added: min-height: fit-content to ensure background covers all buttons
-✅ Added: overflow: visible to extend stacking context
-✅ NUCLEAR OPTION: Everything in navigation gets z-index: 9999
+WHAT'S NEW IN v2.4.0:
+✅ FIXED: Navigation stays fixed at top (doesn't scroll away)
+✅ Changed: Only child elements get position: relative, not main nav
+✅ Preserved: z-index: 9999 on all navigation elements
+✅ Preserved: Background covers all buttons
 
 Navigation Structure:
 - Top Row: Main tools (6 items)
 - Bottom Row: Secondary tools (5 items)
 
 This file is complete and ready to deploy.
-Last modified: January 9, 2026 - v2.3.0
+Last modified: January 9, 2026 - v2.4.0
 I did no harm and this file is not truncated.
 */
 
@@ -43,9 +42,13 @@ I did no harm and this file is not truncated.
     overflow: visible;
 }
 
-/* Force all navigation children to stay in the same layer */
-.main-navigation,
-.main-navigation * {
+/* Force all navigation CHILDREN to stay in the same layer, but keep navigation fixed */
+.nav-container-unified,
+.nav-container-unified *,
+.nav-header-row,
+.nav-header-row *,
+.nav-menu-container,
+.nav-menu-container * {
     position: relative;
     z-index: 9999 !important;
 }
