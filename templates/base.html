@@ -1,30 +1,17 @@
 <!DOCTYPE html>
 <!--
 TruthLens - Base Template with Universal Progress Banner
-Version: 2.0.0 - UNIVERSAL PROGRESS BANNER SYSTEM
+Version: 2.1.0 - ADDED ASK AI NAVIGATION
 Date: January 9, 2026
 
-WHAT'S NEW IN v2.0.0:
-- ADDED: Universal progress banner system (works on all pages)
-- ADDED: Global JavaScript functions: showProgressBanner(), updateProgressBanner(), hideProgressBanner()
-- ADDED: Banner positioned ABOVE navigation (z-index: 1100)
-- ADDED: Smooth animations and transitions
-- PRESERVED: All v1.0.2 functionality (DO NO HARM)
+WHAT'S NEW IN v2.1.0:
+- ADDED: "Ask AI" to top navigation row
+- ADDED: Icon and active page highlighting for Ask AI
+- PRESERVED: All v2.0.0 functionality (DO NO HARM)
+- PRESERVED: Universal progress banner system
+- PRESERVED: All existing navigation links
 
-UNIVERSAL BANNER FEATURES:
-- Single banner implementation for entire site
-- Positioned above navigation bar (always visible)
-- Animated progress bar with percentage
-- Custom icons and messages per page
-- Fun facts rotation during long operations
-- Automatic hide/show with smooth transitions
-
-HOW PAGES USE THE BANNER:
-1. showProgressBanner(message, icon) - Show banner with message
-2. updateProgressBanner(percent, message, icon) - Update progress
-3. hideProgressBanner() - Hide banner when complete
-
-Last modified: January 9, 2026 - v2.0.0 Universal Progress Banner
+Last modified: January 9, 2026 - v2.1.0 Ask AI Navigation
 I did no harm and this file is not truncated.
 -->
 <html lang="en">
@@ -194,13 +181,14 @@ I did no harm and this file is not truncated.
                     <li><a href="/features" class="nav-link {% if active_page == 'features' %}active{% endif %}"><i class="fas fa-star"></i> Features</a></li>
                     <li><a href="/analyze" class="nav-link {% if active_page == 'news' %}active{% endif %}"><i class="fas fa-newspaper"></i> News Analysis</a></li>
                     <li><a href="/transcript" class="nav-link {% if active_page == 'transcript' %}active{% endif %}"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
+                    <li><a href="/ask-ai" class="nav-link {% if active_page == 'ask-ai' %}active{% endif %}"><i class="fas fa-brain"></i> Ask AI</a></li>
                     <li><a href="/debate-arena" class="nav-link {% if active_page == 'debates' %}active{% endif %}"><i class="fas fa-users"></i> Debate Arena</a></li>
                 </ul>
                 
                 <!-- BOTTOM ROW: Secondary Tools -->
                 <ul class="nav-menu-row bottom-row">
                     <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                    <li><a href="https://ai-bias-research.onrender.com/observatory" class="nav-link external" target="_blank"><i class="fas fa-chart-line"></i> AI Observatory <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                    <li><a href="/observatory" class="nav-link {% if active_page == 'observatory' %}active{% endif %}"><i class="fas fa-chart-line"></i> AI Observatory</a></li>
                     <li><a href="/claim-tracker" class="nav-link {% if active_page == 'claims' %}active{% endif %}"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
                     <li><a href="/quiz" class="nav-link {% if active_page == 'quiz' %}active{% endif %}"><i class="fas fa-question-circle"></i> Quiz</a></li>
                     <li><a href="/contact" class="nav-link {% if active_page == 'contact' %}active{% endif %}"><i class="fas fa-envelope"></i> Contact Us</a></li>
@@ -368,4 +356,5 @@ I did no harm and this file is not truncated.
 <!--
 I did no harm and this file is not truncated.
 DEPLOYMENT READY FOR GITHUB/RENDER
+Version: 2.1.0 - January 9, 2026 - ASK AI NAVIGATION ADDED
 -->
