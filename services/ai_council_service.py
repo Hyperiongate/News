@@ -2,12 +2,12 @@
 AI Council Service - Multi-AI Query & Consensus Generation
 File: services/ai_council_service.py
 Date: January 10, 2026
-Version: 1.1.0
+Version: 2.0.0
 
 PURPOSE:
 Query multiple AI services with the same question and generate consensus.
 
-AI SERVICES (7 total):
+AI SERVICES (10 total - EXPANDED!):
 1. OpenAI GPT-4
 2. Anthropic Claude Sonnet 4
 3. Mistral Large
@@ -15,24 +15,33 @@ AI SERVICES (7 total):
 5. Cohere Command R+
 6. Groq Llama 3.1 70B
 7. xAI Grok 3
+8. Perplexity AI Sonar (NEW!)
+9. Reka Core (NEW!)
+10. AI21 Jamba 1.5 (NEW!)
 
 FEATURES:
-- Parallel execution (all 7 AIs queried simultaneously)
+- Parallel execution (all 10 AIs queried simultaneously)
 - Timeout handling (20s per AI)
 - Error recovery (continues if some AIs fail)
 - Consensus generation using Claude
 - Claim extraction from responses
 
 CHANGELOG:
+v2.0.0 (January 10, 2026):
+- Added Perplexity AI Sonar (real-time web search AI)
+- Added Reka Core (multimodal AI)
+- Added AI21 Jamba 1.5 (hybrid SSM-Transformer model)
+- Now supports 10 AI services total!
+
 v1.1.0 (January 10, 2026):
 - Updated xAI: grok-beta → grok-3 (deprecated model fix)
 - Updated Cohere: command → command-r-plus (deprecated model fix)
 - All 7 AI services now using current models
 
 v1.0.0 (January 9, 2026):
-- Initial release
+- Initial release with 7 AI services
 
-Last modified: January 10, 2026 - v1.1.0 Model Updates
+Last modified: January 10, 2026 - v2.0.0 10 AI Services!
 I did no harm and this file is not truncated.
 """
 
@@ -162,6 +171,57 @@ class AICouncilService:
                 logger.info("✓ xAI Grok 3 initialized")
         except Exception as e:
             logger.warning(f"xAI unavailable: {e}")
+        
+        # 8. Perplexity AI
+        try:
+            import openai  # Perplexity uses OpenAI SDK
+            api_key = os.getenv('PERPLEXITY_API_KEY')
+            if api_key:
+                self.ai_clients['perplexity'] = {
+                    'client': openai.OpenAI(
+                        api_key=api_key,
+                        base_url="https://api.perplexity.ai"
+                    ),
+                    'model': 'llama-3.1-sonar-large-128k-online',
+                    'name': 'Perplexity AI Sonar'
+                }
+                logger.info("✓ Perplexity AI initialized")
+        except Exception as e:
+            logger.warning(f"Perplexity unavailable: {e}")
+        
+        # 9. Reka AI
+        try:
+            import openai  # Reka uses OpenAI SDK
+            api_key = os.getenv('REKA_API_KEY')
+            if api_key:
+                self.ai_clients['reka'] = {
+                    'client': openai.OpenAI(
+                        api_key=api_key,
+                        base_url="https://api.reka.ai/v1"
+                    ),
+                    'model': 'reka-core',
+                    'name': 'Reka Core'
+                }
+                logger.info("✓ Reka AI initialized")
+        except Exception as e:
+            logger.warning(f"Reka unavailable: {e}")
+        
+        # 10. AI21 Jurassic
+        try:
+            import openai  # AI21 uses OpenAI SDK
+            api_key = os.getenv('AI21_API_KEY')
+            if api_key:
+                self.ai_clients['ai21'] = {
+                    'client': openai.OpenAI(
+                        api_key=api_key,
+                        base_url="https://api.ai21.com/studio/v1"
+                    ),
+                    'model': 'jamba-1.5-large',
+                    'name': 'AI21 Jamba 1.5'
+                }
+                logger.info("✓ AI21 Jurassic initialized")
+        except Exception as e:
+            logger.warning(f"AI21 unavailable: {e}")
     
     def query_all(self, question: str) -> Dict[str, Any]:
         """
@@ -182,7 +242,7 @@ class AICouncilService:
         responses = []
         
         # Query all AIs in parallel
-        with ThreadPoolExecutor(max_workers=7) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = {}
             
             for service_name, client_info in self.ai_clients.items():
@@ -297,6 +357,36 @@ class AICouncilService:
                 tokens = response.usage.total_tokens if hasattr(response, 'usage') else None
             
             elif service_name == 'xai':
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": question}],
+                    max_tokens=1000,
+                    temperature=0.7
+                )
+                response_text = response.choices[0].message.content
+                tokens = response.usage.total_tokens if hasattr(response, 'usage') else None
+            
+            elif service_name == 'perplexity':
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": question}],
+                    max_tokens=1000,
+                    temperature=0.7
+                )
+                response_text = response.choices[0].message.content
+                tokens = response.usage.total_tokens if hasattr(response, 'usage') else None
+            
+            elif service_name == 'reka':
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[{"role": "user", "content": question}],
+                    max_tokens=1000,
+                    temperature=0.7
+                )
+                response_text = response.choices[0].message.content
+                tokens = response.usage.total_tokens if hasattr(response, 'usage') else None
+            
+            elif service_name == 'ai21':
                 response = client.chat.completions.create(
                     model=model,
                     messages=[{"role": "user", "content": question}],
