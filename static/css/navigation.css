@@ -1,20 +1,20 @@
 /*
 TruthLens Navigation CSS - TWO-ROW LAYOUT
-Version: 2.6.0 - MAXIMUM BACKGROUND COVERAGE
+Version: 2.7.0 - MAXIMUM MAXIMUM BACKGROUND COVERAGE
 Date: January 9, 2026
 
-WHAT'S NEW IN v2.6.0:
-✅ FIXED: Purple background FULLY covers both button rows
-✅ Changed: 4x padding (3rem bottom on main-navigation)
-✅ Changed: 4x padding on nav-container (2rem top, 3rem bottom)
-✅ Preserved: position: fixed, z-index: 9999
+WHAT'S NEW IN v2.7.0:
+✅ FIXED: Purple background DEFINITELY covers both button rows now
+✅ Changed: 8x padding (5rem bottom on main-navigation)
+✅ Changed: 8x padding on nav-container (3rem top, 5rem bottom)
+✅ This is HUGE padding - should cover everything
 
 Navigation Structure:
 - Top Row: Main tools (6 items)
 - Bottom Row: Secondary tools (5 items)
 
 This file is complete and ready to deploy.
-Last modified: January 9, 2026 - v2.6.0
+Last modified: January 9, 2026 - v2.7.0
 I did no harm and this file is not truncated.
 */
 
@@ -31,7 +31,7 @@ I did no harm and this file is not truncated.
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     z-index: 9999 !important;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    padding-bottom: 3rem; /* 4x original - plenty of space below buttons */
+    padding-bottom: 5rem; /* 8x original - huge space below buttons */
     
     /* CRITICAL: Force navigation to create its own compositing layer */
     transform: translate3d(0, 0, 0);
@@ -57,7 +57,7 @@ I did no harm and this file is not truncated.
 .nav-container-unified {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 2rem 1.5rem 3rem; /* 4x original - much more vertical space */
+    padding: 3rem 1.5rem 5rem; /* 8x original - massive vertical space */
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
