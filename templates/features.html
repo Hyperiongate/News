@@ -2,24 +2,24 @@
 
 <!--
 TruthLens Features Page
-Version: 4.0.0 - ACCORDION DROPDOWNS + BADGE REMOVAL
+Version: 5.0.0 - AI COUNCIL + IMPROVED DESCRIPTIONS
 Date: January 10, 2026
 
-WHAT'S NEW IN v4.0.0:
-✅ ADDED: Accordion dropdowns for Features, AI Systems, Data Sources
-✅ REMOVED: "Free Forever" badges from all features
-✅ REMOVED: Beta banner at top of page
-✅ IMPROVED: Cleaner, more professional layout
-✅ PRESERVED: All v3.4.0 functionality (DO NO HARM ✓)
+WHAT'S NEW IN v5.0.0:
+✅ ADDED: AI Council feature (Query 10 AIs simultaneously)
+✅ CHANGED: All accordions start CLOSED (user must click to open)
+✅ IMPROVED: Feature descriptions now explain GOAL + HOW IT WORKS + OUTPUT
+✅ UPDATED: 10 AI systems in infrastructure (was 8)
+✅ PRESERVED: All v4.0.0 functionality (DO NO HARM ✓)
 
 ACCORDION SECTIONS:
-1. Features (11 tools) - Collapsible
-2. Our AI & Data Infrastructure (10 systems) - Collapsible  
-3. Authoritative Data Sources (5 sources) - Collapsible
-4. Comprehensive Data Sources (5 sources) - Collapsible
+1. Features (12 tools) - Starts CLOSED
+2. Our AI & Data Infrastructure (10 systems) - Starts CLOSED
+3. Authoritative Data Sources (5 sources) - Starts CLOSED
+4. Comprehensive Data Sources (5 sources) - Starts CLOSED
 
 This file is complete and ready to deploy.
-Last modified: January 10, 2026 - v4.0.0
+Last modified: January 10, 2026 - v5.0.0
 I did no harm and this file is not truncated.
 -->
 
@@ -161,6 +161,7 @@ I did no harm and this file is not truncated.
     .feature-icon.quiz { background: linear-gradient(135deg, #eab308, #ca8a04); }
     .feature-icon.claims { background: linear-gradient(135deg, #06b6d4, #0891b2); }
     .feature-icon.debate { background: linear-gradient(135deg, #f97316, #ea580c); }
+    .feature-icon.aicouncil { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
 
     .feature-card h3 {
         font-size: 1.25rem;
@@ -172,7 +173,17 @@ I did no harm and this file is not truncated.
     .feature-card p {
         color: #64748b;
         line-height: 1.6;
-        margin: 0;
+        margin: 0 0 0.5rem 0;
+        font-size: 0.95rem;
+    }
+
+    .feature-card .feature-meta {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        font-style: italic;
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e2e8f0;
     }
 
     /* AI Systems Grid */
@@ -310,10 +321,10 @@ I did no harm and this file is not truncated.
         Advanced AI-powered tools to analyze news, transcripts, and live streams with professional-grade accuracy
     </p>
 
-    <!-- FEATURES ACCORDION -->
-    <div class="accordion-section open">
+    <!-- FEATURES ACCORDION - STARTS CLOSED -->
+    <div class="accordion-section">
         <div class="accordion-header" onclick="toggleAccordion(this)">
-            <h2><i class="fas fa-toolbox"></i> Features</h2>
+            <h2><i class="fas fa-toolbox"></i> Features (12 Tools)</h2>
             <span class="accordion-toggle"><i class="fas fa-chevron-down"></i></span>
         </div>
         <div class="accordion-content">
@@ -324,7 +335,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-shield-alt"></i>
                         </div>
                         <h3>Source Credibility</h3>
-                        <p>Evaluates news outlet reliability based on founding history, awards, bias ratings, and track record. Database of 500+ sources with detailed metadata.</p>
+                        <p><strong>Goal:</strong> Determine if a news outlet is trustworthy and reliable.</p>
+                        <p><strong>How it works:</strong> Analyzes outlet's founding history, awards (Pulitzer), bias ratings (AllSides, MBFC), fact-checking record, and ownership transparency.</p>
+                        <p class="feature-meta">Output: Trust score (0-100), bias rating, credibility assessment, and specific concerns</p>
                     </div>
 
                     <div class="feature-card">
@@ -332,7 +345,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-balance-scale"></i>
                         </div>
                         <h3>Bias Detection</h3>
-                        <p>Identifies political lean, sensationalism, loaded language, and editorial slant. Provides visual bias meter and specific examples.</p>
+                        <p><strong>Goal:</strong> Identify political lean and loaded language in article.</p>
+                        <p><strong>How it works:</strong> AI scans for partisan keywords, emotional language, one-sided framing, and sensationalism. Compares against neutral reporting standards.</p>
+                        <p class="feature-meta">Output: Bias meter (left/center/right), examples of biased language, overall fairness score</p>
                     </div>
 
                     <div class="feature-card">
@@ -340,7 +355,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-check-double"></i>
                         </div>
                         <h3>Fact-Checking</h3>
-                        <p>Verifies factual claims against trusted databases and sources. Highlights questionable statements and provides evidence-based corrections.</p>
+                        <p><strong>Goal:</strong> Verify if factual claims in the article are true.</p>
+                        <p><strong>How it works:</strong> Extracts claims, cross-references with trusted databases (FRED, BLS, WHO, CDC), and verifies using 4-AI consensus (GPT-4, Claude, DeepSeek, Cohere).</p>
+                        <p class="feature-meta">Output: Each claim marked as verified/disputed/unverifiable with sources and evidence</p>
                     </div>
 
                     <div class="feature-card">
@@ -348,7 +365,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-user-check"></i>
                         </div>
                         <h3>Author Analysis</h3>
-                        <p>Assesses journalist credentials, publication history, awards, and expertise. Provides context on author's background and potential conflicts of interest.</p>
+                        <p><strong>Goal:</strong> Assess journalist's credibility and expertise.</p>
+                        <p><strong>How it works:</strong> Researches author's publication history, awards, credentials, expertise areas, and potential conflicts of interest using AI and databases.</p>
+                        <p class="feature-meta">Output: Author credibility score, biography, expertise assessment, publication history</p>
                     </div>
 
                     <div class="feature-card">
@@ -356,7 +375,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-eye"></i>
                         </div>
                         <h3>Transparency</h3>
-                        <p>Evaluates source attribution, methodology disclosure, conflicts of interest, and corrections policy. Measures editorial transparency standards.</p>
+                        <p><strong>Goal:</strong> Measure how openly the outlet discloses methods and sources.</p>
+                        <p><strong>How it works:</strong> Checks for source attribution, methodology disclosure, corrections policy, funding transparency, and conflicts of interest.</p>
+                        <p class="feature-meta">Output: Transparency score, specific areas of concern, comparison to journalism standards</p>
                     </div>
 
                     <div class="feature-card">
@@ -364,7 +385,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-award"></i>
                         </div>
                         <h3>Content Quality</h3>
-                        <p>Analyzes writing quality, depth of research, source diversity, and professional standards. Identifies thin or poorly researched content.</p>
+                        <p><strong>Goal:</strong> Evaluate depth of research and professional standards.</p>
+                        <p><strong>How it works:</strong> Analyzes writing quality, source diversity, depth of evidence, logical structure, and adherence to journalistic standards.</p>
+                        <p class="feature-meta">Output: Quality score, strengths/weaknesses analysis, comparison to professional benchmarks</p>
                     </div>
 
                     <div class="feature-card">
@@ -372,7 +395,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-exclamation-triangle"></i>
                         </div>
                         <h3>Manipulation Detection</h3>
-                        <p>Identifies emotional manipulation, misleading headlines, cherry-picked data, and propaganda techniques. Flags manipulative content patterns.</p>
+                        <p><strong>Goal:</strong> Identify emotional manipulation and propaganda techniques.</p>
+                        <p><strong>How it works:</strong> Scans for misleading headlines, cherry-picked data, emotional appeals, logical fallacies, and propaganda patterns (fear-mongering, scapegoating).</p>
+                        <p class="feature-meta">Output: Manipulation risk score, specific techniques identified, examples with explanations</p>
                     </div>
 
                     <div class="feature-card">
@@ -380,7 +405,19 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-file-alt"></i>
                         </div>
                         <h3>Transcript Analysis</h3>
-                        <p>Analyzes speeches, interviews, and videos for credibility. Extracts claims, verifies facts, assesses speaker reliability. Supports YouTube URLs and text transcripts.</p>
+                        <p><strong>Goal:</strong> Fact-check speeches, interviews, and video content.</p>
+                        <p><strong>How it works:</strong> Extracts transcript (YouTube URL or paste text), identifies claims, verifies facts using FRED economic data + AI consensus, analyzes speaker quality.</p>
+                        <p class="feature-meta">Output: Claim-by-claim fact-check with sources, speaker credibility score, PDF export</p>
+                    </div>
+
+                    <div class="feature-card">
+                        <div class="feature-icon aicouncil">
+                            <i class="fas fa-brain"></i>
+                        </div>
+                        <h3>AI Council</h3>
+                        <p><strong>Goal:</strong> Get multiple AI perspectives on any question.</p>
+                        <p><strong>How it works:</strong> Simultaneously queries 10 different AI services (GPT-4, Claude, Mistral, DeepSeek, Cohere, Groq, xAI, Perplexity, Reka, AI21) with your question. Generates consensus summary.</p>
+                        <p class="feature-meta">Output: 10 AI responses, agreement/disagreement areas, consensus score, auto-extracted claims</p>
                     </div>
 
                     <div class="feature-card">
@@ -388,7 +425,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-question-circle"></i>
                         </div>
                         <h3>Media Literacy Quiz</h3>
-                        <p>Test your skills at spotting clickbait, bias, and misinformation. Three difficulty levels with progressive challenges to sharpen your critical thinking.</p>
+                        <p><strong>Goal:</strong> Test and improve your ability to spot misinformation.</p>
+                        <p><strong>How it works:</strong> Interactive quizzes on clickbait detection, bias identification, fact vs opinion, and source evaluation. Three difficulty levels with instant feedback.</p>
+                        <p class="feature-meta">Output: Score, correct answers with explanations, personalized learning path, achievements</p>
                     </div>
 
                     <div class="feature-card">
@@ -396,7 +435,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-tasks"></i>
                         </div>
                         <h3>Claim Tracker</h3>
-                        <p>Automatically extracts and tracks verifiable claims from analyzed articles. Search claims, view verification status, and link to fact-check evidence.</p>
+                        <p><strong>Goal:</strong> Build searchable database of verified claims.</p>
+                        <p><strong>How it works:</strong> Automatically extracts 5 verifiable claims from every analyzed article using Claude AI. Stores in database with verification status and sources. Fully searchable.</p>
+                        <p class="feature-meta">Output: Searchable claim database, verification status, source links, appearance tracking</p>
                     </div>
 
                     <div class="feature-card">
@@ -404,7 +445,9 @@ I did no harm and this file is not truncated.
                             <i class="fas fa-gavel"></i>
                         </div>
                         <h3>Debate Arena</h3>
-                        <p>Start debates on news topics and let the community decide. Create arguments, challenge opposing views, and vote on who made the stronger case.</p>
+                        <p><strong>Goal:</strong> Engage in structured debates on news topics.</p>
+                        <p><strong>How it works:</strong> Create debate topic + your argument (300 words max). Others join opposing side. Community votes on who made the stronger case. Live results displayed.</p>
+                        <p class="feature-meta">Output: Debate status, argument quality, vote results with bar charts, moderator controls</p>
                     </div>
                 </div>
             </div>
@@ -414,7 +457,7 @@ I did no harm and this file is not truncated.
     <!-- OUR AI & DATA INFRASTRUCTURE ACCORDION -->
     <div class="accordion-section">
         <div class="accordion-header" onclick="toggleAccordion(this)">
-            <h2><i class="fas fa-brain"></i> Our AI & Data Infrastructure</h2>
+            <h2><i class="fas fa-brain"></i> Our AI & Data Infrastructure (10 Systems)</h2>
             <span class="accordion-toggle"><i class="fas fa-chevron-down"></i></span>
         </div>
         <div class="accordion-content">
@@ -430,12 +473,6 @@ I did no harm and this file is not truncated.
                         <div class="ai-system-icon">🧠</div>
                         <h4>Anthropic Claude</h4>
                         <p>Constitutional AI with safety focus</p>
-                    </div>
-
-                    <div class="ai-system-card">
-                        <div class="ai-system-icon">✨</div>
-                        <h4>Google Gemini</h4>
-                        <p>Multimodal analysis capabilities</p>
                     </div>
 
                     <div class="ai-system-card">
@@ -458,26 +495,32 @@ I did no harm and this file is not truncated.
 
                     <div class="ai-system-card">
                         <div class="ai-system-icon">⚡</div>
-                        <h4>Groq</h4>
+                        <h4>Groq Llama</h4>
                         <p>Ultra-fast inference speed</p>
                     </div>
 
                     <div class="ai-system-card">
                         <div class="ai-system-icon">🔮</div>
-                        <h4>xAI Grok</h4>
+                        <h4>xAI Grok 3</h4>
                         <p>Real-time data integration</p>
                     </div>
 
                     <div class="ai-system-card">
-                        <div class="ai-system-icon">📚</div>
-                        <h4>AI21 Jamba</h4>
-                        <p>Long context understanding</p>
+                        <div class="ai-system-icon">🔍</div>
+                        <h4>Perplexity AI</h4>
+                        <p>Real-time web search AI</p>
                     </div>
 
                     <div class="ai-system-card">
                         <div class="ai-system-icon">🌟</div>
                         <h4>Reka Core</h4>
                         <p>Multimodal reasoning</p>
+                    </div>
+
+                    <div class="ai-system-card">
+                        <div class="ai-system-icon">📚</div>
+                        <h4>AI21 Jamba 1.5</h4>
+                        <p>Long context understanding</p>
                     </div>
                 </div>
             </div>
@@ -623,7 +666,7 @@ function toggleAccordion(header) {
 
 <!--
 I did no harm and this file is not truncated.
-v4.0.0 - January 10, 2026 - Accordion dropdowns with badge removal
+v5.0.0 - January 10, 2026 - AI Council + Improved Descriptions + All Closed
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
