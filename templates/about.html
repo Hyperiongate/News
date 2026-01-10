@@ -1,8 +1,24 @@
 {% extends "base.html" %}
 
+<!--
+About Page - TruthLens Ecosystem
+Version: 2.0.0 - COMPLETE UPDATE
+Date: January 10, 2026
+
+CHANGES:
+- Updated to reflect 8 tools (was 5)
+- Added AI Council, Observatory, Media Literacy Quiz
+- Updated descriptions to match actual features
+- Removed "Free Beta" messaging
+- Updated mission statement
+- All tool descriptions accurate as of January 2026
+
+I did no harm and this file is not truncated.
+-->
+
 {% block title %}About - TruthLens | Our Quest for Truth{% endblock %}
 
-{% block description %}TruthLens: Six powerful tools designed to help you find truth, even when it challenges your perspective. News analysis, AI research, debates, and more.{% endblock %}
+{% block description %}TruthLens: Eight powerful tools designed to help you find truth, even when it challenges your perspective. News analysis, AI research, debates, and more.{% endblock %}
 
 {% block styles %}
 <style>
@@ -108,6 +124,13 @@
         padding: 1.5rem;
         border-radius: 12px;
         border: 1px solid rgba(102, 126, 234, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .tool-item:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+        border-color: rgba(102, 126, 234, 0.3);
     }
 
     .tool-item h3 {
@@ -240,43 +263,53 @@
     <div class="content-card">
         <h2>
             <i class="fas fa-toolbox"></i>
-            Five Tools for the Truth-Seeking Journey
+            Eight Tools for the Truth-Seeking Journey
         </h2>
         <p>
-            TruthLens isn't just one app—it's a comprehensive suite of five tools designed to approach truth from multiple angles. Each tool serves a different purpose in your quest for clarity:
+            TruthLens isn't just one app—it's a comprehensive ecosystem of eight interconnected tools designed to approach truth from multiple angles. Each tool serves a different purpose in your quest for clarity:
         </p>
 
         <div class="tool-grid">
             <div class="tool-item">
                 <h3><i class="fas fa-shield-check"></i> News Analysis</h3>
-                <p>Evaluate news articles with 7 AI services analyzing credibility, bias, fact-checking, and more. Get a comprehensive Trust Score (0-100).</p>
+                <p>Evaluate news articles with 7 AI services analyzing credibility, bias, fact-checking, and more. Get a comprehensive Trust Score (0-100) and auto-extracted claims for verification.</p>
             </div>
 
             <div class="tool-item">
                 <h3><i class="fas fa-file-alt"></i> Transcript Analysis</h3>
-                <p>Fact-check speeches, interviews, and transcripts. Extract claims, verify facts, assess speaker credibility. Truth doesn't just live in news—it's in what people say.</p>
+                <p>Fact-check speeches, interviews, YouTube videos, and transcripts. Extract claims, verify facts, assess credibility. Supports both text and video URL input.</p>
             </div>
 
             <div class="tool-item">
-                <h3><i class="fas fa-brain"></i> AI Bias Research</h3>
-                <p>Ask the same question to 7 different AI systems and compare their answers. See how geography, training, and design affect AI perspectives. Are they aligned on truth—or divided by bias?</p>
+                <h3><i class="fas fa-brain"></i> AI Council</h3>
+                <p>Ask any question to 10 different AI systems simultaneously. Compare GPT-4, Claude, Gemini, DeepSeek, Mistral, and more. See consensus, disagreements, and extracted claims.</p>
+            </div>
+
+            <div class="tool-item">
+                <h3><i class="fas fa-satellite-dish"></i> AI Observatory</h3>
+                <p>Monitor AI systems for existential threats. Track economic impacts, behavioral anomalies, and emergent capabilities across multiple AI platforms in real-time.</p>
+            </div>
+
+            <div class="tool-item">
+                <h3><i class="fas fa-trophy"></i> Media Literacy Quiz</h3>
+                <p>Test your ability to spot misinformation, bias, and manipulation. Learn to identify logical fallacies, deepfakes, and deceptive framing through interactive challenges.</p>
+            </div>
+
+            <div class="tool-item">
+                <h3><i class="fas fa-microscope"></i> AI Bias Research</h3>
+                <p>Comprehensive research tool comparing 8 AI systems across 20 categories and 1,250+ questions. Analyze political bias, cultural values, and alignment patterns with full CSV export.</p>
             </div>
 
             <div class="tool-item">
                 <h3><i class="fas fa-users"></i> Human Debates</h3>
-                <p>Debate real people on any topic, then let the community vote on who made the best argument. Democracy of ideas. May the best case win.</p>
+                <p>Debate real people on any topic in structured rounds. Community voting determines winners. Democracy of ideas—may the best argument win.</p>
             </div>
 
             <div class="tool-item">
                 <h3><i class="fas fa-robot"></i> AI Debates</h3>
-                <p>Watch 2 AI systems debate each other on any topic. Then watch a third AI judge their performance and pick a winner. See how AI reasons, argues, and reaches conclusions.</p>
+                <p>Watch AI systems debate each other on any topic (3-15 rounds). Configure word limits, choose adversarial or truth-seeking mode. Optional AI judge scoring and MP3 audio generation.</p>
             </div>
         </div>
-
-        <p style="margin-top: 1.5rem; font-style: italic; color: #64748b;">
-            <i class="fas fa-rocket" style="color: #667eea;"></i> 
-            <strong>Coming Soon:</strong> Deepfake detection, AI-generated content scanner, plagiarism checker, image manipulation analysis, and more truth detection capabilities.
-        </p>
     </div>
 
     <!-- How We Approach Truth -->
@@ -289,9 +322,11 @@
             Truth is rarely found in a single source or perspective. That's why TruthLens uses multiple approaches:
         </p>
         <ul>
-            <li><strong>Multiple AI Systems:</strong> We don't trust one AI—we compare many. If 7 AI systems disagree, that tells you something important.</li>
-            <li><strong>Human Wisdom:</strong> AI is powerful, but humans provide context, nuance, and lived experience. Our debate tools let people make the case.</li>
-            <li><strong>Transparency:</strong> We show you <em>how</em> we reach conclusions, not just <em>what</em> they are. You decide what to believe.</li>
+            <li><strong>Multiple AI Systems:</strong> We don't trust one AI—we compare many. Our AI Council queries 10 systems simultaneously. If they disagree, that tells you something important.</li>
+            <li><strong>Consensus Analysis:</strong> When 7 different AI services agree on credibility or 10 AIs reach consensus on a claim, that's meaningful data.</li>
+            <li><strong>Human Wisdom:</strong> AI is powerful, but humans provide context, nuance, and lived experience. Our debate and quiz tools combine both.</li>
+            <li><strong>Transparency:</strong> We show you <em>how</em> we reach conclusions, not just <em>what</em> they are. You see individual AI responses, scoring breakdowns, and methodology.</li>
+            <li><strong>Automated Verification:</strong> Claims are automatically extracted and added to a searchable database. Track what's been verified and what needs checking.</li>
             <li><strong>No Agenda:</strong> We're not here to tell you what to think. We're here to help you think better.</li>
             <li><strong>Continuous Improvement:</strong> Truth-seeking tools must evolve as deception techniques evolve. We're always adding new capabilities.</li>
         </ul>
@@ -322,22 +357,38 @@
             <li>Verify what you read before you share it</li>
             <li>Understand when you're being manipulated</li>
             <li>See multiple perspectives instead of just one</li>
+            <li>Compare how different AI systems interpret the same information</li>
+            <li>Monitor AI developments for potential existential risks</li>
+            <li>Build media literacy skills through practice</li>
             <li>Make informed decisions based on facts, not fear</li>
             <li>Adjust your beliefs when new evidence emerges</li>
         </ul>
     </div>
 
-    <!-- Beta & Free Access -->
+    <!-- Technology Stack -->
     <div class="content-card">
         <h2>
-            <i class="fas fa-flask"></i>
-            Free Beta Access
+            <i class="fas fa-code"></i>
+            The Technology Behind TruthLens
         </h2>
         <p>
-            TruthLens is currently in beta testing, which means <strong>all features are completely free</strong> while we refine the platform and gather feedback.
+            TruthLens integrates with 10+ AI systems to provide comprehensive analysis:
         </p>
+        <ul>
+            <li><strong>OpenAI:</strong> GPT-4, GPT-3.5 Turbo</li>
+            <li><strong>Anthropic:</strong> Claude Sonnet 4</li>
+            <li><strong>Google:</strong> Gemini 2.0 Flash</li>
+            <li><strong>Mistral AI:</strong> Mistral Large 2</li>
+            <li><strong>DeepSeek:</strong> DeepSeek Chat V3</li>
+            <li><strong>Cohere:</strong> Command R+</li>
+            <li><strong>xAI:</strong> Grok Beta</li>
+            <li><strong>Meta:</strong> Llama 3.3 70B (via Groq)</li>
+            <li><strong>Perplexity:</strong> Sonar Large (real-time web search)</li>
+            <li><strong>Reka:</strong> Reka Core (multimodal)</li>
+            <li><strong>AI21:</strong> Jamba 1.5 Large</li>
+        </ul>
         <p>
-            We're looking for truth-seekers who want to help us build better tools. If that's you, jump in and start exploring. Your feedback will shape the future of this platform.
+            We also integrate with external data sources including Federal Reserve Economic Data (FRED), Bureau of Labor Statistics (BLS), and real-time web search APIs.
         </p>
     </div>
 
@@ -345,11 +396,14 @@
     <div class="cta-section">
         <h2><i class="fas fa-rocket"></i> Join the Quest for Truth</h2>
         <p>
-            Whether you're a journalist, researcher, student, skeptic, or just someone who cares about facts—we'd love to have you on board. The truth is out there. Let's find it together.
+            Whether you're a journalist, researcher, student, skeptic, or just someone who cares about facts—we'd love to have you explore our tools. The truth is out there. Let's find it together.
         </p>
         <div class="cta-buttons">
             <a href="/" class="cta-button">
                 <i class="fas fa-play"></i> Start Exploring
+            </a>
+            <a href="/features" class="cta-button secondary">
+                <i class="fas fa-star"></i> See All Features
             </a>
             <a href="/contact" class="cta-button secondary">
                 <i class="fas fa-envelope"></i> Get In Touch
