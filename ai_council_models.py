@@ -1,5 +1,5 @@
 """
-TruthLens AI Council - Database Models
+TruthLens AI Council - Database Models 
 File: ai_council_models.py
 Date: January 9, 2026
 Version: 1.0.0
