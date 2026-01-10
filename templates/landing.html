@@ -2,17 +2,17 @@
 
 {% block title %}TruthLens AI Suite - Complete Truth Detection Platform{% endblock %}
 
-{% block description %}Seven powerful AI tools: analyze news, fact-check transcripts, query 10 AIs, test media literacy, track claims, debate ideas, and research AI perspectives.{% endblock %}
+{% block description %}Eight powerful AI tools: analyze news, fact-check transcripts, query 10 AIs, monitor AI threats, test media literacy, track claims, debate ideas, and research AI perspectives.{% endblock %}
 
 <!--
-Version: 4.0.0 - AI COUNCIL + REMOVE BETA
+Version: 5.0.0 - AI OBSERVATORY + AI COUNCIL
 Date: January 10, 2026
 Changes: 
+- Added AI Observatory card (Existential threat monitoring)
 - Added AI Council card (10 AI services)
 - Removed "Free Beta" badge
-- Updated hero subtitle from "Six" to "Seven" tools
-- Added AI Council to footer CTA buttons
-- Updated to 7 tools total
+- Updated hero subtitle from "Six" to "Eight" tools
+- Updated to 8 tools total
 -->
 
 {% block styles %}
@@ -95,6 +95,7 @@ Changes:
     
     .app-card.transcript .app-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
     .app-card.aicouncil .app-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .app-card.observatory .app-icon { background: linear-gradient(135deg, #ef4444, #dc2626); }
     .app-card.quiz .app-icon { background: linear-gradient(135deg, #eab308, #ca8a04); }
     .app-card.research .app-icon { background: linear-gradient(135deg, #10b981, #059669); }
     .app-card.debate .app-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
@@ -148,6 +149,7 @@ Changes:
     
     .app-card.transcript .app-button { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
     .app-card.aicouncil .app-button { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+    .app-card.observatory .app-button { background: linear-gradient(135deg, #ef4444, #dc2626); }
     .app-card.quiz .app-button { background: linear-gradient(135deg, #eab308, #ca8a04); }
     .app-card.research .app-button { background: linear-gradient(135deg, #10b981, #059669); }
     .app-card.debate .app-button { background: linear-gradient(135deg, #f59e0b, #d97706); }
@@ -215,8 +217,8 @@ Changes:
     <h1 class="hero-title">TruthLens AI Suite</h1>
     <p class="hero-subtitle">Complete Truth Detection Platform</p>
     <p class="hero-description">
-        Seven powerful AI tools: analyze news, fact-check transcripts, query 10 AIs simultaneously,
-        test your media literacy, track claims, debate ideas, and research AI perspectives.
+        Eight powerful AI tools: analyze news, fact-check transcripts, query 10 AIs simultaneously,
+        monitor AI existential threats, test your media literacy, track claims, debate ideas, and research AI perspectives.
     </p>
 </section>
 
@@ -262,6 +264,20 @@ Changes:
                 <li><i class="fas fa-check-circle"></i> Auto-extract claims</li>
             </ul>
             <a href="/ask-ai" class="app-button"><i class="fas fa-comments"></i> Ask AIs</a>
+        </div>
+
+        <!-- AI Observatory -->
+        <div class="app-card observatory">
+            <div class="app-icon"><i class="fas fa-satellite-dish"></i></div>
+            <h2 class="app-title">AI Observatory</h2>
+            <p class="app-description">Monitor AI systems for existential threats and behavioral anomalies.</p>
+            <ul class="app-features">
+                <li><i class="fas fa-check-circle"></i> Economic threat detection</li>
+                <li><i class="fas fa-check-circle"></i> Behavioral analysis</li>
+                <li><i class="fas fa-check-circle"></i> Real-time monitoring</li>
+                <li><i class="fas fa-check-circle"></i> Threat alerts</li>
+            </ul>
+            <a href="/observatory" class="app-button"><i class="fas fa-radar"></i> View Dashboard</a>
         </div>
 
         <!-- Quiz -->
@@ -323,11 +339,12 @@ Changes:
 
     <div class="footer-cta">
         <h2>Ready to Get Started?</h2>
-        <p>Explore all seven powerful AI tools.</p>
+        <p>Explore all eight powerful AI tools.</p>
         <div class="cta-buttons">
             <a href="/analyze" class="cta-button"><i class="fas fa-shield-check"></i> News</a>
             <a href="/transcript" class="cta-button"><i class="fas fa-file-lines"></i> Transcripts</a>
             <a href="/ask-ai" class="cta-button"><i class="fas fa-brain"></i> AI Council 🆕</a>
+            <a href="/observatory" class="cta-button"><i class="fas fa-satellite-dish"></i> Observatory</a>
             <a href="/quiz" class="cta-button"><i class="fas fa-trophy"></i> Quiz</a>
             <a href="/claim-tracker" class="cta-button"><i class="fas fa-database"></i> Claims</a>
             <a href="/debate-arena" class="cta-button"><i class="fas fa-users"></i> Debates</a>
@@ -339,5 +356,5 @@ Changes:
 
 <!-- 
 I did no harm and this file is not truncated 
-v4.0.0 - January 10, 2026 - AI Council + Remove Beta
+v5.0.0 - January 10, 2026 - AI Observatory + AI Council
 -->
