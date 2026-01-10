@@ -2,12 +2,17 @@
 
 {% block title %}TruthLens AI Suite - Complete Truth Detection Platform{% endblock %}
 
-{% block description %}Six powerful AI tools: analyze news, fact-check transcripts, test your media literacy, track claims, debate ideas, and research AI perspectives.{% endblock %}
+{% block description %}Seven powerful AI tools: analyze news, fact-check transcripts, query 10 AIs, test media literacy, track claims, debate ideas, and research AI perspectives.{% endblock %}
 
 <!--
-Version: 3.1.0 - Z-INDEX STACKING FIX
-Date: January 9, 2026
-Changes: Added z-index: 1 !important to hero-section and apps-container to prevent covering navigation
+Version: 4.0.0 - AI COUNCIL + REMOVE BETA
+Date: January 10, 2026
+Changes: 
+- Added AI Council card (10 AI services)
+- Removed "Free Beta" badge
+- Updated hero subtitle from "Six" to "Seven" tools
+- Added AI Council to footer CTA buttons
+- Updated to 7 tools total
 -->
 
 {% block styles %}
@@ -27,15 +32,6 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
         isolation: isolate; /* Create stacking context */
     }
     
-    .beta-badge {
-        display: inline-block;
-        background: rgba(255, 255, 255, 0.25);
-        padding: 7px 18px;
-        border-radius: 30px;
-        font-weight: 600;
-        margin-bottom: 10px;
-    }
-    
     .hero-title {
         font-family: 'Space Grotesk', sans-serif;
         font-size: 3rem;
@@ -51,7 +47,7 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
     
     .hero-description {
         font-size: 1.05rem;
-        max-width: 750px;
+        max-width: 800px;
         margin: 0 auto;
         opacity: 0.9;
     }
@@ -98,6 +94,7 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
     }
     
     .app-card.transcript .app-icon { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .app-card.aicouncil .app-icon { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
     .app-card.quiz .app-icon { background: linear-gradient(135deg, #eab308, #ca8a04); }
     .app-card.research .app-icon { background: linear-gradient(135deg, #10b981, #059669); }
     .app-card.debate .app-icon { background: linear-gradient(135deg, #f59e0b, #d97706); }
@@ -150,6 +147,7 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
     }
     
     .app-card.transcript .app-button { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .app-card.aicouncil .app-button { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
     .app-card.quiz .app-button { background: linear-gradient(135deg, #eab308, #ca8a04); }
     .app-card.research .app-button { background: linear-gradient(135deg, #10b981, #059669); }
     .app-card.debate .app-button { background: linear-gradient(135deg, #f59e0b, #d97706); }
@@ -214,14 +212,11 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
 
 {% block content %}
 <section class="hero-section">
-    <div class="beta-badge">
-        <i class="fas fa-flask"></i> Free Beta - All Features Unlocked
-    </div>
     <h1 class="hero-title">TruthLens AI Suite</h1>
     <p class="hero-subtitle">Complete Truth Detection Platform</p>
     <p class="hero-description">
-        Six powerful AI tools: analyze news, fact-check transcripts, test your media literacy,
-        track claims, debate ideas, and research AI perspectives.
+        Seven powerful AI tools: analyze news, fact-check transcripts, query 10 AIs simultaneously,
+        test your media literacy, track claims, debate ideas, and research AI perspectives.
     </p>
 </section>
 
@@ -250,15 +245,29 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
                 <li><i class="fas fa-check-circle"></i> Claim extraction</li>
                 <li><i class="fas fa-check-circle"></i> Fact verification</li>
                 <li><i class="fas fa-check-circle"></i> Speaker credibility</li>
-                <li><i class="fas fa-check-circle"></i> Export (PDF/JSON)</i>
+                <li><i class="fas fa-check-circle"></i> Export (PDF/JSON)</li>
             </ul>
             <a href="/transcript" class="app-button"><i class="fas fa-file-lines"></i> Analyze</a>
         </div>
 
-        <!-- Quiz - NEW! -->
+        <!-- AI Council - NEW! -->
+        <div class="app-card aicouncil">
+            <div class="app-icon"><i class="fas fa-brain"></i></div>
+            <h2 class="app-title">AI Council <span class="new-badge">NEW</span></h2>
+            <p class="app-description">Ask any question to 10 different AI systems simultaneously.</p>
+            <ul class="app-features">
+                <li><i class="fas fa-check-circle"></i> 10 AI services</li>
+                <li><i class="fas fa-check-circle"></i> Consensus summary</li>
+                <li><i class="fas fa-check-circle"></i> Compare perspectives</li>
+                <li><i class="fas fa-check-circle"></i> Auto-extract claims</li>
+            </ul>
+            <a href="/ask-ai" class="app-button"><i class="fas fa-comments"></i> Ask AIs</a>
+        </div>
+
+        <!-- Quiz -->
         <div class="app-card quiz">
             <div class="app-icon"><i class="fas fa-trophy"></i></div>
-            <h2 class="app-title">Media Literacy Quiz <span class="new-badge">NEW</span></h2>
+            <h2 class="app-title">Media Literacy Quiz</h2>
             <p class="app-description">Test your skills spotting clickbait, bias & misinformation.</p>
             <ul class="app-features">
                 <li><i class="fas fa-check-circle"></i> Multiple categories</li>
@@ -271,7 +280,7 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
 
         <!-- AI Research -->
         <div class="app-card research">
-            <div class="app-icon"><i class="fas fa-brain"></i></div>
+            <div class="app-icon"><i class="fas fa-microscope"></i></div>
             <h2 class="app-title">AI Bias Research</h2>
             <p class="app-description">Compare perspectives across 7 AI systems.</p>
             <ul class="app-features">
@@ -280,7 +289,7 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
                 <li><i class="fas fa-check-circle"></i> Batch testing</li>
                 <li><i class="fas fa-check-circle"></i> Export CSV</li>
             </ul>
-            <a href="https://ai-bias-research.onrender.com" class="app-button" target="_blank"><i class="fas fa-microscope"></i> Research AI</a>
+            <a href="https://ai-bias-research.onrender.com" class="app-button" target="_blank"><i class="fas fa-flask"></i> Research AI</a>
         </div>
 
         <!-- Human Debates -->
@@ -308,24 +317,27 @@ Changes: Added z-index: 1 !important to hero-section and apps-container to preve
                 <li><i class="fas fa-check-circle"></i> Audio generation</li>
                 <li><i class="fas fa-check-circle"></i> Export debates</li>
             </ul>
-            <a href="https://ai-debate-arena-k8gs.onrender.com" class="app-button" target="_blank"><i class="fas fa-robot"></i> Watch AI Debate</a>
+            <a href="https://ai-debate-arena-k8gs.onrender.com" class="app-button" target="_blank"><i class="fas fa-gavel"></i> Watch AI Debate</a>
         </div>
     </div>
 
     <div class="footer-cta">
         <h2>Ready to Get Started?</h2>
-        <p>All features free during beta testing.</p>
+        <p>Explore all seven powerful AI tools.</p>
         <div class="cta-buttons">
             <a href="/analyze" class="cta-button"><i class="fas fa-shield-check"></i> News</a>
             <a href="/transcript" class="cta-button"><i class="fas fa-file-lines"></i> Transcripts</a>
-            <a href="/quiz" class="cta-button"><i class="fas fa-trophy"></i> Quiz 🆕</a>
+            <a href="/ask-ai" class="cta-button"><i class="fas fa-brain"></i> AI Council 🆕</a>
+            <a href="/quiz" class="cta-button"><i class="fas fa-trophy"></i> Quiz</a>
             <a href="/claim-tracker" class="cta-button"><i class="fas fa-database"></i> Claims</a>
             <a href="/debate-arena" class="cta-button"><i class="fas fa-users"></i> Debates</a>
-            <a href="https://ai-bias-research.onrender.com" class="cta-button" target="_blank"><i class="fas fa-brain"></i> AI Research</a>
-            <a href="https://ai-debate-arena-k8gs.onrender.com" class="cta-button" target="_blank"><i class="fas fa-robot"></i> AI Debates</a>
+            <a href="https://ai-bias-research.onrender.com" class="cta-button" target="_blank"><i class="fas fa-microscope"></i> AI Research</a>
         </div>
     </div>
 </div>
 {% endblock %}
 
-<!-- I did no harm and this file is not truncated -->
+<!-- 
+I did no harm and this file is not truncated 
+v4.0.0 - January 10, 2026 - AI Council + Remove Beta
+-->
