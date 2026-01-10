@@ -5,7 +5,7 @@ Date: January 9, 2026
 Version: 1.0.0
 
 PURPOSE:
-Query multiple AI services with the same question and generate consensus.
+Query multiple AI services with the same question and generate consensus. 
 
 AI SERVICES (7 total):
 1. OpenAI GPT-4
