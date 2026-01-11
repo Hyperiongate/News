@@ -1,17 +1,193 @@
 {% extends "base.html" %} 
 
+<!--
+AI Council Page - Ask Multiple AI Systems
+Version: 2.0.0 - FIXED HEADER + IMPROVED UX
+Date: January 10, 2026
+
+WHAT CHANGED:
+- FIXED: Header no longer hidden behind navigation (added body padding)
+- IMPROVED: Better explanation of how AI Council works
+- IMPROVED: Clear expectations about what happens
+- REMOVED: "Tip: Press Ctrl+Enter" message (unnecessary clutter)
+- Updated reference from 7 to 10 AI systems (consistent with platform)
+- All existing functionality preserved (DO NO HARM ✓)
+
+Last modified: January 10, 2026 - v2.0.0
+I did no harm and this file is not truncated.
+-->
+
 {% block title %}Ask AI Council - TruthLens{% endblock %}
+
+{% block styles %}
+<style>
+    body {
+        padding-top: 110px; /* FIXED: Added padding to prevent header hiding */
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .response-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transition: all 0.2s;
+    }
+
+    .response-card:hover {
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        transform: translateY(-4px);
+    }
+
+    .ai-name {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .success-badge {
+        background: #10b981;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-left: auto;
+    }
+
+    .error-badge {
+        background: #ef4444;
+        color: white;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-left: auto;
+    }
+
+    .response-text {
+        color: #4a5568;
+        line-height: 1.7;
+        margin-bottom: 16px;
+        font-size: 0.95rem;
+    }
+
+    .response-meta {
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+        padding-top: 16px;
+        border-top: 1px solid #e2e8f0;
+        font-size: 0.85rem;
+        color: #718096;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .how-it-works {
+        background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+        border: 2px solid #8b5cf6;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 30px;
+    }
+
+    .how-it-works h3 {
+        font-size: 1.2rem;
+        color: #5b21b6;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .how-it-works ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .how-it-works li {
+        padding: 8px 0;
+        color: #4c1d95;
+        display: flex;
+        align-items: start;
+        gap: 12px;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .how-it-works li i {
+        color: #8b5cf6;
+        margin-top: 4px;
+    }
+
+    @media (max-width: 768px) {
+        body {
+            padding-top: 100px; /* Mobile adjustment */
+        }
+
+        #responsesGrid {
+            grid-template-columns: 1fr;
+        }
+
+        .how-it-works {
+            padding: 20px;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
 <div class="container" style="max-width: 1400px; margin: 0 auto; padding: 20px;">
     <!-- Header -->
-    <div style="text-align: center; margin-bottom: 40px;">
+    <div style="text-align: center; margin-bottom: 30px;">
         <h1 style="font-size: 2.5rem; color: #1a202c; margin-bottom: 16px;">
-            <i class="fas fa-brain" style="color: #8b5cf6;"></i> Ask AI Council
+            <i class="fas fa-brain" style="color: #8b5cf6;"></i> AI Council
         </h1>
-        <p style="font-size: 1.1rem; color: #4a5568; max-width: 800px; margin: 0 auto;">
-            Ask any question and get perspectives from 7 different AI services. See where they agree and disagree.
+        <p style="font-size: 1.2rem; color: #4a5568; max-width: 900px; margin: 0 auto; line-height: 1.6;">
+            Ask any question to 10 different AI systems simultaneously and compare their perspectives. 
+            See where they agree, where they disagree, and get a consensus summary.
         </p>
+    </div>
+
+    <!-- How It Works Box -->
+    <div class="how-it-works">
+        <h3>
+            <i class="fas fa-info-circle"></i> How AI Council Works
+        </h3>
+        <ul>
+            <li>
+                <i class="fas fa-check-circle"></i>
+                <span><strong>Your question is sent to 10 different AI services:</strong> OpenAI GPT-4, Anthropic Claude, Google Gemini, Mistral, DeepSeek, Cohere, xAI Grok, Meta Llama, Perplexity, and Reka AI.</span>
+            </li>
+            <li>
+                <i class="fas fa-clock"></i>
+                <span><strong>Processing takes 20-30 seconds:</strong> Each AI analyzes your question independently and provides its own perspective.</span>
+            </li>
+            <li>
+                <i class="fas fa-balance-scale"></i>
+                <span><strong>You get a consensus summary:</strong> We analyze all 10 responses to identify where AIs agree, where they disagree, and provide an overall consensus score.</span>
+            </li>
+            <li>
+                <i class="fas fa-eye"></i>
+                <span><strong>Compare individual responses:</strong> Read each AI's full response side-by-side to understand different perspectives and reasoning approaches.</span>
+            </li>
+        </ul>
     </div>
 
     <!-- Question Input -->
@@ -24,10 +200,7 @@
             placeholder="Example: What's the best way to reduce inflation? Is nuclear energy safe? Should I invest in cryptocurrency?"
             style="width: 100%; min-height: 120px; padding: 16px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; resize: vertical; font-family: inherit;"
         ></textarea>
-        <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
-            <span style="color: #718096; font-size: 0.9rem;">
-                <i class="fas fa-keyboard"></i> Tip: Press Ctrl+Enter to submit
-            </span>
+        <div style="margin-top: 16px; text-align: right;">
             <button 
                 id="askButton" 
                 onclick="askQuestion()"
@@ -35,7 +208,7 @@
                 onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 16px rgba(139,92,246,0.3)'"
                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'"
             >
-                <i class="fas fa-paper-plane"></i> Ask All AIs
+                <i class="fas fa-paper-plane"></i> Ask All 10 AIs
             </button>
         </div>
     </div>
@@ -44,7 +217,7 @@
     <div id="loadingIndicator" style="display: none; background: white; border-radius: 12px; padding: 40px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 30px;">
         <div style="display: inline-block; width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top-color: #8b5cf6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
         <p style="margin-top: 20px; font-size: 1.1rem; color: #4a5568;">
-            <strong>Querying 7 AI services...</strong>
+            <strong>Querying 10 AI services...</strong>
         </p>
         <p style="margin-top: 8px; color: #718096;">
             This typically takes 20-30 seconds
@@ -88,89 +261,8 @@
     </div>
 </div>
 
-<style>
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-.response-card {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    transition: all 0.2s;
-}
-
-.response-card:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    transform: translateY(-4px);
-}
-
-.ai-name {
-    font-size: 1.3rem;
-    font-weight: 700;
-    color: #2d3748;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.success-badge {
-    background: #10b981;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-left: auto;
-}
-
-.error-badge {
-    background: #ef4444;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    margin-left: auto;
-}
-
-.response-text {
-    color: #4a5568;
-    line-height: 1.7;
-    margin-bottom: 16px;
-    font-size: 0.95rem;
-}
-
-.response-meta {
-    display: flex;
-    gap: 16px;
-    flex-wrap: wrap;
-    padding-top: 16px;
-    border-top: 1px solid #e2e8f0;
-    font-size: 0.85rem;
-    color: #718096;
-}
-
-.meta-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-@media (max-width: 768px) {
-    #responsesGrid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
-
 <script>
-// Keyboard shortcut
+// Keyboard shortcut (keeping functionality, just not advertising it)
 document.getElementById('questionInput').addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.key === 'Enter') {
         askQuestion();
@@ -294,3 +386,8 @@ function displayResults(data) {
 }
 </script>
 {% endblock %}
+
+<!--
+I did no harm and this file is not truncated.
+v2.0.0 - January 10, 2026 - Header visibility fix + improved UX
+-->
