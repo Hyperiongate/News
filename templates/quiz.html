@@ -41,7 +41,7 @@ I did no harm and this file is not truncated.
         font-family: 'Inter', sans-serif;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         min-height: 100vh;
-        padding-top: 110px; /* FIXED: Increased from 90px to prevent header hiding */
+        padding-top: 130px; /* FIXED: Increased to 130px to fully clear navigation */
     }
 
     .container {
@@ -82,8 +82,8 @@ I did no harm and this file is not truncated.
         padding: 1.5rem;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
         position: sticky;
-        top: 130px; /* FIXED: Increased to account for new body padding */
-        max-height: calc(100vh - 150px);
+        top: 150px; /* FIXED: Increased to account for new body padding */
+        max-height: calc(100vh - 170px);
         overflow-y: auto;
     }
 
@@ -513,7 +513,7 @@ I did no harm and this file is not truncated.
 
     @media (max-width: 768px) {
         body {
-            padding-top: 100px; /* FIXED: Adjusted for mobile navigation */
+            padding-top: 120px; /* FIXED: Adjusted for mobile navigation */
         }
 
         .page-header h1 {
@@ -529,7 +529,7 @@ I did no harm and this file is not truncated.
         }
 
         .learning-sidebar {
-            top: 110px;
+            top: 130px;
         }
     }
 </style>
