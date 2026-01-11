@@ -136,6 +136,56 @@ I did no harm and this file is not truncated.
         margin-top: 4px;
     }
 
+    .consensus-methodology {
+        background: white;
+        border: 2px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 30px;
+    }
+
+    .consensus-methodology h3 {
+        font-size: 1.2rem;
+        color: #2d3748;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .consensus-methodology .method-step {
+        padding: 12px 0;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .consensus-methodology .method-step:last-child {
+        border-bottom: none;
+    }
+
+    .consensus-methodology .step-number {
+        display: inline-block;
+        width: 28px;
+        height: 28px;
+        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        color: white;
+        border-radius: 50%;
+        text-align: center;
+        line-height: 28px;
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-right: 12px;
+    }
+
+    .consensus-methodology .step-text {
+        color: #4a5568;
+        font-size: 0.95rem;
+        line-height: 1.6;
+    }
+
+    .consensus-methodology .step-text strong {
+        color: #2d3748;
+    }
+
     @media (max-width: 768px) {
         body {
             padding-top: 100px; /* Mobile adjustment */
@@ -188,6 +238,43 @@ I did no harm and this file is not truncated.
                 <span><strong>Compare individual responses:</strong> Read each AI's full response side-by-side to understand different perspectives and reasoning approaches.</span>
             </li>
         </ul>
+    </div>
+
+    <!-- Consensus Methodology Box -->
+    <div class="consensus-methodology">
+        <h3>
+            <i class="fas fa-calculator"></i> How the Consensus Score is Calculated
+        </h3>
+        <div class="method-step">
+            <span class="step-number">1</span>
+            <span class="step-text">
+                <strong>Semantic Analysis:</strong> We use Claude AI to analyze all 10 responses and identify common themes, agreements, and disagreements in meaning (not just word matching).
+            </span>
+        </div>
+        <div class="method-step">
+            <span class="step-number">2</span>
+            <span class="step-text">
+                <strong>Agreement Detection:</strong> Points where 7+ AIs express similar views are marked as "areas of agreement" - these become the consensus foundation.
+            </span>
+        </div>
+        <div class="method-step">
+            <span class="step-number">3</span>
+            <span class="step-text">
+                <strong>Disagreement Identification:</strong> Points where AIs provide contradictory perspectives (e.g., some say "yes" while others say "no") are flagged as "areas of disagreement."
+            </span>
+        </div>
+        <div class="method-step">
+            <span class="step-number">4</span>
+            <span class="step-text">
+                <strong>Consensus Score:</strong> Calculated as the percentage of key points where AIs agree. A score of 85% means 85% of the main points had agreement from 7+ AIs.
+            </span>
+        </div>
+        <div class="method-step">
+            <span class="step-number">5</span>
+            <span class="step-text">
+                <strong>Summary Generation:</strong> Claude synthesizes the consensus into a clear, unified answer that represents the majority perspective while noting significant disagreements.
+            </span>
+        </div>
     </div>
 
     <!-- Question Input -->
