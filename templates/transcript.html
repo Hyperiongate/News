@@ -2,14 +2,19 @@
 
 <!--
 TruthLens Transcript Analysis Page - TEMPLATE INHERITANCE VERSION
-Version: 4.1.0 - FIXED HEADER VISIBILITY
-Date: January 10, 2026
+Version: 4.2.0 - INCREASED HEADER CLEARANCE
+Date: January 12, 2026
 
 WHAT CHANGED:
-- FIXED: Header no longer hidden behind navigation bar
+v4.2.0 - January 12, 2026:
+- FIXED: Increased body padding-top from 110px to 130px to fully clear navigation bar
+- FIXED: Increased mobile padding from 100px to 120px for consistency
+- ALL v4.1.0 functionality preserved (DO NO HARM ✓)
+
+v4.1.0 - January 10, 2026:
+- Header no longer hidden behind navigation bar
 - Increased body padding-top from 70px to 110px
 - Increased mobile padding from 60px to 100px
-- ALL v4.0.0 functionality preserved (DO NO HARM ✓)
 
 PRESERVED FEATURES:
 - Text transcript input with date field
@@ -21,7 +26,7 @@ PRESERVED FEATURES:
 - Progress tracking
 - All speaker metrics
 
-Last modified: January 10, 2026 - v4.1.0 Header visibility fix
+Last modified: January 12, 2026 - v4.2.0 Increased header clearance
 I did no harm and this file is not truncated.
 -->
 
@@ -36,7 +41,7 @@ I did no harm and this file is not truncated.
 <style>
     /* Additional inline styles for transcript page */
     body {
-        padding-top: 110px; /* FIXED: Increased from 70px to clear navigation */
+        padding-top: 130px; /* FIXED: Increased from 110px to fully clear navigation */
     }
 
     /* YouTube Caption Disclaimer Styling (v3.5.0) */
@@ -256,7 +261,7 @@ I did no harm and this file is not truncated.
 
     @media (max-width: 768px) {
         body {
-            padding-top: 100px; /* FIXED: Increased for mobile navigation */
+            padding-top: 120px; /* FIXED: Increased for mobile navigation */
         }
 
         .caption-disclaimer {
@@ -474,7 +479,7 @@ I did no harm and this file is not truncated.
 
 {% block scripts %}
 <script>
-    console.log('[TranscriptApp] Module loading - v4.1.0 Header visibility fix...');
+    console.log('[TranscriptApp] Module loading - v4.2.0 Increased header clearance...');
     
     let currentJobId = null;
     let pollInterval = null;
@@ -727,15 +732,15 @@ I did no harm and this file is not truncated.
     // START ANALYSIS (v3.8.0 with transcript_date support)
     // ============================================================================
     function startAnalysis(type) {
-        console.log('[TranscriptApp v4.1.0] Starting analysis, type:', type);
+        console.log('[TranscriptApp v4.2.0] Starting analysis, type:', type);
         
         if (type === 'text') {
             const transcript = document.getElementById('text-input').value.trim();
             const transcriptDate = document.getElementById('transcript-date').value;
             
-            console.log('[TranscriptApp v4.1.0] Processing text input, length:', transcript.length);
+            console.log('[TranscriptApp v4.2.0] Processing text input, length:', transcript.length);
             if (transcriptDate) {
-                console.log('[TranscriptApp v4.1.0] Transcript date provided:', transcriptDate);
+                console.log('[TranscriptApp v4.2.0] Transcript date provided:', transcriptDate);
             }
             
             if (!transcript) {
@@ -787,7 +792,7 @@ I did no harm and this file is not truncated.
             
             if (transcriptDate) {
                 requestBody.transcript_date = transcriptDate;
-                console.log('[TranscriptApp v4.1.0] Including transcript_date in request:', transcriptDate);
+                console.log('[TranscriptApp v4.2.0] Including transcript_date in request:', transcriptDate);
             }
             
             const response = await fetch('/api/transcript/analyze', {
@@ -803,7 +808,7 @@ I did no harm and this file is not truncated.
             }
             
             currentJobId = data.job_id;
-            console.log('[TranscriptApp v4.1.0] ✓ Job created:', currentJobId);
+            console.log('[TranscriptApp v4.2.0] ✓ Job created:', currentJobId);
             
             startPolling();
             
@@ -1491,13 +1496,13 @@ I did no harm and this file is not truncated.
         window.scrollTo({ behavior: 'smooth', top: 0 });
     }
 
-    console.log('[TranscriptApp] ✓ Initialized - v4.1.0 Header visibility fix');
+    console.log('[TranscriptApp] ✓ Initialized - v4.2.0 Increased header clearance');
 </script>
 {% endblock %}
 
 <!--
 I did no harm and this file is not truncated.
-v4.1.0 - January 10, 2026 - FIXED HEADER VISIBILITY
+v4.2.0 - January 12, 2026 - INCREASED HEADER CLEARANCE
 
 DEPLOYMENT READY FOR GITHUB/RENDER
 Complete file ready for production deployment.
