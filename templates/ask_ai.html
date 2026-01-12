@@ -2,18 +2,23 @@
 
 <!--
 AI Council Page - Ask Multiple AI Systems
-Version: 2.0.0 - FIXED HEADER + IMPROVED UX
-Date: January 10, 2026
+Version: 2.1.0 - INCREASED HEADER CLEARANCE
+Date: January 12, 2026
 
 WHAT CHANGED:
-- FIXED: Header no longer hidden behind navigation (added body padding)
-- IMPROVED: Better explanation of how AI Council works
-- IMPROVED: Clear expectations about what happens
-- REMOVED: "Tip: Press Ctrl+Enter" message (unnecessary clutter)
-- Updated reference from 7 to 10 AI systems (consistent with platform)
+v2.1.0 - January 12, 2026:
+- FIXED: Increased body padding-top from 130px to 140px to fully clear navigation bar
+- FIXED: Increased mobile padding from 120px to 130px for consistency
 - All existing functionality preserved (DO NO HARM ✓)
 
-Last modified: January 10, 2026 - v2.0.0
+v2.0.0 - January 10, 2026:
+- Header no longer hidden behind navigation (added body padding)
+- Better explanation of how AI Council works
+- Clear expectations about what happens
+- Removed "Tip: Press Ctrl+Enter" message (unnecessary clutter)
+- Updated reference from 7 to 10 AI systems (consistent with platform)
+
+Last modified: January 12, 2026 - v2.1.0
 I did no harm and this file is not truncated.
 -->
 
@@ -22,7 +27,7 @@ I did no harm and this file is not truncated.
 {% block styles %}
 <style>
     body {
-        padding-top: 130px; /* FIXED: Increased from 110px to fully clear navigation */
+        padding-top: 140px; /* FIXED: Increased from 130px to fully clear navigation */
     }
 
     @keyframes spin {
@@ -188,7 +193,7 @@ I did no harm and this file is not truncated.
 
     @media (max-width: 768px) {
         body {
-            padding-top: 120px; /* Mobile adjustment - increased */
+            padding-top: 130px; /* Mobile adjustment - increased */
         }
 
         #responsesGrid {
@@ -476,5 +481,5 @@ function displayResults(data) {
 
 <!--
 I did no harm and this file is not truncated.
-v2.0.0 - January 10, 2026 - Header visibility fix + improved UX
+v2.1.0 - January 12, 2026 - Increased header clearance
 -->
