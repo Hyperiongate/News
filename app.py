@@ -748,7 +748,7 @@ def ask_ai_page():
         </body>
         </html>
         ''', 503
-    return render_template('ask-ai.html', active_page='ask-ai')
+    return render_template('ask_ai.html', active_page='ask-ai')
 
 @app.route('/features')
 def features():
