@@ -2,16 +2,20 @@
 
 <!--
 TruthLens Claim Tracker Page - TEMPLATE INHERITANCE VERSION
-Version: 2.0.0 - CONVERTED TO TEMPLATE INHERITANCE
-Date: January 9, 2026
+Version: 2.1.0 - FIXED HEADER VISIBILITY
+Date: January 12, 2026
 
-CONVERSION NOTES:
-- Now extends base.html (navigation defined once)
-- ALL v1.0.0 functionality preserved (DO NO HARM)
+WHAT CHANGED:
+v2.1.0 - January 12, 2026:
+- FIXED: Increased body padding-top from 90px to 130px to fully clear navigation
+- Header and subtitle now fully visible below navigation bar
+- All v2.0.0 functionality preserved (DO NO HARM ✓)
+
+v2.0.0 - January 9, 2026:
+- Converted to template inheritance (extends base.html)
+- ALL v1.0.0 functionality preserved
 - All JavaScript intact (search, filters, modal)
 - All CSS intact (stats, cards, modal)
-- All features working
-- Uses block structure for template inheritance
 
 PRESERVED FEATURES:
 - Search claims by text
@@ -22,7 +26,7 @@ PRESERVED FEATURES:
 - All API integrations
 - Export functionality
 
-Last modified: January 9, 2026 - v2.0.0 Template Inheritance
+Last modified: January 12, 2026 - v2.1.0 Header visibility fix
 I did no harm and this file is not truncated.
 -->
 
@@ -34,7 +38,7 @@ I did no harm and this file is not truncated.
 <style>
     /* Page-specific styles */
     body {
-        padding-top: 90px;
+        padding-top: 130px; /* FIXED: Increased from 90px to clear navigation */
         background: #f8fafc;
         font-family: 'Inter', sans-serif;
     }
@@ -378,6 +382,10 @@ I did no harm and this file is not truncated.
 
     /* Responsive Design */
     @media (max-width: 768px) {
+        body {
+            padding-top: 120px; /* Mobile adjustment */
+        }
+
         .search-form {
             grid-template-columns: 1fr;
         }
@@ -793,7 +801,7 @@ I did no harm and this file is not truncated.
 
 <!--
 I did no harm and this file is not truncated.
-v2.0.0 - January 8, 2026 - TEMPLATE INHERITANCE VERSION
+v2.1.0 - January 12, 2026 - FIXED HEADER VISIBILITY
 
 FEATURES PRESERVED:
 ✅ Search claims by text
