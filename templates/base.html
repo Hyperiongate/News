@@ -1,36 +1,27 @@
 <!DOCTYPE html>
 <!--
 ================================================================================
-TruthLens - Base Template with Universal Progress Banner
+TRUTHLENS - Base Template
 ================================================================================
-Version: 2.4.0 - CRITICAL FIX: AI Observatory External Link
+Version: 2.5.0 - CORRECTED FOR TRUTHLENS SITE
 Date: January 14, 2026
+Repository: TruthLens (factsandfakes.ai)
 
 ================================================================================
-🚨 CRITICAL NAVIGATION RULES - READ BEFORE EDITING 🚨
+🚨 THIS FILE IS FOR TRUTHLENS (factsandfakes.ai) ONLY 🚨
 ================================================================================
 
-AI OBSERVATORY IS AN **EXTERNAL** LINK!
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-The AI Observatory lives on the AI Bias Research platform, NOT on TruthLens.
-CORRECT URL: https://ai-bias-research.onrender.com/observatory
-WRONG URL: /observatory (this is a placeholder that doesn't exist on TruthLens)
+This base.html goes in: TruthLens repository
+Deploy to: factsandfakes.ai
 
-DO NOT CHANGE THIS TO AN INTERNAL LINK. EVER.
+DO NOT use this file for ai-bias-research.onrender.com - that site has its own
+base.html with different navigation links.
 
 ================================================================================
-NAVIGATION LINK REFERENCE (ACTIVE AS OF JANUARY 14, 2026)
+NAVIGATION STRUCTURE FOR THIS SITE
 ================================================================================
 
-BOTTOM ROW LINKS - ALL 6 ITEMS:
-1. AI Bias Research  → EXTERNAL → https://ai-bias-research.onrender.com
-2. AI Debates        → EXTERNAL → https://ai-debate-arena-k8gs.onrender.com
-3. AI Observatory    → EXTERNAL → https://ai-bias-research.onrender.com/observatory  ⚠️ NOT /observatory!
-4. Claim Tracker     → INTERNAL → /claim-tracker
-5. Quiz              → INTERNAL → /quiz
-6. Contact Us        → INTERNAL → /contact
-
-TOP ROW LINKS - ALL 7 ITEMS:
+TOP ROW (ALL INTERNAL to factsandfakes.ai):
 1. Home              → INTERNAL → /
 2. About Us          → INTERNAL → /about
 3. Features          → INTERNAL → /features
@@ -39,24 +30,41 @@ TOP ROW LINKS - ALL 7 ITEMS:
 6. Ask AI            → INTERNAL → /ask-ai
 7. Debate Arena      → INTERNAL → /debate-arena
 
+BOTTOM ROW (Mix of internal and external):
+1. AI Bias Research  → EXTERNAL → https://ai-bias-research.onrender.com
+2. AI Debates        → EXTERNAL → https://ai-debate-arena-k8gs.onrender.com
+3. AI Observatory    → EXTERNAL → https://ai-bias-research.onrender.com/observatory ⚠️
+4. Claim Tracker     → INTERNAL → /claim-tracker
+5. Quiz              → INTERNAL → /quiz
+6. Contact Us        → INTERNAL → /contact
+
+================================================================================
+🚨 CRITICAL: AI OBSERVATORY IS EXTERNAL 🚨
+================================================================================
+
+AI Observatory lives on AI Bias Research, NOT on TruthLens!
+CORRECT: https://ai-bias-research.onrender.com/observatory (EXTERNAL)
+WRONG: /observatory (does not exist on TruthLens)
+
+DO NOT CHANGE THIS TO AN INTERNAL LINK. EVER.
+
 ================================================================================
 VERSION HISTORY
 ================================================================================
+v2.5.0 - January 14, 2026:
+  - Rebuilt with correct site identification
+  - Added extensive documentation to prevent confusion
+  - AI Observatory confirmed as EXTERNAL link
+  - All internal routes verified for TruthLens
+
 v2.4.0 - January 14, 2026:
-  - CRITICAL FIX: AI Observatory changed from /observatory (WRONG) to 
-    https://ai-bias-research.onrender.com/observatory (CORRECT)
-  - Added extensive documentation to prevent this recurring mistake
-  - AI Observatory is now marked as EXTERNAL with visual indicator
+  - Fixed AI Observatory external link
 
 v2.3.0 - January 13, 2026:
   - BROKEN: Changed AI Observatory to internal /observatory (MISTAKE!)
-  - Added AI Bias Research external link
-
-v2.2.0 - Previous:
-  - Had AI Observatory as external (was correct, then broken in v2.3.0)
 
 ================================================================================
-Last modified: January 14, 2026 - v2.4.0 Critical Navigation Fix
+Last modified: January 14, 2026 - v2.5.0
 I did no harm and this file is not truncated.
 ================================================================================
 -->
@@ -202,9 +210,10 @@ I did no harm and this file is not truncated.
     </div>
 
     <!-- ========================================================================
-         NAVIGATION - DEFINED ONCE, INHERITED BY ALL PAGES
+         NAVIGATION - TRUTHLENS SITE (factsandfakes.ai)
          
-         🚨 IMPORTANT: AI Observatory is EXTERNAL - see header comments! 🚨
+         TOP ROW: All internal links to this site
+         BOTTOM ROW: Mix - some internal, some external to AI Bias Research
          ======================================================================== -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
@@ -222,7 +231,9 @@ I did no harm and this file is not truncated.
             
             <!-- Two-Row Menu Container -->
             <div class="nav-menu-container" id="navMenu">
-                <!-- TOP ROW: Main Tools (all internal) -->
+                <!-- ============================================================
+                     TOP ROW: Main Tools (ALL INTERNAL to this site)
+                     ============================================================ -->
                 <ul class="nav-menu-row top-row">
                     <li><a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}"><i class="fas fa-home"></i> Home</a></li>
                     <li><a href="/about" class="nav-link {% if active_page == 'about' %}active{% endif %}"><i class="fas fa-info-circle"></i> About Us</a></li>
@@ -236,37 +247,35 @@ I did no harm and this file is not truncated.
                 <!-- ============================================================
                      BOTTOM ROW: Secondary Tools
                      
-                     🚨🚨🚨 EXTERNAL LINKS WARNING 🚨🚨🚨
+                     EXTERNAL LINKS (other sites):
+                     - AI Bias Research → ai-bias-research.onrender.com
+                     - AI Debates → ai-debate-arena-k8gs.onrender.com
+                     - AI Observatory → ai-bias-research.onrender.com/observatory
                      
-                     THREE links in this row are EXTERNAL (open in new tab):
-                     1. AI Bias Research → https://ai-bias-research.onrender.com
-                     2. AI Debates → https://ai-debate-arena-k8gs.onrender.com
-                     3. AI Observatory → https://ai-bias-research.onrender.com/observatory
-                     
-                     DO NOT change AI Observatory to /observatory - that page
-                     does not exist on TruthLens! The Observatory lives on
-                     the AI Bias Research platform.
+                     INTERNAL LINKS (this site):
+                     - Claim Tracker → /claim-tracker
+                     - Quiz → /quiz
+                     - Contact Us → /contact
                      ============================================================ -->
                 <ul class="nav-menu-row bottom-row">
-                    <!-- EXTERNAL: AI Bias Research (main site) -->
+                    <!-- EXTERNAL: AI Bias Research -->
                     <li><a href="https://ai-bias-research.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-microscope"></i> AI Bias Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
                     
                     <!-- EXTERNAL: AI Debates -->
                     <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
                     
-                    <!-- ⚠️ EXTERNAL: AI Observatory - DO NOT CHANGE TO /observatory ⚠️ -->
-                    <!-- The Observatory is hosted on AI Bias Research, NOT on TruthLens -->
-                    <!-- CORRECT: https://ai-bias-research.onrender.com/observatory -->
-                    <!-- WRONG: /observatory (placeholder page, doesn't exist) -->
+                    <!-- ⚠️⚠️⚠️ EXTERNAL: AI Observatory ⚠️⚠️⚠️ -->
+                    <!-- DO NOT CHANGE TO /observatory - IT DOES NOT EXIST ON THIS SITE -->
+                    <!-- The Observatory lives on AI Bias Research, not TruthLens -->
                     <li><a href="https://ai-bias-research.onrender.com/observatory" class="nav-link external" target="_blank"><i class="fas fa-satellite-dish"></i> AI Observatory <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
                     
-                    <!-- INTERNAL: Claim Tracker -->
+                    <!-- INTERNAL: Claim Tracker (ON THIS SITE) -->
                     <li><a href="/claim-tracker" class="nav-link {% if active_page == 'claims' %}active{% endif %}"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
                     
-                    <!-- INTERNAL: Quiz -->
+                    <!-- INTERNAL: Quiz (ON THIS SITE) -->
                     <li><a href="/quiz" class="nav-link {% if active_page == 'quiz' %}active{% endif %}"><i class="fas fa-question-circle"></i> Quiz</a></li>
                     
-                    <!-- INTERNAL: Contact Us -->
+                    <!-- INTERNAL: Contact Us (ON THIS SITE) -->
                     <li><a href="/contact" class="nav-link {% if active_page == 'contact' %}active{% endif %}"><i class="fas fa-envelope"></i> Contact Us</a></li>
                 </ul>
             </div>
@@ -436,30 +445,40 @@ END OF FILE - DEPLOYMENT VERIFICATION
 
 I did no harm and this file is not truncated.
 
-DEPLOYMENT READY FOR GITHUB/RENDER
-Version: 2.4.0 - January 14, 2026
+DEPLOYMENT READY FOR GITHUB
+Version: 2.5.0 - January 14, 2026
 
 ================================================================================
-🚨 FINAL REMINDER: AI OBSERVATORY LINK 🚨
+🚨 DEPLOYMENT INSTRUCTIONS 🚨
 ================================================================================
 
-The AI Observatory link in this file points to:
-✅ CORRECT: https://ai-bias-research.onrender.com/observatory (EXTERNAL)
-❌ WRONG:   /observatory (internal placeholder - DOES NOT EXIST)
+This file goes to: TruthLens repository
+Deploy location: templates/base.html
+Site URL: factsandfakes.ai
 
-The AI Observatory is part of the AI Bias Research platform, not TruthLens.
-It must always be an external link with target="_blank".
-
-If you see /observatory anywhere in the navigation, IT IS A BUG.
+DO NOT deploy this to ai-bias-research.onrender.com - that site has its own base.html!
 
 ================================================================================
-BOTTOM ROW NAVIGATION SUMMARY (for quick reference)
+INTERNAL ROUTES ON THIS SITE (factsandfakes.ai)
 ================================================================================
-1. AI Bias Research  → EXTERNAL → https://ai-bias-research.onrender.com
-2. AI Debates        → EXTERNAL → https://ai-debate-arena-k8gs.onrender.com  
-3. AI Observatory    → EXTERNAL → https://ai-bias-research.onrender.com/observatory
-4. Claim Tracker     → INTERNAL → /claim-tracker
-5. Quiz              → INTERNAL → /quiz
-6. Contact Us        → INTERNAL → /contact
+/              → Home page
+/about         → About Us
+/features      → Features
+/analyze       → News Analysis
+/transcript    → Transcript/YouTube Analysis
+/ask-ai        → Ask AI
+/debate-arena  → Debate Arena
+/claim-tracker → Claim Tracker
+/quiz          → Quiz
+/contact       → Contact Us
+
+================================================================================
+EXTERNAL LINKS (to other sites)
+================================================================================
+AI Bias Research → https://ai-bias-research.onrender.com
+AI Debates       → https://ai-debate-arena-k8gs.onrender.com
+AI Observatory   → https://ai-bias-research.onrender.com/observatory
+
+⚠️ AI Observatory is EXTERNAL! Do not change to /observatory!
 ================================================================================
 -->
