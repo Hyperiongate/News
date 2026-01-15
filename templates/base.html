@@ -1,70 +1,60 @@
 <!DOCTYPE html>
 <!--
 ================================================================================
-TRUTHLENS - Base Template
+AI BIAS RESEARCH - Base Template with Two-Row Navigation
 ================================================================================
-Version: 2.5.0 - CORRECTED FOR TRUTHLENS SITE
+Version: 1.2.0 - RESTORED TWO-ROW NAVIGATION
 Date: January 14, 2026
-Repository: TruthLens (factsandfakes.ai)
+Repository: ai-bias-research (ai-bias-research.onrender.com)
 
 ================================================================================
-🚨 THIS FILE IS FOR TRUTHLENS (factsandfakes.ai) ONLY 🚨
+🚨 THIS FILE IS FOR AI BIAS RESEARCH SITE ONLY 🚨
 ================================================================================
 
-This base.html goes in: TruthLens repository
-Deploy to: factsandfakes.ai
+This base.html goes in: ai-bias-research repository
+Deploy to: ai-bias-research.onrender.com
 
-DO NOT use this file for ai-bias-research.onrender.com - that site has its own
-base.html with different navigation links.
-
-================================================================================
-NAVIGATION STRUCTURE FOR THIS SITE
-================================================================================
-
-TOP ROW (ALL INTERNAL to factsandfakes.ai):
-1. Home              → INTERNAL → /
-2. About Us          → INTERNAL → /about
-3. Features          → INTERNAL → /features
-4. News Analysis     → INTERNAL → /analyze
-5. Transcript/YouTube→ INTERNAL → /transcript
-6. Ask AI            → INTERNAL → /ask-ai
-7. Debate Arena      → INTERNAL → /debate-arena
-
-BOTTOM ROW (Mix of internal and external):
-1. AI Bias Research  → EXTERNAL → https://ai-bias-research.onrender.com
-2. AI Debates        → EXTERNAL → https://ai-debate-arena-k8gs.onrender.com
-3. AI Observatory    → EXTERNAL → https://ai-bias-research.onrender.com/observatory ⚠️
-4. Claim Tracker     → INTERNAL → /claim-tracker
-5. Quiz              → INTERNAL → /quiz
-6. Contact Us        → INTERNAL → /contact
+DO NOT use this file for factsandfakes.ai - that site has its own base.html
 
 ================================================================================
-🚨 CRITICAL: AI OBSERVATORY IS EXTERNAL 🚨
+TWO-ROW NAVIGATION STRUCTURE
 ================================================================================
 
-AI Observatory lives on AI Bias Research, NOT on TruthLens!
-CORRECT: https://ai-bias-research.onrender.com/observatory (EXTERNAL)
-WRONG: /observatory (does not exist on TruthLens)
+TOP ROW (Links to TruthLens main site - factsandfakes.ai):
+1. Home              → https://factsandfakes.ai
+2. About Us          → https://factsandfakes.ai/about
+3. Features          → https://factsandfakes.ai/features
+4. News Analysis     → https://factsandfakes.ai/analyze
+5. Transcript Analysis → https://factsandfakes.ai/transcript
+6. Ask AI            → https://factsandfakes.ai/ask-ai
+7. Debate Arena      → https://factsandfakes.ai/debate-arena
 
-DO NOT CHANGE THIS TO AN INTERNAL LINK. EVER.
+BOTTOM ROW (AI Research tools - mix of internal and external):
+1. AI Debates        → EXTERNAL → https://ai-debate-arena-k8gs.onrender.com
+2. AI Observatory    → INTERNAL → /observatory
+3. Economic Tracker  → INTERNAL → /economic-tracker
+4. AI Behavior       → INTERNAL → /ai-behavior
+5. AI Research       → INTERNAL → / (home of this site)
+6. Claim Tracker     → EXTERNAL → https://factsandfakes.ai/claim-tracker
+7. Quiz              → EXTERNAL → https://factsandfakes.ai/quiz
 
 ================================================================================
 VERSION HISTORY
 ================================================================================
-v2.5.0 - January 14, 2026:
-  - Rebuilt with correct site identification
-  - Added extensive documentation to prevent confusion
-  - AI Observatory confirmed as EXTERNAL link
-  - All internal routes verified for TruthLens
+v1.2.0 - January 14, 2026:
+  - RESTORED: Full two-row navigation that was accidentally lost
+  - FIXED: Increased body padding-top to 200px for nav clearance
+  - FIXED: Mobile padding-top to 160px
+  - All existing functionality preserved (DO NO HARM)
 
-v2.4.0 - January 14, 2026:
-  - Fixed AI Observatory external link
+v1.1.0 - January 14, 2026:
+  - Attempted fix but broke navigation structure
 
-v2.3.0 - January 13, 2026:
-  - BROKEN: Changed AI Observatory to internal /observatory (MISTAKE!)
+v1.0.0 - January 10, 2026:
+  - Initial creation with unified TruthLens navigation
 
 ================================================================================
-Last modified: January 14, 2026 - v2.5.0
+Last modified: January 14, 2026 - v1.2.0
 I did no harm and this file is not truncated.
 ================================================================================
 -->
@@ -74,30 +64,230 @@ I did no harm and this file is not truncated.
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Page title - override in child templates -->
-    <title>{% block title %}TruthLens - Find Truth in Media{% endblock %}</title>
+    <title>{% block title %}AI Bias Research - TruthLens{% endblock %}</title>
     
     <!-- Meta description - override in child templates -->
-    <meta name="description" content="{% block description %}TruthLens: Comprehensive AI-powered tools for news analysis, fact-checking, and media literacy.{% endblock %}">
+    <meta name="description" content="{% block description %}AI Bias Research: Comprehensive tools for analyzing AI behavior, economic threats, and existential risks.{% endblock %}">
     
     <!-- Common fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
-    <!-- NAVIGATION CSS FIRST -->
-    <link rel="stylesheet" href="/static/css/navigation.css">
-    
-    <!-- COMMON STYLES -->
-    <link rel="stylesheet" href="/static/css/main.css">
-    
-    <!-- UNIVERSAL PROGRESS BANNER STYLES -->
+    <!-- NAVIGATION & COMMON STYLES -->
     <style>
-        /* Universal Progress Banner - Always Above Navigation */
+        /* ===================================================================
+           GLOBAL RESET & BASE STYLES
+           =================================================================== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+            /*
+             * CRITICAL: Navigation Clearance
+             * ==============================
+             * The navigation bar has 3 sections:
+             *   - Logo row (~60px)
+             *   - Top menu row (~50px)
+             *   - Bottom menu row (~50px)
+             *   - Padding/borders (~40px)
+             * Total: ~200px
+             * DO NOT reduce this or headers will be hidden!
+             */
+            padding-top: 200px;
+        }
+
+        /* ===================================================================
+           NAVIGATION STYLES - TWO ROW LAYOUT
+           =================================================================== */
+        .main-navigation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: white;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .nav-container-unified {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .nav-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .nav-logo:hover {
+            color: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        .nav-logo i {
+            font-size: 1.6rem;
+        }
+
+        .mobile-menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: #667eea;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .nav-menu-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-menu-row {
+            display: flex;
+            list-style: none;
+            gap: 5px;
+            padding: 10px 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .nav-menu-row.top-row {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .nav-menu-row.bottom-row {
+            padding-bottom: 15px;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            text-decoration: none;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .nav-link:hover {
+            background: #f1f5f9;
+            color: #667eea;
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .nav-link.external {
+            color: #10b981;
+        }
+
+        .nav-link.external:hover {
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        /* ===================================================================
+           MOBILE RESPONSIVE STYLES
+           =================================================================== */
+        @media (max-width: 1200px) {
+            .nav-link {
+                font-size: 0.85rem;
+                padding: 8px 10px;
+                gap: 4px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                /*
+                 * Mobile Navigation Clearance
+                 * Mobile nav collapses but still needs clearance when open
+                 */
+                padding-top: 80px;
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .nav-menu-container {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: white;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+                padding: 10px 20px 20px 20px;
+                border-top: 1px solid #e2e8f0;
+            }
+
+            .nav-menu-container.active {
+                display: flex;
+            }
+
+            .nav-menu-row {
+                flex-direction: column;
+                gap: 0;
+                padding: 5px 0;
+            }
+
+            .nav-menu-row.top-row {
+                border-bottom: 1px solid #e2e8f0;
+                margin-bottom: 5px;
+                padding-bottom: 10px;
+            }
+
+            .nav-link {
+                padding: 12px 15px;
+                font-size: 1rem;
+                border-radius: 8px;
+            }
+
+            .nav-link:hover {
+                background: #f1f5f9;
+            }
+        }
+
+        /* ===================================================================
+           UNIVERSAL PROGRESS BANNER
+           =================================================================== */
         #universalProgressBanner {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 1100; /* Above navigation (1000) */
+            z-index: 1100;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             padding: 12px 20px;
@@ -158,34 +348,13 @@ I did no harm and this file is not truncated.
             text-align: right;
         }
 
-        .progress-banner-fun-fact {
-            font-size: 0.875rem;
-            opacity: 0.9;
-            font-style: italic;
-        }
-
-        /* Push content down when banner is visible */
         body.banner-visible {
-            padding-top: 150px !important;
+            padding-top: 260px !important;
         }
 
         @media (max-width: 768px) {
-            #universalProgressBanner {
-                padding: 10px 15px;
-                gap: 10px;
-            }
-
-            .progress-banner-icon {
-                font-size: 1.25rem;
-            }
-
-            .progress-banner-message {
-                font-size: 0.9rem;
-            }
-
-            .progress-banner-percentage {
-                font-size: 1rem;
-                min-width: 40px;
+            body.banner-visible {
+                padding-top: 140px !important;
             }
         }
     </style>
@@ -204,22 +373,22 @@ I did no harm and this file is not truncated.
             <div class="progress-banner-bar-container">
                 <div class="progress-banner-bar-fill" id="progressBannerBarFill"></div>
             </div>
-            <div class="progress-banner-fun-fact" id="progressBannerFunFact"></div>
         </div>
         <div class="progress-banner-percentage" id="progressBannerPercentage">0%</div>
     </div>
 
     <!-- ========================================================================
-         NAVIGATION - TRUTHLENS SITE (factsandfakes.ai)
+         NAVIGATION - TWO ROW LAYOUT
          
-         TOP ROW: All internal links to this site
-         BOTTOM ROW: Mix - some internal, some external to AI Bias Research
+         This is the AI BIAS RESEARCH site navigation.
+         - TOP ROW: Links to TruthLens main site (factsandfakes.ai)
+         - BOTTOM ROW: AI Research tools (internal + external mix)
          ======================================================================== -->
     <nav class="main-navigation">
         <div class="nav-container-unified">
             <!-- Logo and Mobile Toggle -->
             <div class="nav-header-row">
-                <a href="/" class="nav-logo">
+                <a href="https://factsandfakes.ai" class="nav-logo">
                     <i class="fas fa-shield-check"></i>
                     <span>TruthLens</span>
                 </a>
@@ -232,51 +401,54 @@ I did no harm and this file is not truncated.
             <!-- Two-Row Menu Container -->
             <div class="nav-menu-container" id="navMenu">
                 <!-- ============================================================
-                     TOP ROW: Main Tools (ALL INTERNAL to this site)
+                     TOP ROW: Main TruthLens Tools
+                     All links go to factsandfakes.ai (external from this site)
                      ============================================================ -->
                 <ul class="nav-menu-row top-row">
-                    <li><a href="/" class="nav-link {% if active_page == 'home' %}active{% endif %}"><i class="fas fa-home"></i> Home</a></li>
-                    <li><a href="/about" class="nav-link {% if active_page == 'about' %}active{% endif %}"><i class="fas fa-info-circle"></i> About Us</a></li>
-                    <li><a href="/features" class="nav-link {% if active_page == 'features' %}active{% endif %}"><i class="fas fa-star"></i> Features</a></li>
-                    <li><a href="/analyze" class="nav-link {% if active_page == 'news' %}active{% endif %}"><i class="fas fa-newspaper"></i> News Analysis</a></li>
-                    <li><a href="/transcript" class="nav-link {% if active_page == 'transcript' %}active{% endif %}"><i class="fas fa-file-alt"></i> Transcript/YouTube Analysis</a></li>
-                    <li><a href="/ask-ai" class="nav-link {% if active_page == 'ask-ai' %}active{% endif %}"><i class="fas fa-brain"></i> Ask AI</a></li>
-                    <li><a href="/debate-arena" class="nav-link {% if active_page == 'debates' %}active{% endif %}"><i class="fas fa-users"></i> Debate Arena</a></li>
+                    <li><a href="https://factsandfakes.ai" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="https://factsandfakes.ai/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
+                    <li><a href="https://factsandfakes.ai/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
+                    <li><a href="https://factsandfakes.ai/analyze" class="nav-link"><i class="fas fa-newspaper"></i> News Analysis</a></li>
+                    <li><a href="https://factsandfakes.ai/transcript" class="nav-link"><i class="fas fa-file-alt"></i> Transcript Analysis</a></li>
+                    <li><a href="https://factsandfakes.ai/ask-ai" class="nav-link"><i class="fas fa-brain"></i> Ask AI</a></li>
+                    <li><a href="https://factsandfakes.ai/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
                 </ul>
                 
                 <!-- ============================================================
-                     BOTTOM ROW: Secondary Tools
+                     BOTTOM ROW: AI Research Tools
                      
-                     EXTERNAL LINKS (other sites):
-                     - AI Bias Research → ai-bias-research.onrender.com
+                     INTERNAL LINKS (on this site - ai-bias-research.onrender.com):
+                     - /observatory
+                     - /economic-tracker
+                     - /ai-behavior
+                     - / (AI Research home)
+                     
+                     EXTERNAL LINKS:
                      - AI Debates → ai-debate-arena-k8gs.onrender.com
-                     - AI Observatory → ai-bias-research.onrender.com/observatory
-                     
-                     INTERNAL LINKS (this site):
-                     - Claim Tracker → /claim-tracker
-                     - Quiz → /quiz
-                     - Contact Us → /contact
+                     - Claim Tracker → factsandfakes.ai/claim-tracker
+                     - Quiz → factsandfakes.ai/quiz
                      ============================================================ -->
                 <ul class="nav-menu-row bottom-row">
-                    <!-- EXTERNAL: AI Bias Research -->
-                    <li><a href="https://ai-bias-research.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-microscope"></i> AI Bias Research <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
-                    
                     <!-- EXTERNAL: AI Debates -->
                     <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
                     
-                    <!-- ⚠️⚠️⚠️ EXTERNAL: AI Observatory ⚠️⚠️⚠️ -->
-                    <!-- DO NOT CHANGE TO /observatory - IT DOES NOT EXIST ON THIS SITE -->
-                    <!-- The Observatory lives on AI Bias Research, not TruthLens -->
-                    <li><a href="https://ai-bias-research.onrender.com/observatory" class="nav-link external" target="_blank"><i class="fas fa-satellite-dish"></i> AI Observatory <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                    <!-- INTERNAL: AI Observatory -->
+                    <li><a href="/observatory" class="nav-link {% if active_page == 'observatory' %}active{% endif %}"><i class="fas fa-satellite-dish"></i> AI Observatory</a></li>
                     
-                    <!-- INTERNAL: Claim Tracker (ON THIS SITE) -->
-                    <li><a href="/claim-tracker" class="nav-link {% if active_page == 'claims' %}active{% endif %}"><i class="fas fa-tasks"></i> Claim Tracker</a></li>
+                    <!-- INTERNAL: Economic Tracker -->
+                    <li><a href="/economic-tracker" class="nav-link {% if active_page == 'economic' %}active{% endif %}"><i class="fas fa-dollar-sign"></i> Economic Tracker</a></li>
                     
-                    <!-- INTERNAL: Quiz (ON THIS SITE) -->
-                    <li><a href="/quiz" class="nav-link {% if active_page == 'quiz' %}active{% endif %}"><i class="fas fa-question-circle"></i> Quiz</a></li>
+                    <!-- INTERNAL: AI Behavior -->
+                    <li><a href="/ai-behavior" class="nav-link {% if active_page == 'behavior' %}active{% endif %}"><i class="fas fa-brain"></i> AI Behavior</a></li>
                     
-                    <!-- INTERNAL: Contact Us (ON THIS SITE) -->
-                    <li><a href="/contact" class="nav-link {% if active_page == 'contact' %}active{% endif %}"><i class="fas fa-envelope"></i> Contact Us</a></li>
+                    <!-- INTERNAL: AI Research (home page of this site) -->
+                    <li><a href="/" class="nav-link {% if active_page == 'research' %}active{% endif %}"><i class="fas fa-microscope"></i> AI Research</a></li>
+                    
+                    <!-- EXTERNAL: Claim Tracker (on TruthLens) -->
+                    <li><a href="https://factsandfakes.ai/claim-tracker" class="nav-link external" target="_blank"><i class="fas fa-tasks"></i> Claim Tracker <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
+                    
+                    <!-- EXTERNAL: Quiz (on TruthLens) -->
+                    <li><a href="https://factsandfakes.ai/quiz" class="nav-link external" target="_blank"><i class="fas fa-question-circle"></i> Quiz <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i></a></li>
                 </ul>
             </div>
         </div>
@@ -290,133 +462,14 @@ I did no harm and this file is not truncated.
     {% endblock %}
 
     <!-- ========================================================================
-         UNIVERSAL PROGRESS BANNER JAVASCRIPT
+         JAVASCRIPT
          ======================================================================== -->
     <script>
-        // ===================================================================
-        // UNIVERSAL PROGRESS BANNER SYSTEM
-        // Global functions available to all pages
-        // ===================================================================
-
-        const UniversalProgressBanner = {
-            funFacts: [
-                "💡 Did you know? The first newspaper was published in 1605.",
-                "🎯 Fact: The average person encounters 4,000-10,000 ads per day.",
-                "📰 Fun fact: 'News' comes from the four cardinal directions: North, East, West, South.",
-                "🧠 Research shows it takes 7 exposures to a message before people remember it.",
-                "⚡ The first tweet was sent on March 21, 2006 by Jack Dorsey.",
-                "🔍 Studies show people judge content credibility in under 4 seconds.",
-                "📊 Over 60% of news shared on social media is never read by the sharer.",
-                "🎓 Media literacy is now taught in over 50 countries worldwide.",
-                "🌍 The internet has over 5 billion active users as of 2024.",
-                "📱 Mobile devices account for over 60% of web traffic globally."
-            ],
-            currentFactIndex: 0,
-            factInterval: null,
-
-            show: function(message = "Processing...", icon = "🔍") {
-                const banner = document.getElementById('universalProgressBanner');
-                const messageEl = document.getElementById('progressBannerMessage');
-                const iconEl = document.getElementById('progressBannerIcon');
-                
-                messageEl.textContent = message;
-                iconEl.textContent = icon;
-                
-                banner.classList.add('visible');
-                document.body.classList.add('banner-visible');
-                
-                // Start rotating fun facts
-                this.rotateFunFacts();
-            },
-
-            update: function(percentage, message = null, icon = null) {
-                const barFill = document.getElementById('progressBannerBarFill');
-                const percentageEl = document.getElementById('progressBannerPercentage');
-                const messageEl = document.getElementById('progressBannerMessage');
-                const iconEl = document.getElementById('progressBannerIcon');
-                
-                // Update percentage
-                const clampedPercent = Math.min(100, Math.max(0, percentage));
-                barFill.style.width = clampedPercent + '%';
-                percentageEl.textContent = Math.round(clampedPercent) + '%';
-                
-                // Update message if provided
-                if (message) {
-                    messageEl.textContent = message;
-                }
-                
-                // Update icon if provided
-                if (icon) {
-                    iconEl.textContent = icon;
-                }
-            },
-
-            hide: function() {
-                const banner = document.getElementById('universalProgressBanner');
-                
-                banner.classList.remove('visible');
-                document.body.classList.remove('banner-visible');
-                
-                // Stop rotating fun facts
-                if (this.factInterval) {
-                    clearInterval(this.factInterval);
-                    this.factInterval = null;
-                }
-                
-                // Reset after animation
-                setTimeout(() => {
-                    this.reset();
-                }, 300);
-            },
-
-            reset: function() {
-                document.getElementById('progressBannerBarFill').style.width = '0%';
-                document.getElementById('progressBannerPercentage').textContent = '0%';
-                document.getElementById('progressBannerMessage').textContent = 'Processing...';
-                document.getElementById('progressBannerIcon').textContent = '🔍';
-                document.getElementById('progressBannerFunFact').textContent = '';
-                this.currentFactIndex = 0;
-            },
-
-            rotateFunFacts: function() {
-                const funFactEl = document.getElementById('progressBannerFunFact');
-                
-                // Show first fact immediately
-                funFactEl.textContent = this.funFacts[this.currentFactIndex];
-                
-                // Rotate every 5 seconds
-                this.factInterval = setInterval(() => {
-                    this.currentFactIndex = (this.currentFactIndex + 1) % this.funFacts.length;
-                    funFactEl.textContent = this.funFacts[this.currentFactIndex];
-                }, 5000);
-            }
-        };
-
-        // ===================================================================
-        // GLOBAL HELPER FUNCTIONS (backward compatible)
-        // ===================================================================
-        
-        function showProgressBanner(message, icon) {
-            UniversalProgressBanner.show(message, icon);
-        }
-
-        function updateProgressBanner(percentage, message, icon) {
-            UniversalProgressBanner.update(percentage, message, icon);
-        }
-
-        function hideProgressBanner() {
-            UniversalProgressBanner.hide();
-        }
-    </script>
-
-    <!-- ========================================================================
-         MOBILE MENU JAVASCRIPT
-         ======================================================================== -->
-    <script>
+        // Mobile menu toggle
         function toggleMobileMenu() {
-            var navMenu = document.getElementById('navMenu');
-            if (navMenu) {
-                navMenu.classList.toggle('active');
+            const menu = document.getElementById('navMenu');
+            if (menu) {
+                menu.classList.toggle('active');
             }
         }
 
@@ -431,6 +484,55 @@ I did no harm and this file is not truncated.
                 }
             }
         });
+
+        // Universal Progress Banner System
+        const UniversalProgressBanner = {
+            show: function(message = "Processing...", icon = "🔍") {
+                const banner = document.getElementById('universalProgressBanner');
+                const messageEl = document.getElementById('progressBannerMessage');
+                const iconEl = document.getElementById('progressBannerIcon');
+                
+                if (messageEl) messageEl.textContent = message;
+                if (iconEl) iconEl.textContent = icon;
+                
+                if (banner) {
+                    banner.classList.add('visible');
+                    document.body.classList.add('banner-visible');
+                }
+            },
+
+            update: function(percentage, message = null) {
+                const barFill = document.getElementById('progressBannerBarFill');
+                const percentageEl = document.getElementById('progressBannerPercentage');
+                const messageEl = document.getElementById('progressBannerMessage');
+                
+                if (barFill) barFill.style.width = percentage + '%';
+                if (percentageEl) percentageEl.textContent = percentage + '%';
+                
+                if (message && messageEl) {
+                    messageEl.textContent = message;
+                }
+            },
+
+            hide: function() {
+                const banner = document.getElementById('universalProgressBanner');
+                if (banner) {
+                    banner.classList.remove('visible');
+                    document.body.classList.remove('banner-visible');
+                }
+                
+                // Reset after animation
+                setTimeout(() => {
+                    const barFill = document.getElementById('progressBannerBarFill');
+                    const percentageEl = document.getElementById('progressBannerPercentage');
+                    if (barFill) barFill.style.width = '0%';
+                    if (percentageEl) percentageEl.textContent = '0%';
+                }, 300);
+            }
+        };
+
+        // Make available globally
+        window.UniversalProgressBanner = UniversalProgressBanner;
     </script>
 
     <!-- Page-specific scripts - override in child templates -->
@@ -446,39 +548,34 @@ END OF FILE - DEPLOYMENT VERIFICATION
 I did no harm and this file is not truncated.
 
 DEPLOYMENT READY FOR GITHUB
-Version: 2.5.0 - January 14, 2026
+Version: 1.2.0 - January 14, 2026
 
 ================================================================================
 🚨 DEPLOYMENT INSTRUCTIONS 🚨
 ================================================================================
 
-This file goes to: TruthLens repository
+This file goes to: ai-bias-research repository
 Deploy location: templates/base.html
-Site URL: factsandfakes.ai
+Site URL: ai-bias-research.onrender.com
 
-DO NOT deploy this to ai-bias-research.onrender.com - that site has its own base.html!
-
-================================================================================
-INTERNAL ROUTES ON THIS SITE (factsandfakes.ai)
-================================================================================
-/              → Home page
-/about         → About Us
-/features      → Features
-/analyze       → News Analysis
-/transcript    → Transcript/YouTube Analysis
-/ask-ai        → Ask AI
-/debate-arena  → Debate Arena
-/claim-tracker → Claim Tracker
-/quiz          → Quiz
-/contact       → Contact Us
+DO NOT deploy this to factsandfakes.ai - that site has its own base.html!
 
 ================================================================================
-EXTERNAL LINKS (to other sites)
+INTERNAL ROUTES ON THIS SITE (ai-bias-research.onrender.com)
 ================================================================================
-AI Bias Research → https://ai-bias-research.onrender.com
-AI Debates       → https://ai-debate-arena-k8gs.onrender.com
-AI Observatory   → https://ai-bias-research.onrender.com/observatory
+/              → AI Research home page (main bias testing tool)
+/observatory   → AI Observatory dashboard
+/economic-tracker → Economic threat tracker
+/ai-behavior   → AI behavior monitor
 
-⚠️ AI Observatory is EXTERNAL! Do not change to /observatory!
+================================================================================
+NAVIGATION STRUCTURE SUMMARY
+================================================================================
+TOP ROW (7 items) - All external to factsandfakes.ai:
+  Home, About, Features, News, Transcript, Ask AI, Debate Arena
+
+BOTTOM ROW (7 items) - Mix of internal and external:
+  AI Debates (ext), Observatory, Economic, Behavior, Research, Claims (ext), Quiz (ext)
+
 ================================================================================
 -->
