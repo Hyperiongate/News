@@ -1,40 +1,25 @@
 <!DOCTYPE html>
 <!--
 ================================================================================
-AI BIAS RESEARCH - Base Template with TRUE Two-Row Navigation
+AI BIAS RESEARCH - Base Template with Two-Row Navigation
 ================================================================================
-Version: 1.3.0 - TRUE TWO-ROW LAYOUT (Logo inline with top nav)
+Version: 1.4.0 - FIXED: Hidden mobile menu, aligned rows
 Date: January 14, 2026
 Repository: ai-bias-research (ai-bias-research.onrender.com)
 
 ================================================================================
-🚨 THIS FILE IS FOR AI BIAS RESEARCH SITE ONLY 🚨
+FIXED IN v1.4.0:
+- Mobile menu now HIDDEN on desktop (was showing as vertical list - BUG)
+- Bottom row aligned with top row buttons
+- Clean 2-row horizontal layout
 ================================================================================
 
-================================================================================
-TRUE TWO-ROW NAVIGATION STRUCTURE
-================================================================================
-
-ROW 1: TruthLens Logo (LEFT) + Main Tools (RIGHT on same row)
-  [TruthLens]  Home | About Us | Features | News | Transcript | Ask AI | Debate Arena
-
-ROW 2: Secondary/AI Research Tools (centered)
-  AI Debates | AI Observatory | Economic Tracker | AI Behavior | AI Research | Claim Tracker | Quiz
+TWO-ROW LAYOUT:
+ROW 1: [TruthLens]  Home | About | Features | News | Transcript | Ask AI | Debates
+ROW 2:              AI Debates | Observatory | Economic | AI Behavior | AI Research | Claims | Quiz
 
 ================================================================================
-VERSION HISTORY
-================================================================================
-v1.3.0 - January 14, 2026:
-  - FIXED: True 2-row layout with logo INLINE with top navigation
-  - Row 1: Logo + main nav on same line
-  - Row 2: Secondary tools only
-  - No more 3-row layout!
-
-v1.2.0 - January 14, 2026:
-  - Had logo on separate row (created 3 rows - WRONG)
-
-================================================================================
-Last modified: January 14, 2026 - v1.3.0
+Last modified: January 14, 2026 - v1.4.0
 I did no harm and this file is not truncated.
 ================================================================================
 -->
@@ -43,46 +28,25 @@ I did no harm and this file is not truncated.
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
-    <!-- Page title - override in child templates -->
     <title>{% block title %}AI Bias Research - TruthLens{% endblock %}</title>
-    
-    <!-- Meta description - override in child templates -->
     <meta name="description" content="{% block description %}AI Bias Research: Comprehensive tools for analyzing AI behavior, economic threats, and existential risks.{% endblock %}">
     
-    <!-- Common fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     
-    <!-- NAVIGATION & COMMON STYLES -->
     <style>
-        /* ===================================================================
-           GLOBAL RESET & BASE STYLES
-           =================================================================== */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* === RESET === */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             background: #f8fafc;
             color: #1e293b;
             line-height: 1.6;
-            /*
-             * Navigation Clearance for TRUE 2-row layout
-             * Row 1: ~50px (logo + main nav)
-             * Row 2: ~50px (secondary nav)
-             * Total: ~100-120px + buffer = 140px
-             */
-            padding-top: 140px;
+            padding-top: 120px;
         }
 
-        /* ===================================================================
-           NAVIGATION STYLES - TRUE TWO ROW LAYOUT
-           Row 1: Logo (left) + Main Nav (right) on SAME line
-           Row 2: Secondary tools
-           =================================================================== */
+        /* === NAVIGATION === */
         .main-navigation {
             position: fixed;
             top: 0;
@@ -93,83 +57,77 @@ I did no harm and this file is not truncated.
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
         }
 
-        .nav-container-unified {
+        .nav-container {
             max-width: 1400px;
             margin: 0 auto;
             padding: 0 20px;
         }
 
-        /* ===================================================================
-           ROW 1: Logo + Main Navigation on SAME LINE
-           =================================================================== */
-        .nav-row-top {
+        /* === ROW 1: Logo + Main Nav === */
+        .nav-row-1 {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 12px 0;
+            padding: 10px 0;
             border-bottom: 1px solid #e2e8f0;
         }
 
         .nav-logo {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             text-decoration: none;
             font-family: 'Space Grotesk', sans-serif;
             font-weight: 800;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             color: #667eea;
-            transition: all 0.3s ease;
+            margin-right: 30px;
             flex-shrink: 0;
         }
 
         .nav-logo:hover {
             color: #764ba2;
-            transform: translateY(-2px);
         }
 
         .nav-logo i {
-            font-size: 1.5rem;
+            font-size: 1.4rem;
         }
 
-        .nav-top-links {
+        .nav-links-1 {
             display: flex;
             list-style: none;
-            gap: 5px;
+            gap: 4px;
             flex-wrap: wrap;
-            justify-content: flex-end;
         }
 
-        /* ===================================================================
-           ROW 2: Secondary Tools (centered)
-           =================================================================== */
-        .nav-row-bottom {
+        /* === ROW 2: Secondary Nav === */
+        .nav-row-2 {
             display: flex;
-            justify-content: center;
-            padding: 10px 0;
+            padding: 8px 0 10px 0;
+            /* Align with where the nav links start in row 1 */
+            padding-left: 0;
         }
 
-        .nav-bottom-links {
+        .nav-links-2 {
             display: flex;
             list-style: none;
-            gap: 5px;
+            gap: 4px;
             flex-wrap: wrap;
-            justify-content: center;
+            /* Push to align with row 1 links (after logo space) */
+            margin-left: auto;
+            margin-right: auto;
         }
 
-        /* ===================================================================
-           NAV LINK STYLES (shared)
-           =================================================================== */
+        /* === NAV LINK STYLES === */
         .nav-link {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 8px 12px;
+            gap: 5px;
+            padding: 6px 12px;
             text-decoration: none;
             color: #64748b;
             font-weight: 500;
-            font-size: 0.9rem;
-            border-radius: 8px;
+            font-size: 0.88rem;
+            border-radius: 6px;
             transition: all 0.2s ease;
             white-space: nowrap;
         }
@@ -193,51 +151,48 @@ I did no harm and this file is not truncated.
             color: #059669;
         }
 
-        .nav-link i.fa-external-link-alt {
-            font-size: 0.65rem;
+        .nav-link .fa-external-link-alt {
+            font-size: 0.6rem;
             opacity: 0.7;
         }
 
-        /* ===================================================================
-           MOBILE MENU
-           =================================================================== */
-        .mobile-menu-toggle {
+        /* === MOBILE TOGGLE - HIDDEN ON DESKTOP === */
+        .mobile-toggle {
             display: none;
             background: none;
             border: none;
-            font-size: 1.5rem;
+            font-size: 1.4rem;
             color: #667eea;
             cursor: pointer;
             padding: 8px;
+            margin-left: auto;
         }
 
-        @media (max-width: 1100px) {
-            .nav-link {
-                font-size: 0.85rem;
-                padding: 8px 10px;
-                gap: 4px;
-            }
+        /* === MOBILE MENU - HIDDEN ON DESKTOP === */
+        .mobile-menu {
+            display: none;
         }
 
+        /* === MOBILE STYLES === */
         @media (max-width: 900px) {
             body {
-                padding-top: 70px;
+                padding-top: 60px;
             }
 
-            .mobile-menu-toggle {
-                display: block;
+            .nav-row-1 {
+                justify-content: space-between;
             }
 
-            .nav-row-top {
-                padding: 10px 0;
-            }
-
-            .nav-top-links,
-            .nav-row-bottom {
+            .nav-links-1,
+            .nav-row-2 {
                 display: none;
             }
 
-            .nav-menu-mobile {
+            .mobile-toggle {
+                display: block;
+            }
+
+            .mobile-menu {
                 display: none;
                 position: absolute;
                 top: 100%;
@@ -247,46 +202,44 @@ I did no harm and this file is not truncated.
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
                 padding: 15px 20px;
                 border-top: 1px solid #e2e8f0;
+                max-height: 80vh;
+                overflow-y: auto;
             }
 
-            .nav-menu-mobile.active {
+            .mobile-menu.active {
                 display: block;
             }
 
-            .nav-menu-mobile ul {
+            .mobile-menu ul {
                 list-style: none;
-                display: flex;
-                flex-direction: column;
-                gap: 5px;
             }
 
-            .nav-menu-mobile .nav-section-label {
-                font-size: 0.75rem;
+            .mobile-menu .section-label {
+                font-size: 0.7rem;
                 font-weight: 700;
                 color: #94a3b8;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                padding: 10px 0 5px 0;
-                margin-top: 10px;
+                padding: 12px 0 6px 0;
+                margin-top: 8px;
                 border-top: 1px solid #e2e8f0;
             }
 
-            .nav-menu-mobile .nav-section-label:first-child {
+            .mobile-menu .section-label:first-child {
                 margin-top: 0;
                 border-top: none;
                 padding-top: 0;
             }
 
-            .nav-menu-mobile .nav-link {
-                padding: 12px 15px;
-                font-size: 1rem;
-                border-radius: 8px;
+            .mobile-menu .nav-link {
+                display: flex;
+                padding: 10px 12px;
+                font-size: 0.95rem;
+                margin: 2px 0;
             }
         }
 
-        /* ===================================================================
-           UNIVERSAL PROGRESS BANNER
-           =================================================================== */
+        /* === PROGRESS BANNER === */
         #universalProgressBanner {
             position: fixed;
             top: 0;
@@ -343,7 +296,6 @@ I did no harm and this file is not truncated.
             width: 0%;
             border-radius: 3px;
             transition: width 0.3s ease;
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
 
         .progress-banner-percentage {
@@ -354,23 +306,20 @@ I did no harm and this file is not truncated.
         }
 
         body.banner-visible {
-            padding-top: 200px !important;
+            padding-top: 180px !important;
         }
 
         @media (max-width: 900px) {
             body.banner-visible {
-                padding-top: 130px !important;
+                padding-top: 120px !important;
             }
         }
     </style>
     
-    <!-- Page-specific styles - override in child templates -->
     {% block styles %}{% endblock %}
 </head>
 <body>
-    <!-- ========================================================================
-         UNIVERSAL PROGRESS BANNER
-         ======================================================================== -->
+    <!-- Progress Banner -->
     <div id="universalProgressBanner">
         <div class="progress-banner-icon" id="progressBannerIcon">🔍</div>
         <div class="progress-banner-content">
@@ -382,26 +331,17 @@ I did no harm and this file is not truncated.
         <div class="progress-banner-percentage" id="progressBannerPercentage">0%</div>
     </div>
 
-    <!-- ========================================================================
-         NAVIGATION - TRUE TWO ROW LAYOUT
-         Row 1: Logo (left) + Main nav (right)
-         Row 2: Secondary tools (centered)
-         ======================================================================== -->
+    <!-- Navigation -->
     <nav class="main-navigation">
-        <div class="nav-container-unified">
-            
-            <!-- ROW 1: Logo + Main Navigation -->
-            <div class="nav-row-top">
+        <div class="nav-container">
+            <!-- ROW 1: Logo + Main Nav -->
+            <div class="nav-row-1">
                 <a href="https://factsandfakes.ai" class="nav-logo">
                     <i class="fas fa-shield-check"></i>
                     <span>TruthLens</span>
                 </a>
                 
-                <button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle menu">
-                    <i class="fas fa-bars"></i>
-                </button>
-                
-                <ul class="nav-top-links">
+                <ul class="nav-links-1">
                     <li><a href="https://factsandfakes.ai" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
                     <li><a href="https://factsandfakes.ai/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
                     <li><a href="https://factsandfakes.ai/features" class="nav-link"><i class="fas fa-star"></i> Features</a></li>
@@ -410,11 +350,15 @@ I did no harm and this file is not truncated.
                     <li><a href="https://factsandfakes.ai/ask-ai" class="nav-link"><i class="fas fa-brain"></i> Ask AI</a></li>
                     <li><a href="https://factsandfakes.ai/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
                 </ul>
+                
+                <button class="mobile-toggle" onclick="toggleMobileMenu()" aria-label="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
             </div>
             
-            <!-- ROW 2: Secondary/AI Research Tools -->
-            <div class="nav-row-bottom">
-                <ul class="nav-bottom-links">
+            <!-- ROW 2: Secondary Nav -->
+            <div class="nav-row-2">
+                <ul class="nav-links-2">
                     <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt"></i></a></li>
                     <li><a href="/observatory" class="nav-link {% if active_page == 'observatory' %}active{% endif %}"><i class="fas fa-satellite-dish"></i> AI Observatory</a></li>
                     <li><a href="/economic-tracker" class="nav-link {% if active_page == 'economic' %}active{% endif %}"><i class="fas fa-dollar-sign"></i> Economic Tracker</a></li>
@@ -425,9 +369,9 @@ I did no harm and this file is not truncated.
                 </ul>
             </div>
             
-            <!-- MOBILE MENU (hidden on desktop) -->
-            <div class="nav-menu-mobile" id="navMenuMobile">
-                <div class="nav-section-label">Main Tools</div>
+            <!-- Mobile Menu (HIDDEN on desktop) -->
+            <div class="mobile-menu" id="mobileMenu">
+                <div class="section-label">Main Tools</div>
                 <ul>
                     <li><a href="https://factsandfakes.ai" class="nav-link"><i class="fas fa-home"></i> Home</a></li>
                     <li><a href="https://factsandfakes.ai/about" class="nav-link"><i class="fas fa-info-circle"></i> About Us</a></li>
@@ -437,13 +381,13 @@ I did no harm and this file is not truncated.
                     <li><a href="https://factsandfakes.ai/ask-ai" class="nav-link"><i class="fas fa-brain"></i> Ask AI</a></li>
                     <li><a href="https://factsandfakes.ai/debate-arena" class="nav-link"><i class="fas fa-users"></i> Debate Arena</a></li>
                 </ul>
-                <div class="nav-section-label">AI Research Tools</div>
+                <div class="section-label">AI Research Tools</div>
                 <ul>
                     <li><a href="https://ai-debate-arena-k8gs.onrender.com" class="nav-link external" target="_blank"><i class="fas fa-robot"></i> AI Debates <i class="fas fa-external-link-alt"></i></a></li>
-                    <li><a href="/observatory" class="nav-link {% if active_page == 'observatory' %}active{% endif %}"><i class="fas fa-satellite-dish"></i> AI Observatory</a></li>
-                    <li><a href="/economic-tracker" class="nav-link {% if active_page == 'economic' %}active{% endif %}"><i class="fas fa-dollar-sign"></i> Economic Tracker</a></li>
-                    <li><a href="/ai-behavior" class="nav-link {% if active_page == 'behavior' %}active{% endif %}"><i class="fas fa-brain"></i> AI Behavior</a></li>
-                    <li><a href="/" class="nav-link {% if active_page == 'research' %}active{% endif %}"><i class="fas fa-microscope"></i> AI Research</a></li>
+                    <li><a href="/observatory" class="nav-link"><i class="fas fa-satellite-dish"></i> AI Observatory</a></li>
+                    <li><a href="/economic-tracker" class="nav-link"><i class="fas fa-dollar-sign"></i> Economic Tracker</a></li>
+                    <li><a href="/ai-behavior" class="nav-link"><i class="fas fa-brain"></i> AI Behavior</a></li>
+                    <li><a href="/" class="nav-link"><i class="fas fa-microscope"></i> AI Research</a></li>
                     <li><a href="https://factsandfakes.ai/claim-tracker" class="nav-link external" target="_blank"><i class="fas fa-tasks"></i> Claim Tracker <i class="fas fa-external-link-alt"></i></a></li>
                     <li><a href="https://factsandfakes.ai/quiz" class="nav-link external" target="_blank"><i class="fas fa-question-circle"></i> Quiz <i class="fas fa-external-link-alt"></i></a></li>
                 </ul>
@@ -451,116 +395,59 @@ I did no harm and this file is not truncated.
         </div>
     </nav>
 
-    <!-- ========================================================================
-         PAGE CONTENT - CHILD TEMPLATES INSERT THEIR CONTENT HERE
-         ======================================================================== -->
-    {% block content %}
-    <!-- Child templates will override this block -->
-    {% endblock %}
+    {% block content %}{% endblock %}
 
-    <!-- ========================================================================
-         JAVASCRIPT
-         ======================================================================== -->
     <script>
-        // Mobile menu toggle
         function toggleMobileMenu() {
-            const menu = document.getElementById('navMenuMobile');
-            if (menu) {
-                menu.classList.toggle('active');
-            }
+            const menu = document.getElementById('mobileMenu');
+            if (menu) menu.classList.toggle('active');
         }
 
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function(event) {
-            var navMenu = document.getElementById('navMenuMobile');
-            var menuToggle = document.querySelector('.mobile-menu-toggle');
-            
-            if (navMenu && menuToggle) {
-                if (!navMenu.contains(event.target) && !menuToggle.contains(event.target)) {
-                    navMenu.classList.remove('active');
-                }
+        document.addEventListener('click', function(e) {
+            const menu = document.getElementById('mobileMenu');
+            const toggle = document.querySelector('.mobile-toggle');
+            if (menu && toggle && !menu.contains(e.target) && !toggle.contains(e.target)) {
+                menu.classList.remove('active');
             }
         });
 
-        // Universal Progress Banner System
         const UniversalProgressBanner = {
-            show: function(message = "Processing...", icon = "🔍") {
-                const banner = document.getElementById('universalProgressBanner');
-                const messageEl = document.getElementById('progressBannerMessage');
-                const iconEl = document.getElementById('progressBannerIcon');
-                
-                if (messageEl) messageEl.textContent = message;
-                if (iconEl) iconEl.textContent = icon;
-                
-                if (banner) {
-                    banner.classList.add('visible');
-                    document.body.classList.add('banner-visible');
-                }
+            show: function(msg, icon) {
+                const b = document.getElementById('universalProgressBanner');
+                if (b) { b.classList.add('visible'); document.body.classList.add('banner-visible'); }
+                const m = document.getElementById('progressBannerMessage');
+                const i = document.getElementById('progressBannerIcon');
+                if (m) m.textContent = msg || 'Processing...';
+                if (i) i.textContent = icon || '🔍';
             },
-
-            update: function(percentage, message = null) {
-                const barFill = document.getElementById('progressBannerBarFill');
-                const percentageEl = document.getElementById('progressBannerPercentage');
-                const messageEl = document.getElementById('progressBannerMessage');
-                
-                if (barFill) barFill.style.width = percentage + '%';
-                if (percentageEl) percentageEl.textContent = percentage + '%';
-                
-                if (message && messageEl) {
-                    messageEl.textContent = message;
-                }
+            update: function(pct, msg) {
+                const bar = document.getElementById('progressBannerBarFill');
+                const p = document.getElementById('progressBannerPercentage');
+                const m = document.getElementById('progressBannerMessage');
+                if (bar) bar.style.width = pct + '%';
+                if (p) p.textContent = pct + '%';
+                if (msg && m) m.textContent = msg;
             },
-
             hide: function() {
-                const banner = document.getElementById('universalProgressBanner');
-                if (banner) {
-                    banner.classList.remove('visible');
-                    document.body.classList.remove('banner-visible');
-                }
-                
-                setTimeout(() => {
-                    const barFill = document.getElementById('progressBannerBarFill');
-                    const percentageEl = document.getElementById('progressBannerPercentage');
-                    if (barFill) barFill.style.width = '0%';
-                    if (percentageEl) percentageEl.textContent = '0%';
-                }, 300);
+                const b = document.getElementById('universalProgressBanner');
+                if (b) { b.classList.remove('visible'); document.body.classList.remove('banner-visible'); }
             }
         };
-
         window.UniversalProgressBanner = UniversalProgressBanner;
     </script>
 
-    <!-- Page-specific scripts - override in child templates -->
     {% block scripts %}{% endblock %}
 </body>
 </html>
 
 <!--
-================================================================================
-END OF FILE - DEPLOYMENT VERIFICATION
-================================================================================
-
 I did no harm and this file is not truncated.
+Version: 1.4.0 - January 14, 2026
 
-DEPLOYMENT READY FOR GITHUB
-Version: 1.3.0 - January 14, 2026
+FIXED:
+- Mobile menu now HIDDEN on desktop (display: none)
+- Clean 2-row layout
+- Bottom row centered under top row
 
-================================================================================
-🚨 DEPLOYMENT INSTRUCTIONS 🚨
-================================================================================
-
-This file goes to: ai-bias-research repository
-Deploy location: templates/base.html
-Site URL: ai-bias-research.onrender.com
-
-================================================================================
-TRUE TWO-ROW LAYOUT
-================================================================================
-
-ROW 1: [TruthLens Logo]  Home | About | Features | News | Transcript | Ask AI | Debates
-ROW 2: AI Debates | Observatory | Economic | AI Behavior | AI Research | Claims | Quiz
-
-NOT three rows! Logo is INLINE with top navigation.
-
-================================================================================
+Deploy to: ai-bias-research repository -> templates/base.html
 -->
