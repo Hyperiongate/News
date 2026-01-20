@@ -15,8 +15,8 @@ FIXED: Cohere model 'command-r-plus' was removed September 15, 2025
   
 FIXED: AI21 model not supported error
   OLD: 'jamba-1.5-large'
-  NEW: 'jamba-1.5-mini' ✓
-  Note: AI21 API changed - large model requires different tier
+  NEW: 'jamba-mini' ✓
+  Note: Correct model name is simply 'jamba-mini' (points to jamba-mini-2-2026-01)
 
 AI SERVICES (10 total):
 1. OpenAI GPT-4
@@ -28,7 +28,7 @@ AI SERVICES (10 total):
 7. xAI Grok 3
 8. Perplexity AI Sonar
 9. Reka Core
-10. AI21 Jamba 1.5 Mini ✓ FIXED
+10. AI21 Jamba Mini ✓ FIXED
 
 FEATURES:
 - Parallel execution (all 10 AIs queried simultaneously)
@@ -40,7 +40,7 @@ FEATURES:
 CHANGELOG:
 v2.1.0 (January 20, 2026):
 - FIXED: Updated Cohere to 'command-r-plus-08-2024' (deprecated model fix)
-- FIXED: Updated AI21 to 'jamba-1.5-mini' (supported model)
+- FIXED: Updated AI21 to 'jamba-mini' (correct API model name)
 - Both services now fully operational
 
 v2.0.0 (January 10, 2026):
@@ -235,10 +235,10 @@ class AICouncilService:
                         api_key=api_key,
                         base_url="https://api.ai21.com/studio/v1"
                     ),
-                    'model': 'jamba-1.5-mini',  # FIXED: was 'jamba-1.5-large'
-                    'name': 'AI21 Jamba 1.5 Mini'
+                    'model': 'jamba-mini',  # FIXED: was 'jamba-1.5-large', correct is 'jamba-mini'
+                    'name': 'AI21 Jamba Mini'
                 }
-                logger.info("✓ AI21 Jamba initialized")
+                logger.info("✓ AI21 Jamba Mini initialized")
         except Exception as e:
             logger.warning(f"AI21 unavailable: {e}")
     
